@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: Information Theory for ML — Mathematics Behind AI & ML</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; Information Theory for ML</h2><span class="tb-sub">Surprise, uncertainty, and the language of learning</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Information</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">priority_high</span></div><span class="pipe-label">Surprise</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Entropy</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compare_arrows</span></div><span class="pipe-label">Cross-Ent</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">straighten</span></div><span class="pipe-label">KL Div</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Mutual Info</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Bottleneck</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">AI Uses</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">priority_high</span></div><div><div class="cc-title">Information as Surprise</div><div class="cc-sub">The less likely an event, the more information it carries</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine a weather forecast. &ldquo;It&rsquo;s sunny in the Sahara&rdquo; &mdash; no surprise, no information. &ldquo;It&rsquo;s snowing in the Sahara&rdquo; &mdash; extremely surprising, lots of information! <strong>Information = surprise</strong>. The less likely an event, the more information it carries when it happens. Claude Shannon formalized this in 1948: Information(event) = &minus;log₂(probability).</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> When a language model predicts the next word, it assigns probabilities. &ldquo;The cat sat on the ___&rdquo; &rarr; &ldquo;mat&rdquo; (high probability, low surprise). If the model says &ldquo;volcano&rdquo; &mdash; that&rsquo;s high information (surprising). Perplexity, the standard metric for language models, is literally the exponential of average surprise.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Math</div>
+            <div class="cc-code"><span class="hl-cmt"># Information content of an event</span>
+<span class="hl-cmt"># I(x) = -log₂(P(x)) bits</span>
+
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+<span class="hl-cmt"># Fair coin flip (P = 0.5)</span>
+I_coin = -np.log2(<span class="hl-num">0.5</span>)    <span class="hl-cmt"># = 1 bit</span>
+
+<span class="hl-cmt"># Fair die roll (P = 1/6)</span>
+I_die = -np.log2(<span class="hl-num">1/6</span>)     <span class="hl-cmt"># ≈ 2.58 bits</span>
+
+<span class="hl-cmt"># Rare event (P = 0.001)</span>
+I_rare = -np.log2(<span class="hl-num">0.001</span>)  <span class="hl-cmt"># ≈ 9.97 bits</span>
+
+<span class="hl-cmt"># Certain event (P = 1.0)</span>
+I_certain = -np.log2(<span class="hl-num">1.0</span>) <span class="hl-cmt"># = 0 bits (no surprise!)</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">&ldquo;Sun rises tomorrow&rdquo; = 0 surprise. &ldquo;Aliens land&rdquo; = maximum surprise.</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In AI</div><div class="cb-text">Predicting &ldquo;the&rdquo; after &ldquo;in&rdquo; = low info. Predicting &ldquo;platypus&rdquo; = high info.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">tag</span></div><div><div class="cc-title">Entropy &mdash; Average Surprise</div><div class="cc-sub">How uncertain is the entire distribution?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text"><strong>Entropy</strong> is the average surprise across all possible outcomes. A fair coin has maximum entropy (1 bit) &mdash; you&rsquo;re maximally uncertain. A loaded coin (99% heads) has low entropy &mdash; you already know what&rsquo;s coming. Think of entropy as a measure of <em>chaos</em> or <em>unpredictability</em> in a system.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> In decision trees, the algorithm splits on the feature that <em>reduces entropy the most</em> (information gain). High entropy = mixed classes = uncertain. After a good split, each branch has lower entropy = more pure = more certain. The tree literally maximizes information gained at each step!</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Worked Example</div>
+            <div class="cc-code"><span class="hl-cmt"># Entropy: H(X) = -Σ P(x) × log₂(P(x))</span>
+
+<span class="hl-cmt"># Fair coin: P(H)=0.5, P(T)=0.5</span>
+H_fair = -(<span class="hl-num">0.5</span>*np.log2(<span class="hl-num">0.5</span>) + <span class="hl-num">0.5</span>*np.log2(<span class="hl-num">0.5</span>))
+<span class="hl-cmt"># = 1.0 bit (maximum uncertainty)</span>
+
+<span class="hl-cmt"># Loaded coin: P(H)=0.99, P(T)=0.01</span>
+H_loaded = -(<span class="hl-num">0.99</span>*np.log2(<span class="hl-num">0.99</span>) + <span class="hl-num">0.01</span>*np.log2(<span class="hl-num">0.01</span>))
+<span class="hl-cmt"># ≈ 0.08 bits (almost certain)</span>
+
+<span class="hl-cmt"># Decision tree: split that reduces entropy most</span>
+<span class="hl-cmt"># Before split: H = 1.0 (50/50 cat/dog)</span>
+<span class="hl-cmt"># After split on "has whiskers":</span>
+<span class="hl-cmt">#   Left: H ≈ 0.2 (mostly cats)</span>
+<span class="hl-cmt">#   Right: H ≈ 0.3 (mostly dogs)</span>
+<span class="hl-cmt"># Information gain = 1.0 - weighted avg ≈ 0.75</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">Cross-Entropy &mdash; The #1 Loss Function</div><div class="cc-sub">Measuring how well your model matches reality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine you&rsquo;re packing for a trip. <strong>Entropy</strong> = the minimum luggage if you pack perfectly for the actual weather. <strong>Cross-entropy</strong> = the luggage you actually bring based on your <em>predicted</em> weather. If your predictions are perfect, cross-entropy = entropy. If your predictions are wrong, you overpack &mdash; cross-entropy &gt; entropy. The gap is wasted effort.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Cross-entropy loss is THE most common loss function in classification. When you train a neural network with <code>nn.CrossEntropyLoss()</code> in PyTorch, you&rsquo;re literally minimizing the average surprise of the true labels under the model&rsquo;s predicted distribution. Lower cross-entropy = model&rsquo;s predictions match reality better.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Math &amp; Code</div>
+            <div class="cc-code"><span class="hl-cmt"># Cross-entropy: H(P, Q) = -Σ P(x) × log Q(x)</span>
+<span class="hl-cmt"># P = true distribution, Q = model's prediction</span>
+
+<span class="hl-key">import</span> torch
+<span class="hl-key">import</span> torch.nn <span class="hl-key">as</span> nn
+
+<span class="hl-cmt"># True label: class 2 (one-hot: [0, 0, 1])</span>
+<span class="hl-cmt"># Model predicts: [0.1, 0.2, 0.7]</span>
+loss_fn = nn.CrossEntropyLoss()
+logits = torch.tensor([[<span class="hl-num">-1.0</span>, <span class="hl-num">0.0</span>, <span class="hl-num">1.2</span>]])
+target = torch.tensor([<span class="hl-num">2</span>])
+loss = loss_fn(logits, target)
+<span class="hl-cmt"># loss ≈ 0.56 (low — good prediction!)</span>
+
+<span class="hl-cmt"># Bad prediction: model says class 0</span>
+logits_bad = torch.tensor([[<span class="hl-num">2.0</span>, <span class="hl-num">0.0</span>, <span class="hl-num">-1.0</span>]])
+loss_bad = loss_fn(logits_bad, target)
+<span class="hl-cmt"># loss ≈ 3.17 (high — wrong prediction!)</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">Packing perfectly for actual weather = minimum luggage (entropy)</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In AI</div><div class="cb-text">Model matching true labels = minimum cross-entropy loss</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">straighten</span></div><div><div class="cc-title">KL Divergence &mdash; Distance Between Distributions</div><div class="cc-sub">How different is your model from reality?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text"><strong>KL divergence</strong> measures the &ldquo;extra cost&rdquo; of using the wrong distribution. If you designed a communication system based on predicted weather Q but the actual weather follows P, KL(P||Q) is the wasted bits per message. It&rsquo;s the gap between cross-entropy and entropy: KL(P||Q) = H(P,Q) &minus; H(P). Always &ge; 0, equals 0 only when P = Q.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> KL divergence is everywhere in modern AI. VAEs minimize KL divergence to keep the latent space well-structured. Knowledge distillation uses KL to transfer knowledge from a large teacher model to a small student. RLHF uses KL to prevent the fine-tuned model from drifting too far from the base model.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Worked Example</div>
+            <div class="cc-code"><span class="hl-cmt"># KL(P || Q) = Σ P(x) × log(P(x) / Q(x))</span>
+<span class="hl-cmt"># = H(P, Q) - H(P)  (extra cost)</span>
+
+P = np.array([<span class="hl-num">0.7</span>, <span class="hl-num">0.2</span>, <span class="hl-num">0.1</span>])  <span class="hl-cmt"># true</span>
+Q = np.array([<span class="hl-num">0.3</span>, <span class="hl-num">0.4</span>, <span class="hl-num">0.3</span>])  <span class="hl-cmt"># model</span>
+
+KL = np.sum(P * np.log2(P / Q))
+<span class="hl-cmt"># ≈ 0.50 bits (significant mismatch)</span>
+
+<span class="hl-cmt"># Note: KL is NOT symmetric!</span>
+<span class="hl-cmt"># KL(P||Q) ≠ KL(Q||P)</span>
+<span class="hl-cmt"># KL(P||Q): "cost of using Q when truth is P"</span>
+<span class="hl-cmt"># KL(Q||P): "cost of using P when truth is Q"</span>
+
+<span class="hl-cmt"># In VAE:</span>
+<span class="hl-cmt"># Loss = Reconstruction + β × KL(q(z|x) || p(z))</span>
+<span class="hl-cmt"># KL term keeps latent space close to N(0,1)</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Minimizing cross-entropy H(P,Q) is equivalent to minimizing KL(P||Q) because H(P) is constant. That&rsquo;s why cross-entropy loss works &mdash; it&rsquo;s secretly minimizing the distance between your model and reality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Mutual Information</div><div class="cc-sub">How much does knowing X tell you about Y?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text"><strong>Mutual information</strong> measures how much knowing one thing tells you about another. Knowing someone&rsquo;s height tells you something about their weight (positive MI). Knowing their shoe size tells you almost nothing about their favorite color (near-zero MI). MI = 0 means the variables are completely independent.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Mutual information is a more powerful version of correlation. Correlation only captures linear relationships. MI captures <em>any</em> statistical dependency. If X = sin(Y), correlation might be ~0, but MI is high. This makes MI invaluable for feature selection &mdash; find features that share the most information with the target, regardless of the relationship shape.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Math</div>
+            <div class="cc-code"><span class="hl-cmt"># MI(X; Y) = H(X) + H(Y) - H(X, Y)</span>
+<span class="hl-cmt"># = KL(P(X,Y) || P(X)P(Y))</span>
+<span class="hl-cmt"># = reduction in uncertainty about X</span>
+<span class="hl-cmt">#   when you learn Y (and vice versa)</span>
+
+<span class="hl-cmt"># Properties:</span>
+<span class="hl-cmt"># MI(X; Y) ≥ 0 (always)</span>
+<span class="hl-cmt"># MI(X; Y) = 0 iff X ⊥ Y (independent)</span>
+<span class="hl-cmt"># MI(X; X) = H(X) (max possible)</span>
+<span class="hl-cmt"># MI(X; Y) = MI(Y; X) (symmetric!)</span>
+
+<span class="hl-key">from</span> sklearn.feature_selection <span class="hl-key">import</span> mutual_info_classif
+<span class="hl-cmt"># Select features with highest MI to target</span>
+mi_scores = mutual_info_classif(X, y)
+<span class="hl-cmt"># [0.82, 0.01, 0.45, 0.67, ...]</span>
+<span class="hl-cmt"># Feature 0 and 3 are most informative</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">The Information Bottleneck</div><div class="cc-sub">Compress the input, keep only what matters for the output</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine summarizing a 500-page book into a 1-page summary. You must <strong>compress</strong> (lose details) while <strong>preserving</strong> the key message. The <strong>information bottleneck</strong> theory says deep learning does exactly this: each layer compresses the input (forgets irrelevant details) while preserving information relevant to the output label.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> This explains why deep networks generalize. Early layers extract features (compress 1M pixels to 512 features). Later layers keep only what matters for the task. A cat classifier doesn&rsquo;t need to remember the exact pixel values &mdash; just &ldquo;has ears, whiskers, fur pattern.&rdquo; The network learns to throw away noise and keep signal.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Framework</div>
+            <div class="cc-code"><span class="hl-cmt"># Information Bottleneck principle:</span>
+<span class="hl-cmt"># min I(X; T) - β × I(T; Y)</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># X = input (image pixels)</span>
+<span class="hl-cmt"># T = representation (hidden layer)</span>
+<span class="hl-cmt"># Y = output (label)</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># Goal: minimize I(X;T) → compress input</span>
+<span class="hl-cmt">#        maximize I(T;Y) → preserve label info</span>
+
+<span class="hl-cmt"># Deep network as compression pipeline:</span>
+<span class="hl-cmt"># Image (3×224×224 = 150K values)</span>
+<span class="hl-cmt">#   → Conv layers (compress spatial info)</span>
+<span class="hl-cmt">#   → 512-dim feature vector (bottleneck)</span>
+<span class="hl-cmt">#   → 10-class prediction</span>
+<span class="hl-cmt"># 150K → 512 → 10 (massive compression!)</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">Summarize a book: lose details, keep the core message</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In AI</div><div class="cb-text">Neural net: compress 150K pixels to 512 features that predict the label</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">Information Theory in Modern AI</div><div class="cc-sub">From GPT to diffusion models &mdash; information theory is everywhere</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Language Models</div><div class="cc-text"><strong>GPT and LLMs</strong> are trained to minimize cross-entropy on next-token prediction. <strong>Perplexity</strong> = 2^(cross-entropy) measures how &ldquo;confused&rdquo; the model is. GPT-4 has perplexity ~10-15 on English text, meaning at each position it&rsquo;s effectively choosing between 10-15 equally likely words. <strong>Temperature</strong> in sampling controls the entropy of the output distribution &mdash; low temp = low entropy = predictable; high temp = high entropy = creative.</div></div>
+          <div class="cc-note n-teal"><strong>Key connection:</strong> When you set temperature=0.7 in ChatGPT, you&rsquo;re literally adjusting the entropy of the probability distribution over next tokens. Temperature=0 picks the most likely token (zero entropy). Temperature=2 makes the distribution nearly uniform (high entropy, very random).</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">More Applications</div>
+            <div class="cc-code"><span class="hl-cmt"># VAEs: ELBO = Reconstruction - KL</span>
+<span class="hl-cmt"># KL keeps latent space structured</span>
+
+<span class="hl-cmt"># Diffusion models: learn to reverse</span>
+<span class="hl-cmt"># information destruction (adding noise)</span>
+<span class="hl-cmt"># Score = ∇log p(x) (gradient of log-prob)</span>
+
+<span class="hl-cmt"># RLHF: KL penalty prevents drift</span>
+<span class="hl-cmt"># Loss = reward - β × KL(π_new || π_ref)</span>
+
+<span class="hl-cmt"># Knowledge distillation:</span>
+<span class="hl-cmt"># Student minimizes KL to teacher's outputs</span>
+<span class="hl-cmt"># Soft labels carry more info than hard labels</span>
+
+<span class="hl-cmt"># Perplexity of language model:</span>
+<span class="hl-cmt"># PPL = 2^H(P, Q) where Q = model</span>
+<span class="hl-cmt"># GPT-4: PPL ≈ 10-15 on English text</span>
+<span class="hl-cmt"># Human: PPL ≈ 20 (we're less predictable!)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">The Complete Picture</div><div class="cc-sub">How all the information theory concepts connect</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Unified View</div><div class="cc-text">All of information theory connects through one idea: <strong>uncertainty reduction</strong>. Entropy measures total uncertainty. Cross-entropy measures how well a model captures that uncertainty. KL divergence measures the gap. Mutual information measures shared uncertainty. Every ML loss function is secretly an information-theoretic quantity.</div></div>
+          <div class="cc-note n-green"><strong>The big picture:</strong> Shannon&rsquo;s 1948 paper &ldquo;A Mathematical Theory of Communication&rdquo; is arguably the most important paper for modern AI. Without it, we wouldn&rsquo;t have cross-entropy loss, perplexity, KL divergence for VAEs, or the information bottleneck theory. Information theory IS the language of learning.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cheat Sheet</div>
+            <div class="cc-code"><span class="hl-cmt"># Information Theory Cheat Sheet for ML:</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># Entropy H(P)        → uncertainty of P</span>
+<span class="hl-cmt"># Cross-ent H(P,Q)    → avg surprise of P</span>
+<span class="hl-cmt">#                       under model Q</span>
+<span class="hl-cmt"># KL(P||Q)            → extra cost of Q vs P</span>
+<span class="hl-cmt"># MI(X;Y)             → shared information</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># Key relationships:</span>
+<span class="hl-cmt"># H(P,Q) = H(P) + KL(P||Q)</span>
+<span class="hl-cmt"># MI(X;Y) = H(X) - H(X|Y)</span>
+<span class="hl-cmt"># MI(X;Y) = KL(P(X,Y) || P(X)P(Y))</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># Where you see them:</span>
+<span class="hl-cmt"># Classification → cross-entropy loss</span>
+<span class="hl-cmt"># VAE → KL divergence regularizer</span>
+<span class="hl-cmt"># LLM eval → perplexity = 2^H(P,Q)</span>
+<span class="hl-cmt"># Feature selection → mutual information</span>
+<span class="hl-cmt"># Decision trees → information gain</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-hypothesis-testing-statistical-learning.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: Hypothesis Testing</a>
+    <a class="ch-nav-btn next" href="12-tensors-and-high-dimensional-geometry.html">Ch 12: Tensors &amp; Geometry <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[0,1,2,3,4,5,6]};
+  const NARRATION={1:{text:'<strong>Step 1:</strong> Information = surprise. Rare events carry more information. Shannon formalized it: I(x) = -log₂(P(x)). Language models measure perplexity — the exponential of average surprise.',color:'#d97706'},2:{text:'<strong>Step 2:</strong> Entropy = average surprise across all outcomes. Fair coin = 1 bit (max uncertainty). Decision trees split on features that reduce entropy most (information gain).',color:'#d97706'},3:{text:'<strong>Step 3:</strong> Cross-entropy measures how well your model matches reality. It\'s THE loss function for classification. Lower cross-entropy = model predictions closer to truth.',color:'#ea580c'},4:{text:'<strong>Step 4:</strong> KL divergence = extra cost of using wrong distribution. Used in VAEs, RLHF, knowledge distillation. Minimizing cross-entropy IS minimizing KL divergence.',color:'#ea580c'},5:{text:'<strong>Step 5:</strong> Mutual information captures ANY dependency between variables (not just linear). More powerful than correlation. Used for feature selection and representation learning.',color:'#7c3aed'},6:{text:'<strong>Step 6:</strong> Information bottleneck: deep networks compress inputs while preserving label-relevant info. 150K pixels → 512 features → 10 classes. Compression = generalization.',color:'#7c3aed'},7:{text:'<strong>Step 7:</strong> LLMs minimize cross-entropy. Temperature controls output entropy. VAEs use KL. Diffusion models reverse information destruction. Info theory is everywhere in modern AI.',color:'#0d9488'},8:{text:'<strong>Step 8:</strong> All concepts connect through uncertainty reduction. Shannon\'s 1948 paper gave us the language of learning: entropy, cross-entropy, KL divergence, mutual information.',color:'#16a34a'}};
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

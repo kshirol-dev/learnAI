@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 14: Testing AI Products — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 14 &mdash; Testing AI Products</h2><span class="tb-sub">Why traditional QA breaks down for AI &mdash; and the testing strategy that replaces it.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">block</span></div><span class="pipe-label">Why QA Fails</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Test Layers</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">shield</span></div><span class="pipe-label">Red Team</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">history</span></div><span class="pipe-label">Regression</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">groups</span></div><span class="pipe-label">User Test</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Go / No-Go</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">block</span></div><div><div class="cc-title">Why Traditional QA Breaks Down</div><div class="cc-sub">AI products violate every assumption that traditional testing relies on</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Traditional Software Testing</div><div class="cc-text">Traditional QA works because software is <strong>deterministic</strong>: the same input always produces the same output. You write test cases, define expected results, and verify that actual results match. If they do, the software passes. If they don&rsquo;t, there&rsquo;s a bug.<br><br>This model assumes:<br>&bull; Inputs and outputs are well-defined<br>&bull; Behavior is reproducible<br>&bull; Pass/fail is binary<br>&bull; A passing test stays passing until code changes<br>&bull; You can enumerate the important test cases</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why AI Breaks These Assumptions</div><div class="cc-text"><strong>Non-deterministic:</strong> The same input can produce different outputs. Run the same prompt 10 times and you might get 10 different responses. A test that passes today might fail tomorrow with no code changes.<br><br><strong>No binary pass/fail:</strong> Is a response &ldquo;correct&rdquo;? Often there&rsquo;s no single right answer. Quality exists on a spectrum &mdash; partially correct, mostly helpful, slightly off-tone.<br><br><strong>Infinite input space:</strong> Users can type anything. You can&rsquo;t enumerate all possible inputs. The long tail of unusual queries is where most failures hide.<br><br><strong>Context-dependent:</strong> The same question in different conversation contexts can require different answers. Testing individual queries misses multi-turn interaction failures.<br><br><strong>Continuous evolution:</strong> Model updates, data changes, and prompt modifications all shift behavior. A test suite that covered the important cases last month may miss new failure modes this month.</div></div>
+          <div class="cc-note n-violet"><strong>The mindset shift:</strong> AI testing is not about proving the system works correctly. It&rsquo;s about <em>quantifying the risk</em> of deploying it. You&rsquo;re measuring quality distributions, not checking pass/fail conditions. The question changes from &ldquo;Does it work?&rdquo; to &ldquo;How often does it fail, and how badly?&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">The AI Testing Pyramid</div><div class="cc-sub">Five layers of testing, from fastest and cheapest to slowest and most expensive</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Layer 1: Unit Tests (Automated, Continuous)</div><div class="cc-text">Test individual components in isolation:<br>&bull; Does the data pipeline produce clean, correctly formatted data?<br>&bull; Does the chunking function split documents at the right boundaries?<br>&bull; Does the output parser handle all expected formats?<br>&bull; Do API integrations return expected schemas?<br><br>These are traditional software tests for the <em>non-AI</em> parts of the system. They&rsquo;re fast, cheap, and should run on every code change.</div></div>
+          <div class="cc-block"><div class="cc-label">Layer 2: Model Evaluation (Automated, Per Model Change)</div><div class="cc-text">Test the AI model&rsquo;s quality on a curated evaluation dataset:<br>&bull; Run 200&ndash;500 test cases covering normal, hard, and edge cases<br>&bull; Measure precision, recall, F1 (classification) or faithfulness, relevance (generation)<br>&bull; Compare against the previous model version<br>&bull; Flag regressions automatically<br><br>This is the <strong>primary quality gate</strong> for model and prompt changes. No change ships without passing the eval suite.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Layer 3: Integration Tests (Automated, Per Release)</div><div class="cc-text">Test the full pipeline end-to-end:<br>&bull; User query &rarr; retrieval &rarr; generation &rarr; response<br>&bull; Verify latency, cost, and format requirements<br>&bull; Test error handling and fallback behavior<br>&bull; Verify human handoff triggers work correctly<br><br>Integration tests catch issues that unit tests and model evaluation miss &mdash; like a retrieval change that breaks generation quality.</div></div>
+          <div class="cc-block"><div class="cc-label">Layer 4: Adversarial / Red Team (Periodic)</div><div class="cc-text">Deliberately try to break the system (covered in detail in the next step).</div></div>
+          <div class="cc-block"><div class="cc-label">Layer 5: User Acceptance Testing (Pre-Launch)</div><div class="cc-text">Real users interact with the product and provide feedback. The most expensive but most realistic test. Covered in step 6.</div></div>
+          <div class="cc-note n-blue"><strong>The 80/20 rule:</strong> Layers 1&ndash;3 should catch 80% of issues automatically. Layers 4&ndash;5 catch the remaining 20% that require human judgment. Invest heavily in automated testing (layers 1&ndash;3) to keep the expensive human testing (layers 4&ndash;5) focused on what automation can&rsquo;t catch.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">shield</span></div><div><div class="cc-title">Red Teaming &amp; Adversarial Testing</div><div class="cc-sub">Systematically trying to break your AI before users and attackers do</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Red Teaming Is</div><div class="cc-text">Red teaming is <strong>structured adversarial testing</strong> where a dedicated team tries to make the AI behave in unintended ways. It&rsquo;s now standard practice at OpenAI, Anthropic, Microsoft, and Google before any public release.<br><br>The goal is to find vulnerabilities <em>before</em> deployment, not after users discover them on social media.</div></div>
+          <div class="cc-block"><div class="cc-label">The Five Phases</div><div class="cc-text"><strong>1. Reconnaissance:</strong> Understand the AI&rsquo;s capabilities, constraints, and intended behavior. Map the attack surface.<br><br><strong>2. Attack surface mapping:</strong> Identify all input channels (text, files, API parameters, conversation history) and all output channels (text, actions, data access).<br><br><strong>3. Vulnerability testing:</strong> Systematically probe each attack vector with crafted inputs.<br><br><strong>4. Exploitation:</strong> For each vulnerability found, determine the worst-case impact. Can the AI be made to leak data? Take harmful actions? Produce dangerous content?<br><br><strong>5. Reporting:</strong> Document findings with severity ratings, reproduction steps, and recommended mitigations.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Attack Vectors to Test</div><div class="cc-text"><strong>Prompt injection:</strong> Can users override the system prompt? &ldquo;Ignore all previous instructions and...&rdquo;<br><br><strong>Information disclosure:</strong> Can the AI be tricked into revealing the system prompt, internal data, or other users&rsquo; information?<br><br><strong>Harmful content:</strong> Can the AI be made to produce toxic, biased, illegal, or dangerous content?<br><br><strong>Excessive agency:</strong> Can the AI be manipulated into taking actions beyond its intended scope? (Especially critical for agentic AI.)<br><br><strong>Hallucination exploitation:</strong> Can users craft queries that reliably trigger hallucinations, then use those hallucinations to mislead others?<br><br><strong>Data poisoning:</strong> If the AI learns from user feedback, can adversarial feedback degrade its quality over time?</div></div>
+          <div class="cc-note n-red"><strong>The non-determinism challenge:</strong> Unlike traditional security testing, AI vulnerabilities appear <em>inconsistently</em>. A prompt injection might work 5% of the time. Run each adversarial test 10&ndash;20 times. A vulnerability that succeeds even once in 20 attempts is a real vulnerability &mdash; at scale, 5% success means thousands of exploits per day.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">history</span></div><div><div class="cc-title">Regression Testing for AI</div><div class="cc-sub">Ensuring improvements don&rsquo;t break what was already working</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Regressions Are Common in AI</div><div class="cc-text">AI products regress more frequently than traditional software because changes propagate unpredictably:<br><br><strong>Prompt changes:</strong> Improving the prompt for one type of query can degrade performance on another. Adding a new constraint might conflict with existing instructions.<br><br><strong>Model updates:</strong> When the underlying model is updated (GPT-4 &rarr; GPT-4o, Claude 3 &rarr; Claude 3.5), behavior changes in subtle ways. Prompts optimized for one model version may underperform on the next.<br><br><strong>Data changes:</strong> Adding new documents to a RAG knowledge base can change retrieval rankings, causing previously correct answers to become wrong.<br><br><strong>Threshold changes:</strong> Adjusting a confidence threshold to reduce false positives might increase false negatives elsewhere.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Building a Regression Suite</div><div class="cc-text"><strong>Golden test set:</strong> A curated set of 200&ndash;500 input-output pairs that represent the most important behaviors. These are your &ldquo;must not break&rdquo; cases. Include:<br><br>&bull; High-traffic queries (the 20% of queries that represent 80% of usage)<br>&bull; Previously failed cases that were fixed (prevent re-introduction)<br>&bull; Edge cases that required special handling<br>&bull; Safety-critical scenarios (must never regress)<br><br><strong>Automated comparison:</strong> On every change, run the golden test set against both the old and new versions. Flag any case where the new version scores lower.<br><br><strong>Regression budget:</strong> Define how much regression is acceptable. &ldquo;No more than 2% of golden tests may regress. Zero safety-critical regressions.&rdquo; This gives the team a clear decision framework.</div></div>
+          <div class="cc-block"><div class="cc-label">CI/CD Integration</div><div class="cc-text">Embed regression tests into the deployment pipeline. Every prompt change, model update, or data change triggers the regression suite automatically. Block deployment if regressions exceed the budget. This prevents the most common source of AI quality degradation: well-intentioned changes with unintended side effects.</div></div>
+          <div class="cc-note n-amber"><strong>The growing test set:</strong> Every production failure should become a regression test. Over time, your golden test set grows into a comprehensive quality safety net. Teams that do this consistently have 75% fewer production incidents than those that don&rsquo;t.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">data_check</span></div><div><div class="cc-title">Data Quality Testing</div><div class="cc-sub">Shift-left: quality begins at the data layer, not at deployment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Data Testing Matters</div><div class="cc-text">The shift-left approach to AI QA means testing <strong>before the model ever sees the data</strong>. Most AI quality issues originate in the data, not the model:<br><br>&bull; Mislabeled training data &rarr; model learns wrong patterns<br>&bull; Biased data &rarr; biased predictions<br>&bull; Stale knowledge base &rarr; outdated answers<br>&bull; Duplicate or contradictory documents &rarr; inconsistent retrieval<br>&bull; Missing data for important categories &rarr; blind spots<br><br>Catching these issues at the data layer is 10x cheaper than catching them at the model layer and 100x cheaper than catching them in production.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Validation Checks</div><div class="cc-text"><strong>Schema validation:</strong> Does the data conform to the expected format? Are required fields present? Are data types correct?<br><br><strong>Distribution checks:</strong> Has the data distribution shifted since the last training run? Are there new categories the model hasn&rsquo;t seen? Are some categories suddenly over- or under-represented?<br><br><strong>Freshness checks:</strong> When was the data last updated? Are there documents older than the freshness threshold? Are there gaps in the update pipeline?<br><br><strong>Consistency checks:</strong> Do multiple sources agree? Are there contradictory documents? Are deprecated documents still in the active set?<br><br><strong>Bias checks:</strong> Does the data represent all relevant user groups? Are there systematic gaps or over-representations that could lead to biased outputs?</div></div>
+          <div class="cc-note n-teal"><strong>Automate data quality:</strong> Run data validation checks on every data pipeline execution. Alert when checks fail. Block model training or knowledge base updates when data quality drops below thresholds. Data quality monitoring is as important as model quality monitoring &mdash; and should run more frequently.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">groups</span></div><div><div class="cc-title">User Acceptance Testing</div><div class="cc-sub">The final gate before launch &mdash; real users, real tasks, real feedback</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why User Testing Is Non-Negotiable</div><div class="cc-text">Automated tests and internal reviews can&rsquo;t fully predict how real users will interact with an AI product:<br><br>&bull; Users phrase questions differently than testers expect<br>&bull; Users have context and expectations that internal teams don&rsquo;t anticipate<br>&bull; Users discover workflows and edge cases that weren&rsquo;t in the test plan<br>&bull; User satisfaction depends on subjective factors (tone, speed, helpfulness) that metrics only partially capture<br><br>User acceptance testing (UAT) is the bridge between &ldquo;the AI performs well on benchmarks&rdquo; and &ldquo;users actually find this useful.&rdquo;</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Running Effective UAT for AI</div><div class="cc-text"><strong>Recruit representative users:</strong> Include power users, new users, and users from different segments. 20&ndash;50 participants is typically sufficient for qualitative insights.<br><br><strong>Give real tasks, not scripts:</strong> &ldquo;Use the AI to resolve your actual support question&rdquo; is better than &ldquo;Ask the AI: What is your return policy?&rdquo; Scripted tasks miss the messy reality of real usage.<br><br><strong>Measure both satisfaction and accuracy:</strong> Users might be satisfied with a wrong answer (they don&rsquo;t know it&rsquo;s wrong) or dissatisfied with a correct answer (the tone was off). Measure both independently.<br><br><strong>Capture qualitative feedback:</strong> Ask users to think aloud. What surprised them? What frustrated them? When did they lose trust? These insights are more valuable than aggregate scores.<br><br><strong>Run for at least 1&ndash;2 weeks:</strong> Users need time to build mental models of the AI&rsquo;s capabilities. First-day impressions differ from week-two impressions.</div></div>
+          <div class="cc-note n-pink"><strong>The beta program:</strong> For AI products, consider a structured beta with 100&ndash;500 users before general launch. Provide a feedback channel, monitor usage patterns, and iterate on the most common failure modes. A 4-week beta with active feedback collection can prevent the majority of launch-day issues.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">sync</span></div><div><div class="cc-title">Continuous Testing</div><div class="cc-sub">Testing doesn&rsquo;t end at launch &mdash; it becomes a permanent part of operations</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Continuous Testing Is Essential</div><div class="cc-text">Unlike traditional software, AI products can degrade <strong>without any code changes</strong>:<br><br>&bull; <strong>Data drift:</strong> User queries evolve over time. New topics emerge. Seasonal patterns shift.<br>&bull; <strong>Model drift:</strong> If the provider updates the underlying model, behavior changes.<br>&bull; <strong>Knowledge staleness:</strong> The knowledge base becomes outdated as the real world changes.<br>&bull; <strong>Adversarial evolution:</strong> Attackers learn new techniques to exploit the AI.<br><br>A test suite that passes today may fail next month even if nothing in your system changed. Quality must be monitored continuously, not just at deployment.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Continuous Testing Cadence</div><div class="cc-text"><strong>Every change (automated):</strong><br>Unit tests, model evaluation, regression suite. Blocks deployment on failure.<br><br><strong>Daily (automated):</strong><br>Run the full evaluation suite against production. Sample 100&ndash;200 real user queries and evaluate quality. Alert on metric drops.<br><br><strong>Weekly (PM review):</strong><br>Review quality dashboards. Analyze user feedback patterns. Prioritize the top failure modes for the next sprint.<br><br><strong>Monthly (human evaluation):</strong><br>Domain experts evaluate 200&ndash;500 production outputs using the scoring rubric. Compare to previous month. Identify emerging quality issues.<br><br><strong>Quarterly (red team):</strong><br>Full adversarial testing cycle. Test new attack vectors. Verify that previous vulnerabilities remain patched. Update the threat model.</div></div>
+          <div class="cc-note n-green"><strong>The testing flywheel:</strong> Production failures &rarr; new regression tests &rarr; better automated coverage &rarr; fewer production failures. Every incident makes the test suite stronger. Teams that run this flywheel for 6+ months achieve dramatically higher quality than teams that test only at deployment.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Pre-Launch Testing Checklist</div><div class="cc-sub">The go/no-go decision framework for shipping an AI product</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quality Gates</div><div class="cc-text"><strong>&square; Model evaluation passes</strong><br>Primary metric meets the launch threshold. No safety-critical regressions. Guardrail metrics (latency, cost) within budget.<br><br><strong>&square; Regression suite passes</strong><br>No more than N% of golden tests regressed. All previously fixed bugs remain fixed.<br><br><strong>&square; Red team complete</strong><br>No critical or high-severity vulnerabilities open. Medium-severity items have documented mitigations.<br><br><strong>&square; Data quality validated</strong><br>Knowledge base is current, consistent, and complete for the product&rsquo;s scope.</div></div>
+          <div class="cc-block"><div class="cc-label">User Readiness</div><div class="cc-text"><strong>&square; UAT feedback addressed</strong><br>Top user complaints from beta have been resolved or have documented workarounds.<br><br><strong>&square; Error handling tested</strong><br>Graceful degradation, human handoff, and &ldquo;I don&rsquo;t know&rdquo; behaviors work correctly.<br><br><strong>&square; Feedback mechanisms live</strong><br>Thumbs up/down, correction, and escalation paths are functional.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Operational Readiness</div><div class="cc-text"><strong>&square; Monitoring dashboards live</strong><br>Quality, latency, cost, and safety metrics are tracked in real time.<br><br><strong>&square; Alerting configured</strong><br>Automated alerts for metric degradation with defined response procedures.<br><br><strong>&square; Rollback plan tested</strong><br>Can revert to the previous version within minutes. The rollback has been tested end-to-end.<br><br><strong>&square; On-call rotation established</strong><br>Someone is responsible for responding to quality issues 24/7 during the launch window.<br><br><strong>&square; Continuous testing pipeline active</strong><br>Daily automated evaluation, weekly PM review, and monthly human evaluation are scheduled.</div></div>
+          <div class="cc-note n-violet"><strong>The go/no-go decision:</strong> All quality gates must pass. User readiness items should be substantially complete (minor issues can be tracked post-launch). Operational readiness is non-negotiable &mdash; you must be able to detect problems and roll back quickly. If any gate fails, fix it before launching. The cost of a bad AI launch (user trust damage, brand risk) far exceeds the cost of a delayed launch.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="13-ux-patterns-for-ai-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 13: UX Patterns for AI Products</a>
+    <a class="ch-nav-btn next" href="15-launch-strategy-high-level.html">Ch 15: Launch Strategy for AI Products <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[1,3],5:[0,1],6:[4],7:[1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Why traditional QA breaks down.</strong> AI is non-deterministic (same input, different outputs), has no binary pass/fail (quality is a spectrum), faces infinite input space, is context-dependent, and continuously evolves. The mindset shift: from &ldquo;Does it work?&rdquo; to &ldquo;How often does it fail, and how badly?&rdquo;',color:'#7c3aed'},
+    2:{text:'<strong>The AI testing pyramid.</strong> Five layers. Unit tests (non-AI components, every change). Model evaluation (200&ndash;500 test cases, per model change). Integration tests (full pipeline, per release). Red team (adversarial, periodic). User acceptance (real users, pre-launch). Layers 1&ndash;3 catch 80% automatically; layers 4&ndash;5 catch the rest.',color:'#2563eb'},
+    3:{text:'<strong>Red teaming.</strong> Five phases: reconnaissance, attack surface mapping, vulnerability testing, exploitation, reporting. Test for prompt injection, information disclosure, harmful content, excessive agency, hallucination exploitation, and data poisoning. Run each test 10&ndash;20 times &mdash; a 5% success rate means thousands of exploits at scale.',color:'#dc2626'},
+    4:{text:'<strong>Regression testing.</strong> AI regresses more than traditional software: prompt changes, model updates, data changes, and threshold adjustments all cause unpredictable side effects. Build a golden test set (200&ndash;500 cases). Define a regression budget. Embed in CI/CD. Every production failure becomes a new regression test.',color:'#d97706'},
+    5:{text:'<strong>Data quality testing.</strong> Shift-left: test data before the model sees it. Schema validation, distribution checks, freshness checks, consistency checks, bias checks. Catching data issues is 10x cheaper at the data layer than the model layer, and 100x cheaper than in production.',color:'#0d9488'},
+    6:{text:'<strong>User acceptance testing.</strong> 20&ndash;50 representative users, real tasks (not scripts), measure both satisfaction and accuracy, capture qualitative feedback, run for 1&ndash;2 weeks. Consider a structured 4-week beta with 100&ndash;500 users before general launch. UAT bridges benchmarks and real-world usefulness.',color:'#db2777'},
+    7:{text:'<strong>Continuous testing.</strong> AI degrades without code changes (data drift, model drift, knowledge staleness, adversarial evolution). Cadence: every change (automated gates), daily (production sampling), weekly (PM review), monthly (human evaluation), quarterly (red team). The testing flywheel: failures &rarr; new tests &rarr; better coverage &rarr; fewer failures.',color:'#16a34a'},
+    8:{text:'<strong>Pre-launch checklist.</strong> Quality gates: eval passes, regression passes, red team complete, data validated. User readiness: UAT addressed, error handling tested, feedback live. Operational readiness: monitoring, alerting, rollback tested, on-call established, continuous testing active. All gates must pass. The cost of a bad AI launch exceeds the cost of a delay.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

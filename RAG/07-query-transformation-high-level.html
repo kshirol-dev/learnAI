@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Query Transformation — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--violet-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--violet),var(--blue),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b45309;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Query Transformation</h2><span class="tb-sub">Rewriting the user’s question before retrieval</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="07-query-transformation-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">Raw Query</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">Rewrite</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">call_split</span></div><span class="pipe-label">Decompose</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">auto_awesome</span></div><span class="pipe-label">HyDE</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">step_over</span></div><span class="pipe-label">Step-Back</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">repeat</span></div><span class="pipe-label">Multi-Query</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Retrieve</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why Transform Queries -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">chat</span></div><div><div class="cc-title">Why Transform Queries?</div><div class="cc-sub">User questions are rarely optimal for retrieval</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Users ask questions in natural, conversational language. But the best retrieval query is often different from what the user typed. Common issues:<br><br><strong>Vague queries:</strong> “Tell me about that thing we discussed” — no useful search terms.<br><br><strong>Complex questions:</strong> “How does X compare to Y in terms of A, B, and C?” — too many concepts for a single embedding.<br><br><strong>Vocabulary mismatch:</strong> The user says “get my money back” but the docs say “refund policy.”<br><br><strong>Conversational context:</strong> “What about the pricing?” — depends on what was discussed before.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Query Transformation Strategies</div><div class="cc-text">This chapter covers the main techniques to improve queries before retrieval:<br><br><strong>1. Query Rewriting</strong> — LLM rewrites the query for better retrieval<br><strong>2. Sub-Question Decomposition</strong> — Break complex questions into simpler parts<br><strong>3. HyDE</strong> — Generate a hypothetical answer, embed that instead<br><strong>4. Step-Back Prompting</strong> — Ask a broader question first<br><strong>5. Multi-Query</strong> — Generate multiple query variations<br><br>All of these use the LLM as a <strong>pre-processing step</strong> before retrieval.</div></div>
+          <div class="cc-note n-amber"><strong>Query transformation sits between the user and retrieval.</strong> The user’s raw question goes in, a better search query (or queries) comes out. This is one of the highest-leverage improvements in advanced RAG — often more impactful than changing the embedding model or vector store.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Query Rewriting -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">edit_note</span></div><div><div class="cc-title">Query Rewriting</div><div class="cc-sub">LLM rewrites the user’s question for better retrieval</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">Send the user’s query to an LLM with a prompt like: <em>“Rewrite this question to be more specific and better suited for searching a knowledge base.”</em> The LLM returns a cleaner, more precise version that retrieves better results.</div></div>
+          <div class="cc-block"><div class="cc-label">What Rewriting Fixes</div><div class="cc-text"><strong>Conversational context:</strong> “What about the pricing?” → “What is the pricing for the Enterprise plan discussed earlier?” (using chat history)<br><br><strong>Ambiguity:</strong> “How do I set it up?” → “How do I set up the Stripe payment integration?”<br><br><strong>Typos &amp; grammar:</strong> “how too cancle subscrption” → “How to cancel a subscription?”</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangChain — query rewriting</span>
+<span class="hl-key">from</span> langchain.prompts <span class="hl-key">import</span> ChatPromptTemplate
+
+rewrite_prompt = ChatPromptTemplate.from_template(
+    <span class="hl-str">"""Given the conversation history and the
+user's question, rewrite the question to be
+a standalone, specific search query.
+
+Chat history: {chat_history}
+User question: {question}
+
+Rewritten query:"""</span>
+)
+
+chain = rewrite_prompt | llm | StrOutputParser()
+better_query = chain.invoke({
+    <span class="hl-str">"chat_history"</span>: history,
+    <span class="hl-str">"question"</span>: <span class="hl-str">"What about the pricing?"</span>
+})</div>
+          <div class="cc-note n-blue"><strong>Query rewriting is the simplest and most universally useful transformation.</strong> It is especially critical for conversational RAG where follow-up questions depend on context. LangChain’s <code>create_history_aware_retriever</code> does this automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Sub-Question Decomposition -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">call_split</span></div><div><div class="cc-title">Sub-Question Decomposition</div><div class="cc-sub">Break complex questions into simpler, retrievable parts</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use</div><div class="cc-text">Complex questions that span multiple topics or require information from different documents. A single retrieval cannot find all the pieces.<br><br><strong>Example:</strong> “How does our refund policy compare to our competitor’s, and what are the legal implications?”<br><br>This needs information from: (1) our refund policy, (2) competitor’s refund policy, (3) legal requirements. No single chunk contains all three.</div></div>
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">The LLM breaks the question into sub-questions. Each sub-question is retrieved independently. The results are combined and the LLM synthesizes a final answer from all retrieved chunks.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Sub-question decomposition</span>
+decompose_prompt = ChatPromptTemplate.from_template(
+    <span class="hl-str">"""Break this complex question into 2-4
+simpler sub-questions that can each be
+answered independently:
+
+Question: {question}
+
+Sub-questions:"""</span>
+)
+
+<span class="hl-cmt"># Input: "How does our refund policy compare</span>
+<span class="hl-cmt">#         to competitors, and what are the</span>
+<span class="hl-cmt">#         legal implications?"</span>
+
+<span class="hl-cmt"># Output:</span>
+<span class="hl-cmt"># 1. What is our current refund policy?</span>
+<span class="hl-cmt"># 2. What are our competitors' refund policies?</span>
+<span class="hl-cmt"># 3. What are the legal requirements for</span>
+<span class="hl-cmt">#    refund policies in our jurisdiction?</span>
+
+<span class="hl-cmt"># Each sub-question → separate retrieval</span>
+<span class="hl-cmt"># All results → combined context → final answer</span></div>
+          <div class="cc-note n-violet"><strong>LlamaIndex’s <code>SubQuestionQueryEngine</code></strong> implements this pattern natively. It decomposes the question, routes each sub-question to the appropriate index (if you have multiple), retrieves independently, and synthesizes a final answer. LangChain offers similar functionality via custom chains.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: HyDE -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">auto_awesome</span></div><div><div class="cc-title">HyDE (Hypothetical Document Embeddings)</div><div class="cc-sub">Generate a fake answer, embed that instead of the question</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Insight</div><div class="cc-text">A question and its answer use very different language. “What is the refund policy?” (question) vs. “Customers may request a full refund within 30 days of purchase…” (answer). The answer is much closer in embedding space to the actual document chunks. <strong>HyDE</strong> (Gao et al., 2022) exploits this by generating a hypothetical answer and embedding that instead.</div></div>
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>Step 1:</strong> Ask the LLM to generate a hypothetical answer to the question (without any retrieved context).<br><strong>Step 2:</strong> Embed the hypothetical answer (not the original question).<br><strong>Step 3:</strong> Use that embedding to search the vector store.<br><br>The hypothetical answer doesn’t need to be correct — it just needs to be in the same “language” as the real documents.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># HyDE implementation</span>
+hyde_prompt = ChatPromptTemplate.from_template(
+    <span class="hl-str">"""Write a short paragraph that would answer
+this question. It does not need to be
+accurate — just write in the style of a
+knowledge base article.
+
+Question: {question}
+
+Hypothetical answer:"""</span>
+)
+
+<span class="hl-cmt"># 1. Generate hypothetical answer</span>
+hypo_answer = (hyde_prompt | llm).invoke(
+    {<span class="hl-str">"question"</span>: <span class="hl-str">"What is the refund policy?"</span>}
+)
+<span class="hl-cmt"># → "Our refund policy allows customers to</span>
+<span class="hl-cmt">#    request a full refund within 30 days..."</span>
+
+<span class="hl-cmt"># 2. Embed the hypothetical answer</span>
+hypo_embedding = embeddings.embed_query(hypo_answer)
+
+<span class="hl-cmt"># 3. Search with that embedding</span>
+docs = vectorstore.similarity_search_by_vector(
+    hypo_embedding, k=<span class="hl-num">5</span>
+)</div>
+          <div class="cc-note n-pink"><strong>HyDE works best when there is a large vocabulary gap between questions and documents.</strong> It is especially effective for technical documentation, legal text, and academic papers where the document language is very different from how users ask questions. Trade-off: adds one LLM call (~200–500ms) before retrieval.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Step-Back Prompting -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">step_over</span></div><div><div class="cc-title">Step-Back Prompting</div><div class="cc-sub">Ask a broader question to get better context</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Idea</div><div class="cc-text"><strong>Step-back prompting</strong> (Zheng et al., 2023) asks the LLM to generate a more general, higher-level question from the user’s specific query. The broader question retrieves foundational context that helps answer the specific question.</div></div>
+          <div class="cc-block"><div class="cc-label">Example</div><div class="cc-text"><strong>User query:</strong> “Why did the revenue drop in Q3 2024 for the EMEA region?”<br><br><strong>Step-back question:</strong> “What were the key factors affecting EMEA revenue performance in 2024?”<br><br>The step-back question retrieves broader context about EMEA performance, market conditions, and strategic changes — which helps explain the specific Q3 drop.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Step-back prompting</span>
+stepback_prompt = ChatPromptTemplate.from_template(
+    <span class="hl-str">"""Given this specific question, generate a
+more general step-back question that would
+help retrieve useful background context.
+
+Specific question: {question}
+
+Step-back question:"""</span>
+)
+
+<span class="hl-cmt"># Retrieve for BOTH the original and step-back</span>
+original_docs = retriever.invoke(question)
+stepback_q = (stepback_prompt | llm).invoke(
+    {<span class="hl-str">"question"</span>: question}
+)
+stepback_docs = retriever.invoke(stepback_q)
+
+<span class="hl-cmt"># Combine both sets of results</span>
+all_docs = original_docs + stepback_docs
+
+<span class="hl-cmt"># Generate answer with broader context</span>
+answer = generate(question, all_docs)</div>
+          <div class="cc-note n-teal"><strong>Step-back is complementary, not a replacement.</strong> You retrieve for both the original query and the step-back query, then combine the results. This gives the LLM both the specific details and the broader context needed for a complete answer.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Multi-Query -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">repeat</span></div><div><div class="cc-title">Multi-Query Retrieval</div><div class="cc-sub">Generate multiple query variations for broader recall</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">Ask the LLM to generate 3–5 different versions of the user’s question, each phrased differently. Run retrieval for each variation. Deduplicate and combine the results. This captures documents that any single phrasing might miss.</div></div>
+          <div class="cc-block"><div class="cc-label">Why It Helps</div><div class="cc-text"><strong>Different phrasings match different chunks.</strong> “How to cancel?” might retrieve the cancellation guide, while “End my subscription” retrieves the account management docs, and “Stop billing” retrieves the payment FAQ. Together, you get a more complete picture.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangChain — MultiQueryRetriever</span>
+<span class="hl-key">from</span> langchain.retrievers.multi_query <span class="hl-key">import</span> (
+    MultiQueryRetriever
+)
+
+multi_retriever = MultiQueryRetriever.from_llm(
+    retriever=vectorstore.as_retriever(),
+    llm=llm
+)
+
+<span class="hl-cmt"># User: "How to cancel my subscription?"</span>
+<span class="hl-cmt"># LLM generates:</span>
+<span class="hl-cmt"># 1. "How do I cancel my subscription?"</span>
+<span class="hl-cmt"># 2. "Steps to end my membership"</span>
+<span class="hl-cmt"># 3. "How to stop recurring billing"</span>
+
+<span class="hl-cmt"># Each query → retrieval → deduplicate</span>
+docs = multi_retriever.invoke(
+    <span class="hl-str">"How to cancel my subscription?"</span>
+)</div>
+          <div class="cc-note n-orange"><strong>LangChain’s <code>MultiQueryRetriever</code></strong> handles this end-to-end: generates variations, retrieves for each, deduplicates by document ID, and returns the union. It typically generates 3 variations by default. Combine with reranking to sort the merged results by relevance.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Choosing the Right Strategy -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Choosing the Right Strategy</div><div class="cc-sub">A practical decision framework</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Guide</div><div class="cc-text"><strong>Conversational RAG (follow-up questions):</strong><br>Use <strong>Query Rewriting</strong>. Essential for chat-based interfaces where questions depend on context.<br><br><strong>Complex multi-part questions:</strong><br>Use <strong>Sub-Question Decomposition</strong>. When the answer requires information from multiple different documents.<br><br><strong>Technical/specialized documents:</strong><br>Use <strong>HyDE</strong>. When document language is very different from how users ask questions.<br><br><strong>Specific questions needing background:</strong><br>Use <strong>Step-Back Prompting</strong>. When the answer needs broader context to be complete.<br><br><strong>General recall improvement:</strong><br>Use <strong>Multi-Query</strong>. When you suspect single-query retrieval is missing relevant chunks.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Combining Strategies</div><div class="cc-text">These strategies are composable:<br><br><strong>Rewrite + Multi-Query:</strong> First rewrite for context, then generate variations.<br><br><strong>Decompose + HyDE:</strong> Break into sub-questions, generate hypothetical answers for each.<br><br><strong>Any strategy + Reranking:</strong> Transform queries, retrieve broadly, then rerank for precision.</div></div>
+          <div class="cc-block"><div class="cc-label">Cost vs Benefit</div><div class="cc-text">Every transformation adds one LLM call (~200–500ms, ~$0.001–0.01). Multi-query adds multiple retrieval calls. Decomposition adds multiple LLM + retrieval calls. <strong>Start with query rewriting</strong> (simplest, most universal), then add others only when you identify specific failure modes.</div></div>
+          <div class="cc-note n-green"><strong>Measure the impact.</strong> Run your evaluation set with and without each transformation. If multi-query improves recall@5 by 10%, the extra latency and cost are justified. If it only improves by 1%, skip it. Always let data drive the decision.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'Users ask questions in conversational language that is rarely optimal for retrieval. Vague queries, complex multi-part questions, vocabulary mismatches, and conversational context all degrade retrieval quality. <strong>Query transformation</strong> uses the LLM to rewrite, decompose, or augment the query before it hits the vector store — one of the highest-leverage improvements in advanced RAG.',color:'#d97706'},
+    2:{text:'<strong>Query rewriting</strong> sends the user’s question to an LLM with chat history to produce a standalone, specific search query. "What about the pricing?" becomes "What is the pricing for the Enterprise plan?" This is essential for conversational RAG. LangChain’s <code>create_history_aware_retriever</code> does this automatically.',color:'#2563eb'},
+    3:{text:'<strong>Sub-question decomposition</strong> breaks complex questions into 2–4 simpler parts, each retrieved independently. "How does our refund policy compare to competitors?" becomes three separate queries: our policy, competitor policies, and legal requirements. LlamaIndex’s <code>SubQuestionQueryEngine</code> implements this natively.',color:'#7c3aed'},
+    4:{text:'<strong>HyDE</strong> (Gao et al., 2022): Generate a hypothetical answer, embed that instead of the question. The insight: answers are closer in embedding space to document chunks than questions are. The hypothetical answer doesn’t need to be correct — it just needs to use the same language as the real documents. Especially effective for technical and legal text.',color:'#db2777'},
+    5:{text:'<strong>Step-back prompting</strong> (Zheng et al., 2023): Generate a broader, more general question from the specific query. "Why did revenue drop in Q3 EMEA?" → "What factors affected EMEA revenue in 2024?" Retrieve for both the original and step-back queries, giving the LLM both specific details and broader context.',color:'#0d9488'},
+    6:{text:'<strong>Multi-query retrieval:</strong> Generate 3–5 different phrasings of the question. "How to cancel?" + "End my subscription" + "Stop recurring billing." Retrieve for each, deduplicate, combine. LangChain’s <code>MultiQueryRetriever</code> handles this end-to-end. Captures documents that any single phrasing might miss.',color:'#ea580c'},
+    7:{text:'<strong>Start with query rewriting</strong> (simplest, most universal). Add decomposition for complex multi-part questions. Add HyDE for technical docs with vocabulary gaps. Add multi-query for general recall improvement. Every transformation adds ~200–500ms. <strong>Always measure impact</strong> on your evaluation set before adding complexity.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--amber)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

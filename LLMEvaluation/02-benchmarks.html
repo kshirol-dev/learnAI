@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Benchmarks — The Scoreboard — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Benchmarks: The Scoreboard</h2><span class="tb-sub">MMLU, HumanEval, SWE-bench, GPQA &mdash; what they measure and why they saturate</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">MMLU</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">HumanEval</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">SWE-bench</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">GPQA</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">forum</span></div><span class="pipe-label">Arena</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">tips_and_updates</span></div><span class="pipe-label">Takeaway</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">MMLU &mdash; The Knowledge Test</div><div class="cc-sub">Massive Multitask Language Understanding</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Measures</div>
+            <div class="cc-text">MMLU tests <strong>broad academic knowledge</strong> across 57 subjects &mdash; from abstract algebra to world religions. Each question is multiple-choice (A/B/C/D) with a single correct answer. It was designed to measure how much a model &ldquo;knows&rdquo; across the full breadth of human knowledge.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Numbers</div>
+            <div class="cc-text"><strong>14,042 questions</strong> across 57 tasks. Random baseline: 25% (4 choices). Human expert baseline: ~89.8%. Current frontier models cluster <strong>above 88%</strong>, making MMLU essentially saturated for differentiating top models.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why It Matters (and Doesn&rsquo;t)</div>
+            <div class="cc-text">MMLU was the <strong>first widely-adopted general benchmark</strong> and remains a standard reporting metric. But its saturation means it can no longer differentiate frontier models. A model scoring 87% vs 89% on MMLU tells you almost nothing about which is better for your use case.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Saturation status:</strong> MMLU is effectively solved. Frontier models exceed human expert performance. The field has moved to MMLU-Pro (harder, 10-choice questions) and GPQA (graduate-level science) as replacements.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">code</span></div>
+        <div><div class="cc-title">HumanEval &amp; Coding Benchmarks</div><div class="cc-sub">Can the model write working code?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">HumanEval</div>
+            <div class="cc-text"><strong>164 Python programming problems</strong> with function signatures and docstrings. The model generates the function body, which is tested against unit tests. Metric: <strong>pass@k</strong> (probability of at least one correct solution in k attempts). Most frontier models now score <strong>above 85%</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Beyond HumanEval</div>
+            <div class="cc-text">&bull; <strong>HumanEval+:</strong> Same problems, 80x more test cases to catch edge cases<br>&bull; <strong>MBPP:</strong> 974 crowd-sourced Python problems (easier)<br>&bull; <strong>LiveCodeBench:</strong> Fresh problems from competitive programming sites, updated monthly to resist contamination</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Contamination Problem</div>
+            <div class="cc-text">HumanEval problems are now in most training datasets. LiveCodeBench showed models <strong>dropping 20&ndash;30%</strong> on problems released after their training cutoff &mdash; proving that high HumanEval scores partly reflect memorization, not genuine coding ability.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> A model scoring 92% on HumanEval might score 60% on novel problems it hasn&rsquo;t seen. Always test with fresh, domain-specific coding tasks rather than relying on public benchmark scores.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">build</span></div>
+        <div><div class="cc-title">SWE-bench &mdash; Real Software Engineering</div><div class="cc-sub">Can the model fix actual GitHub issues?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Tests</div>
+            <div class="cc-text">SWE-bench presents <strong>real GitHub issues</strong> from popular Python repositories (Django, Flask, scikit-learn, etc.) and asks models to generate patches that pass the repository&rsquo;s test suite. This tests <strong>end-to-end software engineering</strong>: reading code, understanding context, writing fixes, and passing tests.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Variants</div>
+            <div class="cc-text">&bull; <strong>SWE-bench Lite:</strong> 300 curated, well-specified issues (easier subset)<br>&bull; <strong>SWE-bench Verified:</strong> Human-validated subset with clear specifications<br>&bull; <strong>SWE-bench Pro:</strong> Private, harder subset &mdash; GPT-5 and Claude Opus 4.1 both score only <strong>~23%</strong></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Current Scores (2025&ndash;2026)</div>
+            <div class="cc-code"><span class="hl-cmt">// SWE-bench Verified (top scores)</span>
+<span class="hl-key">Gemini 3 Pro</span>     <span class="hl-num">76.2%</span>
+<span class="hl-key">Claude Sonnet 4</span>   <span class="hl-num">72.7%</span>
+<span class="hl-key">GPT-5</span>             <span class="hl-num">~69%</span>
+
+<span class="hl-cmt">// SWE-bench Pro (private, harder)</span>
+<span class="hl-key">GPT-5</span>             <span class="hl-num">23.1%</span>
+<span class="hl-key">Claude Opus 4.1</span>   <span class="hl-num">23.1%</span></div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The gap between SWE-bench Verified (~72%) and SWE-bench Pro (~23%) shows how much benchmark difficulty matters. Easy benchmarks create an illusion of capability that harder tests shatter.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">science</span></div>
+        <div><div class="cc-title">GPQA &amp; Reasoning Benchmarks</div><div class="cc-sub">Graduate-level science and mathematical reasoning</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">GPQA (Google-Proof Q&A)</div>
+            <div class="cc-text"><strong>448 expert-crafted questions</strong> in biology, physics, and chemistry. Questions are designed to be &ldquo;Google-proof&rdquo; &mdash; you can&rsquo;t find the answer by searching. Even domain experts with internet access only score <strong>~65%</strong>. Current leader: Gemini 3 Pro at <strong>92.6%</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">GSM8K &amp; Math</div>
+            <div class="cc-text"><strong>GSM8K:</strong> 8,500 grade-school math word problems. Status: <strong>saturated</strong> (frontier models score 95%+). Replaced by <strong>MATH</strong> (competition-level problems) and <strong>AIME</strong> (American Invitational Mathematics Exam) for harder reasoning tests.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Reasoning Benchmarks Matter</div>
+            <div class="cc-text">Reasoning benchmarks test whether models can <strong>chain logical steps</strong>, not just recall facts. A model that scores well on GPQA demonstrates genuine multi-step reasoning ability &mdash; the kind needed for complex real-world tasks like research, analysis, and problem-solving.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>The saturation pattern:</strong> GSM8K (2021) &rarr; saturated in 2 years. MMLU (2020) &rarr; saturated in 3 years. GPQA (2023) &rarr; approaching saturation. Each generation of benchmarks has a shorter useful lifespan.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">forum</span></div>
+        <div><div class="cc-title">Chatbot Arena &amp; Human Preference</div><div class="cc-sub">When humans are the benchmark</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How It Works</div>
+            <div class="cc-text">LMSYS Chatbot Arena presents users with <strong>two anonymous model responses</strong> side by side. Users pick which they prefer. Preferences are aggregated into <strong>ELO ratings</strong> (like chess rankings). As of January 2026: nearly <strong>5 million votes</strong> across <strong>296 models</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why It Works</div>
+            <div class="cc-text">Arena avoids the contamination problem because <strong>every query is unique</strong>. It measures what users actually care about &mdash; helpfulness, clarity, accuracy &mdash; rather than performance on artificial tasks. It&rsquo;s become the most trusted ranking for comparing frontier models.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Limitations</div>
+            <div class="cc-text">&bull; <strong>Style bias:</strong> Users prefer longer, more verbose answers even when shorter ones are more accurate<br>&bull; <strong>Demographic skew:</strong> Voters are mostly tech-savvy English speakers<br>&bull; <strong>Task distribution:</strong> Heavily weighted toward general chat, not domain-specific tasks<br>&bull; <strong>No granularity:</strong> &ldquo;Which is better?&rdquo; doesn&rsquo;t tell you <em>why</em> or <em>at what</em></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Chatbot Arena is the best general ranking we have, but it measures &ldquo;average user preference on average tasks.&rdquo; Your specific use case may have very different requirements.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">trending_down</span></div>
+        <div><div class="cc-title">The Saturation Problem</div><div class="cc-sub">When benchmarks stop being useful</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Saturation Timeline</div>
+            <div class="cc-code"><span class="hl-cmt">// Benchmark lifecycle</span>
+<span class="hl-key">GSM8K</span>     (2021) &rarr; Saturated 2023  <span class="hl-num">~2 years</span>
+<span class="hl-key">MMLU</span>      (2020) &rarr; Saturated 2024  <span class="hl-num">~3 years</span>
+<span class="hl-key">HumanEval</span> (2021) &rarr; Saturated 2024  <span class="hl-num">~3 years</span>
+<span class="hl-key">GPQA</span>      (2023) &rarr; Approaching...  <span class="hl-num">~2 years</span>
+<span class="hl-key">SWE-bench</span> (2023) &rarr; Still useful    <span class="hl-num">ongoing</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Benchmarks Saturate</div>
+            <div class="cc-text">Three forces drive saturation:<br><br>1. <strong>Data contamination:</strong> Benchmark questions leak into training data<br>2. <strong>Optimization pressure:</strong> Labs specifically optimize for benchmark scores<br>3. <strong>Capability ceiling:</strong> Models genuinely improve and exceed the benchmark&rsquo;s difficulty level</div>
+          </div>
+          <div class="cc-note n-red"><strong>The treadmill:</strong> The field is stuck in a cycle: create benchmark &rarr; models saturate it &rarr; contamination renders it useless &rarr; create harder benchmark. Each new benchmark has a 6&ndash;12 month useful lifespan before the cycle repeats.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">tips_and_updates</span></div>
+        <div><div class="cc-title">How to Read Benchmark Scores</div><div class="cc-sub">A practical guide to not being fooled</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Red Flags</div>
+            <div class="cc-text">&bull; <strong>Cherry-picked benchmarks:</strong> Only showing scores where the model excels<br>&bull; <strong>No error bars:</strong> Single-run scores without confidence intervals<br>&bull; <strong>Old benchmarks only:</strong> Reporting MMLU/GSM8K but not harder alternatives<br>&bull; <strong>No comparison to baselines:</strong> Scores without context are meaningless<br>&bull; <strong>Benchmark-specific fine-tuning:</strong> Models optimized for the test, not the task</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Do Instead</div>
+            <div class="cc-text">1. <strong>Build your own eval set</strong> from real production data (50&ndash;200 examples)<br>2. <strong>Test on multiple benchmarks</strong> across different capabilities<br>3. <strong>Use contamination-resistant benchmarks</strong> (LiveCodeBench, SWE-bench Pro)<br>4. <strong>Check Chatbot Arena</strong> for general quality ranking<br>5. <strong>Run your own A/B tests</strong> with real users</div>
+          </div>
+          <div class="cc-note n-green"><strong>Rule of thumb:</strong> Public benchmarks tell you a model&rsquo;s floor, not its ceiling. A model that scores well on benchmarks might still fail on your specific task. A model that scores poorly might excel in your domain. Always test on your own data.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">map</span></div>
+        <div><div class="cc-title">The Benchmark Landscape Map</div><div class="cc-sub">Choosing the right benchmark for your evaluation</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">By Capability</div>
+            <div class="cc-code"><span class="hl-cmt">// Match benchmark to what you need</span>
+<span class="hl-key">General knowledge</span>  &rarr; MMLU-Pro, ARC
+<span class="hl-key">Reasoning</span>          &rarr; GPQA, MATH, ARC-C
+<span class="hl-key">Coding</span>             &rarr; SWE-bench, LiveCodeBench
+<span class="hl-key">Instruction follow</span> &rarr; IFEval, MT-Bench
+<span class="hl-key">Safety</span>             &rarr; TruthfulQA, BBQ
+<span class="hl-key">Multimodal</span>         &rarr; MMMU, MathVista
+<span class="hl-key">Overall quality</span>    &rarr; Chatbot Arena ELO</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Bottom Line</div>
+            <div class="cc-text">Benchmarks are <strong>necessary but not sufficient</strong>. They give you a starting point for model selection and a common language for comparison. But the only benchmark that truly matters is <strong>performance on your specific task with your specific data</strong>. Everything else is a proxy.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Next up:</strong> In Chapter 3, we&rsquo;ll explore LLM-as-Judge &mdash; using AI to evaluate AI at scale, achieving 80&ndash;90% human agreement at a fraction of the cost. This is the technique that makes systematic evaluation practical.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-why-evaluation-matters.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: Why Evaluation Matters</a>
+    <a class="ch-nav-btn next" href="03-llm-as-judge.html">Ch 3: LLM-as-Judge <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[2],4:[3],5:[4],6:[0,1,2,3],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> MMLU tests broad knowledge across 57 subjects with 14,042 questions. Frontier models now score above 88%, making it effectively saturated.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> HumanEval tests Python coding with 164 problems. Most frontier models score above 85%, but drop 20\u201330% on fresh problems from LiveCodeBench.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> SWE-bench tests real software engineering with GitHub issues. Top scores: Gemini 3 Pro (76.2%), but only ~23% on the harder private Pro subset.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> GPQA tests graduate-level science \u2014 even domain experts with internet score ~65%. Current leader: Gemini 3 Pro at 92.6%.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Chatbot Arena uses 5M+ human votes across 296 models with ELO ratings. It avoids contamination because every query is unique.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Benchmarks saturate in 2\u20133 years due to data contamination, optimization pressure, and genuine capability improvements.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Watch for cherry-picked scores, missing error bars, and old benchmarks. Build your own eval set from production data instead.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Benchmarks are necessary but not sufficient. The only benchmark that truly matters is performance on your specific task with your specific data.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

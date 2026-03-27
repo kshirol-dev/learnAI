@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: RAG &amp; Knowledge Integration — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; RAG &amp; Knowledge Integration</h2><span class="tb-sub">How to ground LLM products in your organization&rsquo;s data &mdash; the architecture that makes AI actually useful.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">lightbulb</span></div><span class="pipe-label">Why RAG</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Chunk</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Retrieve</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Generate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Failures</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Evaluate</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">Why RAG Exists</div><div class="cc-sub">The fundamental problem RAG solves &mdash; and why fine-tuning alone isn&rsquo;t enough</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Knowledge Problem</div><div class="cc-text">LLMs are trained on public internet data with a <strong>knowledge cutoff date</strong>. They don&rsquo;t know about your company&rsquo;s products, your internal policies, your customer data, or anything that happened after training ended.<br><br>Ask GPT-4 about your company&rsquo;s Q3 earnings, your return policy, or your latest product release &mdash; it will either hallucinate an answer or admit it doesn&rsquo;t know.<br><br>For most enterprise AI products, the value comes from answering questions about <strong>your specific data</strong>. A customer support bot needs your knowledge base. A legal assistant needs your contracts. An internal tool needs your documentation.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RAG vs. Fine-Tuning</div><div class="cc-text"><strong>Fine-tuning</strong> bakes knowledge into the model&rsquo;s weights. It&rsquo;s expensive, slow to update, and the model can still hallucinate. You can&rsquo;t easily verify where an answer came from.<br><br><strong>RAG (Retrieval-Augmented Generation)</strong> keeps knowledge external. At query time, the system retrieves relevant documents and includes them in the prompt. The LLM generates an answer grounded in those documents.<br><br><strong>RAG advantages:</strong><br>&bull; <strong>Always current:</strong> Update the knowledge base, and answers change immediately<br>&bull; <strong>Citable:</strong> Every answer can point to its source documents<br>&bull; <strong>Cheaper:</strong> No retraining required when data changes<br>&bull; <strong>Controllable:</strong> You decide exactly what knowledge is available<br><br>RAG is the default architecture for enterprise LLM products in 2025&ndash;2026. Fine-tuning is used for behavior and style; RAG is used for knowledge.</div></div>
+          <div class="cc-note n-violet"><strong>The mental model:</strong> Think of the LLM as a brilliant new employee with excellent reasoning skills but zero knowledge of your company. RAG is the process of handing them the right documents before they answer a question. The quality of the answer depends on the quality of the documents you hand them.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">schema</span></div><div><div class="cc-title">The RAG Pipeline</div><div class="cc-sub">Two phases, twelve components &mdash; the architecture behind every enterprise AI product</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Phase 1: Offline Indexing</div><div class="cc-text">This happens <strong>before any user query</strong>. You prepare your knowledge base for fast retrieval:<br><br><strong>1. Load documents.</strong><br>Ingest raw data from all sources: PDFs, web pages, databases, Confluence, Notion, Slack, email archives, support tickets. Both batch backfills (historical data) and incremental updates (new data as it arrives).<br><br><strong>2. Chunk documents.</strong><br>Split large documents into smaller pieces (chunks). A 50-page PDF becomes hundreds of 512-token chunks. Each chunk should be a self-contained unit of information.<br><br><strong>3. Embed chunks.</strong><br>Convert each text chunk into a numerical vector (embedding) that captures its meaning. Similar texts produce similar vectors.<br><br><strong>4. Store in vector database.</strong><br>Save the embeddings in a specialized database (Pinecone, Weaviate, pgvector, Qdrant) that supports fast similarity search across millions of vectors.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Phase 2: Online Retrieval</div><div class="cc-text">This happens <strong>for every user query</strong> in real time:<br><br><strong>5. Embed the query.</strong><br>Convert the user&rsquo;s question into a vector using the same embedding model.<br><br><strong>6. Search the vector database.</strong><br>Find the top-K chunks whose vectors are most similar to the query vector. Typically K = 5&ndash;20.<br><br><strong>7. Re-rank results.</strong><br>Use a cross-encoder model to re-score the retrieved chunks for relevance. This boosts precision by 18&ndash;42% over vector search alone.<br><br><strong>8. Build the prompt.</strong><br>Combine the system prompt + retrieved chunks + user query into a single prompt for the LLM.<br><br><strong>9. Generate the answer.</strong><br>The LLM reads the retrieved context and generates an answer grounded in those documents.<br><br><strong>10. Cite sources.</strong><br>Include references to the source documents so users can verify the answer.</div></div>
+          <div class="cc-note n-blue"><strong>PM takeaway:</strong> The pipeline has many failure points. Retrieval quality determines answer quality. If the system retrieves the wrong documents, the LLM will confidently generate a wrong answer based on irrelevant context. The PM must understand each stage to diagnose quality issues.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">content_cut</span></div><div><div class="cc-title">Chunking &amp; Embedding Decisions</div><div class="cc-sub">The unglamorous decisions that determine 80% of RAG quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Chunking Strategy</div><div class="cc-text">How you split documents into chunks has an outsized impact on retrieval quality:<br><br><strong>Fixed-size chunking (recommended start):</strong><br>Split at 512 tokens with 10&ndash;15% overlap between chunks. Simple, predictable, and surprisingly effective. Production data from 2026 shows this outperforms more complex approaches in most cases.<br><br><strong>Semantic chunking:</strong><br>Split at natural boundaries (paragraphs, sections, topic shifts). Sounds better in theory but creates 3&ndash;5x more fragments, increasing embedding costs and retrieval noise. Use only when fixed-size demonstrably fails.<br><br><strong>Document-aware chunking:</strong><br>Respect document structure (headers, tables, code blocks). Important for structured content like technical documentation or legal contracts where splitting mid-table destroys meaning.<br><br><strong>The overlap matters:</strong> Without overlap, information that spans a chunk boundary is lost. A 10&ndash;15% overlap ensures continuity.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Embedding Models</div><div class="cc-text"><strong>What embeddings do:</strong><br>Convert text into vectors (lists of numbers) that capture semantic meaning. &ldquo;How do I return a product?&rdquo; and &ldquo;What is your refund policy?&rdquo; produce similar vectors even though they share few words.<br><br><strong>Model selection:</strong><br>&bull; <code>text-embedding-3-small</code>: Best cost/quality balance for most use cases ($0.02 per million tokens)<br>&bull; <code>text-embedding-3-large</code>: Higher quality, 9x more expensive<br>&bull; Open-source alternatives (e.g., BGE, E5): Free to run but require hosting infrastructure<br><br><strong>Cost at scale:</strong><br>Embedding 1 million documents at 512 tokens each costs $10&ndash;$90 depending on the model. Re-embedding when you change models costs the same again. Choose carefully upfront.</div></div>
+          <div class="cc-block"><div class="cc-label">Metadata Preservation</div><div class="cc-text">Store metadata alongside each chunk: <strong>source URL, document title, author, last updated date, section heading, document type</strong>. This enables filtering (&ldquo;only search HR policies&rdquo;), temporal weighting (&ldquo;prefer recent documents&rdquo;), and source citation in answers.</div></div>
+          <div class="cc-note n-teal"><strong>Start simple, measure, then optimize:</strong> Begin with 512-token fixed chunks, text-embedding-3-small, and basic metadata. Measure retrieval quality on 200+ test queries. Only add complexity (semantic chunking, larger embeddings, re-ranking) when you have evidence that simpler approaches aren&rsquo;t meeting your quality threshold.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">Retrieval Strategies</div><div class="cc-sub">Vector search alone isn&rsquo;t enough &mdash; how production systems find the right documents</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Vector Search</div><div class="cc-text"><strong>How it works:</strong> Convert the query to a vector, find the nearest vectors in the database using approximate nearest-neighbor (ANN) algorithms like HNSW.<br><br><strong>Strengths:</strong> Captures semantic meaning. &ldquo;How do I cancel my subscription?&rdquo; matches a document about &ldquo;account termination procedures&rdquo; even without shared keywords.<br><br><strong>Weaknesses:</strong> Misses exact keyword matches. Searching for &ldquo;error code E-4021&rdquo; might return documents about errors in general rather than the specific code. Also struggles with ambiguous queries (&ldquo;cellular&rdquo; could mean biology or phone plans).</div></div>
+          <div class="cc-block"><div class="cc-label">Keyword Search (BM25)</div><div class="cc-text"><strong>How it works:</strong> Traditional text search based on word frequency and document length. The same technology behind search engines.<br><br><strong>Strengths:</strong> Exact matches. &ldquo;Error code E-4021&rdquo; finds exactly the document containing that code. Fast and well-understood.<br><br><strong>Weaknesses:</strong> No semantic understanding. &ldquo;How do I cancel?&rdquo; won&rsquo;t match &ldquo;account termination&rdquo; because the words are different.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hybrid Search (The Standard)</div><div class="cc-text"><strong>Combine both.</strong> Run vector search and keyword search in parallel, then merge results using <strong>Reciprocal Rank Fusion (RRF)</strong>. Documents that rank highly in both searches get boosted to the top.<br><br>Hybrid search is now the <strong>production standard</strong> for RAG systems. It captures both semantic meaning and exact matches, covering each approach&rsquo;s blind spots.</div></div>
+          <div class="cc-block"><div class="cc-label">Re-Ranking</div><div class="cc-text">After initial retrieval, pass the top 20&ndash;50 results through a <strong>cross-encoder re-ranker</strong>. Unlike embedding models (which encode query and document separately), cross-encoders process the query and document together, producing more accurate relevance scores.<br><br>Re-ranking boosts precision by <strong>18&ndash;42%</strong> in production systems. It&rsquo;s slower (can&rsquo;t search the full database this way) but dramatically improves the final set of documents sent to the LLM.</div></div>
+          <div class="cc-block"><div class="cc-label">Temporal Filtering</div><div class="cc-text">Apply <strong>time-aware weighting</strong> so recent documents outrank stale ones. Critical for knowledge bases where policies change, products update, and old information becomes misleading.</div></div>
+          <div class="cc-note n-amber"><strong>The retrieval stack:</strong> Hybrid search (vector + BM25) &rarr; re-ranking &rarr; temporal filtering &rarr; top-K selection. Each layer improves precision. The PM should track retrieval quality separately from generation quality &mdash; if retrieval is broken, no amount of prompt engineering fixes the output.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">RAG Failure Modes</div><div class="cc-sub">The &ldquo;vibe check&rdquo; problem &mdash; RAG systems that pass demos but fail in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Retrieval Failures</div><div class="cc-text"><strong>1. Wrong documents retrieved.</strong><br>The query &ldquo;cellular data plan&rdquo; retrieves biology documents about cellular structures. Ambiguous queries are the most common retrieval failure. Mitigation: hybrid search, query expansion, metadata filtering.<br><br><strong>2. Relevant documents not in the knowledge base.</strong><br>The user asks about a product that was launched last week, but the knowledge base hasn&rsquo;t been updated. Mitigation: automated ingestion pipelines with freshness monitoring.<br><br><strong>3. Stale documents outranking current ones.</strong><br>An outdated return policy from 2023 ranks higher than the current 2026 policy because it has more keyword matches. Mitigation: temporal filtering, document versioning, explicit deprecation.<br><br><strong>4. Noisy retrieval.</strong><br>The top-K results include 3 relevant and 7 irrelevant chunks. The irrelevant chunks confuse the LLM and trigger hallucinations. Mitigation: re-ranking, stricter relevance thresholds, fewer but higher-quality chunks.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Generation Failures</div><div class="cc-text"><strong>5. Hallucination despite context.</strong><br>The LLM ignores the retrieved documents and generates information from its training data. The answer sounds authoritative but isn&rsquo;t grounded in your knowledge base. Mitigation: strong grounding instructions in the system prompt, faithfulness evaluation.<br><br><strong>6. Synthesizing across contradictory sources.</strong><br>Two retrieved documents give conflicting information (old policy vs. new policy). The LLM blends them into a confidently wrong answer. Mitigation: document versioning, conflict detection, preferring the most recent source.<br><br><strong>7. Missing the answer in the context.</strong><br>The relevant information is in the retrieved chunks, but the LLM fails to find it &mdash; especially in long contexts. LLMs have a &ldquo;lost in the middle&rdquo; problem where they attend more to the beginning and end of the context. Mitigation: put the most relevant chunks first, limit context length.</div></div>
+          <div class="cc-note n-red"><strong>The cascading failure:</strong> RAG failures cascade across stages. Bad chunking &rarr; bad embeddings &rarr; bad retrieval &rarr; bad generation. When the output is wrong, the PM must diagnose <em>which stage</em> failed. Was the right document in the knowledge base? Was it retrieved? Was it ranked highly? Did the LLM use it? Each stage needs its own monitoring.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Evaluating RAG Systems</div><div class="cc-sub">Separate metrics for retrieval and generation &mdash; because they fail independently</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Retrieval Metrics</div><div class="cc-text"><strong>Recall@K:</strong> Of all relevant documents, how many appear in the top K results? Target: &gt;85% at K=10 for production systems.<br><br><strong>Precision@K:</strong> Of the top K retrieved documents, how many are actually relevant? Higher precision means less noise for the LLM.<br><br><strong>Mean Reciprocal Rank (MRR):</strong> How early does the first relevant result appear? Important because LLMs pay more attention to earlier context (positional bias).<br><br><strong>Context relevance:</strong> Semantic alignment between the query and retrieved passages. Measured using embedding similarity or cross-encoder scores.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Generation Metrics</div><div class="cc-text"><strong>Faithfulness / Groundedness:</strong> Does the answer stay grounded in the retrieved context? Or does it introduce information not present in the documents? This is the hallucination metric for RAG.<br><br><strong>Answer relevancy:</strong> Does the answer actually address the user&rsquo;s question? A grounded but off-topic answer is still a failure.<br><br><strong>Completeness:</strong> Does the answer cover all relevant aspects from the retrieved context? Partial answers frustrate users.</div></div>
+          <div class="cc-block"><div class="cc-label">The Three-Layer Evaluation</div><div class="cc-text"><strong>Executive layer:</strong> Manual accuracy checks on 200&ndash;1,000 representative questions. Simple, defensible KPIs. Inter-rater agreement (Cohen&rsquo;s kappa).<br><br><strong>Team layer:</strong> Standardized frameworks like RAGAS for reproducible, automated evaluation across retrieval and generation dimensions.<br><br><strong>Developer layer:</strong> Fine-grained telemetry for debugging. Per-query retrieval scores, chunk-level relevance, latency breakdowns, hallucination source tracing.</div></div>
+          <div class="cc-note n-green"><strong>The evaluation rule:</strong> Always evaluate retrieval and generation separately. If the answer is wrong, first check: were the right documents retrieved? If yes, the generation failed. If no, the retrieval failed. Different problems require different fixes. Conflating them wastes engineering time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">settings</span></div><div><div class="cc-title">Knowledge Base Operations</div><div class="cc-sub">RAG is only as good as the data behind it &mdash; keeping the knowledge base healthy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Ingestion Pipeline</div><div class="cc-text">The knowledge base needs two ingestion lanes:<br><br><strong>Batch backfill:</strong> Initial load of all historical documents. Run once at setup, then periodically for full re-indexing (e.g., when you change the embedding model or chunking strategy).<br><br><strong>Incremental updates:</strong> New and updated documents ingested continuously. A new support article published at 2pm should be retrievable by 2:15pm. This requires automated pipelines that detect changes, re-chunk, re-embed, and update the vector database.<br><br><strong>Deletion and deprecation:</strong> When documents are outdated or removed, the corresponding chunks must be deleted from the vector database. Stale chunks are a common source of wrong answers.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Quality for RAG</div><div class="cc-text"><strong>Source quality matters most.</strong> RAG can&rsquo;t fix bad source documents. If your knowledge base contains contradictory, outdated, or poorly written content, the AI will faithfully reproduce those problems.<br><br><strong>Common data quality issues:</strong><br>&bull; Duplicate documents (same info, different versions) &rarr; conflicting answers<br>&bull; Outdated content not marked as deprecated &rarr; stale answers<br>&bull; Poorly structured documents (no headings, no sections) &rarr; bad chunking<br>&bull; Missing metadata (no dates, no authors) &rarr; can&rsquo;t filter or prioritize<br>&bull; Inconsistent terminology across documents &rarr; retrieval gaps<br><br><strong>The PM&rsquo;s role:</strong> Champion a knowledge base hygiene program. Regular audits, clear ownership of content areas, deprecation workflows, and quality standards for new content. This is often the highest-leverage investment in RAG quality.</div></div>
+          <div class="cc-note n-pink"><strong>The 80/20 of RAG quality:</strong> Teams spend 80% of their time optimizing embeddings, re-rankers, and prompts. But 80% of quality issues come from the source data: missing documents, stale content, poor structure, and contradictions. Fix the data first. Then optimize the pipeline.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">The PM&rsquo;s RAG Playbook</div><div class="cc-sub">Practical decisions and trade-offs for shipping a RAG product</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key PM Decisions</div><div class="cc-text"><strong>1. Scope the knowledge base.</strong><br>What data sources are included? What&rsquo;s excluded? Start narrow (one document collection) and expand. Every new source adds complexity and potential failure modes.<br><br><strong>2. Define freshness requirements.</strong><br>How quickly must new information be available? Real-time (minutes), near-real-time (hours), or batch (daily)? Freshness requirements drive infrastructure cost.<br><br><strong>3. Set the citation standard.</strong><br>Must every answer cite its sources? Can the AI say &ldquo;I don&rsquo;t know&rdquo;? How are citations displayed? Source citation is the primary trust mechanism in RAG products.<br><br><strong>4. Define the &ldquo;I don&rsquo;t know&rdquo; behavior.</strong><br>When no relevant documents are found, the AI should say so rather than hallucinate. This requires a retrieval confidence threshold: below it, the system admits uncertainty rather than guessing.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The RAG Maturity Ladder</div><div class="cc-text"><strong>Level 1: Basic RAG</strong><br>Vector search, fixed chunking, single data source. Good for internal tools and proofs of concept. 2&ndash;4 weeks to build.<br><br><strong>Level 2: Production RAG</strong><br>Hybrid search, re-ranking, multiple data sources, automated ingestion, source citations. Good for customer-facing products. 2&ndash;3 months to build.<br><br><strong>Level 3: Advanced RAG</strong><br>Agentic RAG (the AI decides what to search and when), multi-step retrieval, query decomposition, graph-based knowledge structures. For complex domains with interconnected information. 4&ndash;6+ months.<br><br><strong>Level 4: Enterprise RAG</strong><br>Multi-tenant access control, compliance audit trails, real-time ingestion, cross-language retrieval, feedback-driven re-indexing. For regulated industries at scale. Ongoing investment.</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> RAG is the most common architecture for enterprise AI products because it solves the knowledge problem without retraining models. But &ldquo;just add RAG&rdquo; is deceptively simple. The quality depends on chunking strategy, retrieval approach, source data quality, and continuous evaluation. The PM who understands the full pipeline can diagnose issues, set realistic expectations, and make informed trade-offs between cost, quality, and freshness.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-prompt-engineering-as-product-design-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: Prompt Engineering as Product Design</a>
+    <a class="ch-nav-btn next" href="13-ux-patterns-for-ai-high-level.html">Ch 13: UX Patterns for AI Products <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[4],6:[4,5],7:[0,1],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Why RAG exists.</strong> LLMs have a knowledge cutoff and know nothing about your company. Fine-tuning bakes knowledge into weights (expensive, slow, not citable). RAG keeps knowledge external: retrieve relevant documents at query time, include them in the prompt, generate grounded answers. RAG is the default enterprise LLM architecture.',color:'#7c3aed'},
+    2:{text:'<strong>The RAG pipeline.</strong> Two phases. Offline: load documents &rarr; chunk &rarr; embed &rarr; store in vector DB. Online: embed query &rarr; search &rarr; re-rank &rarr; build prompt &rarr; generate answer &rarr; cite sources. Production systems have 12+ components. Retrieval quality determines answer quality.',color:'#2563eb'},
+    3:{text:'<strong>Chunking &amp; embedding.</strong> Start with 512-token fixed chunks with 10&ndash;15% overlap &mdash; it outperforms semantic chunking in most production deployments. Embedding costs range $0.02&ndash;$0.18 per million tokens. Preserve metadata (source, date, author) for filtering and citation. Start simple, measure, then optimize.',color:'#0d9488'},
+    4:{text:'<strong>Retrieval strategies.</strong> Vector search captures meaning but misses exact matches. Keyword search (BM25) finds exact terms but misses semantics. Hybrid search (both + Reciprocal Rank Fusion) is the production standard. Re-ranking with cross-encoders boosts precision 18&ndash;42%. Add temporal filtering for freshness.',color:'#d97706'},
+    5:{text:'<strong>RAG failure modes.</strong> Retrieval: wrong documents, missing documents, stale data, noisy results. Generation: hallucination despite context, contradictory sources blended, &ldquo;lost in the middle&rdquo; attention problem. Failures cascade: bad chunking &rarr; bad retrieval &rarr; bad answers. Diagnose which stage failed.',color:'#dc2626'},
+    6:{text:'<strong>Evaluating RAG.</strong> Separate retrieval metrics (Recall@K, Precision@K, MRR) from generation metrics (faithfulness, answer relevancy, completeness). Three evaluation layers: executive (manual accuracy), team (RAGAS framework), developer (per-query telemetry). Always diagnose retrieval vs. generation failures independently.',color:'#16a34a'},
+    7:{text:'<strong>Knowledge base operations.</strong> Two ingestion lanes: batch backfill + incremental updates. Delete stale chunks. Fix the data first &mdash; 80% of RAG quality issues come from source data (missing docs, contradictions, poor structure), not the pipeline. Champion knowledge base hygiene as the highest-leverage investment.',color:'#db2777'},
+    8:{text:'<strong>The PM&rsquo;s RAG playbook:</strong> Scope the knowledge base (start narrow). Define freshness requirements. Set citation standards. Define &ldquo;I don&rsquo;t know&rdquo; behavior. Follow the maturity ladder: basic RAG (weeks) &rarr; production RAG (months) &rarr; advanced/agentic RAG &rarr; enterprise RAG. Understand the full pipeline to diagnose issues and set realistic expectations.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

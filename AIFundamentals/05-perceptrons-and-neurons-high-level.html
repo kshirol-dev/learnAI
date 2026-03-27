@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Perceptrons &amp; Neurons — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--red)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Perceptrons &amp; Neurons</h2><span class="tb-sub">From biological neurons to artificial ones &mdash; the building blocks of every neural network</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="05-perceptrons-and-neurons-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Bio Neuron</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">radio_button_checked</span></div><span class="pipe-label">Perceptron</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Activation</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">close</span></div><span class="pipe-label">XOR Crisis</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">MLP</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Deep Nets</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Step 1: Biological Inspiration -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Biological Inspiration</div><div class="cc-sub">How real neurons inspired artificial ones</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Biological Neuron</div><div class="cc-text">Your brain contains roughly <strong>86 billion neurons</strong>, each connected to thousands of others via synapses. A neuron receives electrical signals through <strong>dendrites</strong>, processes them in the <strong>cell body</strong>, and if the combined signal exceeds a threshold, fires an output signal along its <strong>axon</strong> to other neurons.</div></div>
+          <div class="cc-block"><div class="cc-label">The Key Insight</div><div class="cc-text">McCulloch and Pitts (1943) realized this could be modeled mathematically: <strong>inputs &times; weights &rarr; sum &rarr; threshold &rarr; output</strong>. This simple abstraction became the foundation of all neural networks. The brain computes through massive parallelism of simple units &mdash; artificial neural networks follow the same principle.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Biological neuron &rarr; artificial neuron</span>
+
+<span class="hl-key">Dendrites</span>     &rarr;  Inputs (x\u2081, x\u2082, ... x\u2099)
+<span class="hl-key">Synapses</span>      &rarr;  Weights (w\u2081, w\u2082, ... w\u2099)
+<span class="hl-key">Cell body</span>     &rarr;  Weighted sum + bias
+<span class="hl-key">Threshold</span>     &rarr;  Activation function
+<span class="hl-key">Axon output</span>   &rarr;  Output (y)
+
+<span class="hl-cmt"># The artificial neuron computes:</span>
+<span class="hl-key">z</span> = w\u2081x\u2081 + w\u2082x\u2082 + ... + w\u2099x\u2099 + b
+<span class="hl-key">y</span> = activation(z)</div>
+          <div class="cc-note n-red"><strong>Important caveat:</strong> Artificial neurons are a <em>loose</em> analogy to biological neurons. Real neurons use complex electrochemical signaling, have timing-dependent plasticity, and operate in ways we still don&rsquo;t fully understand. The analogy is useful for intuition but shouldn&rsquo;t be taken literally.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: The Perceptron -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">radio_button_checked</span></div><div><div class="cc-title">The Perceptron</div><div class="cc-sub">Frank Rosenblatt&rsquo;s 1958 learning machine</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">The perceptron is the simplest possible neural network &mdash; a <strong>single artificial neuron</strong>. It takes multiple inputs, multiplies each by a learned weight, adds a bias, and passes the result through a step function. If the sum exceeds the threshold, output 1; otherwise, output 0.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Perceptron computation</span>
+
+<span class="hl-key">Inputs:</span>   x = [x\u2081, x\u2082, ..., x\u2099]
+<span class="hl-key">Weights:</span>  w = [w\u2081, w\u2082, ..., w\u2099]
+<span class="hl-key">Bias:</span>     b
+
+<span class="hl-cmt"># Step 1: Weighted sum</span>
+<span class="hl-key">z</span> = w\u2081x\u2081 + w\u2082x\u2082 + ... + w\u2099x\u2099 + b
+
+<span class="hl-cmt"># Step 2: Step function</span>
+<span class="hl-key">y</span> = <span class="hl-num">1</span>  if z &ge; 0
+<span class="hl-key">y</span> = <span class="hl-num">0</span>  if z &lt; 0</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Learning Rule</div><div class="cc-text">Rosenblatt&rsquo;s key innovation: the perceptron <strong>learns its own weights</strong> from labeled examples. For each misclassified example, nudge the weights in the direction that reduces the error. Repeat until all training examples are classified correctly.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Perceptron learning rule</span>
+
+<span class="hl-key">For each</span> training example (x, target):
+  prediction = perceptron(x)
+  error = target - prediction
+
+  <span class="hl-key">if</span> error &ne; 0:
+    w = w + <span class="hl-num">&eta;</span> &times; error &times; x
+    b = b + <span class="hl-num">&eta;</span> &times; error
+
+<span class="hl-cmt"># &eta; = learning rate (small, e.g. 0.01)</span>
+<span class="hl-cmt"># Convergence theorem: if data is linearly</span>
+<span class="hl-cmt"># separable, this WILL find a solution</span></div>
+          <div class="cc-note n-orange"><strong>1958 hype:</strong> The New York Times reported the perceptron as a machine that &ldquo;will be able to walk, talk, see, write, reproduce itself and be conscious of its existence.&rdquo; The reality was far more modest &mdash; but the learning principle was genuinely revolutionary.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: What a Perceptron Can Do -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">check_circle</span></div><div><div class="cc-title">What a Perceptron Can Do</div><div class="cc-sub">Linear decision boundaries and logical gates</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Linear Separability</div><div class="cc-text">A perceptron draws a <strong>straight line</strong> (or hyperplane in higher dimensions) to separate two classes. Any problem where the classes can be divided by a straight line is &ldquo;linearly separable&rdquo; &mdash; and a perceptron can solve it perfectly.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># AND gate &mdash; perceptron CAN learn this</span>
+<span class="hl-key">x\u2081  x\u2082  |  AND</span>
+ 0   0  |   <span class="hl-num">0</span>
+ 0   1  |   <span class="hl-num">0</span>
+ 1   0  |   <span class="hl-num">0</span>
+ 1   1  |   <span class="hl-ok">1</span>    <span class="hl-cmt">&larr; only both true</span>
+
+<span class="hl-cmt"># OR gate &mdash; perceptron CAN learn this</span>
+<span class="hl-key">x\u2081  x\u2082  |  OR</span>
+ 0   0  |   <span class="hl-num">0</span>
+ 0   1  |   <span class="hl-ok">1</span>
+ 1   0  |   <span class="hl-ok">1</span>
+ 1   1  |   <span class="hl-ok">1</span>    <span class="hl-cmt">&larr; either true</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Geometric View</div><div class="cc-text">The weights define a <strong>decision boundary</strong> &mdash; a line that separates the input space into two regions. Points on one side are classified as 1, points on the other as 0. The weight vector is perpendicular to this boundary. The bias shifts the boundary away from the origin.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># AND gate solution</span>
+<span class="hl-key">w\u2081</span> = <span class="hl-num">1.0</span>,  <span class="hl-key">w\u2082</span> = <span class="hl-num">1.0</span>,  <span class="hl-key">b</span> = <span class="hl-num">-1.5</span>
+
+z = 1.0&times;x\u2081 + 1.0&times;x\u2082 - 1.5
+
+(0,0): z = <span class="hl-err">-1.5</span> &lt; 0 &rarr; <span class="hl-num">0</span> <span class="hl-ok">&check;</span>
+(0,1): z = <span class="hl-err">-0.5</span> &lt; 0 &rarr; <span class="hl-num">0</span> <span class="hl-ok">&check;</span>
+(1,0): z = <span class="hl-err">-0.5</span> &lt; 0 &rarr; <span class="hl-num">0</span> <span class="hl-ok">&check;</span>
+(1,1): z = <span class="hl-ok">+0.5</span> &ge; 0 &rarr; <span class="hl-num">1</span> <span class="hl-ok">&check;</span></div>
+          <div class="cc-note n-pink"><strong>The perceptron convergence theorem</strong> (Rosenblatt, 1962) guarantees that if the data is linearly separable, the learning algorithm will find a solution in a finite number of steps. This was one of the first mathematical guarantees in machine learning.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: The XOR Crisis -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">close</span></div><div><div class="cc-title">The XOR Crisis</div><div class="cc-sub">The fatal limitation that nearly killed neural networks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">In 1969, Minsky and Papert published <em>Perceptrons</em>, proving that a single perceptron <strong>cannot learn XOR</strong> (exclusive OR). XOR outputs 1 when inputs differ and 0 when they&rsquo;re the same. No single straight line can separate the 1s from the 0s.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># XOR gate &mdash; NOT linearly separable</span>
+<span class="hl-key">x\u2081  x\u2082  |  XOR</span>
+ 0   0  |   <span class="hl-num">0</span>    <span class="hl-cmt">&larr; same = 0</span>
+ 0   1  |   <span class="hl-ok">1</span>    <span class="hl-cmt">&larr; different = 1</span>
+ 1   0  |   <span class="hl-ok">1</span>    <span class="hl-cmt">&larr; different = 1</span>
+ 1   1  |   <span class="hl-num">0</span>    <span class="hl-cmt">&larr; same = 0</span>
+
+<span class="hl-err">No single line can separate the 1s from 0s!</span>
+<span class="hl-cmt"># The 1s are at opposite corners of a square</span>
+<span class="hl-cmt"># You need at least TWO lines (curves)</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Impact</div><div class="cc-text">Minsky and Papert&rsquo;s proof was mathematically correct but their <strong>implied conclusion</strong> &mdash; that multi-layer networks were also limited &mdash; was wrong. However, the book devastated neural network research funding. The first <strong>AI Winter</strong> (1970s) followed, as researchers and funders abandoned connectionism.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Single Perceptron</div><div class="cb-text">Can only learn <strong>linearly separable</strong> functions. AND, OR, NOT &mdash; yes. XOR, circles, spirals &mdash; no. One straight line is all it has.</div></div>
+            <div class="compare-box good"><div class="cb-tag">Multi-Layer Network</div><div class="cb-text">Can learn <strong>any function</strong> (universal approximation). XOR, complex boundaries, images, language. Multiple layers = multiple decision boundaries combined.</div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>The irony:</strong> Minsky and Papert knew multi-layer networks could solve XOR. The problem was that nobody knew how to <em>train</em> them. The backpropagation algorithm (Ch 6) wouldn&rsquo;t become practical until 1986 &mdash; 17 years later.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Activation Functions -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Activation Functions</div><div class="cc-sub">The non-linearity that gives neural networks their power</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Non-Linearity?</div><div class="cc-text">Without activation functions, stacking layers is pointless &mdash; multiple linear transformations collapse into a single linear transformation. <strong>Activation functions introduce non-linearity</strong>, allowing networks to learn curved decision boundaries and complex patterns.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Key activation functions</span>
+
+<span class="hl-key">Step</span>       y = 1 if z&ge;0, else 0
+           Binary, not differentiable
+           Used in: original perceptron
+
+<span class="hl-key">Sigmoid</span>    y = 1 / (1 + e\u207b\u1dbb)
+           Range: (0, 1), smooth S-curve
+           Used in: output for binary class.
+
+<span class="hl-key">Tanh</span>       y = (e\u1dbb - e\u207b\u1dbb) / (e\u1dbb + e\u207b\u1dbb)
+           Range: (-1, 1), zero-centered
+           Used in: RNN hidden layers
+
+<span class="hl-key">ReLU</span>       y = max(0, z)
+           Range: [0, &infin;), dead simple
+           Used in: <span class="hl-ok">default for hidden layers</span>
+
+<span class="hl-key">Softmax</span>    y\u1d62 = e\u1dbb\u1d62 / &sum;e\u1dbb\u2c7c
+           Outputs sum to 1 (probabilities)
+           Used in: multi-class output</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ReLU: The Modern Default</div><div class="cc-text"><strong>ReLU (Rectified Linear Unit)</strong> is the most widely used activation function in deep learning. It&rsquo;s computationally cheap (just a max operation), doesn&rsquo;t saturate for positive values, and creates sparse activations (many neurons output exactly 0).</div></div>
+          <div class="cc-block"><div class="cc-label">The Vanishing Gradient Problem</div><div class="cc-text">Sigmoid and tanh squash outputs into small ranges. For very large or very small inputs, the gradient approaches zero. During backpropagation, these tiny gradients multiply across layers, making deep networks nearly impossible to train. <strong>ReLU solved this</strong> &mdash; its gradient is 1 for positive inputs, enabling training of much deeper networks.</div></div>
+          <div class="cc-note n-blue"><strong>ReLU variants:</strong> Leaky ReLU (small slope for negatives), ELU (smooth for negatives), GELU (used in transformers &mdash; smooth approximation of ReLU). Swish (x &times; sigmoid(x)) is used in some modern architectures. But plain ReLU remains the default starting point.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6: The Multilayer Perceptron -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">The Multilayer Perceptron (MLP)</div><div class="cc-sub">Stacking layers to solve any problem</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-text">An MLP stacks multiple layers of neurons: an <strong>input layer</strong> (receives features), one or more <strong>hidden layers</strong> (learn representations), and an <strong>output layer</strong> (produces predictions). Each neuron in one layer connects to every neuron in the next &mdash; hence &ldquo;fully connected&rdquo; or &ldquo;dense&rdquo; layers.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># MLP for XOR (2 inputs, 1 output)</span>
+
+<span class="hl-key">Input layer:</span>   2 neurons  (x\u2081, x\u2082)
+<span class="hl-key">Hidden layer:</span>  2 neurons  (h\u2081, h\u2082)
+<span class="hl-key">Output layer:</span>  1 neuron   (y)
+
+<span class="hl-cmt"># Forward pass:</span>
+h\u2081 = ReLU(w\u2081\u2081x\u2081 + w\u2081\u2082x\u2082 + b\u2081)
+h\u2082 = ReLU(w\u2082\u2081x\u2081 + w\u2082\u2082x\u2082 + b\u2082)
+y  = sigmoid(v\u2081h\u2081 + v\u2082h\u2082 + b\u2083)
+
+<span class="hl-cmt"># Hidden layer transforms the space so</span>
+<span class="hl-cmt"># XOR becomes linearly separable!</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Hidden Layers Work</div><div class="cc-text">Each hidden layer <strong>transforms the input space</strong> into a new representation. The first hidden layer might learn simple features (edges, basic patterns). Deeper layers combine these into complex features. The output layer then draws a simple boundary in this transformed space.</div></div>
+          <div class="cc-block"><div class="cc-label">XOR Solved</div><div class="cc-text">The hidden layer warps the 2D input space so that the XOR points become linearly separable. Think of it as folding a piece of paper so that previously separated points now line up on the same side.</div></div>
+          <div class="cc-note n-teal"><strong>Universal Approximation Theorem</strong> (Cybenko, 1989; Hornik, 1991): A neural network with a single hidden layer containing enough neurons can approximate <em>any</em> continuous function to arbitrary accuracy. This is an existence proof &mdash; it guarantees a solution exists but doesn&rsquo;t say how to find it or how many neurons you need.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7: From MLP to Deep Networks -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">From MLP to Deep Networks</div><div class="cc-sub">Why depth matters more than width</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Depth vs Width</div><div class="cc-text">The universal approximation theorem says a <em>wide</em> single-layer network can approximate anything. But in practice, <strong>deeper networks are exponentially more efficient</strong>. A function that requires millions of neurons in one layer might need only hundreds across several layers. Depth enables hierarchical feature learning.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Typical modern architectures</span>
+
+<span class="hl-key">Shallow MLP</span>    (1-2 hidden layers)
+  Tabular data, simple classification
+  Parameters: thousands
+
+<span class="hl-key">Deep MLP</span>       (3-8 hidden layers)
+  Complex tabular, feature extraction
+  Parameters: millions
+
+<span class="hl-key">CNN</span>            (10-150+ layers)
+  Images, spatial data
+  Parameters: millions to billions
+
+<span class="hl-key">Transformer</span>    (12-96+ layers)
+  Text, multimodal
+  Parameters: billions to trillions</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hierarchical Features</div><div class="cc-text"><strong>Layer 1:</strong> Learns edges, simple patterns<br><strong>Layer 2:</strong> Combines edges into textures, shapes<br><strong>Layer 3:</strong> Combines shapes into parts (eyes, wheels)<br><strong>Layer 4+:</strong> Combines parts into objects (faces, cars)<br><br>Each layer builds on the previous one, creating increasingly abstract representations. This is why deep networks excel at complex tasks like image recognition and language understanding.</div></div>
+          <div class="cc-note n-orange"><strong>The depth revolution:</strong> AlexNet (2012) had 8 layers. VGG (2014) had 19. ResNet (2015) had 152. GPT-4 has 120+ transformer layers. Depth is the key enabler of modern AI &mdash; but training deep networks requires techniques covered in Ch 6 (backpropagation, batch normalization, residual connections).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8: Neurons Today -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Neurons in Modern AI</div><div class="cc-sub">From Rosenblatt&rsquo;s perceptron to GPT&rsquo;s billions of parameters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Same Core Idea</div><div class="cc-text">Every modern neural network &mdash; CNNs, transformers, diffusion models &mdash; is built from the same fundamental unit: <strong>weighted sum + bias + activation</strong>. The perceptron&rsquo;s core computation hasn&rsquo;t changed since 1958. What changed is scale, architecture, and training methods.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Scale of modern networks</span>
+
+<span class="hl-key">Perceptron</span> (1958)
+  Neurons: <span class="hl-num">1</span>
+  Parameters: <span class="hl-num">~10</span>
+
+<span class="hl-key">LeNet-5</span> (1998)
+  Neurons: <span class="hl-num">~60K</span>
+  Parameters: <span class="hl-num">60K</span>
+
+<span class="hl-key">AlexNet</span> (2012)
+  Neurons: <span class="hl-num">~650K</span>
+  Parameters: <span class="hl-num">60M</span>
+
+<span class="hl-key">GPT-3</span> (2020)
+  Neurons: <span class="hl-num">~billions</span>
+  Parameters: <span class="hl-num">175B</span>
+
+<span class="hl-key">GPT-4</span> (2023)
+  Parameters: <span class="hl-num">~1.8T</span> (estimated)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Takeaways</div><div class="cc-text"><strong>1.</strong> A neuron computes: weighted sum + bias + activation<br><br><strong>2.</strong> A single perceptron can only learn linearly separable functions<br><br><strong>3.</strong> The XOR problem proved single layers are limited<br><br><strong>4.</strong> Hidden layers transform input space, enabling non-linear boundaries<br><br><strong>5.</strong> ReLU activation solved the vanishing gradient problem<br><br><strong>6.</strong> The universal approximation theorem guarantees expressiveness<br><br><strong>7.</strong> Depth enables hierarchical feature learning &mdash; the foundation of modern deep learning</div></div>
+          <div class="cc-note n-red"><strong>Coming up:</strong> Ch 6 covers <em>how</em> these networks learn &mdash; backpropagation, gradient descent in practice, batch normalization, and the training tricks that make deep learning work. The neuron is the atom; training is the chemistry.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3],6:[3,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Biological neurons</strong> inspired artificial ones. McCulloch & Pitts (1943) modeled the neuron mathematically: inputs \u00d7 weights \u2192 sum \u2192 threshold \u2192 output. Your brain has 86 billion neurons; modern AI networks have billions of artificial ones following the same principle.',color:'#dc2626'},
+    2:{text:'<strong>Rosenblatt\u2019s perceptron</strong> (1958): the first learning machine. Multiply inputs by weights, add bias, apply step function. The learning rule: if wrong, nudge weights toward the correct answer. The convergence theorem guarantees it finds a solution if one exists.',color:'#ea580c'},
+    3:{text:'A perceptron draws a <strong>straight line</strong> to separate two classes. It can learn AND, OR, and NOT gates perfectly. The weights define the decision boundary\u2019s orientation; the bias shifts it. Any linearly separable problem is solvable.',color:'#db2777'},
+    4:{text:'<strong>The XOR crisis</strong> (1969): Minsky & Papert proved a single perceptron cannot learn XOR. The 1s sit at opposite corners \u2014 no single line separates them. This triggered the first AI Winter. The fix: multi-layer networks. But nobody knew how to train them yet.',color:'#7c3aed'},
+    5:{text:'<strong>Activation functions</strong> introduce non-linearity. Without them, stacking layers is pointless. Sigmoid squashes to (0,1). Tanh to (-1,1). ReLU = max(0,z) \u2014 the modern default. ReLU solved the vanishing gradient problem, enabling training of deep networks.',color:'#2563eb'},
+    6:{text:'The <strong>multilayer perceptron (MLP)</strong> stacks layers of neurons. Hidden layers transform the input space so non-linear problems become linearly separable. The Universal Approximation Theorem: one hidden layer with enough neurons can approximate any continuous function.',color:'#0d9488'},
+    7:{text:'<strong>Depth beats width.</strong> Deep networks learn hierarchical features: edges \u2192 textures \u2192 parts \u2192 objects. A function needing millions of neurons in one layer may need only hundreds across several layers. AlexNet had 8 layers; GPT-4 has 120+.',color:'#d97706'},
+    8:{text:'Every modern neural network uses the same core unit: <strong>weighted sum + bias + activation</strong>. From Rosenblatt\u2019s single perceptron (10 parameters) to GPT-4 (~1.8 trillion parameters). The atom hasn\u2019t changed \u2014 the scale and architecture have.',color:'#dc2626'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

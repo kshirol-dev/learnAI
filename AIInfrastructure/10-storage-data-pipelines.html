@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Storage &amp; Data Pipelines — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Storage &amp; Data Pipelines: Feeding the GPUs</h2><span class="tb-sub">Parallel file systems, GPUDirect Storage, checkpointing, data loading, and storage architecture</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Bottleneck</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">storage</span></div><span class="pipe-label">Parallel FS</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">GPUDirect</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">save</span></div><span class="pipe-label">Checkpoints</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">input</span></div><span class="pipe-label">Data Loading</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">cloud</span></div><span class="pipe-label">Object Store</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Architecture</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">calculate</span></div><span class="pipe-label">Sizing</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Storage Bottleneck: Starving GPUs</div><div class="cc-sub">Why $400K GPUs sit idle waiting for data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Speed Gap</div><div class="cc-text">Modern GPUs process data far faster than storage can deliver it. An H100 GPU consumes data at <strong>3.35 TB/s</strong> from its HBM3 memory. But the fastest NVMe SSD delivers only ~7 GB/s &mdash; a <strong>478&times; gap</strong>. Even a network-attached parallel file system tops out at 10&ndash;50 GB/s per client.<br><br>The saving grace: GPUs don&rsquo;t need continuous storage I/O during training. Data is loaded into GPU memory in batches, processed through forward and backward passes, then the next batch is loaded. The question is whether storage can deliver the next batch before the GPU finishes the current one.<br><br>When it can&rsquo;t, GPUs idle. On a 1,000-GPU cluster at $2.50/hr per GPU, every 1% of idle time from storage starvation costs <strong>$21,900/month</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">Storage I/O Patterns in AI</div><div class="cc-text"><strong>Training data loading:</strong> Sequential reads of large files (tokenized datasets). Predictable, high-throughput. Typically 1&ndash;10 GB/s per node.<br><br><strong>Checkpointing:</strong> Periodic writes of model state. Bursty, write-heavy. A 70B model checkpoint is ~140 GB; a 1T model is ~2 TB. Must complete fast enough to not stall training.<br><br><strong>Shuffling &amp; preprocessing:</strong> Random reads across large datasets. Latency-sensitive. Can bottleneck data pipelines if storage IOPS is insufficient.<br><br><strong>Model loading (inference):</strong> Read entire model weights at startup. A 70B FP16 model = 140 GB. At 7 GB/s (NVMe), that&rsquo;s 20 seconds. At 1 GB/s (network), that&rsquo;s 2.3 minutes.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Storage Bandwidth Hierarchy</div><div class="cc-code"><span class="hl-key">Storage Tier           Bandwidth     Latency</span>
+──────────────────────────────────────────────
+HBM3 (GPU memory)      <span class="hl-num">3,350 GB/s</span>    ~ns
+L2 Cache (GPU)         <span class="hl-num">~12 TB/s</span>     ~ns
+PCIe Gen5 (GPU↔CPU)    <span class="hl-num">64 GB/s</span>      ~μs
+Local NVMe SSD         <span class="hl-num">7-14 GB/s</span>    ~10 μs
+NVMe-oF (networked)    <span class="hl-num">25-100 GB/s</span>  ~50 μs
+Parallel FS (Lustre)   <span class="hl-num">10-50 GB/s</span>   ~100 μs
+Object Store (S3)      <span class="hl-num">1-10 GB/s</span>    ~10 ms
+HDD (archival)         <span class="hl-num">0.2 GB/s</span>     ~5 ms
+
+<span class="hl-cmt"># The key metric: can storage fill GPU memory</span>
+<span class="hl-cmt"># before the GPU finishes processing?</span>
+
+<span class="hl-key">Example: Training batch loading</span>
+  Batch size: <span class="hl-num">4 MB</span> (tokenized text)
+  GPU processing time: <span class="hl-num">~200 ms</span>
+  Required bandwidth: 4 MB / 200 ms = <span class="hl-num">20 MB/s</span>
+  → Even S3 can keep up for text training!
+
+<span class="hl-key">Example: Image training batch</span>
+  Batch size: <span class="hl-num">2 GB</span> (256 images × 8 MB)
+  GPU processing time: <span class="hl-num">~500 ms</span>
+  Required bandwidth: 2 GB / 500 ms = <span class="hl-num">4 GB/s</span>
+  → Needs local NVMe or parallel FS</div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> Storage for AI training is like a kitchen&rsquo;s prep station. A fast chef (GPU) with a slow prep cook (storage) means the chef stands around waiting for ingredients. The solution isn&rsquo;t a faster chef &mdash; it&rsquo;s a better prep line. Most AI teams over-invest in GPUs and under-invest in storage.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">storage</span></div><div><div class="cc-title">Parallel File Systems: Lustre &amp; GPFS</div><div class="cc-sub">Distributing data across hundreds of storage nodes for aggregate bandwidth</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Parallel File Systems?</div><div class="cc-text">A single storage server maxes out at ~10&ndash;20 GB/s. A 1,000-GPU cluster needs 100+ GB/s of aggregate storage bandwidth. The solution: spread data across many servers and read from all of them simultaneously.<br><br>Parallel file systems <strong>stripe</strong> files across multiple Object Storage Targets (OSTs). A 1 TB file might be split into 1 MB chunks distributed across 100 servers. When a client reads the file, it reads from all 100 servers in parallel, achieving 100&times; the bandwidth of a single server.</div></div>
+          <div class="cc-block"><div class="cc-label">Lustre Architecture</div><div class="cc-text"><strong>Lustre</strong> (Linux + Cluster) is the dominant open-source parallel file system for AI and HPC. Key components:<br><br><strong>MDS (Metadata Server):</strong> Handles file namespace &mdash; directory listings, permissions, file-to-OST mappings. Typically 1&ndash;4 active MDS nodes for clusters up to ~50K clients.<br><br><strong>OSS/OST (Object Storage Server/Target):</strong> Stores actual file data. Each OSS manages multiple OSTs (typically NVMe or SSD arrays). Stripe files across OSTs for parallel access.<br><br><strong>Client:</strong> POSIX-compatible kernel module on compute nodes. Reads/writes appear as normal file operations but are transparently parallelized across OSTs.<br><br><strong>Scaling:</strong> Add more OSS nodes for more bandwidth. DDN&rsquo;s EXAScaler (Lustre-based) delivers <strong>4 TB/s</strong> to NVIDIA&rsquo;s Eos supercomputer across hundreds of OSS nodes.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Lustre vs GPFS (IBM Storage Scale)</div><div class="cc-code"><span class="hl-key">Feature          Lustre              GPFS</span>
+──────────────────────────────────────────────
+License          <span class="hl-str">Open source</span>         <span class="hl-str">Commercial</span>
+Max throughput    <span class="hl-num">4+ TB/s</span>             <span class="hl-num">2+ TB/s</span>
+Max clients       <span class="hl-num">~100K</span>              <span class="hl-num">~20K</span>
+Metadata          Separate MDS        Distributed
+Small files       Weaker              <span class="hl-str">Better</span>
+POSIX compliance  Full                Full
+Cloud offering    AWS FSx for Lustre  IBM Cloud
+Typical users     HPC, AI labs        Enterprise, banks
+Cost              <span class="hl-str">Lower (OSS)</span>         <span class="hl-str">Higher (license)</span>
+
+<span class="hl-key">AWS FSx for Lustre (2025):</span>
+  Max throughput: <span class="hl-num">1,200 Gbps</span> (150 GB/s) per client
+  GPUDirect Storage: <span class="hl-num">Supported</span>
+  S3 integration: Automatic lazy-load from S3
+  Cost: ~$<span class="hl-num">0.14/GB-month</span> (persistent)
+
+<span class="hl-cmt"># Lustre is the "Linux of storage" for AI —</span>
+<span class="hl-cmt"># not the prettiest, but battle-tested at scale.</span></div></div>
+          <div class="cc-block"><div class="cc-note n-blue"><strong>Key insight:</strong> A parallel file system is like a highway with many lanes. A single-server NAS is a one-lane road &mdash; no matter how fast the cars go, throughput is limited. Lustre opens 100+ lanes. Each GPU reads from its own lane, and aggregate bandwidth scales linearly with the number of storage servers.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">GPUDirect Storage: Bypassing the CPU</div><div class="cc-sub">Direct DMA transfers from storage to GPU memory</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The CPU Bounce Problem</div><div class="cc-text">In a traditional data path, reading data from storage to GPU requires two copies:<br><br><strong>1.</strong> Storage &rarr; CPU system memory (via DMA)<br><strong>2.</strong> CPU system memory &rarr; GPU memory (via PCIe)<br><br>Each copy consumes CPU cycles, system memory bandwidth, and PCIe bandwidth. The CPU becomes a bottleneck, especially when multiple GPUs compete for data. On an 8-GPU node, the CPU must orchestrate 8 parallel data streams &mdash; often saturating the memory bus before the GPUs are full.<br><br><strong>GPUDirect Storage (GDS)</strong> eliminates the CPU from the data path entirely. Storage devices transfer data directly to GPU memory via RDMA (Remote Direct Memory Access), bypassing system memory completely.</div></div>
+          <div class="cc-block"><div class="cc-label">How GDS Works</div><div class="cc-text"><strong>1.</strong> GPU application requests a file read via cuFile API<br><strong>2.</strong> GDS driver maps GPU memory pages for DMA access<br><strong>3.</strong> Storage controller (NVMe or network) performs DMA directly to GPU memory<br><strong>4.</strong> GPU is notified when transfer completes<br><br>No CPU involvement. No system memory copy. The data path is: <strong>Storage &rarr; PCIe/Network &rarr; GPU HBM</strong>.<br><br>GDS requires: NVIDIA GPU (Ampere+), compatible NVMe driver or network adapter, and CUDA 11.4+ with the cuFile library.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Performance Impact</div><div class="cc-code"><span class="hl-key">Traditional path (CPU bounce):</span>
+  Storage → System RAM → GPU HBM
+  Bandwidth: <span class="hl-num">~6-8 GB/s</span> per GPU
+  CPU load:  <span class="hl-num">~30-50%</span> (data copying)
+  Latency:   <span class="hl-num">~200 μs</span>
+
+<span class="hl-key">GPUDirect Storage:</span>
+  Storage → GPU HBM (direct DMA)
+  Bandwidth: <span class="hl-num">~12-40 GB/s</span> per GPU
+  CPU load:  <span class="hl-num">~0%</span> (for data transfer)
+  Latency:   <span class="hl-num">~50 μs</span>
+
+<span class="hl-key">Improvement:</span>
+  Bandwidth: <span class="hl-num">2-5×</span>
+  CPU freed: <span class="hl-num">30-50%</span> (for preprocessing)
+  Latency:   <span class="hl-num">4×</span> lower
+
+<span class="hl-key">At scale (DDN EXAScaler + GDS):</span>
+  Sequential reads: <span class="hl-num">351 GiB/s</span>
+  Aggregate to cluster: <span class="hl-num">4 TB/s</span>
+
+<span class="hl-cmt"># DeepNVMe (PyTorch) + local NVMe + GDS:</span>
+<span class="hl-cmt"># 20× faster checkpoint I/O with PCIe Gen5</span></div></div>
+          <div class="cc-block"><div class="cc-label">NVIDIA SCADA (2025)</div><div class="cc-text">NVIDIA&rsquo;s Storage Compute Accelerated Data Access (SCADA), announced November 2025, takes GDS further by completely eliminating CPU involvement in storage orchestration. The GPU itself manages data placement, prefetching, and caching &mdash; treating storage as an extension of its memory hierarchy.<br><br>This is particularly important for <strong>checkpointing</strong>, where a 1T model must write 2 TB of state to storage without stalling training. With SCADA, the GPU can overlap checkpoint writes with the next training step.</div></div>
+          <div class="cc-block"><div class="cc-note n-green"><strong>Key insight:</strong> GPUDirect Storage is like a delivery truck driving straight into the factory floor instead of unloading at the loading dock, carrying boxes to the warehouse, then carting them to the assembly line. Cutting out the middleman (CPU) doubles the delivery speed and frees the warehouse workers (CPU cores) for other tasks.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">save</span></div><div><div class="cc-title">Checkpointing: Saving Progress Without Stalling</div><div class="cc-sub">Multi-tier strategies for protecting billion-dollar training runs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Checkpointing Is Critical</div><div class="cc-text">A frontier model training run costs $50&ndash;100M+ and runs for weeks to months. Hardware failures happen every few hours on large clusters (Meta reported one failure every 3 hours on 16K GPUs). Without checkpointing, a failure could lose days of training progress &mdash; millions of dollars of compute wasted.<br><br>The challenge: checkpoints are <em>huge</em>. A 70B model&rsquo;s full training state (weights + optimizer states + gradients) is ~560 GB. A 1T model: ~8 TB. Writing this to storage fast enough to not stall training is a serious engineering problem.</div></div>
+          <div class="cc-block"><div class="cc-label">Checkpoint Size Math</div><div class="cc-code"><span class="hl-cmt"># Full training checkpoint includes:</span>
+<span class="hl-key">Model weights:</span>     params × bytes_per_param
+<span class="hl-key">Optimizer (Adam):</span>  2 × model_weights (momentum + variance)
+<span class="hl-key">Gradients:</span>         1 × model_weights
+<span class="hl-key">Total:</span>             ~4 × model_weights
+
+<span class="hl-key">Example: Llama 3 70B (mixed precision)</span>
+  Weights (FP16):    <span class="hl-num">140 GB</span>
+  Optimizer (FP32):  <span class="hl-num">280 GB</span>
+  Gradients (FP16):  <span class="hl-num">140 GB</span>
+  Total:             <span class="hl-num">~560 GB</span>
+
+<span class="hl-key">Example: 1T parameter model</span>
+  Weights (FP16):    <span class="hl-num">2 TB</span>
+  Optimizer (FP32):  <span class="hl-num">4 TB</span>
+  Gradients (FP16):  <span class="hl-num">2 TB</span>
+  Total:             <span class="hl-num">~8 TB</span>
+
+<span class="hl-cmt"># With FSDP, each GPU only saves its shard:</span>
+<span class="hl-key">70B on 512 GPUs:</span> 560 GB / 512 = <span class="hl-num">~1.1 GB/GPU</span>
+<span class="hl-key">1T on 4096 GPUs:</span> 8 TB / 4096 = <span class="hl-num">~2 GB/GPU</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Multi-Tier Checkpointing Strategy</div><div class="cc-text">Production training runs use a tiered approach, balancing speed against durability:<br><br><strong>Tier 1 &mdash; Local NVMe (every 5&ndash;10 min):</strong> Each GPU writes its shard to the node&rsquo;s local NVMe SSD. At 7 GB/s, writing 1.1 GB takes &lt;1 second. Protects against GPU failures but not node failures.<br><br><strong>Tier 2 &mdash; Parallel FS (every 30&ndash;60 min):</strong> Full checkpoint written to Lustre/GPFS. At 50 GB/s aggregate, 560 GB takes ~11 seconds. Protects against node failures but not data center failures.<br><br><strong>Tier 3 &mdash; Cloud/Remote (every few hours):</strong> Checkpoint copied to S3/GCS for disaster recovery. At 10 GB/s, 560 GB takes ~56 seconds. Protects against everything but is slowest.<br><br><strong>Asynchronous writes:</strong> All tiers use async I/O &mdash; training continues while checkpoints drain to storage in the background. The GPU only stalls if the next checkpoint starts before the previous one finishes writing.</div></div>
+          <div class="cc-block"><div class="cc-label">Cost of Checkpoint Frequency</div><div class="cc-code"><span class="hl-key">Scenario: 16K GPU cluster, $2.50/hr/GPU</span>
+  Cluster cost: <span class="hl-num">$40,000/hr</span> ($667/min)
+
+<span class="hl-key">Failure every 3 hours (Meta Llama 3 data):</span>
+
+  30-min checkpoints:
+    Max lost work: <span class="hl-num">30 min × $667 = $20,000</span>
+    Average lost:  <span class="hl-num">$10,000 per failure</span>
+    Daily (8 failures): <span class="hl-num">$80,000/day</span>
+
+  10-min checkpoints:
+    Max lost work: <span class="hl-num">10 min × $667 = $6,670</span>
+    Average lost:  <span class="hl-num">$3,335 per failure</span>
+    Daily: <span class="hl-num">$26,680/day</span>
+
+  5-min checkpoints (local NVMe):
+    Max lost work: <span class="hl-num">5 min × $667 = $3,335</span>
+    Average lost:  <span class="hl-num">$1,668 per failure</span>
+    Daily: <span class="hl-num">$13,340/day</span>
+
+<span class="hl-key">Savings: 5-min vs 30-min = $66,660/day</span></div></div>
+          <div class="cc-block"><div class="cc-note n-red"><strong>Key insight:</strong> Checkpointing is like the autosave in a video game. Save too rarely and you lose hours of progress when you die. Save too often and you spend all your time at save points instead of playing. The multi-tier approach is like having a quick-save (local NVMe) for frequent saves and a full save-to-cloud for the important milestones.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">input</span></div><div><div class="cc-title">Data Loading: The Hidden Bottleneck</div><div class="cc-sub">How PyTorch DataLoader, streaming, and preprocessing affect GPU utilization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The DataLoader Pipeline</div><div class="cc-text">Before data reaches the GPU, it passes through a multi-stage pipeline:<br><br><strong>1. Read from storage:</strong> Fetch raw data (text, images, audio) from disk or network.<br><strong>2. Deserialize:</strong> Parse file formats (Parquet, TFRecord, WebDataset).<br><strong>3. Transform:</strong> Tokenize text, resize images, augment data.<br><strong>4. Batch:</strong> Collate samples into tensors of uniform shape.<br><strong>5. Transfer:</strong> Copy batch from CPU memory to GPU memory (pinned memory + async copy).<br><br>Each stage can become a bottleneck. PyTorch&rsquo;s default DataLoader uses CPU workers for stages 1&ndash;4 and overlaps them with GPU training via prefetching. But with large models on fast GPUs, even 16 CPU workers may not keep up.</div></div>
+          <div class="cc-block"><div class="cc-label">Common Bottlenecks</div><div class="cc-code"><span class="hl-cmt"># Diagnosing data loading bottlenecks:</span>
+
+<span class="hl-key">Symptom: GPU utilization drops periodically</span>
+  → DataLoader can't prefetch fast enough
+  Fix: Increase num_workers, use persistent_workers
+
+<span class="hl-key">Symptom: CPU at 100%, GPU at 50%</span>
+  → Preprocessing is CPU-bound
+  Fix: Pre-tokenize data, use DALI for GPU preprocessing
+
+<span class="hl-key">Symptom: High I/O wait</span>
+  → Storage bandwidth insufficient
+  Fix: Local NVMe cache, parallel FS, larger prefetch
+
+<span class="hl-cmt"># PyTorch DataLoader tuning:</span>
+DataLoader(
+    dataset,
+    batch_size=<span class="hl-num">32</span>,
+    num_workers=<span class="hl-num">8</span>,        <span class="hl-cmt"># CPU workers</span>
+    pin_memory=<span class="hl-num">True</span>,      <span class="hl-cmt"># faster CPU→GPU</span>
+    prefetch_factor=<span class="hl-num">4</span>,   <span class="hl-cmt"># batches ahead</span>
+    persistent_workers=<span class="hl-num">True</span>  <span class="hl-cmt"># keep alive</span>
+)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Streaming vs Pre-Downloaded</div><div class="cc-text"><strong>Pre-downloaded (traditional):</strong> Copy entire dataset to local/parallel storage before training. Simple, fast reads, but requires storage capacity equal to dataset size on every node. A 15 TB dataset (Common Crawl) needs 15 TB per node or a shared parallel FS.<br><br><strong>Streaming (MosaicML, HuggingFace):</strong> Read data directly from object storage (S3/GCS) during training. No local copy needed. Data is shuffled and batched on-the-fly.<br><br>Streaming works well for text (low bandwidth per sample) but struggles for images/video (high bandwidth). The sweet spot: stream from S3 to a local NVMe cache, with the cache acting as a sliding window over the dataset.</div></div>
+          <div class="cc-block"><div class="cc-label">Data Formats for AI Training</div><div class="cc-code"><span class="hl-key">Format         Read Speed  Compression  Random Access</span>
+──────────────────────────────────────────────────────
+JSON/JSONL     <span class="hl-num">Slow</span>        None         Line-level
+Parquet        <span class="hl-num">Fast</span>        Columnar     Column-level
+TFRecord       <span class="hl-num">Fast</span>        Optional     Sequential
+WebDataset     <span class="hl-num">Very fast</span>   Tar-based    Sequential
+Arrow/IPC      <span class="hl-num">Very fast</span>   Optional     Row-level
+Mosaic MDSv2   <span class="hl-num">Very fast</span>   Shard-based  Shard-level
+
+<span class="hl-cmt"># WebDataset: tar files of samples</span>
+<span class="hl-cmt"># Sequential reads → maximizes disk throughput</span>
+<span class="hl-cmt"># Shuffling done across shards, not within</span>
+
+<span class="hl-cmt"># Rule of thumb: pre-tokenize + shard into</span>
+<span class="hl-cmt"># 256 MB–1 GB files for optimal parallel reads</span></div></div>
+          <div class="cc-block"><div class="cc-note n-violet"><strong>Key insight:</strong> Data loading is like a supply chain. The GPU is a factory that can process 1,000 widgets per second, but if the delivery trucks (DataLoader workers) only bring 500 per second, the factory runs at half capacity. Optimizing the supply chain (format, caching, prefetching) is often cheaper than buying a faster factory (bigger GPU).</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">cloud</span></div><div><div class="cc-title">Object Storage Integration: S3, GCS &amp; Beyond</div><div class="cc-sub">Using cloud object stores as the data lake for AI training</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Object Storage for AI</div><div class="cc-text">Most organizations store their training data in object storage (S3, GCS, Azure Blob) because it&rsquo;s cheap ($0.023/GB-month for S3 Standard), infinitely scalable, and durable (11 nines). The challenge is getting data from object storage to GPUs fast enough.<br><br><strong>S3 throughput:</strong> A single S3 GET request delivers ~100 MB/s. With 1,000 parallel requests, you can reach ~100 GB/s aggregate. But latency is 10&ndash;50ms per request &mdash; 1,000&times; slower than local NVMe.<br><br><strong>Egress costs:</strong> AWS charges $0.09/GB for data leaving a region. Training on a 15 TB dataset with 3 epochs = 45 TB of reads = <strong>$4,050 in egress</strong> if data and compute are in different regions. Same-region is free.</div></div>
+          <div class="cc-block"><div class="cc-label">Tiered Caching Architecture</div><div class="cc-text">The production pattern combines object storage with local caching:<br><br><strong>Cold tier (S3/GCS):</strong> Full dataset, cheap, durable. Source of truth.<br><br><strong>Warm tier (Parallel FS):</strong> Active training data cached on Lustre/GPFS. High bandwidth, shared across nodes. AWS FSx for Lustre can auto-hydrate from S3.<br><br><strong>Hot tier (Local NVMe):</strong> Current epoch&rsquo;s data cached on node-local SSDs. Fastest access, limited capacity (1&ndash;8 TB per node).<br><br>Data flows: S3 &rarr; Lustre (background prefetch) &rarr; Local NVMe (per-epoch cache) &rarr; GPU memory (per-batch). Each tier acts as a progressively faster, smaller cache.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">AWS FSx for Lustre + S3 Integration</div><div class="cc-code"><span class="hl-cmt"># FSx for Lustre: managed Lustre linked to S3</span>
+
+<span class="hl-key">Setup:</span>
+  S3 bucket: s3://my-training-data (15 TB)
+  FSx volume: /fsx/training (linked to S3)
+  Throughput: <span class="hl-num">1,200 Gbps</span> (150 GB/s) per client
+
+<span class="hl-key">How it works:</span>
+  1. File appears in /fsx/ as a stub (metadata only)
+  2. First read triggers lazy-load from S3
+  3. Subsequent reads served from Lustre (fast)
+  4. Write-back to S3 on demand or schedule
+
+<span class="hl-key">Cost comparison (15 TB dataset, 1 month):</span>
+  S3 Standard:        <span class="hl-num">$345/month</span>
+  FSx Persistent:     <span class="hl-num">$2,100/month</span>
+  FSx Scratch:        <span class="hl-num">$840/month</span> (no durability)
+  Local NVMe (8 nodes): <span class="hl-num">Included with instances</span>
+
+<span class="hl-cmt"># Best practice: FSx Scratch for training data</span>
+<span class="hl-cmt"># (can re-hydrate from S3), FSx Persistent for</span>
+<span class="hl-cmt"># checkpoints (need durability).</span></div></div>
+          <div class="cc-block"><div class="cc-note n-teal"><strong>Key insight:</strong> The storage architecture for AI is like a library system. S3 is the central warehouse with every book ever printed &mdash; cheap to store but slow to retrieve. The parallel file system is the local branch library &mdash; faster, but limited shelf space. Local NVMe is the stack of books on your desk &mdash; instant access, but only room for what you&rsquo;re reading right now. Good data engineering moves the right books to the right tier at the right time.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Storage Architecture Patterns</div><div class="cc-sub">How to design storage for training clusters, inference, and mixed workloads</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training Cluster Storage</div><div class="cc-text">A training cluster&rsquo;s storage must handle three simultaneous workloads: data loading (read-heavy, sequential), checkpointing (write-heavy, bursty), and logging/metrics (write-heavy, small files). These have conflicting I/O patterns.<br><br><strong>Best practice:</strong> Separate storage pools for each workload:<br><br><strong>Data pool:</strong> Lustre with read-optimized OSTs. Stripe across many servers. Tune for sequential read throughput. Cache hot data on local NVMe.<br><br><strong>Checkpoint pool:</strong> Lustre or GPFS with write-optimized OSTs. Needs burst bandwidth (entire cluster writes simultaneously). Size for peak write rate, not average.<br><br><strong>Scratch pool:</strong> Local NVMe on compute nodes. Used for Tier-1 checkpoints, data caching, and temporary files. No network overhead.</div></div>
+          <div class="cc-block"><div class="cc-label">Inference Storage</div><div class="cc-text">Inference storage is simpler but has different priorities:<br><br><strong>Model loading:</strong> Read entire model weights at startup. Speed determines cold-start latency. A 70B model from NVMe: 20s. From network: 2+ minutes. From S3: 5+ minutes.<br><br><strong>Model registry:</strong> Store multiple model versions, quantization variants, LoRA adapters. Needs fast random access for adapter loading.<br><br><strong>Solution:</strong> Keep active models on local NVMe or a fast NAS. Use S3 as the model registry with a pull-through cache. Pre-pull models during scaling events to avoid cold-start latency.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reference Architecture: 1,000-GPU Cluster</div><div class="cc-code"><span class="hl-key">Compute: 125 nodes × 8 GPUs (H100)</span>
+
+<span class="hl-key">Local Storage (per node):</span>
+  4× NVMe Gen4 3.84 TB = <span class="hl-num">15.36 TB</span>
+  Bandwidth: <span class="hl-num">28 GB/s</span> (4× 7 GB/s)
+  Use: Tier-1 checkpoints, data cache
+
+<span class="hl-key">Parallel FS (shared):</span>
+  DDN EXAScaler (Lustre-based)
+  Capacity: <span class="hl-num">2 PB</span> usable
+  Throughput: <span class="hl-num">500 GB/s</span> aggregate
+  OSS nodes: <span class="hl-num">40</span> (NVMe-backed)
+  Use: Training data, Tier-2 checkpoints
+
+<span class="hl-key">Object Storage:</span>
+  S3-compatible (MinIO or AWS S3)
+  Capacity: <span class="hl-num">10+ PB</span>
+  Use: Raw datasets, Tier-3 checkpoints, archive
+
+<span class="hl-key">Estimated storage cost:</span>
+  Local NVMe: <span class="hl-num">Included</span> with nodes
+  Parallel FS: ~$<span class="hl-num">500K-1M</span> (DDN appliance)
+  S3 (10 PB): ~$<span class="hl-num">$2,760/month</span> (AWS)
+  Total: <span class="hl-num">~3-5%</span> of cluster cost</div></div>
+          <div class="cc-block"><div class="cc-note n-orange"><strong>Key insight:</strong> Storage architecture for AI is like plumbing in a building. Nobody notices it when it works, but when a pipe bursts (storage bottleneck), the whole building floods (GPUs idle). Spend 3&ndash;5% of your cluster budget on storage to protect the other 95% from sitting idle.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">Storage Sizing: Capacity, Bandwidth &amp; Cost</div><div class="cc-sub">How to calculate storage requirements for real AI workloads</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Capacity Sizing</div><div class="cc-code"><span class="hl-key">Training Data:</span>
+  Text (Common Crawl):     <span class="hl-num">~15 TB</span> (compressed)
+  Image (LAION-5B):        <span class="hl-num">~240 TB</span>
+  Video (HD, 1M hours):    <span class="hl-num">~2 PB</span>
+  Code (The Stack v2):     <span class="hl-num">~4 TB</span>
+
+<span class="hl-key">Checkpoint Storage:</span>
+  Per checkpoint (70B):    <span class="hl-num">560 GB</span>
+  Keep last 5:             <span class="hl-num">2.8 TB</span>
+  Per checkpoint (1T):     <span class="hl-num">8 TB</span>
+  Keep last 5:             <span class="hl-num">40 TB</span>
+
+<span class="hl-key">Model Artifacts (inference):</span>
+  Per model version:       <span class="hl-num">140-280 GB</span>
+  10 models × 3 versions:  <span class="hl-num">4-8 TB</span>
+  LoRA adapters (100):     <span class="hl-num">70 GB</span>
+
+<span class="hl-key">Rule of thumb:</span>
+  Parallel FS: <span class="hl-num">2× dataset + 10× largest checkpoint</span>
+  Object store: <span class="hl-num">All raw data + all checkpoint history</span></div></div>
+          <div class="cc-block"><div class="cc-label">Bandwidth Sizing</div><div class="cc-text"><strong>Data loading bandwidth:</strong> Calculate based on batch size, processing time, and number of nodes. For text training, even modest bandwidth (100 MB/s per node) suffices. For image/video, plan for 1&ndash;10 GB/s per node.<br><br><strong>Checkpoint bandwidth:</strong> Total checkpoint size &divide; acceptable write time. If a 560 GB checkpoint must complete in 30 seconds: need <strong>18.7 GB/s</strong> aggregate write bandwidth. With FSDP (each GPU writes its shard in parallel), 125 nodes writing 4.5 GB each at 7 GB/s (local NVMe) finishes in &lt;1 second.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Total Cost of Storage</div><div class="cc-code"><span class="hl-key">1,000-GPU training cluster (1 year):</span>
+
+<span class="hl-key">GPU compute:</span>
+  1,000 × $2.50/hr × 8,760 hrs = <span class="hl-num">$21.9M</span>
+
+<span class="hl-key">Storage:</span>
+  Parallel FS (2 PB, DDN):  <span class="hl-num">$800K</span> (amortized)
+  Local NVMe (included):    <span class="hl-num">$0</span>
+  S3 (10 PB):               <span class="hl-num">$33K</span>
+  Total storage:             <span class="hl-num">$833K</span> (~3.8% of compute)
+
+<span class="hl-key">Cost of NOT having good storage:</span>
+  5% GPU idle from storage starvation:
+  1,000 × $2.50 × 8,760 × 0.05 = <span class="hl-num">$1.095M</span>
+
+  <span class="hl-cmt"># Bad storage costs MORE than good storage!</span>
+  <span class="hl-cmt"># $833K investment prevents $1.095M+ waste.</span>
+
+<span class="hl-key">NVMe-oF market growth:</span> <span class="hl-num">27.8% CAGR</span>
+<span class="hl-key">AI storage market:</span> $36B (2025) → $322B (2035)</div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> Storage is the cheapest insurance policy for your GPU investment. Spending 3&ndash;5% of your cluster budget on proper storage prevents 5&ndash;15% of your GPUs from sitting idle. The math is simple: $833K in storage saves $1M+ in wasted compute. Every dollar spent on storage returns $1.30+ in GPU utilization.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-inference-infrastructure.html"><span class="material-symbols-rounded">arrow_back</span>Previous Chapter</a>
+    <a class="ch-nav-btn next" href="11-power-cooling-energy.html">Next Chapter<span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="prevBtn"><span class="material-symbols-rounded">skip_previous</span></button>
+  <button class="ctrl-btn ctrl-play" id="playBtn"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button>
+  <button class="ctrl-btn" id="nextBtn"><span class="material-symbols-rounded">skip_next</span></button>
+</div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=12000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> An H100 consumes data at 3.35 TB/s but the fastest SSD delivers 7 GB/s — a 478× gap. When storage can\'t keep up, $400K GPUs sit idle. Every 1% idle on 1,000 GPUs costs $21,900/month.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Lustre stripes files across 100+ storage servers for parallel reads. DDN EXAScaler delivers 4 TB/s to NVIDIA\'s Eos. GPFS offers better small-file performance but costs more.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> GPUDirect Storage bypasses the CPU entirely — DMA from storage straight to GPU memory. 2–5× bandwidth improvement, 4× lower latency, and frees 30–50% of CPU for preprocessing.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> A 70B checkpoint is 560 GB. Multi-tier strategy: local NVMe every 5 min (<1s write), parallel FS every 30 min (~11s), cloud every few hours. Saves $66,660/day vs infrequent checkpoints.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> PyTorch DataLoader with 8 workers, pinned memory, and prefetch_factor=4. Pre-tokenize data, use WebDataset format, cache on local NVMe. Data loading is the silent GPU killer.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> S3 is cheap ($0.023/GB-month) but slow (10–50ms latency). FSx for Lustre bridges the gap: 150 GB/s throughput with lazy-load from S3. Three-tier caching: S3 → Lustre → local NVMe.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Separate storage pools for data loading (read-optimized), checkpointing (write-burst), and scratch (local NVMe). A 1,000-GPU cluster needs ~2 PB parallel FS + 10 PB object storage.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Storage costs 3–5% of a training cluster ($833K for 1,000 GPUs). But bad storage wastes 5–15% of GPU compute ($1M+). Every dollar on storage returns $1.30+ in GPU utilization.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

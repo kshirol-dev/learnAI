@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Advanced RAG Patterns — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{background:#be185d;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Advanced RAG Patterns</h2><span class="tb-sub">Beyond naive RAG &mdash; graphs, agents, multi-modal, and more</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="09-advanced-rag-patterns-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Graph RAG</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Agentic</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Multi-Modal</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">table_chart</span></div><span class="pipe-label">Structured</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">Conversational</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">cached</span></div><span class="pipe-label">Caching</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Choose</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Graph RAG -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Graph RAG</div><div class="cc-sub">Combining knowledge graphs with vector retrieval</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem with Flat Chunks</div><div class="cc-text">Standard RAG treats documents as isolated chunks. But real knowledge has <strong>relationships</strong>: Person X works at Company Y, Product A depends on Component B, Policy C references Regulation D. Flat vector search misses these connections.</div></div>
+          <div class="cc-block"><div class="cc-label">How Graph RAG Works</div><div class="cc-text"><strong>Step 1:</strong> Extract entities and relationships from documents using an LLM. Build a knowledge graph (nodes = entities, edges = relationships).<br><br><strong>Step 2:</strong> At query time, retrieve relevant entities from the graph and traverse their connections to find related context.<br><br><strong>Step 3:</strong> Combine graph-retrieved context with vector-retrieved chunks for a richer answer.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use</div><div class="cc-text"><strong>Multi-hop questions:</strong> "Who manages the team that built the product mentioned in the Q3 report?" &mdash; requires traversing multiple relationships.<br><br><strong>Entity-centric queries:</strong> "Tell me everything about Project Alpha" &mdash; gather all related entities and their connections.<br><br><strong>Summarization over large corpora:</strong> Microsoft's GraphRAG (Edge et al., 2024) builds community summaries from the graph for high-level questions.</div></div>
+          <div class="cc-note n-pink"><strong>Microsoft GraphRAG</strong> (open-source) is the leading implementation. It uses an LLM to extract entities and relationships, builds a graph, detects communities using the Leiden algorithm, and generates community summaries. For "global" questions about the entire corpus, it queries community summaries instead of individual chunks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Agentic RAG -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">Agentic RAG</div><div class="cc-sub">LLM agents that decide how and when to retrieve</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Beyond Fixed Pipelines</div><div class="cc-text">Standard RAG follows a fixed pipeline: retrieve then generate. <strong>Agentic RAG</strong> gives the LLM agency to decide its own retrieval strategy. The agent can choose which tools to use, when to retrieve, what to search for, and whether to retrieve again if the first results are insufficient.</div></div>
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">The LLM is given access to <strong>tools</strong>: vector search, SQL query, web search, calculator, API calls. For each question, the agent reasons about which tools to use and in what order. It can chain multiple retrievals, combine results from different sources, and self-correct.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangGraph Agentic RAG</span>
+<span class="hl-key">from</span> langgraph.prebuilt <span class="hl-key">import</span> create_react_agent
+
+tools = [
+    vector_search_tool,   <span class="hl-cmt"># search docs</span>
+    sql_query_tool,       <span class="hl-cmt"># query database</span>
+    web_search_tool,      <span class="hl-cmt"># search the web</span>
+    calculator_tool,      <span class="hl-cmt"># math operations</span>
+]
+
+agent = create_react_agent(
+    model=llm,
+    tools=tools,
+    prompt=<span class="hl-str">"You are a research assistant..."</span>
+)
+
+<span class="hl-cmt"># Agent decides: search docs first,</span>
+<span class="hl-cmt"># then query SQL for numbers,</span>
+<span class="hl-cmt"># then calculate the final answer</span>
+result = agent.invoke({
+    <span class="hl-str">"messages"</span>: [(<span class="hl-str">"user"</span>, <span class="hl-str">"What was our revenue growth rate compared to the industry average?"</span>)]
+})</div>
+          <div class="cc-note n-violet"><strong>Agentic RAG is the most powerful but least predictable pattern.</strong> The agent may take unexpected paths, make unnecessary tool calls, or get stuck in loops. Use it for complex research queries where flexibility matters. For simple Q&A, stick with fixed pipelines &mdash; they are faster, cheaper, and more predictable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Multi-Modal RAG -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">image</span></div><div><div class="cc-title">Multi-Modal RAG</div><div class="cc-sub">Retrieving and reasoning over images, tables, and diagrams</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Challenge</div><div class="cc-text">Many documents contain critical information in <strong>images, charts, tables, and diagrams</strong> that text-only RAG completely misses. A financial report's key insights might be in a bar chart. A technical manual's wiring diagram cannot be chunked as text.</div></div>
+          <div class="cc-block"><div class="cc-label">Approaches</div><div class="cc-text"><strong>1. Text extraction:</strong> Use OCR or vision models to convert images/tables to text, then index the text normally. Simplest but loses visual structure.<br><br><strong>2. Multi-modal embeddings:</strong> Use models like CLIP or Nomic Embed Vision to embed images directly into the same vector space as text. Retrieve images by text query.<br><br><strong>3. Vision LLM generation:</strong> Pass retrieved images directly to a vision-capable LLM (GPT-4o, Claude 3.5 Sonnet, Gemini) for analysis. Most powerful approach.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Multi-modal RAG with vision LLM</span>
+
+<span class="hl-cmt"># 1. Extract images from documents</span>
+images = extract_images(pdf_path)
+
+<span class="hl-cmt"># 2. Generate text descriptions</span>
+<span class="hl-key">for</span> img <span class="hl-key">in</span> images:
+    description = vision_llm.describe(img)
+    <span class="hl-cmt"># Index the description as a chunk</span>
+    <span class="hl-cmt"># Store image path in metadata</span>
+    chunks.append(Document(
+        page_content=description,
+        metadata={<span class="hl-str">"image_path"</span>: img.path}
+    ))
+
+<span class="hl-cmt"># 3. At query time, retrieve description</span>
+<span class="hl-cmt"># 4. Pass original image to vision LLM</span>
+answer = vision_llm.invoke([
+    {<span class="hl-str">"type"</span>: <span class="hl-str">"text"</span>, <span class="hl-str">"text"</span>: question},
+    {<span class="hl-str">"type"</span>: <span class="hl-str">"image_url"</span>, <span class="hl-str">"url"</span>: img_path}
+])</div>
+          <div class="cc-note n-blue"><strong>The practical approach:</strong> Extract images, generate text summaries with a vision LLM, index the summaries. At retrieval time, if a summary matches, pass the original image to the generation LLM. This gives you text-based retrieval with image-aware generation. LlamaIndex's <code>MultiModalVectorStoreIndex</code> implements this pattern.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Structured Data RAG (Text-to-SQL) -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">table_chart</span></div><div><div class="cc-title">Structured Data RAG (Text-to-SQL)</div><div class="cc-sub">Querying databases with natural language</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When Documents Aren't Enough</div><div class="cc-text">Some questions need <strong>precise, structured data</strong>: "What was our revenue last quarter?", "How many orders were placed in March?", "Show me the top 10 customers by spend." This data lives in databases, not documents. Text-to-SQL lets the LLM write SQL queries to answer these questions.</div></div>
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>Step 1:</strong> Provide the LLM with the database schema (table names, columns, types).<br><strong>Step 2:</strong> The LLM generates a SQL query from the natural language question.<br><strong>Step 3:</strong> Execute the SQL query against the database.<br><strong>Step 4:</strong> The LLM interprets the results and generates a natural language answer.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangChain Text-to-SQL</span>
+<span class="hl-key">from</span> langchain_community.utilities <span class="hl-key">import</span> SQLDatabase
+<span class="hl-key">from</span> langchain.chains <span class="hl-key">import</span> create_sql_query_chain
+
+db = SQLDatabase.from_uri(<span class="hl-str">"sqlite:///sales.db"</span>)
+chain = create_sql_query_chain(llm, db)
+
+<span class="hl-cmt"># User: "What was total revenue in Q3?"</span>
+<span class="hl-cmt"># LLM generates:</span>
+<span class="hl-cmt"># SELECT SUM(amount) FROM orders</span>
+<span class="hl-cmt"># WHERE date BETWEEN '2024-07-01'</span>
+<span class="hl-cmt">#   AND '2024-09-30'</span>
+
+sql = chain.invoke({
+    <span class="hl-str">"question"</span>: <span class="hl-str">"Total revenue in Q3 2024?"</span>
+})
+result = db.run(sql)</div>
+          <div class="cc-note n-amber"><strong>Combine Text-to-SQL with document RAG.</strong> Use a router to decide: numerical/analytical questions go to SQL, conceptual/policy questions go to vector search. LlamaIndex's <code>RouterQueryEngine</code> and LangChain's routing chains handle this. This gives users a single interface for both structured and unstructured data.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Conversational RAG -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">chat</span></div><div><div class="cc-title">Conversational RAG</div><div class="cc-sub">Multi-turn chat with memory and context tracking</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Challenge</div><div class="cc-text">Users don't ask one question and leave. They have <strong>conversations</strong>: follow-up questions, clarifications, topic shifts. Each turn depends on the previous context. "What's the refund policy?" followed by "How long do I have?" &mdash; the second question only makes sense with the first.</div></div>
+          <div class="cc-block"><div class="cc-label">Key Components</div><div class="cc-text"><strong>Chat history:</strong> Store the full conversation. Pass it to the LLM for context.<br><br><strong>History-aware retrieval:</strong> Rewrite follow-up questions using chat history before retrieval (covered in Ch 7).<br><br><strong>Memory management:</strong> As conversations grow, summarize older turns to stay within the token budget. Keep recent turns verbatim, compress older ones.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangChain Conversational RAG</span>
+<span class="hl-key">from</span> langchain.chains <span class="hl-key">import</span> (
+    create_history_aware_retriever,
+    create_retrieval_chain
+)
+<span class="hl-key">from</span> langchain_community.chat_message_histories <span class="hl-key">import</span> (
+    ChatMessageHistory
+)
+<span class="hl-key">from</span> langchain_core.runnables.history <span class="hl-key">import</span> (
+    RunnableWithMessageHistory
+)
+
+<span class="hl-cmt"># 1. History-aware retriever (rewrites query)</span>
+hist_retriever = create_history_aware_retriever(
+    llm, retriever, contextualize_prompt
+)
+
+<span class="hl-cmt"># 2. Full RAG chain</span>
+rag_chain = create_retrieval_chain(
+    hist_retriever, stuff_chain
+)
+
+<span class="hl-cmt"># 3. Add message history</span>
+conversational_rag = RunnableWithMessageHistory(
+    rag_chain,
+    get_session_history,  <span class="hl-cmt"># returns ChatMessageHistory</span>
+    input_messages_key=<span class="hl-str">"input"</span>,
+    history_messages_key=<span class="hl-str">"chat_history"</span>,
+)</div>
+          <div class="cc-note n-teal"><strong>Session management is critical.</strong> Each user/conversation needs its own chat history. Use Redis, PostgreSQL, or DynamoDB to persist histories across requests. LangChain's <code>RunnableWithMessageHistory</code> handles this with pluggable backends. Set a maximum history length (e.g., last 20 turns) to control costs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Caching & Performance -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">cached</span></div><div><div class="cc-title">Caching &amp; Performance Patterns</div><div class="cc-sub">Reducing latency and cost with intelligent caching</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Semantic Caching</div><div class="cc-text">If a user asks a question very similar to one already answered, return the cached answer instead of running the full pipeline. <strong>Semantic caching</strong> uses embedding similarity to match queries &mdash; "What's the refund policy?" and "How do returns work?" might hit the same cache entry.</div></div>
+          <div class="cc-block"><div class="cc-label">Other Caching Layers</div><div class="cc-text"><strong>Embedding cache:</strong> Cache embedding API calls. Same text = same vector. Saves API costs on repeated documents.<br><br><strong>LLM response cache:</strong> Cache exact prompt &rarr; response pairs. Useful for identical queries.<br><br><strong>Retrieval cache:</strong> Cache query &rarr; retrieved documents. Avoids repeated vector searches for the same query.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LangChain semantic cache</span>
+<span class="hl-key">from</span> langchain.cache <span class="hl-key">import</span> InMemoryCache
+<span class="hl-key">from</span> langchain.globals <span class="hl-key">import</span> set_llm_cache
+
+<span class="hl-cmt"># Exact match cache</span>
+set_llm_cache(InMemoryCache())
+
+<span class="hl-cmt"># Semantic cache (GPTCache)</span>
+<span class="hl-key">from</span> gptcache <span class="hl-key">import</span> Cache
+<span class="hl-key">from</span> gptcache.adapter.langchain_models <span class="hl-key">import</span> (
+    LangChainLLMs
+)
+
+cache = Cache()
+cache.init(
+    similarity_threshold=<span class="hl-num">0.95</span>,
+    <span class="hl-cmt"># Uses embedding similarity to match</span>
+)
+
+<span class="hl-cmt"># Cache hit: &lt;50ms response</span>
+<span class="hl-cmt"># Cache miss: full pipeline (1-5s)</span></div>
+          <div class="cc-note n-orange"><strong>Set the similarity threshold carefully.</strong> Too low (0.8) and you'll return wrong cached answers for different questions. Too high (0.99) and the cache rarely hits. Start at 0.95 and tune based on your query distribution. Monitor cache hit rate and answer quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Choosing the Right Pattern -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Choosing the Right Pattern</div><div class="cc-sub">Match the pattern to your use case</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Guide</div><div class="cc-text"><strong>Simple Q&A over documents:</strong><br>Standard RAG (Ch 1-8). No advanced patterns needed.<br><br><strong>Questions about relationships between entities:</strong><br>Graph RAG. Build a knowledge graph from your documents.<br><br><strong>Complex research requiring multiple data sources:</strong><br>Agentic RAG. Give the LLM tools for each data source.<br><br><strong>Documents with images, charts, diagrams:</strong><br>Multi-modal RAG. Extract and index visual content.<br><br><strong>Numerical/analytical questions:</strong><br>Text-to-SQL + document RAG with routing.<br><br><strong>Chat-based interface:</strong><br>Conversational RAG with history-aware retrieval.<br><br><strong>High traffic, repeated questions:</strong><br>Add semantic caching to any pattern above.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Complexity vs Value</div><div class="cc-text">Each advanced pattern adds significant complexity. Before adopting one, ask:<br><br><strong>1. Does standard RAG fail?</strong> If basic retrieval + generation works, stop there.<br><br><strong>2. Can I identify the failure mode?</strong> Graph RAG fixes relationship queries. Multi-modal fixes image-heavy docs. Don't add complexity without a specific problem to solve.<br><br><strong>3. Do I have the infrastructure?</strong> Graph RAG needs a graph database. Agentic RAG needs careful tool design. Multi-modal needs vision models.</div></div>
+          <div class="cc-note n-green"><strong>Most production RAG systems use standard RAG with hybrid search and reranking.</strong> Advanced patterns are for specific, identified failure modes. Build the simple version first, measure where it fails, then add the specific pattern that addresses that failure. Premature complexity is the enemy of shipping.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Graph RAG</strong> combines knowledge graphs with vector retrieval. Extract entities and relationships from documents, build a graph, and traverse connections at query time. Microsoft\u2019s GraphRAG uses community detection (Leiden algorithm) to generate summaries for high-level questions. Best for multi-hop queries and entity-centric exploration.',color:'#db2777'},
+    2:{text:'<strong>Agentic RAG</strong> gives the LLM tools (vector search, SQL, web search, APIs) and lets it decide its own retrieval strategy. Built with LangGraph or LlamaIndex agents. Most powerful but least predictable \u2014 the agent may take unexpected paths or get stuck in loops. Use for complex research queries, not simple Q&A.',color:'#7c3aed'},
+    3:{text:'<strong>Multi-modal RAG</strong> handles images, charts, tables, and diagrams. Three approaches: (1) extract text from images via OCR/vision models, (2) embed images with CLIP/Nomic into the same vector space as text, (3) pass retrieved images directly to a vision LLM (GPT-4o, Claude). The practical pattern: summarize images as text for retrieval, pass originals for generation.',color:'#2563eb'},
+    4:{text:'<strong>Text-to-SQL</strong> lets users query databases with natural language. The LLM receives the schema, generates SQL, executes it, and interprets results. Combine with document RAG using a router: numerical questions \u2192 SQL, conceptual questions \u2192 vector search. LangChain\u2019s <code>create_sql_query_chain</code> and LlamaIndex\u2019s <code>NLSQLTableQueryEngine</code> implement this.',color:'#d97706'},
+    5:{text:'<strong>Conversational RAG</strong> handles multi-turn chat with follow-up questions. Key components: chat history storage, history-aware query rewriting (Ch 7), and memory management (summarize old turns to stay within token budget). LangChain\u2019s <code>RunnableWithMessageHistory</code> with Redis/PostgreSQL backends handles session persistence.',color:'#0d9488'},
+    6:{text:'<strong>Semantic caching</strong> returns cached answers for semantically similar queries (&lt;50ms vs 1\u20135s). GPTCache uses embedding similarity with a configurable threshold (start at 0.95). Also cache embeddings (same text = same vector) and retrieval results. High-traffic systems with repeated question patterns benefit most.',color:'#ea580c'},
+    7:{text:'<strong>Start with standard RAG.</strong> Only add advanced patterns when you identify specific failure modes: Graph RAG for relationships, agentic for multi-source research, multi-modal for visual content, Text-to-SQL for analytics, conversational for chat, caching for performance. Premature complexity is the enemy of shipping.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--pink)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

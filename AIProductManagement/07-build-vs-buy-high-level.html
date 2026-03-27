@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Build vs. Buy vs. API — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Build vs. Buy vs. API</h2><span class="tb-sub">Foundation model APIs, fine-tuning, custom models, or vertical SaaS? The decision matrix.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">view_list</span></div><span class="pipe-label">Spectrum</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">api</span></div><span class="pipe-label">API</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Fine-Tune</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Custom</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">lock</span></div><span class="pipe-label">Lock-In</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">decision</span></div><span class="pipe-label">Decide</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">view_list</span></div><div><div class="cc-title">The Build-Buy Spectrum</div><div class="cc-sub">It&rsquo;s not binary &mdash; there are five distinct options with different trade-offs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Five Options, Not Two</div><div class="cc-text">The &ldquo;build vs. buy&rdquo; framing is misleading. In AI, there&rsquo;s a <strong>spectrum of five options</strong>, each with different cost, speed, control, and differentiation profiles:<br><br><strong>1. Buy SaaS</strong> &mdash; Purchase a complete AI product (e.g., Intercom Fin for support, Gong for sales intelligence). Fastest, least differentiated.<br><br><strong>2. Use Foundation Model APIs</strong> &mdash; Call OpenAI, Anthropic, or Google APIs directly. Build the product layer yourself, rent the intelligence.<br><br><strong>3. Fine-tune a Foundation Model</strong> &mdash; Take a pre-trained model and customize it on your domain data. More investment, more differentiation.<br><br><strong>4. Deploy Open-Weight Models</strong> &mdash; Run Llama, Mistral, or similar on your own infrastructure. Full control, no per-query costs, but significant ops burden.<br><br><strong>5. Train Custom Models</strong> &mdash; Build from scratch on your data. Maximum control and differentiation. Maximum cost and timeline.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Trade-Off Matrix</div><div class="cc-text">
+<strong>Speed to market:</strong><br>SaaS (days) &gt; API (weeks) &gt; Fine-tune (months) &gt; Open-weight (months) &gt; Custom (6&ndash;12+ months)<br><br>
+<strong>Year 1 cost:</strong><br>SaaS ($6K&ndash;$600K) &asymp; API ($10K&ndash;$200K) &lt; Fine-tune ($50K&ndash;$300K) &lt; Open-weight ($80K&ndash;$400K) &lt; Custom ($200K&ndash;$600K+)<br><br>
+<strong>Differentiation:</strong><br>Custom &gt; Open-weight &gt; Fine-tune &gt; API &gt; SaaS<br><br>
+<strong>Data control:</strong><br>Custom = Open-weight &gt; Fine-tune &gt; API &gt; SaaS<br><br>
+<strong>Maintenance burden:</strong><br>Custom &gt; Open-weight &gt; Fine-tune &gt; API &gt; SaaS</div></div>
+          <div class="cc-note n-violet"><strong>The key insight:</strong> You&rsquo;re not choosing between &ldquo;renting intelligence&rdquo; and &ldquo;owning intelligence.&rdquo; You&rsquo;re choosing between renting model behavior (fast, cheap, dependent) and owning model outcomes (slow, expensive, independent). The right choice depends on whether AI is your core differentiator or a supporting capability.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">api</span></div><div><div class="cc-title">Option 1: Foundation Model APIs</div><div class="cc-sub">The fastest path &mdash; rent intelligence from OpenAI, Anthropic, Google, and others</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">You call a foundation model API (GPT-4o, Claude, Gemini) with your prompt, context, and parameters. The model returns a response. You build the product layer &mdash; UI, business logic, data pipelines, evaluation &mdash; around the API.<br><br><strong>What you own:</strong> The product experience, the prompt engineering, the evaluation framework, the user data, the business logic.<br><br><strong>What you rent:</strong> The model intelligence. You have no control over model updates, pricing changes, or capability shifts. When OpenAI releases a new version, your product behavior may change overnight.</div></div>
+          <div class="cc-block"><div class="cc-label">When to Choose APIs</div><div class="cc-text">&bull; AI is a <strong>feature, not the core product</strong> (adding summarization to a project management tool)<br>&bull; You need to <strong>ship fast</strong> and validate the concept before investing heavily<br>&bull; The task is <strong>general-purpose</strong> (writing, summarization, Q&amp;A) not domain-specific<br>&bull; Your team <strong>lacks ML expertise</strong> and you need to start somewhere<br>&bull; <strong>Volume is low to moderate</strong> (under 100K requests/day)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Risks &amp; Costs</div><div class="cc-text"><strong>Per-query cost:</strong> $0.01&ndash;$0.50+ per request depending on model and token count. At 1M requests/day, that&rsquo;s $10K&ndash;$500K/month. Costs scale linearly with usage.<br><br><strong>Latency:</strong> API calls add 500ms&ndash;5s of latency. For real-time applications, this may be unacceptable.<br><br><strong>Data privacy:</strong> Your data (prompts, context) is sent to a third-party server. For sensitive data (healthcare, finance, legal), this may violate compliance requirements. Some providers offer data processing agreements, but the data still leaves your infrastructure.<br><br><strong>Model changes:</strong> When the provider updates the model, your product behavior changes without your control. A prompt that worked perfectly on GPT-4 may behave differently on GPT-4o. You must regression-test after every model update.</div></div>
+          <div class="cc-note n-blue"><strong>The API starting strategy:</strong> Start with APIs to validate the concept. If the product works and scales, migrate to fine-tuning or open-weight models for cost reduction and control. APIs are the best way to learn what you need before committing to heavier investments.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Option 2: Fine-Tuning</div><div class="cc-sub">Customizing a foundation model on your domain data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">Fine-tuning takes a pre-trained foundation model and <strong>continues training it on your domain-specific data</strong>. The model learns your terminology, style, patterns, and domain knowledge while retaining its general capabilities.<br><br><strong>Example:</strong> Fine-tuning GPT-4o on 10,000 examples of your company&rsquo;s customer support conversations. The resulting model understands your products, policies, and tone of voice far better than the base model with prompting alone.<br><br><strong>What changes vs. APIs:</strong><br>&bull; Better performance on domain-specific tasks (often 10&ndash;30% improvement)<br>&bull; Shorter prompts needed (the knowledge is in the weights, not the prompt)<br>&bull; Lower per-query cost (smaller model, shorter prompts)<br>&bull; More consistent behavior (less sensitive to prompt variations)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Choose Fine-Tuning</div><div class="cc-text">&bull; Prompting alone doesn&rsquo;t achieve your quality threshold<br>&bull; You have <strong>domain-specific data</strong> (1,000+ examples) that the base model hasn&rsquo;t seen<br>&bull; You need <strong>consistent style or format</strong> that&rsquo;s hard to enforce via prompting<br>&bull; You want to <strong>reduce per-query cost</strong> (fine-tuned smaller models can match larger models on specific tasks)<br>&bull; The task is <strong>narrow and well-defined</strong> (classification, extraction, specific generation patterns)</div></div>
+          <div class="cc-block"><div class="cc-label">Costs &amp; Considerations</div><div class="cc-text"><strong>Training cost:</strong> $50&ndash;$5,000+ per fine-tuning run depending on model size and data volume. You&rsquo;ll run multiple iterations.<br><br><strong>Data requirement:</strong> Minimum 500&ndash;1,000 high-quality examples. More is better. The examples must be representative of production use cases.<br><br><strong>Ongoing cost:</strong> You must re-fine-tune when the base model updates, when your domain changes, or when you add new capabilities. This is recurring, not one-time.<br><br><strong>Evaluation burden:</strong> You need robust evaluation to ensure fine-tuning improved the right things without degrading others.</div></div>
+          <div class="cc-note n-teal"><strong>Fine-tuning trap:</strong> Don&rsquo;t fine-tune prematurely. Exhaust prompt engineering and RAG first. Fine-tuning is harder to iterate on (hours per experiment vs. minutes for prompt changes). Only fine-tune when you&rsquo;ve proven the use case with APIs and need the next level of quality or cost efficiency.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">build</span></div><div><div class="cc-title">Option 3: Open-Weight &amp; Custom Models</div><div class="cc-sub">Maximum control, maximum responsibility</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Open-Weight Models</div><div class="cc-text">Models like Meta&rsquo;s Llama, Mistral, and others release their weights publicly. You download the model and run it on your own infrastructure (or a cloud provider).<br><br><strong>Advantages:</strong><br>&bull; <strong>No per-query API cost</strong> &mdash; You pay for compute, not per request. At high volume, this is dramatically cheaper.<br>&bull; <strong>Full data privacy</strong> &mdash; Data never leaves your infrastructure. Critical for regulated industries.<br>&bull; <strong>No vendor dependency</strong> &mdash; The model doesn&rsquo;t change unless you change it. No surprise updates.<br>&bull; <strong>Full customization</strong> &mdash; Fine-tune, modify, combine with other models, run any way you want.<br><br><strong>Challenges:</strong><br>&bull; You own the infrastructure (GPUs, serving, scaling, monitoring)<br>&bull; You own security, patching, and reliability<br>&bull; Open-weight models are often 6&ndash;18 months behind frontier closed models in raw capability</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Custom Models from Scratch</div><div class="cc-text">Training a model entirely from scratch on your own data. This is the most expensive option and only makes sense in specific scenarios:<br><br>&bull; <strong>Highly specialized domain</strong> where general models fail (scientific research, proprietary data formats, niche languages)<br>&bull; <strong>Massive proprietary dataset</strong> that creates a genuine competitive advantage<br>&bull; <strong>Regulatory requirements</strong> that prohibit using any external model<br>&bull; <strong>AI is the core product</strong> and model quality is the primary differentiator<br><br><strong>Cost reality:</strong> Training a competitive LLM from scratch costs $1M&ndash;$100M+. Training a specialized ML model costs $200K&ndash;$2M+. This is not a decision to make lightly.</div></div>
+          <div class="cc-note n-amber"><strong>The cost crossover:</strong> At low volume (&lt;10K requests/day), APIs are cheaper. At medium volume (10K&ndash;100K), fine-tuning or open-weight models break even. At high volume (&gt;100K requests/day), self-hosted models can be 5&ndash;10x cheaper than APIs. Model the economics at your expected scale before deciding.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">shopping_cart</span></div><div><div class="cc-title">Option 4: Buy Vertical SaaS</div><div class="cc-sub">When someone else has already solved your problem</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When Buying Makes Sense</div><div class="cc-text">Sometimes the best AI product decision is to <strong>not build AI at all</strong> and buy an existing solution:<br><br>&bull; <strong>The problem is well-solved</strong> &mdash; Customer support AI, document processing, fraud detection &mdash; mature vendors exist with years of training data and domain expertise.<br>&bull; <strong>AI is not your differentiator</strong> &mdash; If you&rsquo;re an e-commerce company, building your own fraud detection from scratch makes no sense when Stripe Radar exists.<br>&bull; <strong>Speed matters more than control</strong> &mdash; A vendor solution deployed in 2 weeks beats a custom solution deployed in 6 months.<br>&bull; <strong>You lack AI talent</strong> &mdash; Building AI requires specialized skills. If you don&rsquo;t have them and can&rsquo;t hire them, buying is pragmatic.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Vendor Evaluation Criteria</div><div class="cc-text"><strong>1. Model quality:</strong> Request evaluation on <em>your</em> data, not their demo data. Every vendor looks great on cherry-picked examples.<br><br><strong>2. Data handling:</strong> Where does your data go? Is it used to train their model? Can you get it back? What happens if you leave?<br><br><strong>3. Customization depth:</strong> Can you adjust thresholds, add domain terminology, fine-tune on your data? Or is it one-size-fits-all?<br><br><strong>4. Integration effort:</strong> How does it connect to your systems? API? Webhook? Manual export? The integration cost often exceeds the subscription cost.<br><br><strong>5. Pricing model:</strong> Per-seat, per-query, per-outcome? Model the cost at 2x and 10x your current volume. Some pricing models become prohibitive at scale.<br><br><strong>6. Exit strategy:</strong> What happens if the vendor raises prices 3x, gets acquired, or shuts down? How portable is your data and configuration?</div></div>
+          <div class="cc-note n-pink"><strong>The buy-then-build pattern:</strong> The most common successful pattern: buy a vendor solution to validate the use case and learn what matters. Once you understand the requirements deeply, decide whether to build a custom solution or stay with the vendor. Buying first de-risks the investment and accelerates learning.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">lock</span></div><div><div class="cc-title">The Lock-In Problem</div><div class="cc-sub">How AI vendor dependency sneaks up on you &mdash; and how to mitigate it</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Where Lock-In Happens</div><div class="cc-text">AI lock-in is sneakier than traditional software lock-in. It doesn&rsquo;t come from the model itself (models are increasingly commoditized). It comes from:<br><br><strong>Prompt lock-in:</strong> You&rsquo;ve spent months optimizing prompts for GPT-4. Switching to Claude means rewriting and re-evaluating every prompt. The prompts are your product logic &mdash; they&rsquo;re not portable.<br><br><strong>Evaluation lock-in:</strong> Your evaluation framework is tuned to one model&rsquo;s behavior. A new model may fail your tests not because it&rsquo;s worse, but because it responds differently.<br><br><strong>Workflow lock-in:</strong> Your product design assumes specific model capabilities (function calling, JSON mode, vision). Switching models means redesigning features.<br><br><strong>Data lock-in:</strong> Fine-tuning data formatted for one provider&rsquo;s API. Training data stored in a vendor&rsquo;s platform. Evaluation datasets tied to vendor-specific tools.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Mitigation Strategies</div><div class="cc-text"><strong>1. Abstract the model layer.</strong><br>Build an abstraction layer between your product code and the model API. Switching models should require changing a config file, not rewriting your application.<br><br><strong>2. Multi-model evaluation.</strong><br>Regularly test your prompts and use cases against 2&ndash;3 models. Know which alternatives work and how they compare. This takes hours, not weeks.<br><br><strong>3. Own your evaluation data.</strong><br>Keep your evaluation datasets, rubrics, and test cases in your own systems, not in a vendor platform. This is your most portable asset.<br><br><strong>4. Negotiate data rights.</strong><br>Ensure your contract explicitly states: your data is yours, it&rsquo;s not used to train their models (unless you consent), and you can export everything if you leave.<br><br><strong>5. Budget for switching costs.</strong><br>Assume you&rsquo;ll switch models at least once in the next 18 months. The AI landscape changes too fast for permanent commitments.</div></div>
+          <div class="cc-note n-red"><strong>The switching reality:</strong> Model capabilities improve and prices drop every quarter. The provider that&rsquo;s best today may not be best in 6 months. Design for portability from day one. The cost of abstracting the model layer is small compared to the cost of being locked into an increasingly uncompetitive or expensive provider.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">The Hybrid Approach</div><div class="cc-sub">Most successful AI products combine multiple options</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Real-World Hybrid Architectures</div><div class="cc-text">The best AI products rarely use a single approach. They mix and match based on the requirements of each component:<br><br><strong>Example: AI Customer Service Platform</strong><br>&bull; <strong>Intent classification:</strong> Custom ML model (high volume, needs speed, well-defined task)<br>&bull; <strong>Response generation:</strong> Fine-tuned LLM (needs company-specific tone and knowledge)<br>&bull; <strong>Sentiment analysis:</strong> Foundation model API (general-purpose, low volume)<br>&bull; <strong>Ticket routing:</strong> Rules engine (deterministic, no AI needed)<br><br><strong>Example: AI-Powered Legal Research</strong><br>&bull; <strong>Document search:</strong> Open-weight embedding model (data privacy, high volume)<br>&bull; <strong>Answer generation:</strong> Fine-tuned LLM (domain-specific accuracy critical)<br>&bull; <strong>Citation verification:</strong> Custom model (specialized task, no existing solution)<br>&bull; <strong>Summarization:</strong> Foundation model API (general-purpose, acceptable quality)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Progressive Investment Pattern</div><div class="cc-text">The most successful teams follow a <strong>progressive investment pattern</strong>:<br><br><strong>Phase 1: Validate with APIs (weeks)</strong><br>Use foundation model APIs to build a prototype. Test with real users. Validate that the use case works and users want it.<br><br><strong>Phase 2: Optimize with fine-tuning (months)</strong><br>Once validated, fine-tune for quality and cost. Reduce per-query costs. Improve domain-specific performance.<br><br><strong>Phase 3: Own with self-hosted models (quarters)</strong><br>For high-volume, high-value use cases, migrate to open-weight or custom models. Eliminate per-query costs. Gain full control.<br><br>Not every component reaches Phase 3. Low-volume, non-critical features may stay on APIs forever. The investment level matches the strategic importance.</div></div>
+          <div class="cc-note n-green"><strong>The golden rule:</strong> Start with the cheapest, fastest option that meets your quality bar. Invest more only when you have evidence that the investment is justified. Every dollar spent on custom AI before validating the use case is a dollar at risk. Validate first, invest second.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">decision</span></div><div><div class="cc-title">The Decision Framework</div><div class="cc-sub">Five questions that determine your build-buy-API strategy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Five Questions</div><div class="cc-text"><strong>1. Is AI your core differentiator?</strong><br>If yes &rarr; lean toward build/fine-tune (you need to own the intelligence).<br>If no &rarr; lean toward buy/API (rent the intelligence, focus on your actual differentiator).<br><br><strong>2. How sensitive is your data?</strong><br>Highly sensitive (healthcare, finance, government) &rarr; self-hosted or on-premise.<br>Moderate sensitivity &rarr; API with data processing agreements.<br>Low sensitivity &rarr; any option works.<br><br><strong>3. What&rsquo;s your volume?</strong><br>&lt;10K requests/day &rarr; APIs are cheapest.<br>10K&ndash;100K &rarr; fine-tuning or open-weight models break even.<br>&gt;100K &rarr; self-hosted models are 5&ndash;10x cheaper.<br><br><strong>4. How fast do you need to ship?</strong><br>Days&ndash;weeks &rarr; SaaS or API.<br>Months &rarr; fine-tuning or open-weight.<br>6+ months &rarr; custom model (only if justified).<br><br><strong>5. Do you have AI talent?</strong><br>No ML team &rarr; buy or API. Don&rsquo;t build what you can&rsquo;t maintain.<br>Small ML team &rarr; fine-tune or open-weight.<br>Strong ML team &rarr; any option is viable.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Shortcuts</div><div class="cc-text"><strong>If in doubt, start with APIs.</strong> You can always move down the spectrum later. You can&rsquo;t get back the months spent building custom models for a use case that didn&rsquo;t work.<br><br><strong>If data privacy is non-negotiable,</strong> skip APIs entirely. Go straight to open-weight models with on-premise deployment.<br><br><strong>If cost is the primary concern,</strong> calculate the crossover point. At what volume does self-hosting become cheaper than APIs? Build the business case with real numbers.<br><br><strong>If you&rsquo;re a startup,</strong> almost always start with APIs. Speed to market and capital efficiency matter more than model ownership in the early stages.<br><br><strong>If you&rsquo;re an enterprise,</strong> the hybrid approach is almost always correct. Different use cases warrant different investment levels.</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> Build vs. buy is not a one-time decision. It&rsquo;s a portfolio strategy. Each AI capability in your product may sit at a different point on the spectrum. The best PMs evaluate each component independently, start lean, and invest progressively as the use case proves its value. The worst PMs commit to building everything custom before validating anything.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-data-discovery-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Data Discovery &amp; Feasibility</a>
+    <a class="ch-nav-btn next" href="08-writing-ai-specs-high-level.html">Ch 8: Writing AI Product Specs <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[0,1],6:[4],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Five options, not two.</strong> Buy SaaS (days), use APIs (weeks), fine-tune (months), deploy open-weight (months), or train custom (6&ndash;12+ months). Each trades speed for control and differentiation. You&rsquo;re choosing between renting model behavior and owning model outcomes.',color:'#7c3aed'},
+    2:{text:'<strong>Foundation model APIs:</strong> Fastest path. Call GPT-4o, Claude, or Gemini. You own the product layer, rent the intelligence. Best when AI is a feature (not the core product), volume is moderate, and you need to ship fast. Risk: per-query cost scales linearly, data leaves your infrastructure, model changes without warning.',color:'#2563eb'},
+    3:{text:'<strong>Fine-tuning:</strong> Customize a foundation model on your domain data. 10&ndash;30% quality improvement on domain tasks, shorter prompts, lower per-query cost, more consistent behavior. Requires 500&ndash;1,000+ examples. Don&rsquo;t fine-tune prematurely &mdash; exhaust prompt engineering and RAG first.',color:'#0d9488'},
+    4:{text:'<strong>Open-weight &amp; custom models:</strong> Full control, no per-query costs, complete data privacy. Open-weight (Llama, Mistral) for most cases. Custom from scratch only for highly specialized domains with massive proprietary data. At &gt;100K requests/day, self-hosted can be 5&ndash;10x cheaper than APIs.',color:'#d97706'},
+    5:{text:'<strong>Buy vertical SaaS</strong> when the problem is well-solved, AI isn&rsquo;t your differentiator, speed matters, or you lack AI talent. Evaluate vendors on: quality on <em>your</em> data, data handling, customization depth, integration effort, pricing at scale, and exit strategy. Buy first to learn, then decide whether to build.',color:'#db2777'},
+    6:{text:'<strong>Lock-in is sneaky.</strong> It comes from prompts, evaluation frameworks, workflows, and data &mdash; not the model itself. Mitigate: abstract the model layer, test against multiple models regularly, own your evaluation data, negotiate data rights, budget for switching. Design for portability from day one.',color:'#dc2626'},
+    7:{text:'<strong>The hybrid approach wins.</strong> Most products combine multiple options: custom ML for high-volume classification, fine-tuned LLM for generation, API for low-volume tasks, rules for deterministic logic. Follow the progressive investment pattern: validate with APIs, optimize with fine-tuning, own with self-hosted.',color:'#16a34a'},
+    8:{text:'<strong>Five decision questions:</strong> Is AI your core differentiator? How sensitive is your data? What&rsquo;s your volume? How fast must you ship? Do you have AI talent? When in doubt, start with APIs. Validate first, invest second. Build vs. buy is a portfolio strategy, not a one-time decision.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

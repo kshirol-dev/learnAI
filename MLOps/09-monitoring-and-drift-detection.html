@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Monitoring & Drift Detection — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Monitoring &amp; Drift Detection</h2><span class="tb-sub">Data drift, concept drift, model performance monitoring, Evidently AI, and alerting strategies</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Model</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">query_stats</span></div><span class="pipe-label">Predict</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Monitor</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Drift</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">notifications</span></div><span class="pipe-label">Alert</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">autorenew</span></div><span class="pipe-label">Retrain</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">trending_down</span></div><div><div class="cc-title">Why Models Degrade</div><div class="cc-sub">The world changes, but your model doesn&rsquo;t</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Model Decay</div><div class="cc-text">A model that performs well at deployment will inevitably degrade over time. The world changes, but the model is frozen at training time. <strong>Data drift</strong>: the statistical distribution of input features shifts. A retail demand model trained on in-store sales data performs poorly when online sales surge. <strong>Concept drift</strong>: the relationship between inputs and outputs changes. A spam filter becomes less accurate as spammers adapt their techniques. <strong>Upstream data changes</strong>: a feature pipeline breaks, a data source changes format, or a third-party API returns different values. Without monitoring, you won&rsquo;t know your model is degrading until users complain or business metrics drop &mdash; which could be weeks or months later.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Types of Drift</div><div class="cc-code"><span class="hl-cmt">// Types of model degradation</span>
+
+<span class="hl-key">Data Drift</span> (input distribution shifts):
+  Training: avg_income = $55K, std = $20K
+  Production: avg_income = $72K, std = $35K
+  <span class="hl-cmt">// Features look different from training</span>
+
+<span class="hl-key">Concept Drift</span> (relationship changes):
+  Training: high_income → low_default_risk
+  Reality:  high_income → moderate_risk
+  <span class="hl-cmt">// Same features, different outcomes</span>
+
+<span class="hl-key">Upstream Changes</span> (data pipeline breaks):
+  Before: age = 35 (integer)
+  After:  age = "35-44" (categorical)
+  <span class="hl-cmt">// Schema change breaks the model</span>
+
+<span class="hl-key">Label Drift</span> (target distribution shifts):
+  Training: 5% fraud rate
+  Production: 12% fraud rate
+  <span class="hl-cmt">// Class balance changed</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Data drift is the most common and easiest to detect (you can measure it without labels). Concept drift is the most dangerous (model accuracy drops silently) and hardest to detect (requires ground truth labels, which are often delayed).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bar_chart</span></div><div><div class="cc-title">Data Drift Detection</div><div class="cc-sub">Statistical tests for distribution shifts</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Detection Methods</div><div class="cc-text">Data drift detection compares the distribution of production data against a <strong>reference dataset</strong> (typically training data or a recent baseline). Statistical tests used depend on data type and size: <strong>Kolmogorov-Smirnov (KS) test</strong> &mdash; compares cumulative distributions of numerical features (best for small datasets, &le;1,000 samples). <strong>Jensen-Shannon divergence</strong> &mdash; measures distance between two probability distributions (works well for larger datasets). <strong>Wasserstein distance</strong> &mdash; measures the &ldquo;earth mover&rsquo;s distance&rdquo; between distributions (sensitive to shape changes). <strong>Chi-squared test</strong> &mdash; compares categorical feature distributions. <strong>Population Stability Index (PSI)</strong> &mdash; popular in finance, bins the distribution and measures divergence. A feature is &ldquo;drifted&rdquo; if the test statistic exceeds a threshold (e.g., p-value &lt; 0.05).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Drift Test Selection</div><div class="cc-code"><span class="hl-cmt">// Statistical tests for drift detection</span>
+
+<span class="hl-key">Numerical features</span>:
+  Small data (&le;1K):  KS test (p &lt; 0.05)
+  Large data (&gt;1K):   Jensen-Shannon div
+  Shape-sensitive:     Wasserstein distance
+
+<span class="hl-key">Categorical features</span>:
+  Small data (&le;1K):  Chi-squared test
+  Large data (&gt;1K):   Jensen-Shannon div
+
+<span class="hl-key">PSI (Population Stability Index)</span>:
+  PSI &lt; <span class="hl-num">0.1</span>  → No significant drift
+  PSI <span class="hl-num">0.1-0.2</span> → Moderate drift (investigate)
+  PSI &gt; <span class="hl-num">0.2</span>  → Significant drift (action!)
+
+<span class="hl-key">Evidently AI auto-selects</span>:
+  Numerical + &le;1K → KS test
+  Numerical + &gt;1K  → Wasserstein
+  Categorical      → Chi-squared / JS div</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Don&rsquo;t test every feature individually &mdash; you&rsquo;ll get false positives. Focus on the features with the highest feature importance in your model. If a low-importance feature drifts, it may not affect predictions at all.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">psychology_alt</span></div><div><div class="cc-title">Concept Drift Detection</div><div class="cc-sub">When the rules of the game change</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Detection Strategies</div><div class="cc-text">Concept drift is harder to detect because it requires <strong>ground truth labels</strong>, which are often delayed (fraud labels arrive weeks later, medical outcomes take months). Strategies: <strong>Direct monitoring</strong> &mdash; when labels are available, track model accuracy, precision, recall, and F1 over time. A sustained drop signals concept drift. <strong>Prediction drift</strong> &mdash; when labels are unavailable, monitor the distribution of model predictions. If the model suddenly predicts &ldquo;fraud&rdquo; 3x more often, something changed. <strong>Proxy metrics</strong> &mdash; use business metrics as proxies (conversion rate, customer complaints, escalation rate). <strong>Window comparison</strong> &mdash; compare model performance on recent data vs. older data using a sliding window.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Concept Drift Types</div><div class="cc-code"><span class="hl-cmt">// Types of concept drift</span>
+
+<span class="hl-key">Sudden drift</span>:
+  ┌──────┐
+  │ ████ │████████
+  │ ████ │        ████████
+  └──────┘
+  <span class="hl-cmt">// Abrupt change (e.g., new regulation)</span>
+
+<span class="hl-key">Gradual drift</span>:
+  ████████
+    ████████
+      ████████
+        ████████
+  <span class="hl-cmt">// Slow transition (e.g., user behavior)</span>
+
+<span class="hl-key">Recurring drift</span>:
+  ████    ████    ████
+      ████    ████
+  <span class="hl-cmt">// Seasonal patterns (e.g., holiday sales)</span>
+
+<span class="hl-key">Detection without labels</span>:
+  Monitor prediction distribution
+  Track confidence scores over time
+  Use business metrics as proxies
+  Compare recent vs. baseline windows</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Recurring drift (seasonal patterns) is often mistaken for concept drift. Before retraining, check if the pattern is seasonal. If your model sees this pattern every December, it&rsquo;s not drift &mdash; it&rsquo;s a known cycle that should be modeled explicitly.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">biotech</span></div><div><div class="cc-title">Evidently AI</div><div class="cc-sub">Open-source ML monitoring and testing</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evidently Overview</div><div class="cc-text"><strong>Evidently AI</strong> is the most popular open-source tool for ML monitoring. It provides pre-built <strong>reports</strong> (visual dashboards for data drift, model quality, target drift) and <strong>test suites</strong> (automated checks that pass/fail). Key features: <strong>Data Drift Report</strong> &mdash; compares reference and current data distributions for all features, auto-selects appropriate statistical tests. <strong>Data Quality Report</strong> &mdash; checks for missing values, duplicates, out-of-range values, new categories. <strong>Model Performance Report</strong> &mdash; tracks accuracy, precision, recall, F1, AUC over time. <strong>Test Suites</strong> &mdash; define pass/fail conditions (e.g., &ldquo;no more than 30% of features should drift&rdquo;) for CI/CD integration. Evidently works as a Python library, generates HTML reports, and integrates with Grafana for real-time dashboards.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evidently Usage</div><div class="cc-code"><span class="hl-cmt"># Evidently AI data drift detection</span>
+<span class="hl-key">from</span> evidently.report <span class="hl-key">import</span> Report
+<span class="hl-key">from</span> evidently.metric_preset <span class="hl-key">import</span> (
+    DataDriftPreset,
+    DataQualityPreset,
+)
+
+<span class="hl-cmt"># Compare reference vs current data</span>
+report = Report(metrics=[
+    DataDriftPreset(),
+    DataQualityPreset(),
+])
+
+report.run(
+    reference_data=train_df,
+    current_data=production_df,
+)
+
+<span class="hl-cmt"># HTML dashboard</span>
+report.save_html(<span class="hl-str">"drift_report.html"</span>)
+
+<span class="hl-cmt"># Programmatic access</span>
+result = report.as_dict()
+drift_share = result[<span class="hl-str">"metrics"</span>][<span class="hl-num">0</span>]
+    [<span class="hl-str">"result"</span>][<span class="hl-str">"share_of_drifted_columns"</span>]
+
+<span class="hl-key">if</span> drift_share &gt; <span class="hl-num">0.3</span>:
+    trigger_alert(<span class="hl-str">"30%+ features drifted!"</span>)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Evidently&rsquo;s test suites are the key to CI/CD integration. Run them as part of your data pipeline: if the test suite fails (too much drift, data quality issues), block the pipeline and alert the team before the model makes bad predictions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">dashboard</span></div><div><div class="cc-title">Model Performance Monitoring</div><div class="cc-sub">Tracking accuracy, latency, and business metrics</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What to Monitor</div><div class="cc-text">Monitor at three levels: <strong>Infrastructure metrics</strong> &mdash; CPU/GPU utilization, memory, request latency (p50, p95, p99), throughput (requests/second), error rates. Use Prometheus + Grafana. <strong>Model metrics</strong> &mdash; prediction distribution, confidence scores, feature distributions, model accuracy (when labels available). Use Evidently, Arize, or Fiddler. <strong>Business metrics</strong> &mdash; conversion rate, revenue impact, user satisfaction, escalation rate. These are the ultimate measure of model value. Connect model predictions to business outcomes. Set up <strong>dashboards</strong> for each level and <strong>alerts</strong> for anomalies. The most common mistake is monitoring only infrastructure and ignoring model and business metrics.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Monitoring Stack</div><div class="cc-code"><span class="hl-cmt">// Three-level monitoring stack</span>
+
+<span class="hl-key">Level 1: Infrastructure</span>
+  Tool: Prometheus + Grafana
+  Metrics:
+    - Request latency (p50, p95, p99)
+    - Throughput (req/sec)
+    - GPU utilization (%)
+    - Error rate (4xx, 5xx)
+    - Memory usage
+
+<span class="hl-key">Level 2: Model</span>
+  Tool: Evidently AI / Arize
+  Metrics:
+    - Prediction distribution
+    - Feature drift (per feature)
+    - Accuracy / F1 (when labels arrive)
+    - Confidence score distribution
+
+<span class="hl-key">Level 3: Business</span>
+  Tool: Custom dashboards / Looker
+  Metrics:
+    - Conversion rate
+    - Revenue per prediction
+    - User satisfaction (NPS)
+    - Escalation rate</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> A model can have perfect infrastructure metrics (low latency, zero errors) while producing terrible predictions. Always monitor at the model and business level, not just infrastructure.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">notifications_active</span></div><div><div class="cc-title">Alerting Strategies</div><div class="cc-sub">When to page, when to ticket, when to ignore</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Alert Design</div><div class="cc-text">Bad alerting is worse than no alerting &mdash; alert fatigue causes teams to ignore real problems. Design alerts with <strong>severity tiers</strong>: <strong>P0 (page immediately)</strong> &mdash; model serving is down, error rate &gt; 5%, latency &gt; 10x baseline. <strong>P1 (ticket, fix today)</strong> &mdash; significant data drift (&gt; 30% features), model accuracy dropped &gt; 10%, data quality check failed. <strong>P2 (review this week)</strong> &mdash; moderate drift (10&ndash;30% features), slight accuracy decline, cost anomaly. <strong>P3 (informational)</strong> &mdash; minor drift, new feature values observed, usage patterns changed. Use <strong>anomaly detection</strong> on metrics rather than static thresholds &mdash; a 2% accuracy drop might be normal variance or a catastrophic signal depending on context.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Alert Configuration</div><div class="cc-code"><span class="hl-cmt">// Alerting tiers</span>
+
+<span class="hl-key">P0 — Page (PagerDuty/Opsgenie)</span>:
+  error_rate &gt; <span class="hl-num">5%</span>
+  latency_p99 &gt; <span class="hl-num">10s</span>
+  serving_down == <span class="hl-key">true</span>
+  <span class="hl-cmt">// Action: wake someone up</span>
+
+<span class="hl-key">P1 — Ticket (Jira/Linear)</span>:
+  drift_share &gt; <span class="hl-num">0.30</span>
+  accuracy_drop &gt; <span class="hl-num">10%</span>
+  data_quality_fail == <span class="hl-key">true</span>
+  <span class="hl-cmt">// Action: fix today</span>
+
+<span class="hl-key">P2 — Review (Slack)</span>:
+  drift_share &gt; <span class="hl-num">0.10</span>
+  accuracy_drop &gt; <span class="hl-num">3%</span>
+  cost_anomaly == <span class="hl-key">true</span>
+  <span class="hl-cmt">// Action: review this week</span>
+
+<span class="hl-key">P3 — Log (dashboard only)</span>:
+  new_category_observed
+  minor_distribution_shift
+  <span class="hl-cmt">// Action: informational</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Start with fewer, high-confidence alerts and add more as you learn your system&rsquo;s behavior. It&rsquo;s better to miss a P2 alert than to have the team ignore all alerts because of noise.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">autorenew</span></div><div><div class="cc-title">Responding to Drift</div><div class="cc-sub">Retrain, recalibrate, or replace</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Response Playbook</div><div class="cc-text">When drift is detected, follow a structured response: <strong>1. Diagnose</strong> &mdash; is it data drift, concept drift, or an upstream data issue? Check data quality first (a broken pipeline is more common than real drift). <strong>2. Assess impact</strong> &mdash; is the model still performing acceptably? Check business metrics. Minor drift with no accuracy impact may not need action. <strong>3. Choose response</strong>: <strong>Retrain</strong> (most common) &mdash; retrain on recent data. Use continuous training if drift is frequent. <strong>Recalibrate</strong> &mdash; adjust decision thresholds without retraining (e.g., change fraud threshold from 0.5 to 0.6). <strong>Fallback</strong> &mdash; switch to a simpler, more robust model or rule-based system. <strong>Pause</strong> &mdash; stop serving predictions if risk is too high. <strong>4. Validate</strong> &mdash; confirm the fix works on recent data before deploying.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Response Decision Tree</div><div class="cc-code"><span class="hl-cmt">// Drift response decision tree</span>
+
+Drift detected
+  │
+  ├─ Data quality issue?
+  │   └─ Yes → Fix pipeline, no retrain
+  │
+  ├─ Upstream schema change?
+  │   └─ Yes → Fix feature engineering
+  │
+  ├─ Accuracy still acceptable?
+  │   ├─ Yes → Monitor closely, no action
+  │   └─ No → Continue ↓
+  │
+  ├─ Labels available for retrain?
+  │   ├─ Yes → Retrain on recent data
+  │   │         Validate → Deploy
+  │   └─ No → Continue ↓
+  │
+  ├─ Can recalibrate thresholds?
+  │   ├─ Yes → Adjust thresholds
+  │   └─ No → Continue ↓
+  │
+  └─ High risk?
+      ├─ Yes → Pause model, fallback
+      └─ No  → Monitor, schedule retrain</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Most &ldquo;drift&rdquo; alerts are actually upstream data issues (broken pipelines, schema changes, missing values). Always check data quality before assuming the model needs retraining.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">LLM-Specific Monitoring</div><div class="cc-sub">Monitoring challenges unique to LLM applications</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LLM Monitoring Challenges</div><div class="cc-text">LLMs present unique monitoring challenges: <strong>No ground truth</strong> &mdash; there&rsquo;s no &ldquo;correct answer&rdquo; for most LLM outputs, so traditional accuracy metrics don&rsquo;t apply. <strong>Non-deterministic</strong> &mdash; the same input can produce different outputs. <strong>Provider changes</strong> &mdash; OpenAI and Anthropic update models without notice, changing behavior. <strong>Prompt sensitivity</strong> &mdash; small prompt changes cause large output changes. What to monitor: <strong>output quality</strong> (LLM-as-judge scores, user feedback), <strong>safety</strong> (toxicity scores, PII leakage), <strong>hallucination rate</strong> (claims not grounded in source documents), <strong>cost per interaction</strong>, <strong>latency</strong> (time to first token, total generation time), and <strong>user engagement</strong> (completion rate, follow-up questions, thumbs up/down).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LLM Monitoring Metrics</div><div class="cc-code"><span class="hl-cmt">// LLM-specific monitoring</span>
+
+<span class="hl-key">Quality metrics</span>:
+  LLM-as-judge score (1-5)
+  User thumbs up/down ratio
+  Task completion rate
+  Hallucination rate (vs source docs)
+
+<span class="hl-key">Safety metrics</span>:
+  Toxicity score (per response)
+  PII leakage incidents
+  Prompt injection attempts
+  Guardrail trigger rate
+
+<span class="hl-key">Operational metrics</span>:
+  Time to first token (TTFT)
+  Total generation time
+  Tokens per response
+  Cost per interaction
+  Cache hit rate
+
+<span class="hl-key">Engagement metrics</span>:
+  Conversation length
+  Follow-up question rate
+  Escalation to human rate
+  Session abandonment rate</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> For LLMs, user feedback is the most reliable quality signal. Implement thumbs up/down on every response, and use low-rated responses to build your evaluation dataset. This creates a virtuous cycle: monitoring feeds evaluation feeds improvement.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-llmops-prompt-management-and-evaluation.html"><span class="material-symbols-rounded">arrow_back</span> Ch 8: LLMOps: Prompt Mgmt &amp; Evaluation</a>
+    <a class="ch-nav-btn next" href="10-the-mlops-stack.html">Ch 10: The MLOps Stack <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[1,2,3],3:[1,2,3],4:[2,3],5:[0,1,2],6:[2,3,4],7:[3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Models degrade over time. Data drift (input distributions shift), concept drift (relationships change), and upstream data issues all erode model performance silently.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Data drift detection: KS test, Jensen-Shannon divergence, Wasserstein distance, Chi-squared. Focus on high-importance features to avoid false positives.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Concept drift: harder to detect (needs labels). Use prediction drift, proxy metrics, and sliding window comparisons when ground truth is delayed.',color:'#dc2626'},
+    4:{text:'<strong>Step 4:</strong> Evidently AI: open-source ML monitoring. Data drift reports, data quality checks, model performance tracking. Test suites integrate into CI/CD pipelines.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Three-level monitoring: infrastructure (Prometheus/Grafana), model (Evidently/Arize), business (custom dashboards). Don\'t stop at infrastructure.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Alerting: P0 (page), P1 (ticket), P2 (review), P3 (log). Start with fewer high-confidence alerts. Alert fatigue is worse than missing a P2.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Responding to drift: diagnose (data quality first!), assess impact, choose response (retrain, recalibrate, fallback, pause), validate before deploying.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> LLM monitoring: no ground truth, non-deterministic, provider changes. Monitor quality (LLM-as-judge), safety, hallucinations, cost, and user feedback.',color:'#2563eb'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

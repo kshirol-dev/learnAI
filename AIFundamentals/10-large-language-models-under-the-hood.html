@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Large Language Models — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.c-red.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Large Language Models</h2><span class="tb-sub">BPE internals, scaling law math, RLHF pipeline, LoRA, quantization, and inference optimization</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="10-large-language-models-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: Tokenization Internals -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">Zone A</span><span class="zone-title">Tokenization &mdash; BPE Algorithm</span><span class="zone-sub">Steps 1&ndash;2</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red" data-step="1" onclick="openDetail(1)"><div class="step-badge bg-red">1</div><div class="fnode-icon"><span class="material-symbols-rounded">token</span></div><div class="fnode-label">BPE Training</div><div class="fnode-sub">Build vocabulary from corpus</div></div>
+      <div class="farr" data-step="2"></div>
+      <div class="fnode c-red" data-step="2" onclick="openDetail(2)"><div class="step-badge bg-red">2</div><div class="fnode-icon"><span class="material-symbols-rounded">data_array</span></div><div class="fnode-label">Encoding</div><div class="fnode-sub">Text &rarr; token IDs &rarr; embeddings</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange" data-step="3"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Tokens ready &rarr; pretraining</div><div class="step-badge bg-orange">3</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: Pretraining & Scaling -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">Zone B</span><span class="zone-title">Pretraining &amp; Scaling Laws</span><span class="zone-sub">Steps 3&ndash;5</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange" data-step="3" onclick="openDetail(3)"><div class="step-badge bg-orange">3</div><div class="fnode-icon"><span class="material-symbols-rounded">functions</span></div><div class="fnode-label">Loss Function</div><div class="fnode-sub">Cross-entropy over vocab</div></div>
+      <div class="farr" data-step="4"></div>
+      <div class="fnode c-orange" data-step="4" onclick="openDetail(4)"><div class="step-badge bg-orange">4</div><div class="fnode-icon"><span class="material-symbols-rounded">trending_up</span></div><div class="fnode-label">Scaling Laws</div><div class="fnode-sub">Power law formulas</div></div>
+      <div class="farr" data-step="5"></div>
+      <div class="fnode c-orange" data-step="5"><div class="step-badge bg-orange">5</div><div class="fnode-icon"><span class="material-symbols-rounded">memory</span></div><div class="fnode-label">Training Infra</div><div class="fnode-sub">Distributed, mixed precision</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet" data-step="6"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Base model &rarr; alignment</div><div class="step-badge bg-violet">6</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: Alignment Pipeline -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">Zone C</span><span class="zone-title">Alignment &mdash; SFT, RLHF, DPO</span><span class="zone-sub">Steps 6&ndash;7</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="6" onclick="openDetail(6)"><div class="step-badge bg-violet">6</div><div class="fnode-icon"><span class="material-symbols-rounded">school</span></div><div class="fnode-label">SFT + Reward</div><div class="fnode-sub">Instruction tuning + RM</div></div>
+      <div class="farr" data-step="7"></div>
+      <div class="fnode c-violet" data-step="7" onclick="openDetail(7)"><div class="step-badge bg-violet">7</div><div class="fnode-icon"><span class="material-symbols-rounded">psychology</span></div><div class="fnode-label">RLHF &amp; DPO</div><div class="fnode-sub">PPO vs direct preference</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue" data-step="8"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Efficient adaptation</div><div class="step-badge bg-blue">8</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: Fine-Tuning & Quantization -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">Zone D</span><span class="zone-title">LoRA, Quantization &amp; Efficient Fine-Tuning</span><span class="zone-sub">Steps 8&ndash;9</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="8" onclick="openDetail(8)"><div class="step-badge bg-blue">8</div><div class="fnode-icon"><span class="material-symbols-rounded">compress</span></div><div class="fnode-label">LoRA</div><div class="fnode-sub">Low-rank adaptation</div></div>
+      <div class="farr" data-step="9"></div>
+      <div class="fnode c-blue" data-step="9" onclick="openDetail(9)"><div class="step-badge bg-blue">9</div><div class="fnode-icon"><span class="material-symbols-rounded">speed</span></div><div class="fnode-label">Quantization</div><div class="fnode-sub">INT8, INT4, GPTQ, AWQ</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal" data-step="10"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Inference optimization</div><div class="step-badge bg-teal">10</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: Inference -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">Zone E</span><span class="zone-title">Inference &mdash; Sampling &amp; Serving</span><span class="zone-sub">Step 10</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="10"><div class="step-badge bg-teal">10</div><div class="fnode-icon"><span class="material-symbols-rounded">rocket_launch</span></div><div class="fnode-label">Serving Stack</div><div class="fnode-sub">Batching, speculative decode</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"><div class="dp-head"><div class="dp-step" id="dpStep">1</div><div class="dp-title" id="dpTitle">Title</div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div><div class="dp-body" id="dpBody"></div></div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+const TOTAL=10,STEP_MS=7000;
+const NARRATION={
+  1:{text:'<strong>BPE training:</strong> Start with individual bytes (256 tokens). Count all adjacent pairs in the corpus. Merge the most frequent pair into a new token. Repeat until vocabulary reaches target size (e.g., 100K). The merge order defines the tokenizer \u2014 it\u2019s deterministic and reversible.',color:'#dc2626'},
+  2:{text:'<strong>Encoding pipeline:</strong> Text \u2192 UTF-8 bytes \u2192 apply BPE merges in priority order \u2192 token IDs \u2192 embedding lookup (V\u00d7d matrix). Each token ID maps to a learned d-dimensional vector. GPT-4: 100,277 tokens \u00d7 ~12,288 dims = ~1.2B parameters just for the embedding table.',color:'#dc2626'},
+  3:{text:'<strong>Pretraining loss:</strong> Cross-entropy over the vocabulary at each position: L = -\u2211\u209c log P(x\u209c | x\u2081..x\u209c\u208b\u2081). The model outputs logits \u2208 \u211d\u1d5b, softmax converts to probabilities, loss penalizes low probability on the correct next token. Perplexity = exp(L) \u2014 lower is better.',color:'#ea580c'},
+  4:{text:'<strong>Scaling laws:</strong> L(N,D) = (N\u1d9c/N)\u1d43 + (D\u1d9c/D)\u1d47 + L\u221e. Chinchilla optimal: N \u221d C\u00b0\u00b7\u2075, D \u221d C\u00b0\u00b7\u2075 (equal scaling). But Llama 3 trains 8B on 15T tokens (1875 tokens/param vs Chinchilla\u2019s ~20) because inference cost dominates \u2014 smaller models are cheaper to serve.',color:'#ea580c'},
+  5:{text:'<strong>Training infrastructure:</strong> GPT-3 used 1024 A100 GPUs for ~34 days. 3D parallelism: data parallel (replicate model), tensor parallel (split layers across GPUs), pipeline parallel (split layers across stages). Mixed precision (BF16) halves memory. Gradient checkpointing trades compute for memory.',color:'#ea580c'},
+  6:{text:'<strong>SFT + Reward Model:</strong> SFT fine-tunes on ~100K (instruction, response) pairs with standard cross-entropy. The reward model is trained on human preference rankings: given responses A and B, RM learns to predict which humans prefer. Loss: -log \u03c3(RM(preferred) - RM(rejected)).',color:'#7c3aed'},
+  7:{text:'<strong>RLHF vs DPO:</strong> RLHF uses PPO to maximize E[RM(response)] with a KL penalty to stay near the SFT model. Complex: needs 4 models in memory. DPO (Rafailov, 2023) directly optimizes preferences without a reward model: L = -log \u03c3(\u03b2(log \u03c0/\u03c0_ref(preferred) - log \u03c0/\u03c0_ref(rejected))). Simpler, equally effective.',color:'#7c3aed'},
+  8:{text:'<strong>LoRA:</strong> Instead of updating all parameters, add low-rank matrices: W\u2032 = W + BA where B \u2208 \u211d\u1d48\u02e3\u02b3, A \u2208 \u211d\u02b3\u02e3\u1d48, r \u226a d. For r=16, d=4096: 131K trainable params per matrix vs 16.8M. Typically applied to attention projections. QLoRA adds 4-bit quantization of the base model.',color:'#2563eb'},
+  9:{text:'<strong>Quantization:</strong> Reduce weight precision from FP16 (16 bits) to INT8 (8 bits) or INT4 (4 bits). A 70B model: FP16=140GB, INT8=70GB, INT4=35GB. GPTQ and AWQ are post-training quantization methods that minimize accuracy loss. 4-bit models fit on consumer GPUs with minimal quality degradation.',color:'#2563eb'},
+  10:{text:'<strong>Serving optimizations:</strong> Continuous batching (don\u2019t wait for longest sequence). PagedAttention (vLLM: virtual memory for KV cache). Speculative decoding: small draft model generates candidates, large model verifies in parallel \u2014 2\u20133x speedup. Together, these make LLM serving economically viable.',color:'#0d9488'},
+};
+const DETAILS={
+  1:{title:'BPE Algorithm: Step by Step',color:'#dc2626',body:`
+<div class="dp-label">BPE Training Process</div>
+<div class="dp-code"><span class="hl-cmt">// Corpus: "low lower newest widest"</span>
+<span class="hl-cmt">// Start: split into characters + end-of-word</span>
+
+<span class="hl-key">Initial vocab:</span> {l, o, w, e, r, n, s, t, i, d, _}
+
+<span class="hl-key">Step 1:</span> Count pairs:
+  (e,s)=2, (s,t)=2, (l,o)=2, (o,w)=2, ...
+  Most frequent: (e,s) \u2192 merge into <span class="hl-ok">"es"</span>
+
+<span class="hl-key">Step 2:</span> Count pairs with "es":
+  (es,t)=2, (l,o)=2, (o,w)=2, ...
+  Most frequent: (es,t) \u2192 merge into <span class="hl-ok">"est"</span>
+
+<span class="hl-key">Step 3:</span> (l,o) \u2192 <span class="hl-ok">"lo"</span>
+<span class="hl-key">Step 4:</span> (lo,w) \u2192 <span class="hl-ok">"low"</span>
+<span class="hl-key">Step 5:</span> (n,e) \u2192 <span class="hl-ok">"ne"</span>
+<span class="hl-key">Step 6:</span> (ne,w) \u2192 <span class="hl-ok">"new"</span>
+<span class="hl-cmt">// ... continue until target vocab size</span>
+
+<span class="hl-key">Final tokenization:</span>
+  "lowest"  \u2192 [low, est]
+  "newest"  \u2192 [new, est]
+  "widest"  \u2192 [w, i, d, est]</div>
+<div class="dp-note n-red"><strong>Key properties:</strong> BPE is deterministic (same corpus \u2192 same merges). Common words become single tokens. Rare words decompose into known subwords. The merge list is saved and used at inference time. GPT-4\u2019s tokenizer was trained on a massive multilingual corpus to handle 100+ languages efficiently.</div>`},
+  2:{title:'Token Embedding Pipeline',color:'#dc2626',body:`
+<div class="dp-label">From Text to Vectors</div>
+<div class="dp-code"><span class="hl-cmt">// Complete encoding pipeline</span>
+
+<span class="hl-key">1. Text:</span> "Hello world"
+
+<span class="hl-key">2. UTF-8 bytes:</span>
+   [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]
+
+<span class="hl-key">3. BPE merges (apply in priority order):</span>
+   "Hello" \u2192 token 9906
+   " world" \u2192 token 1917
+   Result: [<span class="hl-num">9906</span>, <span class="hl-num">1917</span>]
+
+<span class="hl-key">4. Embedding lookup:</span>
+   E \u2208 \u211d\u00b9\u2070\u2070\u00b2\u2077\u2077\u02e3\u00b9\u00b2\u00b2\u2078\u2078  <span class="hl-cmt">// vocab \u00d7 d_model</span>
+   token 9906 \u2192 E[9906] \u2208 \u211d\u00b9\u00b2\u00b2\u2078\u2078
+   token 1917 \u2192 E[1917] \u2208 \u211d\u00b9\u00b2\u00b2\u2078\u2078
+
+<span class="hl-key">5. Add positional encoding:</span>
+   x\u2081 = E[9906] + PE(0)
+   x\u2082 = E[1917] + PE(1)
+
+<span class="hl-key">6. Feed into transformer layers</span></div>
+<div class="dp-label">Embedding Table Size</div>
+<div class="dp-code"><span class="hl-key">Model       Vocab     d_model   Embed Params</span>
+GPT-2       50,257    768       <span class="hl-num">38.6M</span>
+GPT-3       50,257    12,288    <span class="hl-num">617M</span>
+Llama 3     128,256   8,192     <span class="hl-num">1.05B</span>
+GPT-4 (est) 100,277   ~12,288   <span class="hl-num">~1.23B</span>
+
+<span class="hl-cmt">// Output layer shares embedding weights (weight tying)</span>
+<span class="hl-cmt">// logits = h \u00b7 E\u1d40  (same E matrix, transposed)</span>
+<span class="hl-cmt">// This saves ~1B parameters in large models</span></div>
+<div class="dp-note n-red"><strong>Weight tying:</strong> The input embedding matrix E and the output projection matrix are the same (transposed). This means the model uses the same representation space for input tokens and output predictions. It saves parameters and improves performance \u2014 used in GPT-2, Llama, and most modern LLMs.</div>`},
+  3:{title:'Pretraining Loss: Cross-Entropy',color:'#ea580c',body:`
+<div class="dp-label">Next-Token Prediction Loss</div>
+<div class="dp-code"><span class="hl-cmt">// For sequence x\u2081, x\u2082, ..., x\u209c:</span>
+
+<span class="hl-key">L</span> = -(<span class="hl-num">1</span>/T) \u2211\u209c\u208c\u2081\u1d40 log P(x\u209c | x\u2081, ..., x\u209c\u208b\u2081)
+
+<span class="hl-cmt">// At each position t:</span>
+<span class="hl-key">logits\u209c</span> = h\u209c \u00b7 E\u1d40 \u2208 \u211d\u1d5b  <span class="hl-cmt">// V = vocab size</span>
+<span class="hl-key">P(x\u209c)</span>  = softmax(logits\u209c)[x\u209c]
+
+<span class="hl-cmt">// Example: vocab = {cat, dog, the, sat}</span>
+<span class="hl-key">logits</span> = [2.1, 0.5, 3.8, 1.2]
+<span class="hl-key">P</span>      = [0.12, 0.02, <span class="hl-ok">0.72</span>, 0.04]
+<span class="hl-cmt">// If target = "the": loss = -log(0.72) = 0.33</span>
+<span class="hl-cmt">// If target = "dog": loss = -log(0.02) = 3.91</span></div>
+<div class="dp-label">Perplexity</div>
+<div class="dp-code"><span class="hl-key">Perplexity</span> = exp(L) = exp(avg cross-entropy)
+
+<span class="hl-cmt">// Intuition: "how many tokens is the model</span>
+<span class="hl-cmt">// choosing between at each step?"</span>
+
+<span class="hl-key">PPL = 1:</span>   Perfect prediction (impossible)
+<span class="hl-key">PPL = 10:</span>  Choosing between ~10 options
+<span class="hl-key">PPL = 100:</span> Very uncertain
+
+<span class="hl-cmt">// Typical values:</span>
+<span class="hl-key">GPT-2 (1.5B):</span>  PPL \u2248 <span class="hl-num">18</span> on WebText
+<span class="hl-key">GPT-3 (175B):</span>  PPL \u2248 <span class="hl-num">10</span> on LAMBADA
+<span class="hl-key">Llama 3 (70B):</span> PPL \u2248 <span class="hl-num">5-8</span> on common benchmarks</div>
+<div class="dp-note n-orange"><strong>Loss vs. capability:</strong> Small reductions in loss correspond to large capability jumps. Going from PPL 20 to PPL 10 might unlock coherent paragraphs. PPL 10 to 5 might unlock reasoning. This is why scaling laws are so valuable \u2014 they predict loss, and loss predicts capability.</div>`},
+  4:{title:'Scaling Laws: The Math',color:'#ea580c',body:`
+<div class="dp-label">Kaplan Scaling Laws (OpenAI, 2020)</div>
+<div class="dp-code"><span class="hl-cmt">// Loss as a function of compute, params, data:</span>
+
+<span class="hl-key">L(N)</span> = (N\u1d9c / N)^(\u03b1_N)    <span class="hl-cmt">// N\u1d9c \u2248 8.8\u00d710\u00b9\u00b3</span>
+<span class="hl-key">L(D)</span> = (D\u1d9c / D)^(\u03b1_D)    <span class="hl-cmt">// D\u1d9c \u2248 5.4\u00d710\u00b9\u00b3</span>
+
+<span class="hl-key">\u03b1_N</span> \u2248 0.076   <span class="hl-cmt">// loss exponent for params</span>
+<span class="hl-key">\u03b1_D</span> \u2248 0.095   <span class="hl-cmt">// loss exponent for data</span>
+
+<span class="hl-cmt">// 10x more params \u2192 loss drops by ~16%</span>
+<span class="hl-cmt">// 10x more data   \u2192 loss drops by ~20%</span></div>
+<div class="dp-label">Chinchilla Optimal (DeepMind, 2022)</div>
+<div class="dp-code"><span class="hl-cmt">// For a fixed compute budget C (in FLOPs):</span>
+<span class="hl-cmt">// C \u2248 6 \u00d7 N \u00d7 D  (approximate)</span>
+
+<span class="hl-key">Chinchilla rule:</span>
+  N_opt \u221d C^0.50   <span class="hl-cmt">// optimal params</span>
+  D_opt \u221d C^0.50   <span class="hl-cmt">// optimal tokens</span>
+  D_opt \u2248 20 \u00d7 N_opt  <span class="hl-cmt">// ~20 tokens per param</span>
+
+<span class="hl-key">Example:</span>
+  C = 10\u00b2\u2074 FLOPs (GPT-4 scale)
+  N_opt \u2248 <span class="hl-num">280B</span> params
+  D_opt \u2248 <span class="hl-num">5.6T</span> tokens
+
+<span class="hl-key">But Llama 3 (8B):</span>
+  Trained on <span class="hl-num">15T</span> tokens = <span class="hl-ok">1,875 tokens/param</span>
+  <span class="hl-cmt">// 94x more than Chinchilla-optimal!</span>
+  <span class="hl-cmt">// Why? Inference cost of 8B << 280B</span></div>
+<div class="dp-note n-orange"><strong>The inference-aware view:</strong> Chinchilla optimizes for training compute. But a model is trained once and served millions of times. A smaller model trained on more data costs more to train but much less to serve. Llama 3\u2019s approach: overtrain small models for deployment efficiency. This is now the industry standard.</div>`},
+  6:{title:'SFT & Reward Model Training',color:'#7c3aed',body:`
+<div class="dp-label">Supervised Fine-Tuning (SFT)</div>
+<div class="dp-code"><span class="hl-cmt">// Training data: (instruction, response) pairs</span>
+
+<span class="hl-key">Example:</span>
+  Instruction: "Explain gravity to a child"
+  Response: "Imagine the Earth is like a big magnet..."
+
+<span class="hl-cmt">// Loss: standard cross-entropy on response tokens</span>
+<span class="hl-key">L_SFT</span> = -\u2211\u209c log P(response\u209c | instruction, response\u2081..t\u208b\u2081)
+
+<span class="hl-cmt">// Only compute loss on response tokens</span>
+<span class="hl-cmt">// (mask out instruction tokens in loss)</span>
+
+<span class="hl-key">Scale:</span> ~10K\u2013100K examples
+<span class="hl-key">Duration:</span> 1\u20133 epochs (don\u2019t overfit!)
+<span class="hl-key">LR:</span> 1e-5 to 2e-5 (much lower than pretraining)</div>
+<div class="dp-label">Reward Model (RM)</div>
+<div class="dp-code"><span class="hl-cmt">// Human annotators rank model responses:</span>
+<span class="hl-cmt">// Given prompt P, responses A and B:</span>
+<span class="hl-cmt">// Human says: A > B (A is preferred)</span>
+
+<span class="hl-key">RM architecture:</span>
+  Same as LLM but with scalar output head
+  RM(prompt, response) \u2192 scalar score
+
+<span class="hl-key">Bradley-Terry loss:</span>
+  L = -log \u03c3(RM(preferred) - RM(rejected))
+
+<span class="hl-cmt">// Example:</span>
+  RM(A) = <span class="hl-num">3.2</span>,  RM(B) = <span class="hl-num">1.8</span>
+  L = -log \u03c3(3.2 - 1.8) = -log \u03c3(1.4)
+    = -log(0.802) = <span class="hl-ok">0.22</span>  (low \u2014 good!)
+
+<span class="hl-key">Scale:</span> ~100K\u2013500K comparison pairs
+<span class="hl-cmt">// InstructGPT used ~33K human comparisons</span></div>
+<div class="dp-note n-violet"><strong>Data quality matters enormously.</strong> The SFT data defines the model\u2019s \u201cpersonality\u201d and capabilities. High-quality, diverse instruction data (from expert annotators or distilled from stronger models) is more important than quantity. Similarly, reward model quality is the ceiling for RLHF \u2014 a bad RM produces a bad aligned model.</div>`},
+  7:{title:'RLHF vs DPO: The Alignment Algorithms',color:'#7c3aed',body:`
+<div class="dp-label">RLHF with PPO</div>
+<div class="dp-code"><span class="hl-cmt">// 4 models needed simultaneously:</span>
+<span class="hl-key">1. Policy (\u03c0):</span>      the LLM being optimized
+<span class="hl-key">2. Reference (\u03c0_ref):</span> frozen SFT model (KL anchor)
+<span class="hl-key">3. Reward model:</span>     scores responses
+<span class="hl-key">4. Value model:</span>      estimates expected reward
+
+<span class="hl-key">Objective:</span>
+  max E[RM(response)] - \u03b2 \u00b7 KL(\u03c0 || \u03c0_ref)
+  <span class="hl-str">maximize reward</span>   <span class="hl-str">stay near SFT model</span>
+
+<span class="hl-cmt">// KL penalty prevents reward hacking:</span>
+<span class="hl-cmt">// Without it, model finds degenerate outputs</span>
+<span class="hl-cmt">// that score high on RM but are nonsensical</span>
+
+<span class="hl-err">// Problem: 4 models in memory = very expensive</span>
+<span class="hl-err">// PPO is unstable, sensitive to hyperparameters</span></div>
+<div class="dp-label">DPO (Direct Preference Optimization)</div>
+<div class="dp-code"><span class="hl-cmt">// Key insight: the optimal RLHF policy has a</span>
+<span class="hl-cmt">// closed-form solution in terms of preferences</span>
+
+<span class="hl-key">DPO loss:</span>
+  L = -log \u03c3(\u03b2 \u00b7 [log(\u03c0(y\u2096|\u0078) / \u03c0_ref(y\u2096|\u0078))
+                   - log(\u03c0(y\u2097|\u0078) / \u03c0_ref(y\u2097|\u0078))])
+
+  y\u2096 = preferred response
+  y\u2097 = rejected response
+  \u03b2  = temperature (typically 0.1\u20130.5)
+
+<span class="hl-ok">// Only 2 models needed: \u03c0 and \u03c0_ref</span>
+<span class="hl-ok">// No reward model, no RL, no value function</span>
+<span class="hl-ok">// Standard supervised loss \u2014 stable training</span>
+
+<span class="hl-cmt">// Rafailov et al. (2023) showed DPO matches</span>
+<span class="hl-cmt">// RLHF quality with much simpler training</span></div>
+<div class="dp-note n-violet"><strong>The trend:</strong> RLHF (PPO) was used for ChatGPT and early Claude. DPO and its variants (IPO, KTO, ORPO) are now preferred for their simplicity and stability. Some labs use iterative DPO: generate responses, collect preferences, train, repeat. The field is moving toward simpler alignment methods that scale better.</div>`},
+  8:{title:'LoRA: Low-Rank Adaptation',color:'#2563eb',body:`
+<div class="dp-label">LoRA Mechanics</div>
+<div class="dp-code"><span class="hl-cmt">// Original weight matrix:</span>
+<span class="hl-key">W</span> \u2208 \u211d\u1d48\u02e3\u1d48  <span class="hl-cmt">// e.g., 4096\u00d74096 = 16.8M params</span>
+
+<span class="hl-cmt">// LoRA: add low-rank update</span>
+<span class="hl-key">W\u2032</span> = W + \u0394W = W + B \u00b7 A
+
+<span class="hl-key">B</span> \u2208 \u211d\u1d48\u02e3\u02b3    <span class="hl-cmt">// 4096\u00d716 = 65,536 params</span>
+<span class="hl-key">A</span> \u2208 \u211d\u02b3\u02e3\u1d48    <span class="hl-cmt">// 16\u00d74096 = 65,536 params</span>
+<span class="hl-key">r</span> = 16       <span class="hl-cmt">// rank (hyperparameter)</span>
+
+<span class="hl-cmt">// Trainable params: 2 \u00d7 d \u00d7 r = 131K</span>
+<span class="hl-cmt">// vs original: d\u00b2 = 16.8M</span>
+<span class="hl-cmt">// Reduction: 128x fewer parameters!</span>
+
+<span class="hl-cmt">// Initialization:</span>
+<span class="hl-key">A</span> ~ N(0, \u03c3\u00b2)   <span class="hl-cmt">// random init</span>
+<span class="hl-key">B</span> = 0            <span class="hl-cmt">// zero init (\u0394W starts at 0)</span>
+<span class="hl-cmt">// Model starts identical to pretrained</span></div>
+<div class="dp-label">QLoRA: LoRA + Quantization</div>
+<div class="dp-code"><span class="hl-cmt">// QLoRA (Dettmers et al., 2023):</span>
+<span class="hl-cmt">// 1. Quantize base model to 4-bit (NF4)</span>
+<span class="hl-cmt">// 2. Add LoRA adapters in FP16/BF16</span>
+<span class="hl-cmt">// 3. Train only LoRA params</span>
+
+<span class="hl-key">Memory comparison (70B model):</span>
+  Full fine-tune:  <span class="hl-err">~140 GB</span> (FP16)
+  LoRA:            <span class="hl-num">~140 GB</span> base + <span class="hl-ok">~0.3 GB</span> adapters
+  QLoRA:           <span class="hl-ok">~35 GB</span> (4-bit) + <span class="hl-ok">~0.3 GB</span> adapters
+
+<span class="hl-cmt">// QLoRA fits 70B fine-tuning on a single 48GB GPU!</span>
+<span class="hl-cmt">// Quality: within 1-2% of full fine-tuning</span></div>
+<div class="dp-note n-blue"><strong>Where to apply LoRA:</strong> Typically applied to Q, K, V, and output projection matrices in attention layers. Some apply to FFN layers too. Rank r=8\u201364 is typical. Higher rank = more capacity but more parameters. The adapter weights can be merged into the base model at inference time for zero overhead.</div>`},
+  9:{title:'Quantization: Shrinking Model Size',color:'#2563eb',body:`
+<div class="dp-label">Precision Formats</div>
+<div class="dp-code"><span class="hl-key">FP32:</span>  32 bits, full precision
+  Range: \u00b13.4\u00d710\u00b3\u2078, 7 decimal digits
+
+<span class="hl-key">FP16:</span>  16 bits, half precision
+  Range: \u00b165,504, 3-4 decimal digits
+
+<span class="hl-key">BF16:</span>  16 bits, brain float (Google)
+  Same range as FP32, fewer mantissa bits
+  <span class="hl-ok">Standard for training</span>
+
+<span class="hl-key">INT8:</span>  8 bits, integer quantization
+  Range: -128 to 127
+  <span class="hl-ok">2x compression, ~0.5% quality loss</span>
+
+<span class="hl-key">INT4:</span>  4 bits, aggressive quantization
+  Range: -8 to 7 (or 0 to 15)
+  <span class="hl-ok">4x compression, ~1-3% quality loss</span></div>
+<div class="dp-label">Post-Training Quantization Methods</div>
+<div class="dp-code"><span class="hl-key">GPTQ (Frantar, 2022):</span>
+  Layer-by-layer quantization
+  Uses calibration data (~128 samples)
+  Minimizes output error per layer
+  <span class="hl-ok">Good for INT4, fast inference</span>
+
+<span class="hl-key">AWQ (Lin, 2023):</span>
+  Activation-Aware Weight Quantization
+  Protects important weights (high activation)
+  Scales weights before quantization
+  <span class="hl-ok">Better quality than GPTQ at INT4</span>
+
+<span class="hl-key">Memory savings (Llama 2 70B):</span>
+  FP16:  <span class="hl-err">140 GB</span> (needs 2\u00d7 A100 80GB)
+  INT8:  <span class="hl-num">70 GB</span>  (fits 1\u00d7 A100 80GB)
+  INT4:  <span class="hl-ok">35 GB</span>  (fits 1\u00d7 A100 40GB)</div>
+<div class="dp-note n-blue"><strong>The quality-size tradeoff:</strong> INT8 quantization is nearly lossless for most tasks. INT4 introduces small degradation but makes 70B models runnable on consumer hardware (RTX 4090 with 24GB). For many applications, a 70B INT4 model outperforms a 7B FP16 model \u2014 size matters more than precision.</div>`},
+};
+
+let current=0,playing=false,timer=null;const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const overlay=document.getElementById('detailOverlay');const panel=document.getElementById('detailPanel');const dpStep=document.getElementById('dpStep');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');
+for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');const allSteps=document.querySelectorAll('[data-step]');
+function lightNodes(step){allSteps.forEach(n=>{const s=parseInt(n.dataset.step);if(s<=step){n.classList.add('active');n.classList.remove('dimmed')}else{n.classList.remove('active');n.classList.add('dimmed')}})}
+function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+function showReset(){allSteps.forEach(n=>{n.classList.remove('active','dimmed')});progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin the deep dive...'}
+function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')closeDetail()});
+window.openDetail=function(step){const d=DETAILS[step];if(!d)return;dpStep.textContent=step;dpStep.style.background=d.color;dpTitle.textContent=d.title;dpBody.innerHTML=d.body;overlay.classList.add('visible');panel.classList.add('visible')};function closeDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}dpClose.addEventListener('click',closeDetail);overlay.addEventListener('click',closeDetail);
+reset();
+})();
+</script>
+</body>
+</html>

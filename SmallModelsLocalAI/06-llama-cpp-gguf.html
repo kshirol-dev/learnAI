@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: llama.cpp & GGUF Deep Dive — Small Models & Local AI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--cyan:#0891b2;--cyan-light:#ecfeff;--cyan-border:#a5f3fc;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);padding:4px 12px;background:var(--cyan-light);border:1px solid var(--cyan-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--cyan-border);background:var(--cyan-light)}.pipe-stage.lit .pipe-icon{background:var(--cyan);color:#fff}.pipe-stage.lit .pipe-label{color:var(--cyan)}.pipe-arrow.lit{color:var(--cyan)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--cyan-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--cyan);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--cyan);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--cyan);box-shadow:0 0 5px rgba(8,145,178,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-cyan{background:var(--cyan-light);border:1px solid var(--cyan-border)}.cc-note.n-cyan strong{color:var(--cyan)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--cyan);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; llama.cpp &amp; GGUF Deep Dive</h2><span class="tb-sub">The C++ engine under the hood &mdash; convert, quantize, serve, and tune</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">What Is It</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">swap_horiz</span></div><span class="pipe-label">Convert</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Quantize</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">terminal</span></div><span class="pipe-label">CLI Run</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">dns</span></div><span class="pipe-label">Server Mode</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Perf Tuning</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Engines</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">When to Use</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--cyan)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">What Is llama.cpp?</div><div class="cc-sub">The C++ inference engine that powers almost all local AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Origin Story</div><div class="cc-text">In March 2023, Georgi Gerganov created <strong>llama.cpp</strong> &mdash; a pure C/C++ implementation of Meta&rsquo;s LLaMA model inference. The goal: run LLMs on consumer hardware without Python, PyTorch, or CUDA dependencies.<br><br>It worked. Within weeks, people were running 7B models on MacBook Airs. The project exploded &mdash; it now has 75,000+ GitHub stars and supports virtually every open-weight model architecture.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why It Matters</div><div class="cc-code"><span class="hl-key">llama.cpp powers:</span>
+  ✓ Ollama (Ch 5)
+  ✓ LM Studio
+  ✓ GPT4All
+  ✓ Jan
+  ✓ Kobold.cpp
+  ✓ Text Generation WebUI
+
+<span class="hl-key">Key innovations:</span>
+  ✓ GGUF format (Ch 3)
+  ✓ K-quant quantization methods
+  ✓ Metal (Apple GPU) acceleration
+  ✓ CUDA, Vulkan, SYCL GPU support
+  ✓ Flash attention implementation
+  ✓ Speculative decoding support
+
+<span class="hl-cmt">Almost every local AI tool is either
+built on llama.cpp or inspired by it.</span></div></div>
+          <div class="cc-note n-cyan"><strong>Key insight:</strong> llama.cpp is the foundation of the local AI ecosystem. Ollama is a user-friendly wrapper around it. When you need more control than Ollama provides &mdash; custom quantization, specific GPU layer allocation, server tuning &mdash; you go directly to llama.cpp.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">swap_horiz</span></div><div><div class="cc-title">Converting Models to GGUF</div><div class="cc-sub">Taking a Hugging Face model and making it llama.cpp-compatible</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When You Need to Convert</div><div class="cc-text">Most popular models already have GGUF versions on Hugging Face (uploaded by the community, especially by users like &ldquo;bartowski&rdquo; and &ldquo;TheBloke&rdquo;). You only need to convert yourself when:<br><br>• You fine-tuned a model and want to run it locally<br>• A new model just released and no GGUF exists yet<br>• You want a specific quantization not available</div></div>
+          <div class="cc-block"><div class="cc-label">The Conversion Pipeline</div><div class="cc-code"><span class="hl-key"># 1. Clone llama.cpp</span>
+$ git clone https://github.com/ggerganov/llama.cpp
+$ cd llama.cpp
+
+<span class="hl-key"># 2. Build</span>
+$ cmake -B build
+$ cmake --build build --config Release
+
+<span class="hl-key"># 3. Install Python dependencies</span>
+$ pip install -r requirements.txt
+
+<span class="hl-key"># 4. Convert HF model to GGUF (FP16)</span>
+$ python convert_hf_to_gguf.py \
+  /path/to/hf-model/ \
+  --outfile model-f16.gguf \
+  --outtype f16</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What the Converter Does</div><div class="cc-code"><span class="hl-key">Input:</span> Hugging Face model directory
+  ├── config.json
+  ├── tokenizer.json
+  ├── model-00001-of-00004.safetensors
+  ├── model-00002-of-00004.safetensors
+  └── ...
+
+<span class="hl-key">Output:</span> Single GGUF file
+  model-f16.gguf
+  ├── Architecture metadata
+  ├── Tokenizer (embedded)
+  ├── Chat template (embedded)
+  └── All weights (FP16)
+
+<span class="hl-cmt">The converter reads the HF format,
+maps tensor names to llama.cpp's
+internal naming, embeds the tokenizer,
+and writes everything to one file.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The conversion step produces an FP16 GGUF &mdash; still large but now in the right format. The next step (quantization) is where the real size reduction happens. Think of conversion as &ldquo;translating the language&rdquo; and quantization as &ldquo;compressing the file.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">Quantizing Your Own Models</div><div class="cc-sub">From FP16 GGUF to Q4_K_M &mdash; the hands-on process</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Quantize Command</div><div class="cc-code"><span class="hl-key"># Quantize FP16 → Q4_K_M</span>
+$ ./build/bin/llama-quantize \
+  model-f16.gguf \
+  model-Q4_K_M.gguf \
+  Q4_K_M
+
+<span class="hl-key"># Other common targets:</span>
+$ ./build/bin/llama-quantize \
+  model-f16.gguf model-Q5_K_M.gguf Q5_K_M
+
+$ ./build/bin/llama-quantize \
+  model-f16.gguf model-Q8_0.gguf Q8_0
+
+<span class="hl-cmt"># Takes 2-10 minutes depending on
+# model size and your CPU speed.</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Available Quantization Types</div><div class="cc-code"><span class="hl-key">Type       Bits  Use Case</span>
+Q2_K       2.6   Extreme compression (bad)
+Q3_K_S     3.4   Very small, low quality
+Q3_K_M     3.9   Small, acceptable
+Q4_K_S     4.3   Good balance, smaller
+<span class="hl-str">Q4_K_M     4.5   ← Recommended default</span>
+<span class="hl-str">Q5_K_M     5.1   ← Quality-focused</span>
+Q5_K_S     4.9   Quality, slightly smaller
+Q6_K       6.6   High quality
+<span class="hl-str">Q8_0       8.5   ← Near-lossless</span>
+F16       16.0   Half precision (large)</div></div>
+          <div class="cc-block"><div class="cc-label">Importance Matrix (imatrix)</div><div class="cc-text"><strong>Advanced:</strong> For Q3 and Q4, you can generate an &ldquo;importance matrix&rdquo; from a calibration dataset. This tells the quantizer which weights are most important, preserving them at higher precision. Improves quality at low bit depths.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Quantization is a one-time process. Convert once, use forever. The output GGUF file can be used with Ollama (<code>ollama create</code> with a Modelfile pointing to it), llama.cpp directly, LM Studio, or any GGUF-compatible tool. One file, runs everywhere.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">terminal</span></div><div><div class="cc-title">Running Models with llama-cli</div><div class="cc-sub">Direct inference without Ollama &mdash; maximum control</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Interactive Chat</div><div class="cc-code"><span class="hl-key"># Interactive chat mode</span>
+$ ./build/bin/llama-cli \
+  -m model-Q4_K_M.gguf \
+  -c <span class="hl-num">4096</span> \
+  -ngl <span class="hl-num">99</span> \
+  --chat-template chatml \
+  -cnv
+
+<span class="hl-cmt"># Flags:
+# -m    model file path
+# -c    context size (tokens)
+# -ngl  GPU layers to offload (99 = all)
+# -cnv  conversation mode
+# --chat-template  format for chat</span></div></div>
+          <div class="cc-block"><div class="cc-label">Single Prompt</div><div class="cc-code"><span class="hl-key"># One-shot generation</span>
+$ ./build/bin/llama-cli \
+  -m model-Q4_K_M.gguf \
+  -p "Explain quantization in 2 sentences" \
+  -n <span class="hl-num">100</span> \
+  -ngl <span class="hl-num">99</span>
+
+<span class="hl-cmt"># -p  prompt text
+# -n  max tokens to generate</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Parameters</div><div class="cc-code"><span class="hl-key">-c</span> <span class="hl-num">4096</span>     Context window size
+<span class="hl-key">-ngl</span> <span class="hl-num">99</span>     GPU layers (99 = all)
+<span class="hl-key">-t</span> <span class="hl-num">8</span>        CPU threads
+<span class="hl-key">-b</span> <span class="hl-num">512</span>      Batch size (prompt proc)
+<span class="hl-key">-ub</span> <span class="hl-num">512</span>     Micro-batch size
+<span class="hl-key">--temp</span> <span class="hl-num">0.7</span>  Temperature
+<span class="hl-key">--top-p</span> <span class="hl-num">0.9</span> Nucleus sampling
+<span class="hl-key">--top-k</span> <span class="hl-num">40</span>  Top-K sampling
+<span class="hl-key">--repeat-penalty</span> <span class="hl-num">1.1</span>
+<span class="hl-key">-fa</span>          Flash attention (faster)
+<span class="hl-key">--mlock</span>      Lock model in RAM</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The <code>-ngl</code> flag is the most important performance parameter. It controls how many transformer layers run on GPU vs CPU. Set it to 99 to offload everything to GPU. If you run out of VRAM, reduce it &mdash; llama.cpp will automatically split between GPU and CPU.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">dns</span></div><div><div class="cc-title">Server Mode: OpenAI-Compatible API</div><div class="cc-sub">Run llama.cpp as an API server &mdash; drop-in replacement for OpenAI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Start the Server</div><div class="cc-code"><span class="hl-key"># Start llama.cpp server</span>
+$ ./build/bin/llama-server \
+  -m model-Q4_K_M.gguf \
+  -c <span class="hl-num">4096</span> \
+  -ngl <span class="hl-num">99</span> \
+  --host <span class="hl-str">0.0.0.0</span> \
+  --port <span class="hl-num">8080</span> \
+  -fa
+
+<span class="hl-cmt"># Server starts on http://localhost:8080
+# OpenAI-compatible endpoints:
+#   /v1/chat/completions
+#   /v1/completions
+#   /v1/embeddings
+#   /v1/models</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Use with OpenAI Client</div><div class="cc-code"><span class="hl-key">from</span> openai <span class="hl-key">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="hl-str">"http://localhost:8080/v1"</span>,
+    api_key=<span class="hl-str">"not-needed"</span>
+)
+
+response = client.chat.completions.create(
+    model=<span class="hl-str">"local-model"</span>,
+    messages=[
+        {<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+         <span class="hl-str">"content"</span>: <span class="hl-str">"What is GGUF?"</span>}
+    ],
+    temperature=<span class="hl-num">0.7</span>
+)
+print(response.choices[<span class="hl-num">0</span>].message.content)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> llama.cpp&rsquo;s server mode speaks the OpenAI API protocol. Any code, library, or tool that works with OpenAI&rsquo;s API works with llama.cpp by changing one line: the base URL. This is the foundation for building local AI applications (Chapter 7).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Performance Tuning</div><div class="cc-sub">Squeezing maximum tokens/sec from your hardware</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Big Three Parameters</div><div class="cc-code"><span class="hl-key">1. GPU Layers (-ngl)</span>
+  More layers on GPU = faster
+  Start with 99, reduce if OOM
+  Each layer: ~100-300MB VRAM (7B model)
+
+<span class="hl-key">2. Context Size (-c)</span>
+  Larger context = more RAM
+  4K: ~0.5GB overhead
+  8K: ~1.0GB overhead
+  32K: ~3.0GB overhead
+  <span class="hl-cmt">Use smallest context that works</span>
+
+<span class="hl-key">3. Batch Size (-b)</span>
+  Affects prompt processing speed
+  Default 512 is usually good
+  Increase for long prompts
+  Decrease if running out of memory</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Advanced Tuning</div><div class="cc-code"><span class="hl-key">Flash Attention (-fa)</span>
+  Reduces memory usage for attention
+  Enables larger context windows
+  ~10-20% faster on supported hardware
+
+<span class="hl-key">Thread Count (-t)</span>
+  CPU threads for computation
+  Default: auto-detect
+  Rule: physical cores, not logical
+  M2 Pro: -t 8 (not 12)
+
+<span class="hl-key">Memory Locking (--mlock)</span>
+  Prevents OS from swapping model to disk
+  Important for consistent latency
+  Requires sufficient RAM
+
+<span class="hl-key">KV Cache Quantization</span>
+  --cache-type-k q8_0
+  --cache-type-v q8_0
+  <span class="hl-cmt">Reduces context memory by ~50%</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The biggest performance win is getting the model fully into GPU VRAM (<code>-ngl 99</code>). If that&rsquo;s not possible, the second biggest win is flash attention (<code>-fa</code>) which reduces memory usage. KV cache quantization is the third lever &mdash; it lets you fit larger contexts without more RAM.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Inference Engine Comparison</div><div class="cc-sub">llama.cpp vs vLLM vs TGI &mdash; different tools for different jobs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three Engines</div><div class="cc-code"><span class="hl-key">llama.cpp</span>
+  Language: C/C++
+  Target:   Consumer hardware
+  GPU:      CUDA, Metal, Vulkan
+  Format:   GGUF
+  Strength: CPU inference, Apple Silicon,
+            edge devices, single-user
+  Best for: Local deployment
+
+<span class="hl-key">vLLM</span>
+  Language: Python + C++
+  Target:   Server/cloud GPU
+  GPU:      CUDA (NVIDIA only)
+  Format:   HF SafeTensors
+  Strength: PagedAttention, high throughput,
+            concurrent requests, batching
+  Best for: Production API servers
+
+<span class="hl-key">TGI (Text Generation Inference)</span>
+  Language: Rust + Python
+  Target:   Server/cloud GPU
+  GPU:      CUDA (NVIDIA only)
+  Format:   HF SafeTensors
+  Strength: Hugging Face ecosystem,
+            tensor parallelism, Docker
+  Best for: HF-integrated deployments</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use Each</div><div class="cc-text"><strong>llama.cpp / Ollama:</strong> Local development, single-user, Apple Silicon, edge devices, privacy-first. The default choice for this course.<br><br><strong>vLLM:</strong> When you need to serve many concurrent users on NVIDIA GPUs. PagedAttention gives 2&ndash;4x throughput over naive serving. Production API servers.<br><br><strong>TGI:</strong> When you&rsquo;re already in the Hugging Face ecosystem and want Docker-based deployment with tensor parallelism across multiple GPUs.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> For local AI (the focus of this course), llama.cpp/Ollama is the right choice. vLLM and TGI are server-side tools for when you&rsquo;re serving hundreds or thousands of concurrent users on dedicated GPU servers. Different tools, different scale.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Ollama vs llama.cpp: When to Use Which</div><div class="cc-sub">The decision framework for choosing your tool</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Use Ollama When</div><div class="cc-code"><span class="hl-str">✓</span> You want to get started quickly
+<span class="hl-str">✓</span> Pre-quantized models are available
+<span class="hl-str">✓</span> You need model management (pull/rm)
+<span class="hl-str">✓</span> You want a simple REST API
+<span class="hl-str">✓</span> You're building applications (Ch 7)
+<span class="hl-str">✓</span> You want Modelfile customization
+<span class="hl-str">✓</span> You don't need fine-grained control
+
+<span class="hl-cmt">Ollama is the right choice 90% of
+the time. Start here.</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Use llama.cpp Directly When</div><div class="cc-code"><span class="hl-key">✓</span> You need to convert/quantize models
+<span class="hl-key">✓</span> You need specific GPU layer control
+<span class="hl-key">✓</span> You want KV cache quantization
+<span class="hl-key">✓</span> You need flash attention tuning
+<span class="hl-key">✓</span> You're embedding in a C/C++ app
+<span class="hl-key">✓</span> You need grammar-constrained output
+<span class="hl-key">✓</span> You want maximum performance tuning
+<span class="hl-key">✓</span> You're deploying to edge devices
+
+<span class="hl-cmt">llama.cpp is the power-user tool.
+Use when Ollama isn't enough.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Think of it as a progression: start with Ollama for simplicity, drop down to llama.cpp when you need more control. They use the same engine and the same GGUF files &mdash; switching is seamless. Next up: Chapter 7 puts this into practice by building actual applications.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-ollama.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: Ollama</a>
+    <a class="ch-nav-btn next" href="07-building-local-apps.html">Ch 7: Building Local Apps <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> llama.cpp: pure C++ LLM inference by Georgi Gerganov. 75K+ GitHub stars. Powers Ollama, LM Studio, GPT4All. The foundation of local AI.',color:'#0891b2'},
+    2:{text:'<strong>Step 2:</strong> Converting HF models to GGUF: convert_hf_to_gguf.py takes safetensors → single GGUF file with embedded tokenizer and metadata.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Quantize with llama-quantize: FP16 → Q4_K_M in minutes. One-time process. Output works with Ollama, llama.cpp, LM Studio — everywhere.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> llama-cli for direct inference. Key flags: -m (model), -c (context), -ngl (GPU layers), -fa (flash attention). Maximum control.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> llama-server: OpenAI-compatible API. Change base_url from api.openai.com to localhost:8080 — existing code works with local models.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Performance tuning: GPU layers (-ngl 99) > flash attention (-fa) > KV cache quantization. Get model fully into VRAM for best speed.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> llama.cpp for local/edge. vLLM for high-throughput servers. TGI for HF ecosystem. Different tools for different scales.',color:'#2563eb'},
+    8:{text:'<strong>Step 8:</strong> Start with Ollama (90% of cases). Drop to llama.cpp for custom quantization, GPU tuning, or edge deployment. Same engine, same files.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

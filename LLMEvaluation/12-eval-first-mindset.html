@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: The Eval-First Mindset — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; The Eval-First Mindset</h2><span class="tb-sub">Building evaluation into your team&rsquo;s culture &mdash; from individual habit to organizational practice</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Mindset</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">person</span></div><span class="pipe-label">Individual</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">groups</span></div><span class="pipe-label">Team</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">corporate_fare</span></div><span class="pipe-label">Org</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Action</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">emoji_events</span></div><span class="pipe-label">Mastery</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">psychology</span></div>
+        <div><div class="cc-title">From Vibes to Evidence</div><div class="cc-sub">The fundamental shift that separates AI demos from AI products</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Vibes Problem</div>
+            <div class="cc-text">Most AI teams develop by <strong>vibes</strong>: try a prompt, eyeball a few outputs, declare it &ldquo;looks good,&rdquo; and ship. This works for demos. It fails catastrophically for products. The problem: <strong>you can&rsquo;t improve what you can&rsquo;t measure</strong>. Without systematic evaluation, you&rsquo;re making decisions based on anecdotes, recency bias, and gut feeling.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Eval-First Mindset</div>
+            <div class="cc-text">Eval-first means <strong>defining success before building</strong>. Before writing a prompt, before choosing a model, before designing a pipeline &mdash; write the eval. This is the AI equivalent of Test-Driven Development (TDD):<br><br>1. <strong>Define:</strong> What does &ldquo;good&rdquo; look like? Write 10&ndash;50 examples<br>2. <strong>Measure:</strong> How does the current system perform?<br>3. <strong>Iterate:</strong> Make changes, re-run eval, compare<br>4. <strong>Ship:</strong> Deploy when eval passes<br>5. <strong>Monitor:</strong> Keep running eval in production</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Teams Resist</div>
+            <div class="cc-text">&bull; <strong>&ldquo;It slows us down&rdquo;:</strong> Writing evals takes 2 hours. Debugging a production incident takes 2 days. Evals are faster<br>&bull; <strong>&ldquo;Our use case is too subjective&rdquo;:</strong> If humans can judge quality, you can write an eval for it. Even subjective tasks have measurable dimensions<br>&bull; <strong>&ldquo;We don&rsquo;t have enough data&rdquo;:</strong> Start with 10 examples. 10 is better than 0. You can always add more<br>&bull; <strong>&ldquo;The tools are too complex&rdquo;:</strong> A spreadsheet with 50 rows and a Python script is an eval system. Start simple</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The biggest barrier to eval-first isn&rsquo;t tools or data &mdash; it&rsquo;s culture. Teams that treat evaluation as a tax will always cut corners. Teams that treat it as a superpower will ship better products faster.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">person</span></div>
+        <div><div class="cc-title">Individual Practices</div><div class="cc-sub">What every AI engineer should do, starting today</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Daily Eval Habit</div>
+            <div class="cc-text">1. <strong>Before every prompt change:</strong> Run the eval suite. Compare before and after. Never ship a prompt change without eval evidence<br>2. <strong>Before every PR:</strong> Include eval results in the PR description. &ldquo;Accuracy: 82% &rarr; 87%, safety: 100%, latency: -5%&rdquo;<br>3. <strong>When debugging:</strong> Add the failing case to the eval dataset before fixing it. This ensures the fix is verified and the regression is caught forever<br>4. <strong>When exploring:</strong> Use eval to compare options objectively. &ldquo;GPT-4o scores 0.89 on our eval, Claude scores 0.91&rdquo; beats &ldquo;Claude feels better&rdquo;</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The 30-Minute Eval Kickstart</div>
+            <div class="cc-text">For any new LLM feature, spend 30 minutes writing an eval before writing any code:<br><br>&bull; <strong>Minutes 1&ndash;10:</strong> Write 5 happy-path examples (common queries with expected behavior)<br>&bull; <strong>Minutes 11&ndash;20:</strong> Write 3 edge cases (unusual inputs, ambiguous queries)<br>&bull; <strong>Minutes 21&ndash;30:</strong> Write 2 adversarial cases (what should the system refuse?)<br><br>That&rsquo;s 10 examples in 30 minutes. Enough to guide development and catch obvious regressions. Expand to 50+ as the feature matures.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Keep a &ldquo;failure journal&rdquo; &mdash; every time you see a bad output in development or production, write it down with the expected behavior. Review weekly and add the best ones to your eval dataset. This is the fastest way to build a comprehensive eval set.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">groups</span></div>
+        <div><div class="cc-title">Team Practices</div><div class="cc-sub">Making evaluation a shared responsibility</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Eval as a Team Sport</div>
+            <div class="cc-text">&bull; <strong>Shared eval dataset:</strong> Version-controlled, reviewed like code. Everyone contributes examples. PRs that add eval examples are celebrated<br>&bull; <strong>Eval reviews:</strong> Include eval results in every code review. &ldquo;Where are the eval results?&rdquo; should be as natural as &ldquo;Where are the tests?&rdquo;<br>&bull; <strong>Weekly eval review:</strong> 30-minute meeting to review production quality trends, discuss failures, and prioritize eval improvements<br>&bull; <strong>Eval ownership:</strong> Assign an &ldquo;eval champion&rdquo; who ensures the eval suite stays healthy and grows</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Process Integration</div>
+            <div class="cc-text">&bull; <strong>Definition of Done:</strong> A feature isn&rsquo;t done until it has eval examples and passes them<br>&bull; <strong>Sprint planning:</strong> Include eval work in sprint estimates. &ldquo;Build feature X&rdquo; includes &ldquo;write eval for feature X&rdquo;<br>&bull; <strong>Incident response:</strong> Every production incident results in new eval examples (the flywheel)<br>&bull; <strong>Onboarding:</strong> New team members start by reviewing and contributing to the eval dataset. It&rsquo;s the best way to understand the system&rsquo;s expected behavior</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The eval dataset is the team&rsquo;s shared understanding of what &ldquo;good&rdquo; means. When there&rsquo;s a disagreement about quality, the eval dataset is the source of truth. Invest in it like you invest in your codebase.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">corporate_fare</span></div>
+        <div><div class="cc-title">Organizational Practices</div><div class="cc-sub">Scaling eval culture across the company</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Building the Eval Infrastructure</div>
+            <div class="cc-text">&bull; <strong>Central eval platform:</strong> A shared service that any team can use to run evals, store datasets, and track results over time<br>&bull; <strong>Eval templates:</strong> Pre-built eval configurations for common use cases (RAG, chatbot, agent, summarization) so teams don&rsquo;t start from scratch<br>&bull; <strong>Shared metrics library:</strong> Standardized metrics across teams so results are comparable<br>&bull; <strong>Cost attribution:</strong> Track eval costs per team to ensure eval spending is proportional to system criticality</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Governance &amp; Standards</div>
+            <div class="cc-text">&bull; <strong>Minimum eval requirements:</strong> Every AI feature must have a minimum eval dataset size (e.g., 50 examples) before production deployment<br>&bull; <strong>Safety eval mandate:</strong> All user-facing AI systems must pass safety evaluation including adversarial testing<br>&bull; <strong>Eval audit trail:</strong> Every deployment must have associated eval results for compliance and accountability<br>&bull; <strong>Regular benchmarking:</strong> Quarterly comparison of production systems against current state-of-the-art to identify upgrade opportunities</div>
+          </div>
+          <div class="cc-note n-violet"><strong>For leadership:</strong> Eval maturity correlates strongly with AI product quality. Teams at eval maturity Level 3+ ship 40% fewer production incidents and iterate 2x faster because they have objective evidence guiding every decision.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">trending_up</span></div>
+        <div><div class="cc-title">Measuring Eval Maturity</div><div class="cc-sub">Where is your team on the eval maturity curve?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Maturity Assessment</div>
+            <div class="cc-code"><span class="hl-num">Level 0</span>: No Eval
+  No eval dataset. Ship based on vibes.
+  <span class="hl-cmt">~60% of AI teams</span>
+
+<span class="hl-num">Level 1</span>: Basic Eval
+  50+ examples. Manual runs before deploy.
+  <span class="hl-cmt">~25% of AI teams</span>
+
+<span class="hl-num">Level 2</span>: Automated Eval
+  CI/CD integration. Eval gates on PRs.
+  <span class="hl-cmt">~10% of AI teams</span>
+
+<span class="hl-num">Level 3</span>: Monitored Eval
+  Production monitoring. Drift detection.
+  <span class="hl-cmt">~4% of AI teams</span>
+
+<span class="hl-num">Level 4</span>: Eval-Driven
+  Eval-first culture. Every decision backed
+  by evidence. Continuous improvement.
+  <span class="hl-cmt">~1% of AI teams</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Leveling Up</div>
+            <div class="cc-text"><strong>0 &rarr; 1 (1 day):</strong> Write 50 eval examples. Run them manually before your next deploy. This single step puts you ahead of 60% of AI teams.<br><br><strong>1 &rarr; 2 (1 week):</strong> Add eval to CI/CD. Block PRs that drop quality. Automate what you were doing manually.<br><br><strong>2 &rarr; 3 (1 month):</strong> Add production monitoring. Canary queries. Weekly eval runs. Alerting on quality drops.<br><br><strong>3 &rarr; 4 (3&ndash;6 months):</strong> Cultural shift. Eval-first development. Shared datasets. Team practices. This is the hardest level because it requires changing habits, not just adding tools.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The biggest ROI is going from Level 0 to Level 1. It takes one day and provides 80% of the benefit. Don&rsquo;t wait for the perfect system &mdash; start with 50 examples today.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Anti-Patterns to Avoid</div><div class="cc-sub">Common mistakes that undermine evaluation efforts</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Eval Anti-Patterns</div>
+            <div class="cc-text">&bull; <strong>Eval theater:</strong> Having an eval suite that nobody looks at. Running evals but never acting on the results. This is worse than no eval because it creates false confidence<br>&bull; <strong>Overfitting to eval:</strong> Optimizing prompts specifically for your eval examples until they pass, without ensuring generalization. Your eval set should be representative, not a target to game<br>&bull; <strong>Stale eval data:</strong> An eval dataset that hasn&rsquo;t been updated in 6 months. Production traffic evolves; your eval must evolve with it<br>&bull; <strong>Metric worship:</strong> Optimizing a single metric (e.g., accuracy) while ignoring safety, latency, and cost. Multi-dimensional evaluation is essential</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">More Anti-Patterns</div>
+            <div class="cc-text">&bull; <strong>Tool-first thinking:</strong> Spending weeks evaluating eval tools instead of writing eval examples. The tool doesn&rsquo;t matter if you don&rsquo;t have data<br>&bull; <strong>Perfectionism:</strong> Waiting for the perfect eval dataset before starting. 50 imperfect examples today beat 500 perfect examples next quarter<br>&bull; <strong>Siloed evaluation:</strong> Only the ML team runs evals. Product, design, and QA should contribute examples from their unique perspectives<br>&bull; <strong>Ignoring human eval:</strong> Relying entirely on automated metrics without periodic human review. Automated metrics drift; human judgment calibrates them</div>
+          </div>
+          <div class="cc-note n-red"><strong>Warning:</strong> The most dangerous anti-pattern is eval theater &mdash; having a green CI/CD badge that nobody trusts. If your team routinely overrides eval failures to ship, your eval system has lost credibility. Fix the eval or fix the process, but never normalize ignoring eval results.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">rocket_launch</span></div>
+        <div><div class="cc-title">Your Action Plan</div><div class="cc-sub">Concrete steps to implement eval-first, starting this week</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">This Week</div>
+            <div class="cc-text">1. <strong>Pick your most important AI feature</strong><br>2. <strong>Write 50 eval examples</strong> (2 hours): 20 happy path, 15 edge cases, 10 adversarial, 5 regression<br>3. <strong>Choose 3 metrics:</strong> One quality, one safety, one operational<br>4. <strong>Run the eval manually</strong> and record baseline scores<br>5. <strong>Share results with your team</strong></div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">This Month</div>
+            <div class="cc-text">1. <strong>Add eval to CI/CD:</strong> Run on every PR that touches prompts or model config<br>2. <strong>Set up canary queries:</strong> 10&ndash;20 fixed queries running hourly against production<br>3. <strong>Start a failure journal:</strong> Log every bad output you see, add the best to eval<br>4. <strong>First team eval review:</strong> 30 minutes reviewing quality trends and failures</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">This Quarter</div>
+            <div class="cc-text">1. <strong>Production monitoring:</strong> LLM judge on 5% of responses, quality dashboard<br>2. <strong>Alerting:</strong> Safety, quality, and cost alerts with clear thresholds<br>3. <strong>Human eval round:</strong> 100 production samples reviewed by humans monthly<br>4. <strong>Eval-first for new features:</strong> Every new feature starts with eval examples<br>5. <strong>Grow eval dataset to 200+:</strong> From production failures and team contributions</div>
+          </div>
+          <div class="cc-note n-green"><strong>Start today:</strong> Open a new file. Write 10 eval examples for your most important AI feature. That&rsquo;s it. You&rsquo;ve started. Everything else builds from there.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">emoji_events</span></div>
+        <div><div class="cc-title">Course Summary &amp; Key Takeaways</div><div class="cc-sub">Everything you&rsquo;ve learned across 12 chapters, distilled</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The 12-Chapter Journey</div>
+            <div class="cc-code"><span class="hl-key">Ch 1-2</span>:  Why eval matters + benchmarks
+<span class="hl-key">Ch 3</span>:    LLM-as-Judge (automated quality)
+<span class="hl-key">Ch 4</span>:    RAG evaluation (specialized metrics)
+<span class="hl-key">Ch 5</span>:    Agent evaluation (task completion)
+<span class="hl-key">Ch 6</span>:    Human evaluation (gold standard)
+<span class="hl-key">Ch 7</span>:    Eval pipelines (CI/CD integration)
+<span class="hl-key">Ch 8</span>:    Tools (RAGAS, DeepEval, etc.)
+<span class="hl-key">Ch 9</span>:    Production observability (5 pillars)
+<span class="hl-key">Ch 10</span>:   Guardrails &amp; safety (defense-in-depth)
+<span class="hl-key">Ch 11</span>:   Drift, debugging &amp; alerts
+<span class="hl-key">Ch 12</span>:   The eval-first mindset (culture)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Five Things That Matter Most</div>
+            <div class="cc-text">1. <strong>Build an eval dataset.</strong> 50 examples. Today. This is the single highest-ROI action in AI engineering<br><br>2. <strong>Automate evaluation.</strong> CI/CD gates that block bad deployments. Weekly runs that catch drift<br><br>3. <strong>Monitor production.</strong> Cost, latency, quality, safety, hallucination. Five pillars, one dashboard<br><br>4. <strong>Layer your defenses.</strong> Automated metrics + LLM judges + human review. Guardrails at input and output<br><br>5. <strong>Build the culture.</strong> Eval-first development. Shared datasets. Evidence-based decisions. This is what separates great AI teams from the rest</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Final thought:</strong> The teams building the best AI products aren&rsquo;t the ones with the best models or the most data. They&rsquo;re the ones with the best evaluation systems. Evaluation is the competitive advantage that compounds over time.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-drift-debugging.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: Drift &amp; Debugging</a>
+    <a class="ch-nav-btn next" href="index.html">Back to Index <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[0,1,2,3],6:[0,1,2],7:[4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Eval-first means defining success before building. It\u2019s TDD for AI: write the eval, measure, iterate, ship when it passes, monitor in production.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Individual habit: 30 minutes to write 10 eval examples before any new feature. Run eval before every prompt change. Include results in every PR.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> Team practice: shared eval dataset (version-controlled), eval reviews in PRs, weekly quality review meeting, eval champion role.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Organizational: central eval platform, templates, shared metrics, minimum eval requirements for production deployment, audit trails.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Maturity: 60% of teams are at Level 0 (vibes). Going to Level 1 (50 examples) takes 1 day and provides 80% of the benefit.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Anti-patterns: eval theater, overfitting to eval, stale data, metric worship, tool-first thinking, perfectionism. Avoid these traps.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Action plan: This week \u2014 50 examples + 3 metrics. This month \u2014 CI/CD + canaries. This quarter \u2014 monitoring + alerting + human eval.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The five things: build an eval dataset, automate evaluation, monitor production, layer defenses, build the culture. Evaluation is the competitive advantage.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

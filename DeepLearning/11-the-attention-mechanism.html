@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: The Attention Mechanism — Deep Learning Fundamentals</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; The Attention Mechanism</h2><span class="tb-sub">Bahdanau attention, self-attention, multi-head attention, and why attention replaced recurrence</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Bottleneck</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">center_focus_strong</span></div><span class="pipe-label">Bahdanau</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">key</span></div><span class="pipe-label">Q, K, V</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">self_improvement</span></div><span class="pipe-label">Self-Attn</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">view_column</span></div><span class="pipe-label">Multi-Head</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">token</span></div><span class="pipe-label">Transformer</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">The Bottleneck Problem</div><div class="cc-sub">Why fixed-size context vectors fail for long sequences</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Seq2Seq Limitation</div><div class="cc-text">Recall from Chapter 7: the seq2seq encoder compresses an entire input sentence into a single fixed-size vector. For short sentences, this works. But for a 50-word sentence, cramming all meaning into a 512-dimensional vector is like summarizing a novel in a tweet. Information about early words gets overwritten by later ones. Translation quality degrades sharply for sentences longer than ~20 words. The fundamental problem: the decoder has <strong>equal access to all parts of the input</strong> (via the context vector) but <strong>no way to focus on specific parts</strong> when generating each output word.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Problem Illustrated</div><div class="cc-code"><span class="hl-cmt">// Translating a long sentence</span>
+<span class="hl-key">Input</span>: "The agreement on the European
+  Economic Area was signed in August
+  1992."
+
+<span class="hl-cmt">// Seq2seq encoder:</span>
+<span class="hl-cmt">// All 12 words → single 512-dim vector</span>
+<span class="hl-cmt">// Early words ("The agreement") are</span>
+<span class="hl-cmt">// overwritten by later words ("1992")</span>
+
+<span class="hl-cmt">// When generating "L'accord" (French),</span>
+<span class="hl-cmt">// decoder needs "The agreement" but</span>
+<span class="hl-cmt">// can't selectively access it</span></div></div>
+          <div class="cc-note n-red"><strong>Critical in AI:</strong> This bottleneck was the single biggest limitation of seq2seq models. Bahdanau&rsquo;s attention mechanism solved it by allowing the decoder to &ldquo;look back&rdquo; at all encoder states, not just the final one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">center_focus_strong</span></div><div><div class="cc-title">Bahdanau Attention (2015)</div><div class="cc-sub">Learning to align and translate</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Breakthrough</div><div class="cc-text">Bahdanau, Cho, and Bengio (ICLR 2015) proposed that instead of compressing the entire input into one vector, the decoder should <strong>attend to different parts of the input at each step</strong>. At each decoding step, the model computes <strong>attention weights</strong> &mdash; a probability distribution over all encoder hidden states &mdash; indicating which input words are most relevant for the current output word. The <strong>context vector</strong> is then a weighted sum of all encoder states, dynamically changing at each step. When generating &ldquo;L&rsquo;accord,&rdquo; the model attends heavily to &ldquo;The agreement.&rdquo;</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Bahdanau Attention</div><div class="cc-code"><span class="hl-cmt">// At decoder step t:</span>
+<span class="hl-cmt">// h₁...hₙ = encoder hidden states</span>
+<span class="hl-cmt">// sₜ = decoder hidden state</span>
+
+<span class="hl-cmt">// 1. Compute alignment scores</span>
+eₜᵢ = <span class="hl-key">score</span>(sₜ₋₁, hᵢ)  <span class="hl-cmt">// for each input i</span>
+
+<span class="hl-cmt">// 2. Normalize to attention weights</span>
+αₜᵢ = <span class="hl-key">softmax</span>(eₜᵢ)
+
+<span class="hl-cmt">// 3. Compute context vector</span>
+cₜ = Σᵢ αₜᵢ · hᵢ  <span class="hl-cmt">// weighted sum</span>
+
+<span class="hl-cmt">// 4. Use cₜ + sₜ₋₁ to generate output</span>
+<span class="hl-cmt">// Different cₜ at each decoder step!</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Attention creates a <strong>direct connection</strong> between each decoder step and every encoder position. Information no longer needs to survive the bottleneck &mdash; the decoder can reach back and &ldquo;look at&rdquo; any part of the input at any time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">key</span></div><div><div class="cc-title">Queries, Keys &amp; Values</div><div class="cc-sub">The database analogy that unified attention</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The QKV Framework</div><div class="cc-text">Vaswani et al. (2017) generalized attention using a database analogy. A <strong>query</strong> (Q) is what you&rsquo;re looking for. <strong>Keys</strong> (K) are labels on stored items. <strong>Values</strong> (V) are the actual stored content. Attention computes the similarity between the query and each key, then returns a weighted sum of values. The similarity is computed as a <strong>scaled dot product</strong>: score = Q&middot;K&sup1;/√d_k, where d_k is the key dimension. The scaling prevents dot products from growing too large in high dimensions, which would push softmax into regions with tiny gradients.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Scaled Dot-Product Attention</div><div class="cc-code"><span class="hl-cmt">// Scaled dot-product attention</span>
+Attention(Q, K, V) = softmax(Q · Kᵀ / √d_k) · V
+
+<span class="hl-cmt">// Q: (seq_len, d_k) — what am I looking for?</span>
+<span class="hl-cmt">// K: (seq_len, d_k) — what do I contain?</span>
+<span class="hl-cmt">// V: (seq_len, d_v) — what do I return?</span>
+
+<span class="hl-cmt">// Q · Kᵀ: (seq_len × seq_len) attention matrix</span>
+<span class="hl-cmt">// Each row = attention weights for one position</span>
+<span class="hl-cmt">// softmax makes weights sum to 1</span>
+<span class="hl-cmt">// √d_k scaling prevents gradient saturation</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Q, K, V are all <strong>learned linear projections</strong> of the input. The network learns what to query for, what to advertise as keys, and what to return as values. This flexibility is what makes attention so powerful.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">self_improvement</span></div><div><div class="cc-title">Self-Attention</div><div class="cc-sub">A sequence attending to itself</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">From Cross-Attention to Self-Attention</div><div class="cc-text">Bahdanau attention is <strong>cross-attention</strong>: the decoder attends to the encoder. <strong>Self-attention</strong> is when a sequence attends to <strong>itself</strong>. Each position computes Q, K, V from its own representation, then attends to all other positions in the same sequence. This lets every word in a sentence directly interact with every other word, regardless of distance. In &ldquo;The cat sat on the mat because <strong>it</strong> was tired,&rdquo; self-attention lets &ldquo;it&rdquo; directly attend to &ldquo;cat&rdquo; to resolve the pronoun &mdash; no need to pass information through intermediate words.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Self-Attention vs. RNN</div><div class="cc-code"><span class="hl-cmt">// RNN: information must pass through</span>
+<span class="hl-cmt">// every intermediate position</span>
+cat → sat → on → the → mat → because → <span class="hl-key">it</span>
+<span class="hl-cmt">// Path length: O(n) — 6 steps</span>
+<span class="hl-cmt">// Signal degrades over distance</span>
+
+<span class="hl-cmt">// Self-attention: direct connection</span>
+<span class="hl-key">it</span> ←──────────────────────── cat
+<span class="hl-cmt">// Path length: O(1) — 1 step</span>
+<span class="hl-cmt">// No degradation over distance</span>
+
+<span class="hl-cmt">// Self-attention: every position attends</span>
+<span class="hl-cmt">// to every other position simultaneously</span>
+<span class="hl-cmt">// → fully parallel computation</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Self-attention has O(1) maximum path length between any two positions (vs. O(n) for RNNs). This means long-range dependencies are just as easy to learn as short-range ones. This is the fundamental advantage over recurrence.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">view_column</span></div><div><div class="cc-title">Multi-Head Attention</div><div class="cc-sub">Attending to different things simultaneously</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why Multiple Heads?</div><div class="cc-text">A single attention head can only focus on one type of relationship at a time. <strong>Multi-head attention</strong> runs h parallel attention operations (heads), each with its own learned Q, K, V projections. Different heads learn to attend to different things: one head might capture syntactic relationships (subject-verb), another semantic similarity, another positional patterns. The outputs of all heads are concatenated and projected back to the model dimension. GPT-3 uses 96 heads; GPT-4 is estimated to use 128+.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Multi-Head Attention</div><div class="cc-code"><span class="hl-cmt">// Multi-head attention</span>
+<span class="hl-key">for</span> i <span class="hl-key">in</span> range(h):  <span class="hl-cmt">// h heads</span>
+    Qᵢ = X · W_Qᵢ   <span class="hl-cmt">// (seq, d_k)</span>
+    Kᵢ = X · W_Kᵢ   <span class="hl-cmt">// (seq, d_k)</span>
+    Vᵢ = X · W_Vᵢ   <span class="hl-cmt">// (seq, d_v)</span>
+    headᵢ = Attention(Qᵢ, Kᵢ, Vᵢ)
+
+output = Concat(head₁...headₕ) · W_O
+
+<span class="hl-cmt">// d_model = 768, h = 12 heads</span>
+<span class="hl-cmt">// d_k = d_v = 768/12 = 64 per head</span>
+<span class="hl-cmt">// Same total compute as single-head</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Multi-head attention doesn&rsquo;t increase computation &mdash; each head operates on a smaller dimension (d_model/h). It&rsquo;s like having multiple &ldquo;perspectives&rdquo; on the same data, each specialized for different types of relationships.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">visibility</span></div><div><div class="cc-title">Attention Patterns &amp; Visualization</div><div class="cc-sub">What attention heads actually learn</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Heads Learn</div><div class="cc-text">Research on BERT and GPT attention patterns reveals that different heads specialize in different linguistic relationships: <strong>positional heads</strong> attend to adjacent tokens, <strong>syntactic heads</strong> connect subjects to verbs, <strong>coreference heads</strong> link pronouns to their antecedents, and <strong>delimiter heads</strong> attend to special tokens like [SEP] or [CLS]. Some heads appear to be &ldquo;no-op&rdquo; heads that can be pruned without affecting performance. This emergent specialization happens without any explicit supervision.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Attention Matrix</div><div class="cc-code"><span class="hl-cmt">// Attention matrix for "The cat sat"</span>
+<span class="hl-cmt">// Each row = where that token attends</span>
+
+        The   cat   sat
+The   [<span class="hl-num">0.1</span>  <span class="hl-num">0.7</span>  <span class="hl-num">0.2</span>]  <span class="hl-cmt">// "The" → "cat"</span>
+cat   [<span class="hl-num">0.3</span>  <span class="hl-num">0.2</span>  <span class="hl-num">0.5</span>]  <span class="hl-cmt">// "cat" → "sat"</span>
+sat   [<span class="hl-num">0.1</span>  <span class="hl-num">0.6</span>  <span class="hl-num">0.3</span>]  <span class="hl-cmt">// "sat" → "cat"</span>
+
+<span class="hl-cmt">// Rows sum to 1 (softmax)</span>
+<span class="hl-cmt">// High values = strong attention</span>
+<span class="hl-cmt">// This head learned subject-verb links</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The attention matrix is interpretable &mdash; you can visualize which tokens attend to which. This makes attention-based models more transparent than RNNs, where information flow is hidden inside the recurrent state.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Quadratic Cost</div><div class="cc-sub">Attention&rsquo;s O(n&sup2;) complexity and solutions</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Scaling Problem</div><div class="cc-text">Self-attention computes a score between <strong>every pair of positions</strong>, creating an n&times;n attention matrix. For a sequence of length n, this is <strong>O(n&sup2;)</strong> in both time and memory. A 1,000-token sequence needs 1 million attention scores; 100,000 tokens needs 10 billion. This quadratic cost is why early transformers were limited to 512&ndash;2048 tokens. Solutions include <strong>sparse attention</strong> (attend to only nearby + selected distant positions), <strong>linear attention</strong> (approximate softmax), <strong>FlashAttention</strong> (GPU memory-efficient exact attention), and <strong>sliding window attention</strong> (used in Mistral).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Complexity Comparison</div><div class="cc-code"><span class="hl-cmt">// Attention complexity</span>
+<span class="hl-key">Full attention</span>:    O(n²) time, O(n²) memory
+<span class="hl-key">Sparse attention</span>:  O(n√n) or O(n·log(n))
+<span class="hl-key">Linear attention</span>:  O(n) time, O(n) memory
+<span class="hl-key">FlashAttention</span>:    O(n²) time, O(n) memory
+
+<span class="hl-cmt">// Context lengths over time:</span>
+<span class="hl-key">GPT-2</span>  (<span class="hl-num">2019</span>): 1,024 tokens
+<span class="hl-key">GPT-3</span>  (<span class="hl-num">2020</span>): 2,048 tokens
+<span class="hl-key">GPT-4</span>  (<span class="hl-num">2023</span>): 8K-128K tokens
+<span class="hl-key">Gemini</span> (<span class="hl-num">2024</span>): 1M-2M tokens
+
+<span class="hl-cmt">// FlashAttention + sparse methods</span>
+<span class="hl-cmt">// made long contexts practical</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> FlashAttention (Dao et al., 2022) doesn&rsquo;t change the algorithm &mdash; it computes exact attention but reorganizes memory access patterns to avoid materializing the full n&times;n matrix. This 2-4&times; speedup made long-context models practical.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">token</span></div><div><div class="cc-title">From Attention to Transformers</div><div class="cc-sub">The mechanism that changed everything</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Paradigm Shift</div><div class="cc-text">Attention started as an add-on to RNNs (Bahdanau, 2015). Then Vaswani et al. (2017) asked the radical question: what if we use <strong>only attention</strong>, with no recurrence at all? The answer was the Transformer &mdash; an architecture built entirely from self-attention and feedforward layers. It was faster to train (fully parallelizable), handled long-range dependencies better (O(1) path length), and achieved state-of-the-art results on translation. Every major AI model since &mdash; BERT, GPT, LLaMA, Gemini, Claude &mdash; is a Transformer.</div></div>
+          <div class="cc-note n-green"><strong>The connection:</strong> The next and final chapter covers the Transformer architecture in full: encoder-decoder structure, positional encoding, layer design, and how &ldquo;Attention Is All You Need&rdquo; became the foundation of modern AI. This is the bridge from deep learning fundamentals to the LLM era.</div>
+        </div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Attention Timeline</div><div class="cc-code"><span class="hl-cmt">// The attention revolution</span>
+<span class="hl-key">2015</span>: Bahdanau attention (RNN add-on)
+<span class="hl-key">2015</span>: Luong attention (simplified)
+<span class="hl-key">2017</span>: Transformer (attention only!)
+<span class="hl-key">2018</span>: BERT (bidirectional self-attention)
+<span class="hl-key">2018</span>: GPT (causal self-attention)
+<span class="hl-key">2020</span>: Vision Transformer (ViT)
+<span class="hl-key">2022</span>: FlashAttention (efficient exact)
+<span class="hl-key">2023</span>: Grouped-query attention (GQA)
+<span class="hl-key">2024</span>: Ring attention (distributed long ctx)</div></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-regularization-and-practical-training.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: Regularization &amp; Practical Training</a>
+    <a class="ch-nav-btn next" href="12-the-transformer-architecture.html">Ch 12: The Transformer Architecture <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[3,4],7:[3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Seq2seq\'s fixed-size context vector is a bottleneck — compressing a 50-word sentence into 512 dims loses information. The decoder can\'t focus on specific input words.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> Bahdanau attention (2015) lets the decoder "look back" at all encoder states. At each step, it computes attention weights showing which input words are most relevant.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> The QKV framework: Query = what I\'m looking for, Key = what I contain, Value = what I return. Attention = softmax(Q·Kᵀ/√d_k)·V — a weighted lookup.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Self-attention: a sequence attends to itself. Every position directly connects to every other — O(1) path length vs. O(n) for RNNs. Fully parallelizable.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Multi-head attention runs h parallel attention operations. Different heads learn different relationships: syntax, semantics, coreference. Same total compute as single-head.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Attention heads specialize automatically: positional heads, syntactic heads, coreference heads. The attention matrix is interpretable — you can visualize what the model focuses on.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Self-attention is O(n²) — quadratic in sequence length. FlashAttention, sparse attention, and sliding windows make long contexts (128K+ tokens) practical.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Attention started as an RNN add-on (2015), then became the entire architecture (Transformer, 2017). Every major AI model — BERT, GPT, LLaMA, Claude — is built on attention.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

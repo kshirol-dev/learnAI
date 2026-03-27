@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: CI/CD for Machine Learning — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; CI/CD for Machine Learning</h2><span class="tb-sub">Testing ML code, model validation gates, GitHub Actions for ML, CML, and automated retraining</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Commit</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Test</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Train</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Validate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Monitor</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">sync</span></div><div><div class="cc-title">CI/CD for ML Is Different</div><div class="cc-sub">Why traditional CI/CD pipelines don&rsquo;t work for ML</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The ML CI/CD Challenge</div><div class="cc-text">Traditional CI/CD tests code: does it compile? Do unit tests pass? Does the API return 200? ML CI/CD must test <strong>three additional things</strong>: (1) <strong>Data quality</strong> &mdash; is the training data valid and consistent? (2) <strong>Model quality</strong> &mdash; does the model meet performance thresholds? (3) <strong>Model behavior</strong> &mdash; does it handle edge cases correctly? ML tests are also <strong>statistical, not binary</strong> &mdash; &ldquo;accuracy &ge; 0.92&rdquo; is a threshold, not a pass/fail. And ML pipelines are <strong>expensive</strong> &mdash; a training run can take hours on GPUs, so you can&rsquo;t run the full pipeline on every commit. You need a tiered testing strategy.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Traditional vs ML CI/CD</div><div class="cc-code"><span class="hl-cmt">// Traditional CI/CD</span>
+<span class="hl-key">Trigger</span>: code commit
+<span class="hl-key">Test</span>:    unit tests, integration tests
+<span class="hl-key">Build</span>:   compile → binary/container
+<span class="hl-key">Deploy</span>:  push to production
+<span class="hl-key">Time</span>:    minutes
+
+<span class="hl-cmt">// ML CI/CD</span>
+<span class="hl-key">Trigger</span>: code commit, data change, drift
+<span class="hl-key">Test</span>:    code tests + data tests + model tests
+<span class="hl-key">Build</span>:   train model (hours on GPUs)
+<span class="hl-key">Validate</span>: performance gates, bias checks
+<span class="hl-key">Deploy</span>:  canary → shadow → production
+<span class="hl-key">Time</span>:    hours to days
+
+<span class="hl-cmt">// Key difference: tests are statistical</span>
+<span class="hl-cmt">// "accuracy ≥ 0.92" not "test passed"</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> ML CI/CD has three pipelines, not one: <strong>CI</strong> (test code quality), <strong>CT</strong> (continuous training &mdash; retrain on new data), and <strong>CD</strong> (deploy validated models). CT is the unique ML addition.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">Testing ML Code</div><div class="cc-sub">Unit tests, data tests, and model tests</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Three Layers of ML Testing</div><div class="cc-text"><strong>Layer 1: Code tests</strong> (run on every commit, seconds). Unit tests for data preprocessing functions, feature engineering logic, and model inference code. Use pytest. <strong>Layer 2: Data tests</strong> (run on data changes, minutes). Schema validation, distribution checks, null/duplicate checks using Great Expectations or Pandera. <strong>Layer 3: Model tests</strong> (run on training completion, minutes to hours). Performance thresholds (accuracy, F1 above minimum), regression tests (no worse than current production model), behavioral tests (specific inputs → expected outputs), and bias/fairness checks on protected attributes.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ML Test Examples</div><div class="cc-code"><span class="hl-cmt"># Layer 1: Code tests (every commit)</span>
+<span class="hl-key">def</span> test_preprocess_handles_nulls():
+    df = pd.DataFrame({<span class="hl-str">"age"</span>: [<span class="hl-num">25</span>, None, <span class="hl-num">30</span>]})
+    result = preprocess(df)
+    <span class="hl-key">assert</span> result[<span class="hl-str">"age"</span>].isna().sum() == <span class="hl-num">0</span>
+
+<span class="hl-key">def</span> test_model_output_shape():
+    model = load_model()
+    x = torch.randn(<span class="hl-num">1</span>, <span class="hl-num">10</span>)
+    y = model(x)
+    <span class="hl-key">assert</span> y.shape == (<span class="hl-num">1</span>, <span class="hl-num">2</span>)
+
+<span class="hl-cmt"># Layer 2: Data tests (data changes)</span>
+<span class="hl-key">def</span> test_no_future_leakage():
+    <span class="hl-key">assert</span> df[<span class="hl-str">"event_date"</span>].max() &lt; df[<span class="hl-str">"label_date"</span>].min()
+
+<span class="hl-cmt"># Layer 3: Model tests (after training)</span>
+<span class="hl-key">def</span> test_model_accuracy():
+    metrics = evaluate(model, test_data)
+    <span class="hl-key">assert</span> metrics[<span class="hl-str">"accuracy"</span>] &gt;= <span class="hl-num">0.92</span>
+
+<span class="hl-key">def</span> test_no_regression():
+    new = evaluate(new_model, test_data)
+    old = evaluate(prod_model, test_data)
+    <span class="hl-key">assert</span> new[<span class="hl-str">"f1"</span>] &gt;= old[<span class="hl-str">"f1"</span>] - <span class="hl-num">0.01</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The regression test (<code>new_model &ge; prod_model - tolerance</code>) is the most important ML test. It prevents deploying a model that&rsquo;s worse than what&rsquo;s currently in production.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">sync</span></div><div><div class="cc-title">GitHub Actions for ML</div><div class="cc-sub">Automating ML workflows with GitHub&rsquo;s CI/CD</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">GitHub Actions for ML</div><div class="cc-text"><strong>GitHub Actions</strong> is the most popular CI/CD platform for ML teams. Key patterns: <strong>On push</strong> &mdash; run code tests, linting, and type checking (fast, every commit). <strong>On PR</strong> &mdash; run data validation, train a small model on a subset, generate a CML report with metrics and plots in the PR. <strong>On schedule</strong> &mdash; run full training pipeline nightly or weekly. <strong>On data change</strong> &mdash; trigger retraining when DVC detects new data. For GPU workloads, use <strong>self-hosted runners</strong> (your own GPU machines) or cloud-provisioned runners. GitHub&rsquo;s standard runners are CPU-only and not suitable for training.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">GitHub Actions Workflow</div><div class="cc-code"><span class="hl-cmt"># .github/workflows/ml-ci.yml</span>
+<span class="hl-key">name</span>: ML CI/CD
+<span class="hl-key">on</span>:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+<span class="hl-key">jobs</span>:
+  <span class="hl-key">test</span>:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: <span class="hl-str">"3.11"</span>
+      - run: pip install -r requirements.txt
+      - run: pytest tests/ -v
+      - run: black --check src/
+
+  <span class="hl-key">train</span>:
+    needs: test
+    runs-on: self-hosted  <span class="hl-cmt"># GPU runner</span>
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - run: dvc pull
+      - run: python train.py --subset <span class="hl-num">0.1</span>
+      - uses: iterative/setup-cml@v2
+      - run: cml comment create report.md</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Use a tiered approach: fast tests on every commit (CPU), subset training on PRs (GPU), full training on merge to main or on schedule. This balances speed with thoroughness.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">description</span></div><div><div class="cc-title">CML: Continuous Machine Learning</div><div class="cc-sub">ML reports in pull requests</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Is CML?</div><div class="cc-text"><strong>CML</strong> (Continuous Machine Learning) by Iterative (the DVC team) is an open-source tool that brings ML context into your Git workflow. It auto-generates <strong>reports in pull requests</strong> with: training metrics comparison (this branch vs. main), plots (loss curves, confusion matrices, ROC curves), dataset statistics, and model size/latency benchmarks. CML integrates with GitHub Actions and GitLab CI. It also supports <strong>cloud provisioning</strong> &mdash; CML can spin up GPU instances on AWS/GCP/Azure for training and tear them down when done, so you only pay for what you use.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">CML Report Script</div><div class="cc-code"><span class="hl-cmt">#!/bin/bash</span>
+<span class="hl-cmt"># generate-report.sh (runs in CI)</span>
+
+<span class="hl-cmt"># Train model and save metrics</span>
+python train.py
+python evaluate.py &gt; metrics.json
+
+<span class="hl-cmt"># Generate CML report</span>
+cat &lt;&lt; EOF &gt; report.md
+# Model Training Report
+
+## Metrics
+| Metric | Value |
+|--------|-------|
+| Accuracy | $(jq .accuracy metrics.json) |
+| F1 Score | $(jq .f1 metrics.json) |
+| Latency  | $(jq .latency_ms metrics.json)ms |
+
+## Training Curves
+![](./plots/loss_curve.png)
+
+## Confusion Matrix
+![](./plots/confusion_matrix.png)
+EOF
+
+<span class="hl-cmt"># Post as PR comment</span>
+cml comment create report.md</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> CML makes model performance visible in code review. Reviewers can see metrics, plots, and comparisons directly in the PR &mdash; no need to switch to a separate dashboard. This dramatically improves review quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Model Validation Gates</div><div class="cc-sub">Automated quality checks before deployment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Gate Types</div><div class="cc-text">Model validation gates are automated checks that must pass before a model can be promoted to production. <strong>Performance gates</strong>: accuracy, F1, AUC above minimum thresholds. <strong>Regression gates</strong>: new model must not be worse than current production model on any critical metric. <strong>Latency gates</strong>: inference time must be within SLA (e.g., p99 &lt; 50ms). <strong>Size gates</strong>: model file size within deployment limits. <strong>Fairness gates</strong>: performance must be equitable across protected groups (gender, age, ethnicity). <strong>Behavioral gates</strong>: specific test cases that must produce expected outputs (e.g., &ldquo;this known fraud case must be flagged&rdquo;).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Validation Gate Config</div><div class="cc-code"><span class="hl-cmt"># model_gates.yaml</span>
+<span class="hl-key">performance</span>:
+  accuracy:
+    min: <span class="hl-num">0.92</span>
+  f1_score:
+    min: <span class="hl-num">0.88</span>
+  auc_roc:
+    min: <span class="hl-num">0.95</span>
+
+<span class="hl-key">regression</span>:
+  max_degradation: <span class="hl-num">0.01</span>  <span class="hl-cmt"># vs prod model</span>
+
+<span class="hl-key">latency</span>:
+  p50_ms: <span class="hl-num">10</span>
+  p95_ms: <span class="hl-num">30</span>
+  p99_ms: <span class="hl-num">50</span>
+
+<span class="hl-key">fairness</span>:
+  max_disparity: <span class="hl-num">0.05</span>  <span class="hl-cmt"># across groups</span>
+  protected_attributes:
+    - gender
+    - age_group
+
+<span class="hl-key">behavioral</span>:
+  test_cases: tests/critical_cases.csv
+  min_pass_rate: <span class="hl-num">1.0</span>  <span class="hl-cmt"># 100% must pass</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Behavioral tests are the most underused but most valuable gate. They encode domain knowledge: &ldquo;this specific input should always produce this output.&rdquo; They catch subtle regressions that aggregate metrics miss.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">update</span></div><div><div class="cc-title">Continuous Training (CT)</div><div class="cc-sub">Automated retraining when the world changes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Retraining Triggers</div><div class="cc-text"><strong>Continuous Training</strong> is the ML-specific addition to CI/CD. Models degrade over time as the world changes (data drift, concept drift). CT automates retraining based on triggers: <strong>Schedule-based</strong> (retrain daily/weekly regardless &mdash; simplest, good starting point). <strong>Performance-based</strong> (retrain when monitoring detects accuracy dropping below a threshold). <strong>Data-based</strong> (retrain when new data arrives or data distribution shifts significantly). <strong>Hybrid</strong> (scheduled baseline + triggered on drift). The retraining pipeline should be identical to the initial training pipeline &mdash; same code, same validation gates, same promotion workflow.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">CT Pipeline</div><div class="cc-code"><span class="hl-cmt">// Continuous Training triggers</span>
+
+<span class="hl-key">1. Schedule</span>:
+   Cron: "0 2 * * 1"  <span class="hl-cmt"># Monday 2am</span>
+   Simple, predictable
+   Good default starting point
+
+<span class="hl-key">2. Performance</span>:
+   Monitor: accuracy &lt; 0.90 for 3 days
+   → Trigger retrain
+   Requires production monitoring
+
+<span class="hl-key">3. Data</span>:
+   New data volume &gt; 10K rows
+   OR distribution shift detected
+   → Trigger retrain
+
+<span class="hl-key">CT Pipeline</span>:
+   Trigger → fetch latest data
+   → validate data (gates)
+   → train model
+   → validate model (gates)
+   → register in model registry
+   → promote to staging
+   → [human approval or auto]
+   → promote to production</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Start with scheduled retraining (weekly). Only add drift-triggered retraining when you have monitoring in place and evidence that your model degrades between scheduled retrains.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Deployment Strategies</div><div class="cc-sub">Canary, shadow, blue-green, and A/B testing</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Deployment Patterns</div><div class="cc-text"><strong>Canary deployment</strong>: Route 5% of traffic to the new model, monitor metrics, gradually increase to 100%. Safest option &mdash; limits blast radius. <strong>Shadow deployment</strong>: Run the new model alongside production, compare predictions, but only serve the old model&rsquo;s predictions. Zero risk to users. <strong>Blue-green deployment</strong>: Run two identical environments; switch all traffic at once. Fast rollback (just switch back). <strong>A/B testing</strong>: Split traffic between old and new model, measure business metrics (not just ML metrics). Requires statistical significance testing. Most teams start with canary, add shadow for high-risk models, and A/B test for business-critical decisions.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Deployment Strategies</div><div class="cc-code"><span class="hl-cmt">// ML deployment strategies</span>
+
+<span class="hl-key">Canary</span>:
+  5% → 25% → 50% → 100%
+  Monitor at each stage
+  Rollback if metrics drop
+  Best for: most models
+
+<span class="hl-key">Shadow</span>:
+  100% to old model (serves)
+  100% to new model (logs only)
+  Compare predictions offline
+  Best for: high-risk, first deploy
+
+<span class="hl-key">Blue-Green</span>:
+  Old env (blue) serves traffic
+  New env (green) ready
+  Switch DNS → instant cutover
+  Best for: simple, fast rollback
+
+<span class="hl-key">A/B Test</span>:
+  50/50 split (or other ratio)
+  Measure business KPIs
+  Statistical significance test
+  Best for: business-critical models</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Shadow deployment is the safest way to validate a new model in production. It sees real traffic and real data, but users are never affected. Use it for the first deployment of any high-stakes model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">CI/CD Best Practices for ML</div><div class="cc-sub">Practical guidelines for ML teams</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Best Practices</div><div class="cc-text"><strong>1. Tier your tests</strong> &mdash; fast tests on every commit, medium tests on PRs, full training on merge. <strong>2. Make training reproducible</strong> &mdash; <code>make train</code> should produce the same model from the same data. <strong>3. Version your pipeline</strong> &mdash; the training pipeline is code; treat it like code. <strong>4. Automate validation gates</strong> &mdash; never rely solely on human judgment for model promotion. <strong>5. Keep rollback fast</strong> &mdash; you should be able to roll back to the previous model in under 5 minutes. <strong>6. Test on real data distributions</strong> &mdash; synthetic test data misses distribution-specific bugs. <strong>7. Monitor after deploy</strong> &mdash; CI/CD doesn&rsquo;t end at deployment; monitoring is the final stage.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ML CI/CD Maturity</div><div class="cc-code"><span class="hl-cmt">// ML CI/CD maturity levels</span>
+
+<span class="hl-key">Level 0</span>: No CI/CD
+  Manual training, manual deploy
+  "It works on my machine"
+
+<span class="hl-key">Level 1</span>: Basic CI
+  Code tests on every commit
+  Manual training + deploy
+
+<span class="hl-key">Level 2</span>: CI + CT
+  Code tests + data tests
+  Automated training pipeline
+  Manual model validation + deploy
+
+<span class="hl-key">Level 3</span>: Full CI/CD/CT
+  Automated tests (code + data + model)
+  Automated training (scheduled + triggered)
+  Automated validation gates
+  Automated canary deployment
+  Production monitoring → retrain loop</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Most teams should aim for Level 2 first: automated tests and automated training, with human-in-the-loop for validation and deployment. Level 3 (full automation) requires mature monitoring and high confidence in your validation gates.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-data-pipelines-and-feature-stores.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Data Pipelines &amp; Feature Stores</a>
+    <a class="ch-nav-btn next" href="06-model-serving-and-inference.html">Ch 6: Model Serving &amp; Inference <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3,4],2:[0,1],3:[0,1,2],4:[1,2,3],5:[2,3],6:[2,3,4],7:[3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> ML CI/CD tests three things beyond code: data quality, model quality, and model behavior. Tests are statistical, not binary. Training is expensive.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Three test layers: code tests (every commit), data tests (on data changes), model tests (after training). The regression test is the most important.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> GitHub Actions for ML: fast tests on push, subset training on PRs, full training on merge. Use self-hosted runners for GPU workloads.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> CML generates ML reports in pull requests — metrics, plots, comparisons. Makes model performance visible during code review.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Validation gates: performance thresholds, regression checks, latency SLAs, fairness audits, and behavioral test cases. All must pass before promotion.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Continuous Training: scheduled (weekly), performance-triggered (accuracy drops), or data-triggered (new data arrives). Start with scheduled.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Deployment strategies: canary (gradual rollout), shadow (zero risk), blue-green (instant switch), A/B test (business metrics). Start with canary.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Aim for Level 2 first: automated tests + automated training + human validation. Level 3 (full automation) requires mature monitoring.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

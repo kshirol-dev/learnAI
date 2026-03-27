@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: Multi-Turn & Conversation Design — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; Multi-Turn &amp; Conversation Design</h2><span class="tb-sub">Managing context across turns, preventing drift, and steering conversations toward useful outcomes</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Real-World</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">How Turns Work</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Context Drift</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">anchor</span></div><span class="pipe-label">Anchoring</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">summarize</span></div><span class="pipe-label">Summaries</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">storage</span></div><span class="pipe-label">DB Schema</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">undo</span></div><span class="pipe-label">Course Correct</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Memory Mgmt</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Playbook</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">How Multi-Turn Conversations Actually Work</div><div class="cc-sub">Every turn is re-sent to the model &mdash; there is no &ldquo;memory,&rdquo; only a growing context window</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Illusion of Memory</div><div class="cc-text">When you chat with an LLM, it <em>feels</em> like a conversation with memory. But here&rsquo;s what actually happens on every turn:<br><br><strong>1.</strong> Your entire conversation history (system prompt + all previous messages) is sent to the model<br><strong>2.</strong> The model generates a response based on the full context<br><strong>3.</strong> That response is appended to the history<br><strong>4.</strong> On the next turn, the whole thing is sent again<br><br>The model has <strong>no persistent memory</strong>. It re-reads the entire conversation from scratch every time. This has profound implications for how you design multi-turn interactions.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What This Means in Practice</div><div class="cc-text"><strong>Context grows linearly:</strong> Each turn adds ~100&ndash;500 tokens. A 20-turn conversation can be 5,000&ndash;10,000 tokens of history. That&rsquo;s expensive and eventually hits the context window limit.<br><br><strong>Earlier turns fade:</strong> Due to the &ldquo;lost in the middle&rdquo; effect (Ch 10), the model pays less attention to turns 5&ndash;15 in a 20-turn conversation. Early decisions get &ldquo;forgotten.&rdquo;<br><br><strong>No session persistence:</strong> Close the tab, lose the conversation. The model doesn&rsquo;t remember you from yesterday.</div></div>
+          <div class="cc-block"><div class="cc-label">API View</div><div class="cc-code">messages = [
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"system"</span>, <span class="hl-str">"content"</span>: <span class="hl-str">"..."</span>},
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>, <span class="hl-str">"content"</span>: <span class="hl-str">"Turn 1"</span>},
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"assistant"</span>, <span class="hl-str">"content"</span>: <span class="hl-str">"..."</span>},
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>, <span class="hl-str">"content"</span>: <span class="hl-str">"Turn 2"</span>},
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"assistant"</span>, <span class="hl-str">"content"</span>: <span class="hl-str">"..."</span>},
+  <span class="hl-cmt"># ALL of this is sent every turn</span>
+]</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Multi-turn conversations are not chats &mdash; they&rsquo;re growing documents. Every turn adds to the document. The model reads the entire document every time. Design your turns like you&rsquo;re writing a collaborative document, not having a casual conversation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Context Drift: When Conversations Go Off the Rails</div><div class="cc-sub">A 5-turn conversation where the model gradually loses track of the original requirements</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Drifting Conversation</div><div class="cc-code"><span class="hl-key">Turn 1 (User):</span>
+"Design a REST API for a todo app with
+users, projects, and tasks."
+
+<span class="hl-key">Turn 1 (Model):</span>
+[Designs 8 endpoints, good structure]
+
+<span class="hl-key">Turn 2 (User):</span>
+"Add authentication."
+
+<span class="hl-key">Turn 2 (Model):</span>
+[Adds JWT auth, modifies endpoints]
+
+<span class="hl-key">Turn 3 (User):</span>
+"What about rate limiting?"
+
+<span class="hl-key">Turn 3 (Model):</span>
+[Discusses rate limiting in general,
+forgets the specific API design]
+
+<span class="hl-key">Turn 4 (User):</span>
+"And caching?"
+
+<span class="hl-key">Turn 4 (Model):</span>
+[Generic caching advice, completely
+lost the original API context]
+
+<span class="hl-key">Turn 5 (User):</span>
+"OK, show me the final API spec."
+
+<span class="hl-key">Turn 5 (Model):</span>
+[Produces a spec that's missing the
+auth from Turn 2 and doesn't include
+rate limiting or caching properly]</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why This Happens</div><div class="cc-text"><strong>1. Vague follow-ups:</strong> &ldquo;What about rate limiting?&rdquo; doesn&rsquo;t reference the API. The model treats it as a standalone question.<br><br><strong>2. No anchoring:</strong> There&rsquo;s no system prompt or summary reminding the model what they&rsquo;re building.<br><br><strong>3. Topic hopping:</strong> Each turn introduces a new topic without connecting it to the previous work.<br><br><strong>4. No checkpoints:</strong> Nobody said &ldquo;here&rsquo;s what we have so far&rdquo; to consolidate progress.</div></div>
+          <div class="cc-note n-red"><strong>The pattern:</strong> Context drift is the #1 multi-turn failure mode. The conversation starts focused, but each vague follow-up loosens the model&rsquo;s grip on the original task. By turn 5, the model is responding to the latest message, not the overall project.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">anchor</span></div><div><div class="cc-title">Anchoring: Keep the Model on Track</div><div class="cc-sub">A system prompt that persists the task context across every turn</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Anchoring System Prompt</div><div class="cc-code"><span class="hl-key">System prompt:</span>
+You are helping design a REST API for a
+todo application. The app has three
+entities: Users, Projects, and Tasks.
+
+<span class="hl-str">Current requirements:</span>
+- RESTful endpoints for CRUD on all entities
+- JWT authentication
+- Role-based access (admin, member)
+- Tasks belong to Projects, Projects
+  belong to Users
+
+<span class="hl-str">Design constraints:</span>
+- JSON:API format
+- Pagination on all list endpoints
+- Rate limiting headers in responses
+
+When the user asks about a new feature,
+integrate it into the existing API design.
+Always maintain consistency with previous
+decisions.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Anchored Follow-Ups</div><div class="cc-code"><span class="hl-key">Turn 2 (Anchored):</span>
+"Add rate limiting to the API we designed.
+Specifically: 100 req/min for
+authenticated users, 20 req/min for
+unauthenticated. Show me how this changes
+the response headers."
+
+<span class="hl-key">Turn 3 (Anchored):</span>
+"Now add Redis caching for the
+GET /projects and GET /tasks list
+endpoints. TTL of 60 seconds, invalidate
+on POST/PUT/DELETE. How does this
+integrate with the rate limiting from
+the previous turn?"</div></div>
+          <div class="cc-block"><div class="cc-label">What Changed</div><div class="cc-text"><strong>1. System prompt anchors the task:</strong> The model is reminded of the project on every turn.<br><br><strong>2. Explicit references:</strong> &ldquo;the API we designed,&rdquo; &ldquo;from the previous turn&rdquo; &mdash; these tie each turn to the ongoing work.<br><br><strong>3. Specific requests:</strong> &ldquo;Show me how this changes the response headers&rdquo; instead of &ldquo;what about rate limiting?&rdquo;</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The system prompt is your anchor. It persists across every turn and reminds the model of the overall task, current state, and constraints. Update it as the project evolves. Think of it as the &ldquo;project brief&rdquo; that every team member reads before contributing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">summarize</span></div><div><div class="cc-title">Periodic Summaries: Compress Without Losing</div><div class="cc-sub">&ldquo;So far we&rsquo;ve decided X, Y, Z&rdquo; &mdash; the most powerful multi-turn technique</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Summary Checkpoint</div><div class="cc-text">Every 3&ndash;5 turns, insert a summary message that consolidates all decisions so far. This serves three purposes:<br><br><strong>1. Reinforces context:</strong> Puts key decisions at the end of the history (recency bias helps)<br><strong>2. Corrects drift:</strong> If the model went off track, the summary steers it back<br><strong>3. Saves tokens:</strong> You can trim earlier turns and keep just the summary</div></div>
+          <div class="cc-block"><div class="cc-label">Summary Message Pattern</div><div class="cc-code"><span class="hl-key">User (Turn 6 — Checkpoint):</span>
+
+"Before we continue, let me summarize
+what we've decided so far:
+
+<span class="hl-str">1. API Design:</span> 8 RESTful endpoints
+   covering Users, Projects, Tasks CRUD
+<span class="hl-str">2. Auth:</span> JWT with refresh tokens,
+   role-based (admin/member)
+<span class="hl-str">3. Rate Limiting:</span> 100/min auth,
+   20/min unauth, headers in response
+<span class="hl-str">4. Caching:</span> Redis, 60s TTL on list
+   endpoints, invalidate on writes
+<span class="hl-str">5. Format:</span> JSON:API with pagination
+
+Does this match your understanding?
+If anything is wrong, correct it.
+Then let's move on to error handling."</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why &ldquo;Does This Match?&rdquo; Matters</div><div class="cc-text">Asking the model to confirm the summary does two things:<br><br><strong>1. Catches errors:</strong> If your summary misrepresents something, the model will correct it.<br><br><strong>2. Locks in decisions:</strong> The model&rsquo;s confirmation becomes part of the history, reinforcing those decisions for all future turns.</div></div>
+          <div class="cc-block"><div class="cc-label">Automated Summary (For APIs)</div><div class="cc-code"><span class="hl-cmt"># Every N turns, ask the model to
+# summarize, then use that summary
+# to replace older messages</span>
+
+<span class="hl-key">if</span> len(messages) > <span class="hl-num">10</span>:
+    summary = get_summary(messages[<span class="hl-num">1</span>:<span class="hl-num">-2</span>])
+    messages = [
+        messages[<span class="hl-num">0</span>],  <span class="hl-cmt"># system prompt</span>
+        {<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+         <span class="hl-str">"content"</span>: f<span class="hl-str">"Summary so far:
+         {summary}"</span>},
+        messages[<span class="hl-num">-2</span>],  <span class="hl-cmt"># last user msg</span>
+        messages[<span class="hl-num">-1</span>],  <span class="hl-cmt"># last assistant msg</span>
+    ]</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Summaries are the multi-turn equivalent of saving your work. They compress the conversation into a checkpoint that the model can build on. Without summaries, long conversations degrade. With them, you can maintain quality across 20+ turns.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">storage</span></div><div><div class="cc-title">Domain Example: Iterative Database Schema Design</div><div class="cc-sub">Building a schema through conversation &mdash; steering, correcting, and building on previous turns</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Well-Structured Conversation</div><div class="cc-code"><span class="hl-key">System:</span> "You are a database architect
+helping design a PostgreSQL schema for
+an e-commerce platform."
+
+<span class="hl-key">Turn 1:</span> "Design the core tables: users,
+products, orders, order_items. Include
+PKs, FKs, and common indexes."
+
+<span class="hl-key">Turn 2:</span> "Good. Now add: (1) product
+categories with a tree structure,
+(2) product variants (size, color).
+Build on the schema from Turn 1."
+
+<span class="hl-key">Turn 3:</span> "I see you used an adjacency
+list for categories. I'd prefer a
+materialized path approach for faster
+tree queries. Please revise just the
+categories table, keeping everything
+else the same."
+
+<span class="hl-key">Turn 4 — Checkpoint:</span>
+"Here's our schema so far:
+- users (id, email, name, created_at)
+- products (id, name, category_path, ...)
+- product_variants (id, product_id, ...)
+- orders (id, user_id, status, ...)
+- order_items (id, order_id, variant_id)
+- categories (id, name, path)
+
+Correct? Now add inventory tracking."</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Techniques Used</div><div class="cc-text"><strong>Turn 1:</strong> Clear initial scope with specific deliverables (PKs, FKs, indexes)<br><br><strong>Turn 2:</strong> &ldquo;Build on the schema from Turn 1&rdquo; &mdash; explicit reference prevents the model from starting over<br><br><strong>Turn 3:</strong> Course correction &mdash; &ldquo;I&rsquo;d prefer X instead of Y. Revise just Z, keeping everything else.&rdquo; Specific, surgical change.<br><br><strong>Turn 4:</strong> Summary checkpoint &mdash; lists the current state, asks for confirmation, then introduces the next task.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Casual Chat Style</div><div class="cb-text">&ldquo;Add categories.&rdquo; &ldquo;Now variants.&rdquo; &ldquo;Actually change the categories.&rdquo; &ldquo;Now add inventory.&rdquo;<br><br>Model loses track by turn 4. Final schema is inconsistent.</div></div>
+            <div class="compare-box good"><div class="cb-tag">Collaborative Document Style</div><div class="cb-text">Explicit references, surgical corrections, periodic summaries. Model maintains consistency across 10+ turns. Final schema is coherent.</div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Iterative design conversations work best when you treat each turn as an edit to a shared document. Reference previous work explicitly, make corrections surgically (&ldquo;change just X, keep Y&rdquo;), and checkpoint regularly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">undo</span></div><div><div class="cc-title">Course Correction: When the Model Goes Wrong</div><div class="cc-sub">How to redirect without starting over &mdash; surgical corrections that preserve good work</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Bad Correction</div><div class="cc-code"><span class="hl-cmt">❌ "That's wrong. Do it again."</span>
+
+<span class="hl-cmt">The model doesn't know WHAT was wrong.
+It might change things that were correct
+and keep things that were wrong.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Good Correction</div><div class="cc-code"><span class="hl-str">✓ "Two issues with your response:</span>
+
+<span class="hl-str">1. The orders table is missing a
+   `shipping_address_id` FK. Add it.</span>
+
+<span class="hl-str">2. You used VARCHAR(255) for email but
+   our convention is VARCHAR(320) per
+   RFC 5321. Update all email fields.</span>
+
+<span class="hl-str">Everything else looks good. Keep the
+rest unchanged."</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Correction Patterns</div><div class="cc-text"><strong>The Surgical Fix:</strong> &ldquo;Change X to Y. Keep everything else the same.&rdquo;<br><br><strong>The Additive Fix:</strong> &ldquo;Good, but also add Z to what you have.&rdquo;<br><br><strong>The Reframe:</strong> &ldquo;I like the structure, but I need it to use [different approach]. Rewrite using [approach] while keeping the same entities and relationships.&rdquo;<br><br><strong>The Rollback:</strong> &ldquo;Let&rsquo;s go back to the version from Turn 3. From there, instead of [what you did in Turn 4], do [alternative].&rdquo;</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Vague corrections (&ldquo;that&rsquo;s wrong, try again&rdquo;) cause the model to change things randomly. Specific corrections (&ldquo;change X, keep Y&rdquo;) preserve good work and fix only what&rsquo;s broken. Always tell the model what to keep, not just what to change.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">Memory Management: Handling Long Conversations</div><div class="cc-sub">What to do when the conversation exceeds the context window</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Context Window Problem</div><div class="cc-text">Even with 128K-token context windows (GPT-4o, Claude 3.5), long conversations eventually hit limits. And even before the hard limit, quality degrades as the context grows:<br><br>• <strong>5&ndash;10 turns:</strong> Full quality, no management needed<br>• <strong>10&ndash;20 turns:</strong> Start using summaries, trim old turns<br>• <strong>20&ndash;50 turns:</strong> Aggressive summarization required<br>• <strong>50+ turns:</strong> Consider starting a new conversation with a summary seed</div></div>
+          <div class="cc-block"><div class="cc-label">Strategy 1: Sliding Window + Summary</div><div class="cc-code"><span class="hl-cmt"># Keep: system prompt + summary of old
+# turns + last N turns</span>
+
+messages = [
+  system_prompt,
+  {<span class="hl-str">"role"</span>: <span class="hl-str">"system"</span>,
+   <span class="hl-str">"content"</span>: <span class="hl-str">"Conversation summary:
+   [auto-generated summary of turns
+   1 through 15]"</span>},
+  <span class="hl-cmt"># Last 5 turns (10 messages)</span>
+  ...recent_messages
+]</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Strategy 2: Fresh Start with Seed</div><div class="cc-code"><span class="hl-cmt"># When conversation is too long,
+# start fresh with context</span>
+
+<span class="hl-key">New conversation, Turn 1:</span>
+"I've been working on a database schema
+for an e-commerce platform. Here's
+where we are:
+
+[paste the latest complete schema]
+
+Decisions made:
+- Materialized path for categories
+- JSONB for product attributes
+- Soft deletes on all tables
+
+Now I need to add: payment processing
+tables (transactions, refunds, payment
+methods)."</div></div>
+          <div class="cc-block"><div class="cc-label">Strategy 3: External State</div><div class="cc-text">For production applications, store conversation state externally:<br><br>• <strong>Key decisions</strong> in a database<br>• <strong>Current artifacts</strong> (schema, code, docs) in files<br>• <strong>Conversation summary</strong> updated after each turn<br><br>Inject the relevant state into each new API call. The model doesn&rsquo;t need the full conversation &mdash; it needs the current state and the latest request.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The best multi-turn strategy is to minimize the need for multi-turn. Extract artifacts (code, schemas, documents) from the conversation into external storage. Feed them back as context when needed. The conversation is the process; the artifacts are the product.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Multi-Turn Playbook</div><div class="cc-sub">Rules for conversations that stay on track from turn 1 to turn 20</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The 7 Rules</div><div class="cc-code"><span class="hl-key">1. Anchor with a system prompt</span>
+   Define the task, constraints, and
+   current state upfront
+
+<span class="hl-key">2. Reference previous turns explicitly</span>
+   "Building on the schema from Turn 2"
+   not "add more stuff"
+
+<span class="hl-key">3. Checkpoint every 3-5 turns</span>
+   "Here's what we have so far: ..."
+
+<span class="hl-key">4. Correct surgically</span>
+   "Change X, keep everything else"
+   not "that's wrong, try again"
+
+<span class="hl-key">5. Extract artifacts</span>
+   Save code/schemas/docs outside the
+   conversation as you go
+
+<span class="hl-key">6. Manage context window</span>
+   Summarize old turns, trim history,
+   or start fresh with a seed
+
+<span class="hl-key">7. One topic per turn</span>
+   Don't ask 3 questions in one message.
+   Each turn = one clear request.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Turn Quality Checklist</div><div class="cc-text">Before sending each message, verify:<br><br><strong>Does it reference the current state?</strong> (&ldquo;Building on...&rdquo;, &ldquo;Given our decision about...&rdquo;)<br><br><strong>Is the request specific?</strong> (&ldquo;Add X to Y&rdquo; not &ldquo;what about X?&rdquo;)<br><br><strong>Does it specify what to keep?</strong> (&ldquo;Keep the auth endpoints unchanged&rdquo;)<br><br><strong>Is it one topic?</strong> (Split multi-part requests into separate turns)</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Multi-turn conversations are a skill, not a feature. The model doesn&rsquo;t manage the conversation &mdash; you do. Anchor, reference, checkpoint, correct, extract. Treat every turn as an edit to a shared document, and your conversations will produce consistent, high-quality results across any number of turns.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-rag-context-injection.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: RAG &amp; Context Injection</a>
+    <a class="ch-nav-btn next" href="12-tool-use-function-calling.html">Ch 12: Tool Use &amp; Function Calling <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> There is no memory — the entire conversation is re-sent every turn. The model reads the whole document from scratch. Design turns like edits to a shared document.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Context drift: vague follow-ups ("what about X?") cause the model to lose track. By turn 5, it\'s responding to the latest message, not the overall project.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> Anchoring: a system prompt that defines the task, state, and constraints. Explicit references in follow-ups: "the API we designed," "from the previous turn."',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Periodic summaries: every 3-5 turns, consolidate decisions. "Here\'s what we have so far." Reinforces context, corrects drift, saves tokens.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Database schema design: explicit references, surgical corrections, checkpoints. Collaborative document style beats casual chat style every time.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Course correction: "Change X, keep everything else" not "that\'s wrong, try again." Specific corrections preserve good work. Vague ones cause random changes.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Memory management: sliding window + summary for 10-20 turns, fresh start with seed for 50+. Extract artifacts externally — the conversation is the process, not the product.',color:'#d97706'},
+    8:{text:'<strong>Step 8:</strong> The playbook: anchor, reference, checkpoint, correct surgically, extract artifacts, manage context, one topic per turn. Multi-turn is a skill you manage, not a feature you use.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

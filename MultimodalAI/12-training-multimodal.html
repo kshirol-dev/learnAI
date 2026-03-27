@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Training Multimodal Models &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Training Multimodal Models</h2><span class="tb-sub">Data collection, pre-training, alignment, fine-tuning, and compute requirements</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">dataset</span></div><span class="pipe-label">Data</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Pre-train</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Align</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Fine-tune</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Compute</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">dataset</span></div><div><div class="cc-title">Multimodal Training Data</div><div class="cc-sub">The fuel that powers multimodal models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Types &amp; Sources</div><div class="cc-text">&bull; <strong>Image-text pairs:</strong> LAION-5B (5.85B pairs), DataComp (12.8B), CC12M &mdash; scraped from internet alt-text<br>&bull; <strong>Interleaved documents:</strong> Web pages with images inline &mdash; teaches models to reason about images in context<br>&bull; <strong>Video-text:</strong> WebVid (10M), InternVid (234M) &mdash; video clips with descriptions<br>&bull; <strong>Audio-text:</strong> LibriSpeech, Common Voice, WavCaps &mdash; speech and audio with transcriptions<br>&bull; <strong>Instruction data:</strong> Visual Q&amp;A, image-based conversations, chart reasoning &mdash; for instruction tuning</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Quality Pipeline</div><div class="cc-code"><span class="hl-cmt">// Data curation pipeline</span>
+
+<span class="hl-key">1. Collect</span>    Scrape web, license datasets
+<span class="hl-key">2. Filter</span>     Remove NSFW, low-quality, duplicates
+<span class="hl-key">3. Score</span>      CLIP similarity (text-image alignment)
+             Aesthetic score (image quality)
+<span class="hl-key">4. Deduplicate</span> Perceptual hashing, embedding clustering
+<span class="hl-key">5. Balance</span>    Ensure diversity across concepts
+<span class="hl-key">6. Caption</span>    Re-caption with VLM for better text
+
+<span class="hl-cmt">// Data quality &gt; data quantity</span>
+<span class="hl-cmt">// 1B high-quality pairs &gt; 5B noisy pairs</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Data curation is the most impactful and least glamorous part of training multimodal models. Teams that invest in data quality consistently outperform those with more compute but worse data. &ldquo;Garbage in, garbage out&rdquo; applies 10x to multimodal training.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Pre-Training Strategies</div><div class="cc-sub">How models learn to connect modalities</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Contrastive Pre-Training (CLIP-style)</div><div class="cc-text">Train separate encoders for each modality, align them with contrastive loss. Pull matching pairs together, push non-matching apart. Produces <strong>embedding models</strong> for search and classification. Fast to train, scales well, but doesn&rsquo;t generate text.</div></div>
+          <div class="cc-block"><div class="cc-label">Generative Pre-Training (LLaVA-style)</div><div class="cc-text">Freeze a pre-trained vision encoder and LLM, train a projector to connect them. Then fine-tune the LLM on visual instruction data. Produces <strong>VLMs</strong> that can reason about images and generate text responses. Cheaper than training from scratch.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Native Multimodal (Gemini-style)</div><div class="cc-text">Train the entire model from scratch on <strong>interleaved multimodal data</strong>. Text, images, audio, and video are all tokenized and processed by a single Transformer. Produces the most capable models but requires <strong>enormous compute</strong> ($50M&ndash;$500M per training run).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The three strategies represent a cost-capability tradeoff. Contrastive (cheapest, embeddings only) &rarr; Generative (moderate, bolt-on VLM) &rarr; Native (most expensive, best capability). Most practitioners use the generative approach &mdash; it&rsquo;s the sweet spot of cost and capability.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">link</span></div><div><div class="cc-title">Vision-Language Alignment</div><div class="cc-sub">Teaching the LLM to understand visual tokens</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Two-Stage Training</div><div class="cc-text"><strong>Stage 1 &mdash; Alignment pre-training:</strong><br>Train only the projector on image-caption pairs. The vision encoder and LLM are frozen. This teaches the projector to map visual features into the LLM&rsquo;s embedding space. ~600K image-caption pairs, ~5 hours on 8 GPUs.<br><br><strong>Stage 2 &mdash; Visual instruction tuning:</strong><br>Unfreeze the LLM (or use LoRA) and train on visual instruction data: image-based Q&amp;A, conversations, reasoning tasks. ~150K instruction examples, ~20 hours on 8 GPUs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Instruction Data Generation</div><div class="cc-code"><span class="hl-cmt">// How to create visual instruction data</span>
+
+<span class="hl-key">Method 1: GPT-4V bootstrapping</span>
+  Send images to GPT-4V with diverse prompts
+  Collect high-quality Q&amp;A pairs
+  Cost: ~$0.01 per example
+
+<span class="hl-key">Method 2: Template-based</span>
+  Use existing annotations (bounding boxes,
+  captions) to generate Q&amp;A templates
+  "What object is at [x,y]?" &rarr; "[label]"
+  Cost: nearly free
+
+<span class="hl-key">Method 3: Human annotation</span>
+  Highest quality, most expensive
+  ~$0.50-2.00 per example
+  Best for domain-specific data</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The LLaVA recipe (frozen ViT + MLP projector + fine-tuned LLM) can be replicated for ~$100 in compute. This democratized VLM training &mdash; you don&rsquo;t need Google-scale resources to build a capable vision-language model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Fine-Tuning for Your Domain</div><div class="cc-sub">Adapting multimodal models to specific use cases</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fine-Tuning Approaches</div><div class="cc-text">&bull; <strong>Full fine-tuning:</strong> Update all parameters. Best quality but expensive and risks catastrophic forgetting.<br>&bull; <strong>LoRA:</strong> Add small trainable matrices to attention layers. 10&ndash;100x cheaper, minimal quality loss. The default choice.<br>&bull; <strong>QLoRA:</strong> LoRA on a 4-bit quantized model. Enables fine-tuning on consumer GPUs (24GB VRAM).<br>&bull; <strong>Adapter tuning:</strong> Add small adapter modules between layers. Similar to LoRA but different architecture.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Domain Fine-Tuning Recipe</div><div class="cc-code"><span class="hl-cmt">// Fine-tuning a VLM for your domain</span>
+
+<span class="hl-key">1. Collect data</span>
+   500-5,000 domain-specific image-text pairs
+   Format: image + question + answer
+
+<span class="hl-key">2. Choose base model</span>
+   LLaVA-NeXT, InternVL, or Qwen2-VL
+
+<span class="hl-key">3. Fine-tune with QLoRA</span>
+   Rank: 64, Alpha: 128
+   Learning rate: 2e-5
+   Epochs: 3-5
+   Hardware: 1x A100 or 1x RTX 4090
+
+<span class="hl-key">4. Evaluate</span>
+   Test on held-out domain examples
+   Compare against base model
+
+<span class="hl-key">Time:</span>  2-8 hours
+<span class="hl-key">Cost:</span>  $5-50 (cloud GPU)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Domain fine-tuning is the highest-leverage activity for most teams. A fine-tuned 7B model often outperforms GPT-4V on domain-specific tasks. Medical imaging, satellite analysis, product inspection &mdash; fine-tuning makes the difference between &ldquo;interesting demo&rdquo; and &ldquo;production-ready.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">Compute Requirements</div><div class="cc-sub">What it actually costs to train multimodal models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training Costs by Scale</div><div class="cc-code"><span class="hl-cmt">// Approximate training costs (2025)</span>
+
+<span class="hl-key">LoRA fine-tune (7B VLM)</span>
+  Hardware: 1x A100 (80GB)
+  Time: 2-8 hours
+  Cost: <span class="hl-num">$5-50</span>
+
+<span class="hl-key">Full VLM training (LLaVA-style, 7B)</span>
+  Hardware: 8x A100
+  Time: 1-3 days
+  Cost: <span class="hl-num">$500-3,000</span>
+
+<span class="hl-key">CLIP training (ViT-L)</span>
+  Hardware: 256x A100
+  Time: 2-4 weeks
+  Cost: <span class="hl-num">$100K-500K</span>
+
+<span class="hl-key">Frontier model (Gemini-scale)</span>
+  Hardware: 10,000+ TPUs/GPUs
+  Time: 2-6 months
+  Cost: <span class="hl-num">$50M-500M</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Practical Guidance</div><div class="cc-text">&bull; <strong>Most teams:</strong> Fine-tune existing open-source VLMs with LoRA ($5&ndash;50)<br>&bull; <strong>Startups:</strong> Train a LLaVA-style VLM on domain data ($500&ndash;3K)<br>&bull; <strong>Large companies:</strong> Train custom CLIP or VLM from scratch ($100K&ndash;500K)<br>&bull; <strong>AI labs:</strong> Train frontier multimodal models ($50M+)<br><br>The key insight: <strong>you almost never need to train from scratch</strong>. Fine-tuning open-source models gets you 90% of the way at 0.01% of the cost.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The cost curve for multimodal training is exponential. Going from &ldquo;good enough&rdquo; to &ldquo;state of the art&rdquo; costs 1000x more. For most applications, a fine-tuned open-source model at $50 outperforms a frontier model API at $50K/month in total cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">shield</span></div><div><div class="cc-title">RLHF &amp; Safety Alignment</div><div class="cc-sub">Making multimodal models safe and helpful</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Multimodal RLHF</div><div class="cc-text">RLHF (Reinforcement Learning from Human Feedback) for multimodal models follows the same pattern as text-only:<br><br>1. <strong>Supervised fine-tuning:</strong> Train on high-quality visual instruction data<br>2. <strong>Reward model:</strong> Train a model to predict human preferences for visual responses<br>3. <strong>PPO/DPO:</strong> Optimize the VLM to maximize the reward model&rsquo;s score<br><br>The challenge: multimodal RLHF requires human annotators who can evaluate <strong>both visual accuracy and text quality</strong> simultaneously.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Safety Considerations</div><div class="cc-text">&bull; <strong>Visual hallucination:</strong> Model describes objects not in the image &mdash; requires visual grounding training<br>&bull; <strong>Harmful content:</strong> Model generates or describes NSFW/violent content from images<br>&bull; <strong>Bias:</strong> Model makes stereotypical assumptions based on visual appearance<br>&bull; <strong>Privacy:</strong> Model identifies real people or extracts personal information from images<br>&bull; <strong>Jailbreaks:</strong> Adversarial images that bypass safety filters</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Safety alignment for multimodal models is harder than for text-only models because the attack surface is larger. An adversarial image can bypass text-based safety filters. This is an active research area with no complete solutions yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Deployment &amp; Optimization</div><div class="cc-sub">Getting multimodal models into production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Optimization Techniques</div><div class="cc-text">&bull; <strong>Quantization:</strong> INT8 or INT4 reduces memory 2&ndash;4x with minimal quality loss. Essential for deployment.<br>&bull; <strong>KV-cache optimization:</strong> Visual tokens consume KV-cache space &mdash; compress or evict old visual tokens<br>&bull; <strong>Flash Attention:</strong> 2&ndash;4x faster attention computation, essential for long visual sequences<br>&bull; <strong>Speculative decoding:</strong> Use a small draft model to speed up generation 2&ndash;3x<br>&bull; <strong>Batching:</strong> Process multiple images simultaneously for throughput</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Serving Infrastructure</div><div class="cc-code"><span class="hl-cmt">// Production serving stack</span>
+
+<span class="hl-key">vLLM</span>       Best for VLM serving (PagedAttention)
+<span class="hl-key">TGI</span>        HuggingFace, easy deployment
+<span class="hl-key">TensorRT</span>   NVIDIA, maximum GPU efficiency
+<span class="hl-key">Ollama</span>     Simple local deployment
+<span class="hl-key">SGLang</span>     Optimized for multimodal
+
+<span class="hl-cmt">// Typical latency targets</span>
+<span class="hl-key">Time to first token:</span> &lt;500ms
+<span class="hl-key">Tokens per second:</span>  30-60
+<span class="hl-key">Image processing:</span>   &lt;200ms</div></div>
+          <div class="cc-note n-violet"><strong>Pro tip:</strong> vLLM with INT4 quantization is the default production stack for self-hosted VLMs. It handles batching, KV-cache management, and continuous batching automatically. Start here unless you have specific requirements.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">Key Takeaways</div><div class="cc-sub">What to remember about training multimodal models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Essential Concepts</div><div class="cc-text">1. <strong>Data quality &gt; quantity:</strong> Curated data with good text-image alignment beats raw scale<br><br>2. <strong>Three training strategies:</strong> Contrastive (embeddings), Generative (bolt-on VLM), Native (from scratch)<br><br>3. <strong>Two-stage alignment:</strong> Projector pre-training + visual instruction tuning<br><br>4. <strong>Fine-tuning is king:</strong> LoRA/QLoRA on open-source VLMs costs $5&ndash;50 and often beats API models on domain tasks<br><br>5. <strong>You almost never need to train from scratch:</strong> Fine-tuning gets 90% of the way at 0.01% of the cost</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">For Practitioners</div><div class="cc-text">&bull; <strong>Start with API models</strong> (GPT-4V, Gemini) to validate your use case<br>&bull; <strong>Switch to open-source</strong> when you need cost reduction, privacy, or customization<br>&bull; <strong>Fine-tune with LoRA</strong> on 500&ndash;5,000 domain-specific examples<br>&bull; <strong>Deploy with vLLM</strong> + INT4 quantization for production serving<br>&bull; <strong>Monitor and iterate:</strong> Collect production data for continuous improvement</div></div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 13 puts it all together &mdash; building multimodal applications end-to-end, from architecture patterns to production deployment.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-multimodal-embeddings.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: Multimodal Embeddings</a>
+    <a class="ch-nav-btn next" href="13-building-apps.html">Ch 13: Building Multimodal Applications <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[4],6:[2,3],7:[3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Multimodal training data: image-text pairs (LAION-5B), interleaved documents, video-text, audio-text. Data quality beats quantity.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> Three pre-training strategies: contrastive (CLIP, embeddings), generative (LLaVA, bolt-on VLM), native (Gemini, from scratch).',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> Two-stage alignment: first train the projector on captions, then instruction-tune the LLM on visual Q&A. Total cost: ~$100.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Domain fine-tuning with LoRA: 500-5,000 examples, 2-8 hours, $5-50. Often outperforms GPT-4V on domain-specific tasks.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Compute costs span 6 orders of magnitude: $5 (LoRA) to $500M (frontier). You almost never need to train from scratch.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Multimodal RLHF and safety alignment are harder than text-only \u2014 adversarial images can bypass text-based safety filters.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Deploy with vLLM + INT4 quantization. Target: <500ms time-to-first-token, 30-60 tokens/sec, <200ms image processing.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The practical path: start with APIs, validate use case, switch to open-source, fine-tune with LoRA, deploy with vLLM.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

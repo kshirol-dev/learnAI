@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Progressive Disclosure & Agent Skills — Context Engineering</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Progressive Disclosure &amp; Agent Skills</h2><span class="tb-sub">Loading information in tiers so agents see only what they need, when they need it</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">error</span></div><span class="pipe-label">Problem</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">filter_list</span></div><span class="pipe-label">Tiers</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">description</span></div><span class="pipe-label">Skills</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">person</span></div><span class="pipe-label">Identity</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">auto_fix_high</span></div><span class="pipe-label">Self-Author</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">Tradeoffs</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">error</span></div>
+        <div><div class="cc-title">The Multi-Domain Problem</div><div class="cc-sub">Why loading everything upfront fails</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Scenario</div>
+            <div class="cc-text">Consider a customer support agent that handles <strong>billing, refunds, onboarding, and technical support</strong>. It needs instructions for all four domains. Loading all instructions upfront wastes most of the context window on irrelevant guidance &mdash; a billing question doesn&rsquo;t need the onboarding playbook.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Traditional Alternative</div>
+            <div class="cc-text">The old approach was spinning up <strong>separate specialized sub-agents</strong> for each domain. But this adds orchestration complexity, duplicates shared logic, and introduces latency from inter-agent communication. Neither the &ldquo;load everything&rdquo; nor the &ldquo;separate agents&rdquo; approach scales well as the number of domains grows.</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical in AI:</strong> A support agent with 50+ instruction sets loaded upfront will have most of its context window consumed by irrelevant guidance, leaving little room for the actual conversation and retrieved documents that matter for the current query.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">filter_list</span></div>
+        <div><div class="cc-title">Three-Tier Loading</div><div class="cc-sub">Discovery, activation, execution</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Tier 1 &mdash; Discovery</div>
+            <div class="cc-text">At startup, the agent loads only <strong>names and descriptions</strong> of available capabilities. This costs approximately <strong>~80 tokens per skill</strong> (median). For Anthropic&rsquo;s 17 built-in skills, the total discovery cost is only ~1,700 tokens &mdash; a fraction of the context window.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Tier 2 &mdash; Activation</div>
+            <div class="cc-text">When the model determines a skill is relevant to the current task, the <strong>full instruction body loads</strong> (275 to 8,000 tokens depending on complexity). This is a file read, not an LLM call, so latency is minimal.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Tier 3 &mdash; Execution</div>
+            <div class="cc-text">Supporting scripts, reference materials, and detailed examples load <strong>only during active task execution</strong>. These are the heaviest assets and are evicted when the task completes.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> This three-tier approach mirrors how human experts work: you know what you&rsquo;re capable of (discovery), you pull up the relevant playbook when needed (activation), and you consult reference materials only during execution. The agent never carries the full weight of all its capabilities at once.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">description</span></div>
+        <div><div class="cc-title">Agent Skills Format</div><div class="cc-sub">Markdown files with YAML frontmatter</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Standard</div>
+            <div class="cc-text">An <strong>Agent Skill</strong> is a markdown file with YAML frontmatter. The format was released by <strong>Anthropic in December 2025</strong> and adopted by OpenAI, Google, GitHub, and Cursor within weeks. The frontmatter contains the name and description (used for Tier 1 discovery), while the body contains the full instructions (loaded at Tier 2 activation).</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Skill File Structure</div>
+            <div class="cc-code"><span class="hl-cmt">---</span>
+<span class="hl-key">name:</span> <span class="hl-str">refund-processing</span>
+<span class="hl-key">description:</span> <span class="hl-str">Handle customer refund requests</span>
+  <span class="hl-str">including policy lookup, eligibility</span>
+  <span class="hl-str">checks, and payment reversal.</span>
+<span class="hl-cmt">---</span>
+
+<span class="hl-cmt"># Refund Processing Skill</span>
+
+<span class="hl-cmt">## Steps</span>
+<span class="hl-num">1.</span> Verify customer identity
+<span class="hl-num">2.</span> Check refund eligibility window
+<span class="hl-num">3.</span> Look up original transaction
+<span class="hl-num">4.</span> Apply refund policy rules
+<span class="hl-num">5.</span> Process or escalate</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">3-Tier Architecture (2026 Best Practice)</div>
+            <div class="cc-text">Modern implementations use a <strong>three-tier file hierarchy</strong>:<br><br><strong>Tier 1: Root CLAUDE.md</strong> &mdash; Universal rules under 100 lines, loaded every session. Contains coding standards, naming conventions, and project-wide constraints.<br><br><strong>Tier 2: Skills</strong> (<code>.claude/skills/*/SKILL.md</code>) &mdash; Task-specific playbooks loaded on demand for commits, PRs, migrations, etc.<br><br><strong>Tier 3: Agent Guides</strong> (<code>docs/agent-guides/</code>) &mdash; Deep reference material the agent consults only when needed for complex decisions.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Because skills are plain English markdown, domain experts and team leads can configure agent behavior directly &mdash; without engineering expertise. This democratizes agent customization beyond the development team.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">person</span></div>
+        <div><div class="cc-title">Agent Identity Management</div><div class="cc-sub">One agent, many identities</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Pattern</div>
+            <div class="cc-text">Rather than routing queries to separate specialized sub-agents, a <strong>single agent assumes different identities on demand</strong>. At rest, it has a base identity. When a task activates a skill, the agent adopts that skill&rsquo;s instructions, constraints, tone, and behavioral patterns. When the task completes, it returns to base.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Claude Code Example</div>
+            <div class="cc-text">This is exactly what <strong>Claude Code</strong> already does. It does not spin up a separate &ldquo;PDF agent&rdquo; and a &ldquo;spreadsheet agent.&rdquo; It is one agent that activates the relevant skill, shifting its identity to match. The context window carries only the active skill&rsquo;s instructions, not the instructions for every possible task.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Beyond Coding Agents</div>
+            <div class="cc-text">Agent Skills are not only for coding agents. The pattern generalizes to <strong>customer support, internal operations, research agents</strong>, and any system where agents need broad capability with focused execution. A single customer support agent can handle billing, refunds, onboarding, and technical support by activating the relevant skill for each query.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Why it matters:</strong> Identity management eliminates the orchestration overhead of multi-agent systems while preserving the context efficiency of specialized agents. One agent with skills is simpler, cheaper, and often more effective than a fleet of specialized sub-agents.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">auto_fix_high</span></div>
+        <div><div class="cc-title">Self-Authoring Skills</div><div class="cc-sub">Agents that write their own playbooks</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Concept</div>
+            <div class="cc-text">An interesting extension of Agent Skills: <strong>agents that write their own skills</strong>. When an agent encounters a task it handles repeatedly, it can extract the pattern into a new skill file. Claude Code supports this through its <strong>skill-creator skill</strong> &mdash; the agent observes its own successful behavior, generalizes it, and makes it available for future sessions.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Feedback Loop</div>
+            <div class="cc-text">This closes a powerful loop: <strong>humans write the initial skills, agents extend the library from experience</strong>. Over time, the agent&rsquo;s skill library grows organically based on actual usage patterns. The quality of self-authored skills varies, but the direction is clear &mdash; agents that learn to document their own expertise.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Self-authoring skills represent a form of agent memory that persists across sessions. Unlike conversation history (which is ephemeral), a self-authored skill becomes permanent infrastructure that benefits all future interactions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">speed</span></div>
+        <div><div class="cc-title">Token Economics of Skills</div><div class="cc-sub">Measuring the cost advantage</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Discovery Cost</div>
+            <div class="cc-code"><span class="hl-cmt">// Token cost comparison</span>
+
+<span class="hl-key">Without progressive disclosure:</span>
+  <span class="hl-num">17</span> skills × <span class="hl-num">~2,000</span> tokens avg = <span class="hl-str">34,000 tokens</span>
+  <span class="hl-cmt">// Loaded upfront, every session</span>
+
+<span class="hl-key">With progressive disclosure:</span>
+  <span class="hl-num">17</span> skills × <span class="hl-num">~80</span> tokens (name+desc) = <span class="hl-str">1,360 tokens</span>
+  + <span class="hl-num">1</span> active skill = <span class="hl-str">~2,000 tokens</span>
+  <span class="hl-key">Total:</span> <span class="hl-str">~3,360 tokens</span>
+
+<span class="hl-cmt">// 10× reduction in base context cost</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Latency Profile</div>
+            <div class="cc-text"><strong>Discovery data is pre-loaded</strong> at session start &mdash; no latency impact. <strong>Activation adds a file read</strong>, not an LLM call, so the latency cost is negligible (typically under 10ms). The only meaningful latency is when the model decides which skill to activate, which happens as part of its normal reasoning &mdash; no extra inference call required.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Progressive disclosure converts a fixed upfront cost (all skills loaded) into a variable cost (only active skills loaded). For agents with many capabilities but focused tasks, this is the single highest-leverage context optimization available.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">Tradeoffs and Failure Modes</div><div class="cc-sub">Where progressive disclosure breaks down</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Skill Selection Errors</div>
+            <div class="cc-text">The entire approach depends on <strong>selection accuracy at the discovery layer</strong>. If the model picks the wrong skill based on a brief description, the error compounds downstream &mdash; the agent follows the wrong playbook for the entire task. With a small skill set (under 20), accuracy is high. With <strong>100+ skills</strong>, overlapping descriptions cause misactivation.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Deactivation Problem</div>
+            <div class="cc-text">The key unsolved question: <strong>when does an activated skill get deactivated?</strong> Without explicit pruning logic, multiple activated skills accumulate during a session, destroying the token advantage over time. If a user asks about billing, then refunds, then onboarding, all three skill bodies may remain loaded.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Governance at Scale</div>
+            <div class="cc-text">Maintaining <strong>50+ skills with non-overlapping descriptions</strong> requires governance. Who writes skills? Who reviews them? How do you prevent two teams from creating overlapping skills? How do you deprecate skills that are no longer relevant? These are organizational challenges, not technical ones.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Rule of thumb:</strong> Progressive disclosure works best with 10&ndash;30 well-defined skills. Below 10, just load everything. Above 50, you need a dedicated skill governance process and likely hierarchical categorization to help the model navigate the options.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">rocket_launch</span></div>
+        <div><div class="cc-title">Rapid Industry Adoption</div><div class="cc-sub">From Anthropic&rsquo;s release to universal standard in weeks</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Adoption Timeline</div>
+            <div class="cc-text"><strong>December 2025:</strong> Anthropic releases the Agent Skills format for Claude Code.<br><br><strong>Within weeks:</strong> OpenAI (Codex), Google (Jules), GitHub (Copilot), and Anysphere (Cursor) all adopt compatible formats. The convergence was remarkably fast &mdash; the format was simple enough (markdown + YAML) that adoption required no new infrastructure.<br><br><strong>By March 2026:</strong> Agent Skills are the de facto standard for agent instruction management across the industry.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why It Spread So Fast</div>
+            <div class="cc-text">Three factors drove rapid adoption: <strong>(1)</strong> The format is just markdown &mdash; no proprietary schema, no SDK dependency. <strong>(2)</strong> It solves a universal problem &mdash; every agent system struggles with context bloat from instructions. <strong>(3)</strong> It&rsquo;s human-readable &mdash; domain experts can write and review skills without engineering support.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The Agent Skills format succeeded because it&rsquo;s the simplest possible solution to the progressive disclosure problem. A markdown file with YAML frontmatter is the lowest-friction format that still provides structured metadata for discovery. Simplicity drove adoption speed.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-the-context-window.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: The Context Window</a>
+    <a class="ch-nav-btn next" href="04-context-compression.html">Ch 4: Context Compression <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[1,2],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Loading all instructions upfront wastes context. Separate sub-agents add orchestration complexity. Neither scales.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> Progressive disclosure loads in three tiers: discovery (~80 tokens/skill), activation (full instructions), execution (reference materials).',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Agent Skills are markdown files with YAML frontmatter \u2014 released by Anthropic Dec 2025, adopted by OpenAI, Google, GitHub, and Cursor within weeks.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Identity management: one agent assumes different identities on demand via skill activation, eliminating multi-agent orchestration overhead.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Agents can write their own skills \u2014 Claude Code\u2019s skill-creator skill lets agents document their own expertise for future sessions.',color:'#16a34a'},
+    6:{text:'<strong>Step 6:</strong> Token economics: 17 skills cost ~1,360 tokens at discovery vs ~34,000 loaded upfront \u2014 a 10\u00d7 reduction in base context cost.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Tradeoffs: skill selection errors compound downstream, and the deactivation problem (when to unload skills) remains unsolved.',color:'#d97706'},
+    8:{text:'<strong>Step 8:</strong> Agent Skills became the industry standard in weeks because the format is simple markdown \u2014 no proprietary schema, no SDK dependency.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

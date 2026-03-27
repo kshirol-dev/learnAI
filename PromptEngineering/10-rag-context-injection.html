@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: RAG & Context Injection — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; RAG &amp; Context Injection</h2><span class="tb-sub">How to feed external documents into prompts effectively &mdash; structure, label, cite, and prevent hallucination</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Real-World</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">What Is RAG</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Dump & Pray</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">label</span></div><span class="pipe-label">Label & Cite</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">gavel</span></div><span class="pipe-label">Legal Domain</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">block</span></div><span class="pipe-label">Anti-Hallucinate</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Chunking</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Multi-Source</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">RAG Prompt</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">What Is RAG? (You&rsquo;re Already Doing It)</div><div class="cc-sub">Every time you paste a document into a prompt, you&rsquo;re doing manual Retrieval-Augmented Generation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RAG in 30 Seconds</div><div class="cc-text"><strong>Retrieval-Augmented Generation</strong> means: instead of relying on the model&rsquo;s training data (which is frozen and potentially outdated), you <strong>inject relevant documents into the prompt</strong> so the model can answer based on your data.<br><br>The automated version uses vector databases and embedding search to find relevant chunks. But the <em>prompting</em> part &mdash; how you present the context to the model &mdash; is the same whether you retrieve chunks automatically or paste them manually.</div></div>
+          <div class="cc-block"><div class="cc-label">The RAG Pipeline</div><div class="cc-code"><span class="hl-cmt"># Simplified RAG flow</span>
+
+<span class="hl-num">1.</span> User asks a question
+<span class="hl-num">2.</span> <span class="hl-key">Retrieve</span> relevant document chunks
+   (vector search, keyword search, etc.)
+<span class="hl-num">3.</span> <span class="hl-key">Inject</span> those chunks into the prompt
+   alongside the question
+<span class="hl-num">4.</span> <span class="hl-key">Generate</span> an answer grounded in the
+   provided context
+
+<span class="hl-cmt"># This chapter focuses on step 3:
+# HOW you inject context matters as much
+# as WHAT you inject.</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Context Presentation Matters</div><div class="cc-text">You can retrieve the perfect document chunks, but if you present them poorly, the model will:<br><br>• <strong>Ignore relevant context</strong> buried in a wall of text<br>• <strong>Hallucinate details</strong> that aren&rsquo;t in the context<br>• <strong>Blend context with training data</strong> (mixing your facts with its &ldquo;knowledge&rdquo;)<br>• <strong>Fail to cite sources</strong> making answers unverifiable<br><br>The prompt engineering around context injection is what separates a &ldquo;sometimes useful&rdquo; RAG system from a &ldquo;reliably accurate&rdquo; one.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> RAG has two halves: retrieval (finding the right chunks) and generation (prompting the model to use them correctly). Most tutorials focus on retrieval. This chapter focuses on the generation side &mdash; the prompting techniques that make or break answer quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The &ldquo;Dump &amp; Pray&rdquo; Anti-Pattern</div><div class="cc-sub">Pasting a 10-page document and hoping the model finds the answer</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Superficial Approach</div><div class="cc-code"><span class="hl-key">Prompt:</span>
+Here's our pricing documentation:
+
+[10 pages of text pasted verbatim,
+including table of contents, headers,
+footers, page numbers, legal disclaimers,
+and 47 pricing scenarios]
+
+What's the price for the Enterprise plan
+with annual billing?</div></div>
+          <div class="cc-block"><div class="cc-label">What Goes Wrong</div><div class="cc-text"><strong>1. Needle in a haystack:</strong> The answer is in paragraph 23 of 47. The model has to scan everything to find it.<br><br><strong>2. Conflicting information:</strong> The document mentions &ldquo;Enterprise: $99/mo&rdquo; in one section and &ldquo;Enterprise annual: $79/mo (billed annually)&rdquo; in another. The model might pick either.<br><br><strong>3. Hallucination risk:</strong> If the model can&rsquo;t find the exact answer, it will <em>confidently make one up</em> based on patterns in the document.<br><br><strong>4. Token waste:</strong> You&rsquo;re paying for 10 pages of input tokens when only 2 paragraphs are relevant.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output (Dump &amp; Pray)</div><div class="cc-code"><span class="hl-cmt">The Enterprise plan with annual billing
+is $89 per user per month, billed
+annually at $1,068 per user per year.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Is This Right?</div><div class="cc-text">Maybe. Maybe not. You can&rsquo;t tell because:<br><br>• No citation &mdash; which section did this come from?<br>• The $89 figure might be from an outdated section<br>• &ldquo;Per user&rdquo; might be wrong &mdash; maybe it&rsquo;s per seat<br>• The annual calculation might be the model doing math, not quoting the document<br><br>Without citations, every RAG answer is <strong>unverifiable</strong>.</div></div>
+          <div class="cc-note n-red"><strong>The pattern:</strong> Dumping raw documents produces answers that look confident but are often wrong or unverifiable. The model treats the entire document as &ldquo;context&rdquo; and freely blends, summarizes, and interpolates. You need structure, labels, and citation requirements.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">label</span></div><div><div class="cc-title">The Fix: Label, Cite, Constrain</div><div class="cc-sub">Structure your context with labels and require citations in every answer</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Deliberate RAG Prompt</div><div class="cc-code"><span class="hl-key">Answer the user's question using ONLY the
+provided context excerpts. Cite which
+excerpt supports each claim using [A],
+[B], or [C]. If the excerpts don't
+contain the answer, say "Not found in
+provided context."</span>
+
+<span class="hl-str">[A] Enterprise Pricing (2025 rate card):</span>
+"Enterprise plan: $99/user/month on
+monthly billing. $79/user/month on annual
+billing (billed as $948/user/year).
+Minimum 50 seats. Includes SSO, audit
+logs, and dedicated support."
+
+<span class="hl-str">[B] Discount Policy:</span>
+"Enterprise annual contracts over 200
+seats qualify for volume discount:
+200-499 seats: 10% off, 500+ seats: 15%
+off. Applied to the annual rate."
+
+<span class="hl-str">[C] Plan Comparison:</span>
+"Enterprise includes everything in Pro,
+plus: SSO/SAML, audit logging, custom
+roles, 99.99% SLA, dedicated CSM."
+
+<span class="hl-key">Question:</span> What's the price for the
+Enterprise plan with annual billing?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output (Structured)</div><div class="cc-code">The Enterprise plan with annual billing
+is <span class="hl-num">$79/user/month</span>, billed annually at
+<span class="hl-num">$948/user/year</span> [A]. There is a minimum
+of <span class="hl-num">50 seats</span> [A].
+
+If you have 200+ seats, volume discounts
+apply: 10% off for 200-499 seats, 15%
+off for 500+ seats [B].</div></div>
+          <div class="cc-block"><div class="cc-label">Why This Is Better</div><div class="cc-text"><strong>1. Verifiable:</strong> Every claim has a citation. You can check [A] to confirm $79/user/month.<br><br><strong>2. No hallucination:</strong> The &ldquo;only use provided context&rdquo; constraint prevents the model from inventing details.<br><br><strong>3. Transparent gaps:</strong> If the answer isn&rsquo;t in the excerpts, the model says so instead of guessing.<br><br><strong>4. Efficient:</strong> Only relevant excerpts are included, saving tokens and reducing noise.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Three rules for RAG prompts: (1) <strong>Label</strong> every context chunk with a reference ID, (2) <strong>Require citations</strong> in the answer, (3) <strong>Constrain</strong> the model to only use provided context. These three rules eliminate most hallucination in RAG systems.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">gavel</span></div><div><div class="cc-title">Domain Example: Legal Contract Review</div><div class="cc-sub">Where hallucination isn&rsquo;t just annoying &mdash; it&rsquo;s dangerous</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Scenario</div><div class="cc-text">Your legal team needs to review a vendor contract. They want to know: What are the termination conditions? What&rsquo;s the liability cap? Are there auto-renewal clauses?</div></div>
+          <div class="cc-block"><div class="cc-label">Contract Review Prompt</div><div class="cc-code"><span class="hl-key">You are a legal document analyst. Answer
+questions about this contract using ONLY
+the provided clauses. For each answer:</span>
+
+1. Quote the exact clause text
+2. Cite the clause number
+3. Flag any ambiguities or missing info
+4. If the contract doesn't address the
+   question, say "NOT ADDRESSED"
+
+<span class="hl-str">[Clause 8.1 — Termination for Cause]:</span>
+"Either party may terminate this Agreement
+for cause upon 30 days written notice if
+the other party materially breaches any
+obligation and fails to cure within the
+notice period."
+
+<span class="hl-str">[Clause 8.3 — Termination for Convenience]:</span>
+"Client may terminate for convenience
+upon 90 days written notice. Early
+termination fee: remaining contract
+value × 25%."
+
+<span class="hl-str">[Clause 12.1 — Limitation of Liability]:</span>
+"Neither party's aggregate liability
+shall exceed the total fees paid in the
+12 months preceding the claim."
+
+<span class="hl-key">Questions:</span>
+1. Can we terminate without cause?
+2. What's the liability cap?
+3. Is there an auto-renewal clause?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output</div><div class="cc-code"><span class="hl-key">1. Termination without cause:</span>
+Yes. Per Clause 8.3, Client may terminate
+for convenience with 90 days written
+notice. However, an early termination fee
+applies: "remaining contract value × 25%"
+[Clause 8.3].
+
+<span class="hl-str">⚠ Note:</span> Only the Client has this right.
+The vendor cannot terminate for
+convenience — only for cause [Clause 8.1].
+
+<span class="hl-key">2. Liability cap:</span>
+"Neither party's aggregate liability
+shall exceed the total fees paid in the
+12 months preceding the claim" [Clause
+12.1].
+
+<span class="hl-str">⚠ Ambiguity:</span> This doesn't specify
+whether the cap applies to indirect/
+consequential damages or only direct
+damages. Recommend clarifying.
+
+<span class="hl-key">3. Auto-renewal:</span>
+<span class="hl-num">NOT ADDRESSED</span> in the provided clauses.
+The contract excerpts do not contain an
+auto-renewal or renewal clause. Recommend
+reviewing the full agreement for renewal
+terms.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The &ldquo;NOT ADDRESSED&rdquo; response for question 3 is the most valuable output. Without the constraint, the model would have <em>invented</em> a plausible auto-renewal clause based on its training data. In legal contexts, a confident hallucination is worse than no answer.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">block</span></div><div><div class="cc-title">Anti-Hallucination Techniques</div><div class="cc-sub">Specific prompt patterns that prevent the model from making things up</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Technique 1: The Grounding Constraint</div><div class="cc-code"><span class="hl-key">"Answer using ONLY the provided context.
+Do not use any outside knowledge. If the
+context doesn't contain the answer, say
+'Information not found in provided
+documents.'"</span></div></div>
+          <div class="cc-block"><div class="cc-label">Technique 2: Mandatory Citations</div><div class="cc-code"><span class="hl-key">"Every factual claim must cite its source
+using [Source ID]. Claims without
+citations are not allowed."</span></div></div>
+          <div class="cc-block"><div class="cc-label">Technique 3: Confidence Flagging</div><div class="cc-code"><span class="hl-key">"For each answer, rate your confidence:
+HIGH = directly stated in context
+MEDIUM = inferred from context
+LOW = partially supported
+NONE = not in context (don't answer)"</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Technique 4: The Extraction-Only Pattern</div><div class="cc-code"><span class="hl-key">"Extract and quote the relevant passages
+that answer this question. Do not
+summarize, paraphrase, or interpret.
+Return the exact text from the document
+with the source reference."</span></div></div>
+          <div class="cc-block"><div class="cc-label">Technique 5: Negative Instructions</div><div class="cc-code"><span class="hl-key">"NEVER:
+- Make up information not in the context
+- Combine information from context with
+  your training knowledge
+- Provide an answer if you're not sure
+  it's supported by the context
+- Guess dates, numbers, or names"</span></div></div>
+          <div class="cc-block"><div class="cc-label">Which to Use When</div><div class="cc-text"><strong>Low stakes (FAQ bot):</strong> Grounding constraint + citations<br><strong>Medium stakes (internal docs):</strong> Add confidence flagging<br><strong>High stakes (legal, medical, financial):</strong> All five techniques combined</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> No single technique eliminates hallucination completely. Layer them: grounding constraint as the baseline, citations for verifiability, confidence flagging for transparency, and negative instructions for the most critical applications. Defense in depth.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">content_cut</span></div><div><div class="cc-title">Context Chunking: Less Is More</div><div class="cc-sub">How to select and trim context for maximum relevance and minimum noise</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Chunking Principle</div><div class="cc-text">More context ≠ better answers. Research consistently shows that <strong>3&ndash;5 highly relevant chunks outperform 20 loosely relevant ones</strong>. Why?<br><br><strong>1. Signal-to-noise ratio:</strong> Irrelevant context dilutes the relevant parts<br><strong>2. Lost in the middle:</strong> LLMs pay more attention to the beginning and end of the context (Liu et al., 2023). Important info in the middle gets overlooked.<br><strong>3. Contradictions:</strong> More chunks = higher chance of conflicting information<br><strong>4. Token cost:</strong> Every irrelevant chunk costs money and latency</div></div>
+          <div class="cc-block"><div class="cc-label">Optimal Chunk Strategy</div><div class="cc-code"><span class="hl-cmt"># For a question-answering RAG system:</span>
+
+<span class="hl-key">Retrieve:</span> Top 5-10 chunks by relevance
+<span class="hl-key">Re-rank:</span> Score by relevance to the
+  specific question (not just topic)
+<span class="hl-key">Select:</span> Top 3-5 after re-ranking
+<span class="hl-key">Order:</span> Most relevant first and last
+  (exploit primacy/recency bias)
+<span class="hl-key">Label:</span> [A], [B], [C] with source info</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The &ldquo;Lost in the Middle&rdquo; Problem</div><div class="cc-text">Liu et al. (2023) showed that LLMs perform best when the answer is at the <strong>beginning or end</strong> of the context, and worst when it&rsquo;s in the middle. For a 20-chunk context:<br><br>• Answer in chunk 1: ~90% accuracy<br>• Answer in chunk 10: ~60% accuracy<br>• Answer in chunk 20: ~85% accuracy<br><br><strong>Practical fix:</strong> Put the most relevant chunk first. If you have many chunks, put the second-most-relevant last.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Context injection is a quality game, not a quantity game. Retrieve broadly, then aggressively filter down to the 3&ndash;5 most relevant chunks. Order them strategically (best first, second-best last). Your RAG system&rsquo;s accuracy depends more on chunk selection than on the model you use.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Multi-Source Context: Handling Conflicting Information</div><div class="cc-sub">When different documents say different things, tell the model how to resolve conflicts</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Real-world RAG systems pull from multiple sources: product docs, support tickets, internal wikis, Slack messages. These sources often <strong>contradict each other</strong> because they were written at different times by different people.</div></div>
+          <div class="cc-block"><div class="cc-label">Conflict Resolution Prompt</div><div class="cc-code"><span class="hl-key">Answer using the provided sources. Each
+source has a date and type. When sources
+conflict, follow these rules:</span>
+
+<span class="hl-str">Priority order:</span>
+1. Official documentation (highest)
+2. Release notes
+3. Support tickets
+4. Internal wiki
+5. Slack messages (lowest)
+
+<span class="hl-str">When same-priority sources conflict:</span>
+Use the most recent source.
+
+<span class="hl-str">Always flag conflicts:</span>
+"Note: [Source A] says X, but [Source B]
+says Y. Using [Source A] because
+[reason]."
+
+<span class="hl-str">[A] Official Docs (2025-02-15):</span>
+"Rate limit: 1000 requests/minute per
+API key."
+
+<span class="hl-str">[B] Internal Wiki (2024-11-03):</span>
+"Rate limit: 500 requests/minute."
+
+<span class="hl-str">[C] Release Notes (2025-01-20):</span>
+"Increased rate limits to 1000 req/min
+for all tiers."</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output</div><div class="cc-code">The current rate limit is <span class="hl-num">1000 requests
+per minute</span> per API key [A].
+
+<span class="hl-str">Note:</span> The internal wiki [B] states 500
+req/min, but this is outdated. Release
+notes from 2025-01-20 [C] confirm the
+limit was increased to 1000 req/min, and
+the official docs [A] reflect this
+updated value. Using official docs [A]
+as the authoritative source.</div></div>
+          <div class="cc-block"><div class="cc-label">Why This Matters</div><div class="cc-text">Without conflict resolution rules, the model would either:<br><br>• Pick one source randomly<br>• Average them (&ldquo;the rate limit is 500&ndash;1000 req/min&rdquo;)<br>• Hallucinate a compromise<br><br>Explicit priority rules and conflict flagging make the answer <strong>trustworthy and auditable</strong>.</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Multi-source RAG without conflict resolution is a hallucination factory. Always define: (1) source priority hierarchy, (2) recency rules for same-priority conflicts, and (3) mandatory conflict flagging. The model should never silently choose between contradicting sources.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The RAG Prompt Template</div><div class="cc-sub">A production-ready template for context-grounded question answering</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Universal RAG Prompt Template</div><div class="cc-code"><span class="hl-key"># INSTRUCTIONS</span>
+Answer the user's question using ONLY the
+provided context documents. Follow these
+rules strictly:
+
+1. Base every claim on the provided context
+2. Cite sources using [Source ID] after
+   each claim
+3. If the context doesn't contain the
+   answer, say "Not found in provided
+   context"
+4. Never combine context with outside
+   knowledge
+5. Flag any ambiguities or contradictions
+   between sources
+
+<span class="hl-key"># CONTEXT DOCUMENTS</span>
+
+<span class="hl-str">[A] {source_name} ({date}):</span>
+"{chunk_text}"
+
+<span class="hl-str">[B] {source_name} ({date}):</span>
+"{chunk_text}"
+
+<span class="hl-str">[C] {source_name} ({date}):</span>
+"{chunk_text}"
+
+<span class="hl-key"># USER QUESTION</span>
+{question}</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RAG Prompt Checklist</div><div class="cc-code"><span class="hl-key">□ Grounding constraint</span>
+  "ONLY the provided context"
+
+<span class="hl-key">□ Citation requirement</span>
+  "Cite using [Source ID]"
+
+<span class="hl-key">□ Fallback instruction</span>
+  "If not found, say so"
+
+<span class="hl-key">□ Anti-hallucination</span>
+  "Never use outside knowledge"
+
+<span class="hl-key">□ Labeled chunks</span>
+  [A], [B], [C] with source metadata
+
+<span class="hl-key">□ Chunk ordering</span>
+  Most relevant first and last
+
+<span class="hl-key">□ Conflict resolution</span>
+  Priority rules if multi-source
+
+<span class="hl-key">□ 3-5 chunks maximum</span>
+  Quality over quantity</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> RAG prompt engineering is about <em>trust engineering</em>. Every technique in this chapter &mdash; labeling, citations, grounding constraints, conflict resolution &mdash; exists to make the answer verifiable and trustworthy. An uncited RAG answer is no better than a guess. A cited, grounded, conflict-flagged answer is a reliable tool.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-prompting-for-code.html"><span class="material-symbols-rounded">arrow_back</span> Ch 9: Prompting for Code</a>
+    <a class="ch-nav-btn next" href="11-multi-turn-conversations.html">Ch 11: Multi-Turn Conversations <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> RAG = inject documents into the prompt so the model answers from your data, not its training. You\'re already doing it every time you paste a doc into ChatGPT.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> "Dump & Pray": paste 10 pages, hope the model finds the answer. Result: unverifiable output, possible hallucination, wasted tokens.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> The fix: label chunks [A], [B], [C], require citations, constrain to "ONLY provided context." Every claim becomes verifiable.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Legal contract review: citations prevent hallucinated clauses. "NOT ADDRESSED" is the most valuable output — the model admits what it doesn\'t know.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Anti-hallucination stack: grounding constraint + mandatory citations + confidence flagging + extraction-only + negative instructions. Layer them by stakes.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Less is more: 3-5 relevant chunks beat 20 loosely relevant ones. "Lost in the middle" problem — put best chunks first and last.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Multi-source conflicts: define priority hierarchy, recency rules, and mandatory conflict flagging. Never let the model silently choose between contradicting sources.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The RAG prompt template: grounding + citations + fallback + anti-hallucination + labeled chunks + ordering + conflict rules. Trust engineering, not just text generation.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

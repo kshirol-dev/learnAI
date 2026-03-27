@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: The Training Recipe — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; The Training Recipe</h2><span class="tb-sub">How LLMs learn from raw text &mdash; next-token prediction, loss functions, optimizers, and data pipelines</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Training</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Objective</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">Loss</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">arrow_downward</span></div><span class="pipe-label">Backprop</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Optimizer</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">timeline</span></div><span class="pipe-label">Schedule</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">database</span></div><span class="pipe-label">Data</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Stability</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Loop</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="8"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Eval</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 9</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Objective -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">The Training Objective: Next-Token Prediction</div><div class="cc-sub">The deceptively simple task that teaches LLMs everything</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine a game of <strong>fill-in-the-blank</strong>, played trillions of times. Given &ldquo;The capital of France is ___&rdquo;, the model must predict &ldquo;Paris.&rdquo; Given &ldquo;def fibonacci(n): return n if n &lt;= 1 else ___&rdquo;, it must predict the recursive call. By predicting the next word across trillions of sentences from books, code, Wikipedia, and the web, the model implicitly learns grammar, facts, reasoning, coding, math, and even common sense. No labels needed &mdash; the text itself is the teacher.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Next-token prediction is a form of <strong>self-supervised learning</strong>: the training signal comes from the data itself. Every token in the training set becomes both an input (context) and a label (target). A single document of 1,000 tokens provides 999 training examples. This is why LLMs can be trained on the entire internet without human annotation &mdash; the text supervises itself.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div>
+            <div class="cc-code"><span class="hl-cmt"># Input:  "The cat sat on the"</span>
+<span class="hl-cmt"># Target: "cat sat on the mat"</span>
+<span class="hl-cmt"># (shifted by one position)</span>
+
+<span class="hl-cmt"># At each position, the model predicts</span>
+<span class="hl-cmt"># a probability distribution over the</span>
+<span class="hl-cmt"># entire vocabulary (~100K-200K tokens)</span>
+
+<span class="hl-cmt"># Position 1: "The" → predict "cat"</span>
+<span class="hl-cmt"># Position 2: "The cat" → predict "sat"</span>
+<span class="hl-cmt"># Position 3: "The cat sat" → predict "on"</span>
+<span class="hl-cmt"># Position 4: "The cat sat on" → predict "the"</span>
+<span class="hl-cmt"># Position 5: "The cat sat on the" → predict "mat"</span>
+
+<span class="hl-cmt"># The model outputs logits for EVERY token</span>
+<span class="hl-cmt"># in the vocabulary at each position.</span>
+<span class="hl-cmt"># logits shape: (batch, seq_len, vocab_size)</span>
+<span class="hl-cmt"># e.g., (4, 2048, 128256) for Llama 3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Loss -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">Cross-Entropy Loss: Measuring Wrongness</div><div class="cc-sub">The single number that tells the model how to improve</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine a weather forecaster who says &ldquo;90% chance of sun&rdquo; and it rains. They were <strong>confidently wrong</strong> &mdash; that&rsquo;s a high loss. If they said &ldquo;50% sun, 50% rain,&rdquo; the loss is lower (less confident, less penalty). <strong>Cross-entropy loss</strong> penalizes the model based on how much probability it assigned to the correct answer. Assign 0.01 to the right token? Huge loss. Assign 0.99? Tiny loss. The formula: L = &minus;log(p_correct).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Cross-entropy connects directly to <strong>information theory</strong> (MathForAI Ch 7). The loss measures how many extra bits the model needs compared to a perfect predictor. GPT-3&rsquo;s training loss of ~2.7 nats means it uses ~2.7 extra bits per token. A loss of 0 would mean perfect prediction. The irreducible loss (entropy of natural language) is estimated at ~1.0-1.5 nats &mdash; no model can go below this.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Worked Example</div>
+            <div class="cc-code"><span class="hl-cmt"># Model predicts next token after "The cat"</span>
+<span class="hl-cmt"># Vocabulary: [sat, ran, the, dog, ...]</span>
+<span class="hl-cmt"># True next token: "sat" (index 0)</span>
+
+<span class="hl-cmt"># Model outputs logits: [2.5, 1.0, 0.3, -0.5]</span>
+<span class="hl-cmt"># Softmax → probabilities:</span>
+<span class="hl-cmt"># P(sat)=0.62, P(ran)=0.14, P(the)=0.07, ...</span>
+
+<span class="hl-cmt"># Cross-entropy loss:</span>
+<span class="hl-cmt"># L = -log(P(correct)) = -log(0.62) = 0.48</span>
+
+<span class="hl-cmt"># If model was more confident:</span>
+<span class="hl-cmt"># P(sat)=0.95 → L = -log(0.95) = 0.05 ✓</span>
+
+<span class="hl-cmt"># If model was wrong:</span>
+<span class="hl-cmt"># P(sat)=0.01 → L = -log(0.01) = 4.6 ✗</span>
+
+<span class="hl-key">import</span> torch.nn.functional <span class="hl-key">as</span> F
+
+logits = model(input_ids)  <span class="hl-cmt"># (B, S, V)</span>
+loss = F.cross_entropy(
+    logits.view(-<span class="hl-num">1</span>, vocab_size),
+    target_ids.view(-<span class="hl-num">1</span>)
+)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Backprop -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">arrow_downward</span></div><div><div class="cc-title">Backpropagation: Tracing Blame</div><div class="cc-sub">How the model figures out which parameters to adjust</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">A soccer team loses 3-0. The coach reviews the tape: the goalkeeper let in an easy shot (high blame), the striker missed chances (medium blame), the midfielder played well (low blame). <strong>Backpropagation</strong> does the same: it traces the loss backward through every layer, computing how much each parameter contributed to the error. Parameters that caused more error get larger adjustments. This uses the <strong>chain rule</strong> from calculus (MathForAI Ch 4).</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> For an 8B parameter model, backprop computes 8 billion gradients &mdash; one for every parameter. This requires ~2&times; the compute of the forward pass (the &ldquo;6ND&rdquo; rule: 2N for forward, 4N for backward per token). The gradients tell us the <em>direction</em> to adjust each parameter to reduce loss. The optimizer decides <em>how much</em> to adjust.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Chain Rule in Action</div>
+            <div class="cc-code"><span class="hl-cmt"># Forward pass: compute predictions</span>
+logits = model(input_ids)
+loss = F.cross_entropy(logits, targets)
+
+<span class="hl-cmt"># Backward pass: compute all gradients</span>
+loss.backward()
+<span class="hl-cmt"># PyTorch automatically computes:</span>
+<span class="hl-cmt"># ∂L/∂w for every parameter w in the model</span>
+
+<span class="hl-cmt"># Chain rule example (simplified):</span>
+<span class="hl-cmt"># L = f(g(h(x)))  (nested layers)</span>
+<span class="hl-cmt"># ∂L/∂x = ∂f/∂g · ∂g/∂h · ∂h/∂x</span>
+
+<span class="hl-cmt"># For Llama 3 8B:</span>
+<span class="hl-cmt"># - 8 billion parameters</span>
+<span class="hl-cmt"># - 8 billion gradients computed</span>
+<span class="hl-cmt"># - Flows backward through 32 layers</span>
+<span class="hl-cmt"># - Residual connections help gradients</span>
+<span class="hl-cmt">#   flow without vanishing (Ch 4)</span>
+
+<span class="hl-cmt"># Memory: need to store activations from</span>
+<span class="hl-cmt"># forward pass for backward computation</span>
+<span class="hl-cmt"># → training uses ~3× more memory than inference</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Optimizer -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">AdamW: The Optimizer That Trains Every LLM</div><div class="cc-sub">Adaptive learning rates with weight decay</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine navigating a hilly landscape in fog. Basic gradient descent is like always taking the same-sized step downhill. <strong>Adam</strong> is smarter: it remembers which direction you&rsquo;ve been going (momentum) and how steep the terrain has been (adaptive step size). Flat areas? Take bigger steps. Steep, noisy areas? Take smaller, careful steps. <strong>AdamW</strong> adds &ldquo;weight decay&rdquo; &mdash; a gentle pull toward zero that prevents parameters from growing too large (regularization).</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> AdamW stores <strong>two extra values per parameter</strong>: the first moment (mean of gradients) and second moment (mean of squared gradients). For an 8B model, that&rsquo;s 8B &times; 2 = 16B extra values. At FP32, the optimizer states alone need 64 GB of memory &mdash; more than the model weights! This is why training requires far more memory than inference.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">AdamW in Practice</div>
+            <div class="cc-code"><span class="hl-cmt"># AdamW update rule (per parameter):</span>
+<span class="hl-cmt"># m = β₁·m + (1-β₁)·g       (momentum)</span>
+<span class="hl-cmt"># v = β₂·v + (1-β₂)·g²      (variance)</span>
+<span class="hl-cmt"># m̂ = m / (1-β₁ᵗ)           (bias correct)</span>
+<span class="hl-cmt"># v̂ = v / (1-β₂ᵗ)           (bias correct)</span>
+<span class="hl-cmt"># w = w - lr·(m̂/(√v̂+ε) + λ·w)</span>
+
+<span class="hl-cmt"># Typical hyperparameters (Llama 3):</span>
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=<span class="hl-num">1.5e-4</span>,           <span class="hl-cmt"># peak learning rate</span>
+    betas=(<span class="hl-num">0.9</span>, <span class="hl-num">0.95</span>),    <span class="hl-cmt"># momentum params</span>
+    eps=<span class="hl-num">1e-8</span>,              <span class="hl-cmt"># numerical stability</span>
+    weight_decay=<span class="hl-num">0.1</span>      <span class="hl-cmt"># regularization</span>
+)
+
+<span class="hl-cmt"># Memory per parameter:</span>
+<span class="hl-cmt"># Weight: 2 bytes (BF16)</span>
+<span class="hl-cmt"># Gradient: 2 bytes (BF16)</span>
+<span class="hl-cmt"># Adam m: 4 bytes (FP32)</span>
+<span class="hl-cmt"># Adam v: 4 bytes (FP32)</span>
+<span class="hl-cmt"># Total: 12 bytes/param</span>
+<span class="hl-cmt"># 8B model: 96 GB just for training state!</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Schedule -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">Learning Rate Schedule: Warmup + Cosine Decay</div><div class="cc-sub">Start slow, peak, then gradually cool down</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Learning rate is like the <strong>speed of a car on a mountain road</strong>. At the start (warmup), you accelerate gradually &mdash; going too fast before you know the terrain causes crashes (loss spikes). At peak speed, you&rsquo;re making maximum progress. Then you slowly decelerate (cosine decay) for the final stretch, making finer and finer adjustments. This warmup &rarr; peak &rarr; decay pattern is used by virtually every LLM.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The warmup phase is critical for training stability. Without it, the randomly initialized model receives huge gradient updates that can cause irreversible divergence. Llama 3 uses 2,000 warmup steps out of ~millions total. The cosine decay ensures the model makes progressively smaller adjustments as it converges, similar to simulated annealing in optimization (MathForAI Ch 10).</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Schedule</div>
+            <div class="cc-code"><span class="hl-cmt"># Learning rate schedule visualization:</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># lr │     ╭────╮</span>
+<span class="hl-cmt">#    │    /      ╲</span>
+<span class="hl-cmt">#    │   /        ╲</span>
+<span class="hl-cmt">#    │  /          ╲╲</span>
+<span class="hl-cmt">#    │ /             ╲╲╲</span>
+<span class="hl-cmt">#    │/                ╲╲╲___</span>
+<span class="hl-cmt">#    └──────────────────────── step</span>
+<span class="hl-cmt">#    warmup   peak    cosine decay</span>
+
+<span class="hl-cmt"># Llama 3 schedule:</span>
+<span class="hl-cmt"># Warmup: 2,000 steps (linear ramp)</span>
+<span class="hl-cmt"># Peak lr: 1.5e-4</span>
+<span class="hl-cmt"># Decay: cosine to 1.5e-5 (10% of peak)</span>
+<span class="hl-cmt"># Total steps: ~millions</span>
+
+<span class="hl-key">def</span> cosine_schedule(step, warmup, total, lr_max, lr_min):
+    <span class="hl-key">if</span> step &lt; warmup:
+        <span class="hl-key">return</span> lr_max * step / warmup
+    progress = (step - warmup) / (total - warmup)
+    <span class="hl-key">return</span> lr_min + <span class="hl-num">0.5</span> * (lr_max - lr_min) * (
+        <span class="hl-num">1</span> + math.cos(math.pi * progress)
+    )</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Data -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">database</span></div><div><div class="cc-title">Training Data: The Secret Ingredient</div><div class="cc-sub">Where 15 trillion tokens come from and how they&rsquo;re prepared</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Training data is the <strong>curriculum</strong> for the model. Just as a student who only reads comic books won&rsquo;t write great essays, a model trained on low-quality web scrapes won&rsquo;t produce high-quality output. Modern LLM training involves massive <strong>data engineering</strong>: crawling the web, deduplicating, filtering toxic/low-quality content, mixing in curated sources (books, code, academic papers), and carefully balancing the proportions.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Llama 3 used 15T tokens from a mix of web data (Common Crawl), code (GitHub), books, academic papers, Wikipedia, and more. The data pipeline includes: language detection, quality filtering (perplexity-based), deduplication (MinHash), PII removal, and domain-specific heuristics. Data quality is now considered more important than model architecture &mdash; it&rsquo;s the biggest differentiator between models.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Sources &amp; Mixing</div>
+            <div class="cc-code"><span class="hl-cmt"># Typical data mix (approximate):</span>
+<span class="hl-cmt"># Web text:     ~67%  (Common Crawl, filtered)</span>
+<span class="hl-cmt"># Code:         ~17%  (GitHub, Stack Overflow)</span>
+<span class="hl-cmt"># Books:         ~5%  (BookCorpus, etc.)</span>
+<span class="hl-cmt"># Academic:      ~5%  (ArXiv, papers)</span>
+<span class="hl-cmt"># Wikipedia:     ~3%  (high quality)</span>
+<span class="hl-cmt"># Math/Science:  ~3%  (curated)</span>
+
+<span class="hl-cmt"># Data pipeline stages:</span>
+<span class="hl-cmt"># 1. Crawl: ~100T raw tokens</span>
+<span class="hl-cmt"># 2. Language filter: keep English + top langs</span>
+<span class="hl-cmt"># 3. Quality filter: perplexity scoring</span>
+<span class="hl-cmt"># 4. Dedup: exact + fuzzy (MinHash)</span>
+<span class="hl-cmt"># 5. Safety filter: remove toxic content</span>
+<span class="hl-cmt"># 6. PII removal: emails, phones, etc.</span>
+<span class="hl-cmt"># 7. Domain mixing: set proportions</span>
+<span class="hl-cmt"># Result: ~15T clean tokens</span>
+
+<span class="hl-cmt"># Key datasets:</span>
+<span class="hl-cmt"># FineWeb (HuggingFace): 15T tokens, open</span>
+<span class="hl-cmt"># The Pile (EleutherAI): 800B tokens, open</span>
+<span class="hl-cmt"># RedPajama: 1.2T tokens, open</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Stability -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Training Stability: Preventing Catastrophe</div><div class="cc-sub">Gradient clipping, mixed precision, and surviving loss spikes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Training an LLM is like flying a plane on autopilot for 78 days straight. Turbulence (bad data batches) can cause sudden jolts. Without safety systems, one bad batch could crash the entire training run &mdash; wasting millions of dollars. <strong>Gradient clipping</strong> limits how large any single update can be (like speed limiters). <strong>Mixed precision</strong> uses lower-precision numbers to save memory while keeping critical calculations in high precision.</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Loss spikes are a real danger in LLM training. Llama 3&rsquo;s training report mentions multiple loss spikes that required intervention. Common causes: corrupted data batches, numerical instability in attention, or learning rate too high. The standard fix: roll back to a recent checkpoint and skip the problematic data. At $60M+ per training run, stability engineering is worth millions.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stability Techniques</div>
+            <div class="cc-code"><span class="hl-cmt"># 1. Gradient clipping: cap gradient norm</span>
+torch.nn.utils.clip_grad_norm_(
+    model.parameters(), max_norm=<span class="hl-num">1.0</span>
+)
+<span class="hl-cmt"># Prevents catastrophic updates from bad batches</span>
+
+<span class="hl-cmt"># 2. Mixed precision training (BF16)</span>
+<span class="hl-cmt"># Forward/backward: BF16 (16-bit brain float)</span>
+<span class="hl-cmt"># Optimizer states: FP32 (32-bit float)</span>
+<span class="hl-cmt"># Loss scaling: prevents underflow in gradients</span>
+scaler = torch.amp.GradScaler()
+<span class="hl-key">with</span> torch.amp.autocast(dtype=torch.bfloat16):
+    loss = model(batch)
+scaler.scale(loss).backward()
+scaler.step(optimizer)
+
+<span class="hl-cmt"># 3. Gradient accumulation</span>
+<span class="hl-cmt"># Effective batch = micro_batch × accum_steps</span>
+<span class="hl-cmt"># Llama 3: micro_batch=1, accum=1024</span>
+<span class="hl-cmt"># Effective batch: 4M tokens per step</span>
+
+<span class="hl-cmt"># 4. Checkpointing: save every N steps</span>
+<span class="hl-cmt"># If loss spikes → rollback to last good ckpt</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Training Loop -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">The Complete Training Loop</div><div class="cc-sub">Everything together in ~30 lines of PyTorch</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Simplified Training Loop</div>
+            <div class="cc-code"><span class="hl-key">import</span> torch, torch.nn.functional <span class="hl-key">as</span> F
+
+model = LLM(vocab=<span class="hl-num">128256</span>, d=<span class="hl-num">4096</span>,
+            n_heads=<span class="hl-num">32</span>, d_ff=<span class="hl-num">14336</span>, n_layers=<span class="hl-num">32</span>)
+optimizer = torch.optim.AdamW(
+    model.parameters(), lr=<span class="hl-num">1.5e-4</span>,
+    betas=(<span class="hl-num">0.9</span>, <span class="hl-num">0.95</span>), weight_decay=<span class="hl-num">0.1</span>
+)
+
+<span class="hl-key">for</span> step, batch <span class="hl-key">in</span> enumerate(dataloader):
+    <span class="hl-cmt"># Update learning rate</span>
+    lr = cosine_schedule(step, warmup=<span class="hl-num">2000</span>,
+                         total=total_steps,
+                         lr_max=<span class="hl-num">1.5e-4</span>, lr_min=<span class="hl-num">1.5e-5</span>)
+    <span class="hl-key">for</span> pg <span class="hl-key">in</span> optimizer.param_groups:
+        pg[<span class="hl-str">'lr'</span>] = lr
+
+    <span class="hl-cmt"># Forward: predict next tokens</span>
+    input_ids = batch[:, :-<span class="hl-num">1</span>]
+    targets = batch[:, <span class="hl-num">1</span>:]
+    logits = model(input_ids)
+    loss = F.cross_entropy(
+        logits.reshape(-<span class="hl-num">1</span>, <span class="hl-num">128256</span>),
+        targets.reshape(-<span class="hl-num">1</span>)
+    )
+
+    <span class="hl-cmt"># Backward: compute gradients</span>
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(
+        model.parameters(), <span class="hl-num">1.0</span>
+    )
+
+    <span class="hl-cmt"># Update: adjust parameters</span>
+    optimizer.step()
+    optimizer.zero_grad()</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">That&rsquo;s the Core</div><div class="cc-text">The entire pretraining process is: <strong>predict next token &rarr; measure error &rarr; compute gradients &rarr; update weights &rarr; repeat</strong>. This loop runs billions of times. For Llama 3 8B trained on 15T tokens with batch size 4M: that&rsquo;s ~3.75 million optimizer steps. Each step processes 4 million tokens and updates 8 billion parameters. The simplicity of the loop belies the engineering complexity of making it work at scale.</div></div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">Student reads a sentence, covers the next word, guesses, checks answer, adjusts understanding. Repeat for every sentence in every book in the library.</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In LLMs</div><div class="cb-text">Model sees context, predicts next token, computes cross-entropy loss, backpropagates gradients, AdamW updates 8B parameters. Repeat 3.75M times.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9: Evaluation -->
+    <div class="content-card" data-card="9">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">Evaluation: Is the Model Learning?</div><div class="cc-sub">Tracking loss curves, perplexity, and downstream benchmarks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Watch</div><div class="cc-text">During training, teams monitor several signals: <strong>Training loss</strong> should decrease smoothly. <strong>Validation loss</strong> (on held-out data) should track training loss &mdash; if it diverges, the model is overfitting. <strong>Perplexity</strong> (e^loss) gives an intuitive measure: a perplexity of 10 means the model is as confused as if choosing between 10 equally likely tokens. <strong>Downstream benchmarks</strong> (MMLU, HumanEval, GSM8K) test real capabilities at checkpoints.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The loss curve is remarkably predictable thanks to scaling laws. Labs can train a small model (1B), measure its loss curve, and extrapolate what a 70B model will achieve. This is how training runs costing $100M+ are planned with confidence. If the actual loss deviates from the predicted curve, something is wrong &mdash; bad data, bug, or hardware failure.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Metrics</div>
+            <div class="cc-code"><span class="hl-cmt"># Training metrics:</span>
+<span class="hl-cmt"># Loss: cross-entropy (lower = better)</span>
+<span class="hl-cmt"># Perplexity: e^loss (lower = better)</span>
+<span class="hl-cmt">#   PPL=10 → "choosing between 10 options"</span>
+<span class="hl-cmt">#   PPL=5  → "choosing between 5 options"</span>
+
+<span class="hl-cmt"># Typical loss values:</span>
+<span class="hl-cmt"># Random init: ~11.8 (ln(128256) ≈ 11.8)</span>
+<span class="hl-cmt"># After warmup: ~8.0</span>
+<span class="hl-cmt"># Mid-training: ~3.0</span>
+<span class="hl-cmt"># Final (good): ~2.0-2.5</span>
+<span class="hl-cmt"># Theoretical min: ~1.0-1.5</span>
+
+<span class="hl-cmt"># Downstream benchmarks (Llama 3 8B):</span>
+<span class="hl-cmt"># MMLU (knowledge): 66.6%</span>
+<span class="hl-cmt"># HumanEval (code): 62.2%</span>
+<span class="hl-cmt"># GSM8K (math): 79.6%</span>
+<span class="hl-cmt"># ARC-Challenge (reasoning): 78.6%</span>
+
+<span class="hl-cmt"># These are evaluated periodically during</span>
+<span class="hl-cmt"># training to track capability emergence</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-scaling-up.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: Scaling Up</a>
+    <a class="ch-nav-btn next" href="07-fine-tuning.html">Ch 7: Fine-Tuning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=9,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7],9:[7,8]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The training objective: predict the next token. "The capital of France is ___" → "Paris." Trillions of fill-in-the-blank examples teach grammar, facts, reasoning, and code. Self-supervised: text is its own teacher.',color:'#7c3aed'},
+    2:{text:'<strong>Step 2:</strong> Cross-entropy loss: L = -log(P(correct)). Confident and right → low loss. Confident and wrong → high loss. Connects to information theory — measures extra bits needed vs. perfect prediction.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Backpropagation traces blame through every layer using the chain rule. For 8B parameters, that\'s 8B gradients. Costs ~2× the forward pass. Residual connections keep gradients flowing.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> AdamW: adaptive learning rates + weight decay. Stores 2 extra values per parameter (momentum + variance). For 8B params: 64 GB just for optimizer states. The industry standard since GPT-2.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Learning rate schedule: warmup (2K steps) → peak (1.5e-4) → cosine decay (to 1.5e-5). Start slow to avoid divergence, then gradually reduce for fine adjustments.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Training data: 15T tokens from web, code, books, papers. Pipeline: crawl → filter → dedup → safety → mix. Data quality is now the #1 differentiator between models.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Training stability: gradient clipping (max_norm=1.0), mixed precision (BF16), gradient accumulation (4M tokens/step), checkpointing. Loss spikes can waste millions — stability is critical.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The complete loop: predict → loss → backward → clip → update → repeat. Llama 3 8B: 3.75M steps, each processing 4M tokens and updating 8B parameters. Simple loop, massive scale.',color:'#ea580c'},
+    9:{text:'<strong>Step 9:</strong> Evaluation: loss curves, perplexity, and benchmarks (MMLU, HumanEval, GSM8K). Scaling laws let you predict final performance from small-model experiments. The loss curve is your flight plan.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

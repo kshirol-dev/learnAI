@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: RAG in Production &amp; Evaluation — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--green)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{background:#15803d;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; RAG in Production &amp; Evaluation</h2><span class="tb-sub">Deploying, monitoring, evaluating, and continuously improving RAG systems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="11-production-evaluation-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Evaluate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Monitor</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">feedback</span></div><span class="pipe-label">Feedback</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Optimize</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">sync</span></div><span class="pipe-label">Iterate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Mature</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Deployment Architecture -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Deployment Architecture</div><div class="cc-sub">How to serve a RAG system in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Typical Production Stack</div><div class="cc-text">A production RAG system is a <strong>multi-service architecture</strong>:<br><br><strong>API layer:</strong> FastAPI or Flask serving the RAG endpoint. Handles authentication, rate limiting, request validation.<br><br><strong>Ingestion pipeline:</strong> Separate service (or batch job) that processes new documents, chunks, embeds, and upserts to the vector store. Runs on a schedule or triggered by events.<br><br><strong>Vector store:</strong> Managed service (Pinecone, Qdrant Cloud) or self-hosted (Qdrant, Weaviate on Kubernetes).<br><br><strong>LLM:</strong> API call to OpenAI/Anthropic/Azure OpenAI, or self-hosted via vLLM/TGI.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Minimal production RAG API</span>
+<span class="hl-key">from</span> fastapi <span class="hl-key">import</span> FastAPI, HTTPException
+<span class="hl-key">from</span> pydantic <span class="hl-key">import</span> BaseModel
+
+app = FastAPI()
+
+<span class="hl-key">class</span> Query(BaseModel):
+    question: str
+    session_id: str = <span class="hl-str">"default"</span>
+
+@app.post(<span class="hl-str">"/ask"</span>)
+<span class="hl-key">async def</span> ask(q: Query):
+    docs = <span class="hl-key">await</span> retriever.ainvoke(q.question)
+    answer = <span class="hl-key">await</span> rag_chain.ainvoke({
+        <span class="hl-str">"input"</span>: q.question,
+        <span class="hl-str">"context"</span>: docs
+    })
+    <span class="hl-key">return</span> {
+        <span class="hl-str">"answer"</span>: answer,
+        <span class="hl-str">"sources"</span>: [d.metadata <span class="hl-key">for</span> d <span class="hl-key">in</span> docs]
+    }</div>
+          <div class="cc-note n-green"><strong>Separate ingestion from serving.</strong> The ingestion pipeline (chunking, embedding, indexing) is CPU/GPU-intensive and runs in batch. The serving API is I/O-bound (waiting for vector search and LLM responses). Different scaling characteristics mean different infrastructure. Use a message queue (SQS, RabbitMQ) to decouple them.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Evaluation Metrics -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Evaluation Metrics</div><div class="cc-sub">Measuring retrieval quality and answer correctness</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Retrieval Metrics</div><div class="cc-text"><strong>Context Precision:</strong> Of the retrieved documents, how many are actually relevant? High precision = less noise in context.<br><br><strong>Context Recall:</strong> Of all relevant documents in the corpus, how many were retrieved? High recall = don't miss important information.<br><br><strong>Hit Rate (Recall@k):</strong> Does the correct document appear in the top-k results? The simplest and most important retrieval metric.<br><br><strong>Mean Reciprocal Rank (MRR):</strong> How high does the first relevant document rank? MRR = 1 means it's always first.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Generation Metrics</div><div class="cc-text"><strong>Faithfulness:</strong> Is the answer supported by the retrieved context? Measures hallucination. The most critical metric for RAG.<br><br><strong>Answer Relevancy:</strong> Does the answer actually address the question? An answer can be faithful but off-topic.<br><br><strong>Answer Correctness:</strong> Is the answer factually correct? Requires ground truth labels. The gold standard but expensive to create.<br><br><strong>Answer Completeness:</strong> Does the answer cover all aspects of the question? Important for complex, multi-part queries.</div></div>
+          <div class="cc-note n-blue"><strong>Start with three metrics:</strong> Hit Rate (retrieval), Faithfulness (generation), and Answer Relevancy (end-to-end). These catch the three most common failures: wrong documents retrieved, hallucinated answers, and off-topic responses. Add more metrics as your system matures.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Monitoring & Observability -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">Monitoring &amp; Observability</div><div class="cc-sub">Tracking performance, quality, and cost in real time</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Monitor</div><div class="cc-text"><strong>Latency:</strong> End-to-end response time. Break down by: embedding (10-50ms), retrieval (20-100ms), LLM generation (500-3000ms). Set SLOs (e.g., p95 &lt; 3s).<br><br><strong>Token usage &amp; cost:</strong> Track tokens per request (input + output). Set budgets and alerts. A single runaway prompt can cost $100+.<br><br><strong>Error rates:</strong> LLM API failures, vector store timeouts, rate limit hits. Set up retries with exponential backoff.<br><br><strong>Quality drift:</strong> Run Ragas evaluation on a sample of production queries weekly. Track faithfulness and relevancy over time. Alert if they drop below thresholds.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Observability Tools</div><div class="cc-text"><strong>LangSmith:</strong> Traces every step of your LangChain pipeline. Inputs, outputs, latency, tokens, errors. The most popular choice for LangChain apps.<br><br><strong>LangFuse:</strong> Open-source alternative to LangSmith. Self-hostable. Traces, scores, prompt management. Works with any framework.<br><br><strong>Phoenix (Arize):</strong> Open-source observability for LLM apps. Embedding visualization, trace analysis, evaluation. Good for debugging retrieval quality.<br><br><strong>OpenTelemetry:</strong> Standard observability framework. Integrate RAG metrics into your existing monitoring stack (Datadog, Grafana, etc.).</div></div>
+          <div class="cc-note n-violet"><strong>Log every production query.</strong> Store the question, retrieved documents, generated answer, latency, and token count. This dataset becomes your evaluation set, debugging tool, and fine-tuning data. LangSmith and LangFuse do this automatically. If you build custom, log to a structured store (PostgreSQL, BigQuery).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: User Feedback -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">feedback</span></div><div><div class="cc-title">User Feedback Loops</div><div class="cc-sub">Collecting and using human signals to improve quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Types of Feedback</div><div class="cc-text"><strong>Explicit feedback:</strong> Thumbs up/down buttons on answers. Simple to implement, low response rate (5-15% of users). But the signal is strong and unambiguous.<br><br><strong>Implicit feedback:</strong> Did the user ask a follow-up? Did they rephrase the same question? Did they copy the answer? These signals are noisy but abundant.<br><br><strong>Correction feedback:</strong> Let users edit or correct the answer. The most valuable signal but requires UI investment. Great for internal tools where users are motivated.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Using Feedback</div><div class="cc-text"><strong>1. Identify failure patterns:</strong> Cluster thumbs-down queries. Are they about a specific topic? A specific document type? This tells you where to focus improvement efforts.<br><br><strong>2. Build evaluation sets:</strong> Thumbs-up queries with their answers become ground truth for automated evaluation. Over time, you build a comprehensive test suite from real user queries.<br><br><strong>3. Fine-tune retrieval:</strong> Use feedback to identify queries where the wrong documents were retrieved. Adjust chunking, add metadata, or create synthetic training pairs for a custom reranker.<br><br><strong>4. Improve prompts:</strong> Analyze thumbs-down answers to find prompt weaknesses. Iterate on system prompts to address common failure modes.</div></div>
+          <div class="cc-note n-amber"><strong>The feedback flywheel:</strong> Users provide feedback &rarr; you identify failures &rarr; you fix the pipeline &rarr; quality improves &rarr; users trust the system more &rarr; more usage &rarr; more feedback. This virtuous cycle is what separates good RAG systems from great ones. Start collecting feedback from day one.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Optimization -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Optimization Strategies</div><div class="cc-sub">Improving latency, cost, and quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Latency Optimization</div><div class="cc-text"><strong>Streaming:</strong> Stream LLM responses to the user. Time-to-first-token (TTFT) drops from 2-3s to 200-500ms. Users perceive the system as much faster.<br><br><strong>Parallel retrieval:</strong> If you search multiple indexes or use hybrid search, run queries in parallel (asyncio). Don't wait for one to finish before starting the next.<br><br><strong>Semantic caching:</strong> Cache answers for semantically similar queries. Cache hit = &lt;50ms response. Start with exact match caching, then add semantic similarity.<br><br><strong>Smaller models:</strong> Use GPT-4o-mini or Claude 3.5 Haiku for simple questions. Route complex questions to larger models. Save 80-90% on LLM costs for simple queries.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quality Optimization</div><div class="cc-text"><strong>Better chunking:</strong> The #1 lever for retrieval quality. Experiment with chunk sizes (256-1024 tokens), overlap (10-20%), and strategies (recursive, semantic).<br><br><strong>Add reranking:</strong> A cross-encoder reranker (Cohere Rerank, BGE Reranker) dramatically improves precision. Retrieve 20 documents, rerank to top 5. Adds 100-200ms latency but significantly better context.<br><br><strong>Hybrid search:</strong> Combine vector search with BM25 keyword search. Catches exact matches that embedding models miss. Use Reciprocal Rank Fusion to merge results.<br><br><strong>Contextual Retrieval:</strong> Prepend document context to each chunk before embedding (Anthropic technique). Up to 49% improvement in retrieval accuracy.</div></div>
+          <div class="cc-note n-pink"><strong>Optimization order:</strong> (1) Fix chunking. (2) Add hybrid search. (3) Add reranking. (4) Add streaming. (5) Add caching. (6) Add model routing. Each step has diminishing returns. Measure with Ragas after each change to confirm improvement. Don't optimize what you haven't measured.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Data Freshness & Iteration -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">sync</span></div><div><div class="cc-title">Data Freshness &amp; Continuous Improvement</div><div class="cc-sub">Keeping your knowledge base current and pipeline evolving</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Freshness</div><div class="cc-text"><strong>Incremental ingestion:</strong> Don't re-index everything when a document changes. Track document hashes, only re-process changed/new documents. LlamaIndex's <code>IngestionPipeline</code> with caching handles this.<br><br><strong>Scheduled sync:</strong> Set up a cron job or event trigger to sync your data sources. Frequency depends on how often data changes: real-time for chat support, daily for documentation, weekly for research papers.<br><br><strong>Stale document handling:</strong> Delete vectors for removed documents. Update metadata (e.g., "last_updated") so you can filter by freshness at query time. Some queries should prefer recent documents.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Continuous Improvement Cycle</div><div class="cc-text"><strong>Week 1-2:</strong> Deploy basic RAG. Collect queries and feedback. Identify top failure modes.<br><br><strong>Week 3-4:</strong> Fix the biggest failure mode (usually chunking or retrieval). Re-evaluate with Ragas. Deploy improvement.<br><br><strong>Month 2:</strong> Add hybrid search and reranking. Build a golden evaluation set from production queries. Set up automated evaluation in CI/CD.<br><br><strong>Month 3+:</strong> Add advanced patterns as needed (agentic, multi-modal, graph). Optimize latency and cost. The system gets better every week because you're measuring and iterating.</div></div>
+          <div class="cc-note n-teal"><strong>RAG is never "done."</strong> Your data changes, user needs evolve, better models are released, and new techniques emerge. The teams that win are the ones with the tightest feedback loop: deploy, measure, learn, improve, repeat. Invest in evaluation infrastructure early because it pays dividends forever.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Maturity Model -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">RAG Maturity Model</div><div class="cc-sub">From prototype to production-grade system</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Level 1: Prototype</div><div class="cc-text">Basic RAG with LangChain + Chroma + OpenAI. Works for demos. No evaluation, no monitoring, no feedback. Breaks on edge cases. Good for validating the use case.</div></div>
+          <div class="cc-block"><div class="cc-label">Level 2: MVP</div><div class="cc-text">Deployed API with a managed vector store. Basic evaluation (Ragas on 50 test queries). Logging and error tracking. Thumbs up/down feedback. Handles 80% of queries well.</div></div>
+          <div class="cc-block"><div class="cc-label">Level 3: Production</div><div class="cc-text">Hybrid search + reranking. Automated evaluation in CI/CD. LangSmith/LangFuse tracing. Incremental ingestion. Streaming responses. Handles 95% of queries well. Cost-optimized.</div></div>
+          <div class="cc-block"><div class="cc-label">Level 4: Advanced</div><div class="cc-text">Agentic or multi-modal RAG. A/B testing pipeline changes. Custom reranker fine-tuned on your data. Semantic caching. Model routing. Sub-second TTFT. Handles 99% of queries well.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Pitfalls</div><div class="cc-text"><strong>1. Skipping evaluation:</strong> "It seems to work" is not a metric. You need numbers. Build a test set and run Ragas before every change.<br><br><strong>2. Over-engineering early:</strong> Don't start with Graph RAG and agentic patterns. Start with basic RAG, measure where it fails, then add complexity.<br><br><strong>3. Ignoring chunking:</strong> Teams spend weeks on prompt engineering when the real problem is bad chunking. Fix retrieval first, then fix generation.<br><br><strong>4. No feedback loop:</strong> If you're not collecting user feedback, you're flying blind. Even simple thumbs up/down is invaluable.<br><br><strong>5. Treating RAG as a one-time project:</strong> RAG is a living system. Budget for ongoing maintenance, data updates, and continuous improvement.</div></div>
+          <div class="cc-note n-orange"><strong>Most teams should aim for Level 3 within 2-3 months.</strong> Level 2 is achievable in 2-4 weeks. Level 4 is only needed for high-stakes, high-traffic applications. The jump from Level 1 to Level 2 (adding evaluation and feedback) delivers the most value per effort. Don't skip it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Deployment architecture:</strong> Separate ingestion (batch, CPU/GPU-intensive) from serving (I/O-bound, latency-sensitive). Serve with FastAPI + async. Use a managed vector store (Pinecone, Qdrant Cloud) to avoid ops burden. Decouple with a message queue. Scale the API horizontally behind a load balancer.',color:'#16a34a'},
+    2:{text:'<strong>Evaluation metrics:</strong> Retrieval: <strong>Hit Rate</strong> (does the right doc appear in top-k?), <strong>MRR</strong> (how high does it rank?), <strong>Context Precision/Recall</strong>. Generation: <strong>Faithfulness</strong> (is the answer grounded in context? Most critical.), <strong>Answer Relevancy</strong> (does it address the question?), <strong>Correctness</strong> (factually right?). Start with Hit Rate + Faithfulness + Relevancy.',color:'#2563eb'},
+    3:{text:'<strong>Monitoring:</strong> Track latency (p50, p95, p99), token usage, error rates, and quality drift. Use <strong>LangSmith</strong> (LangChain native), <strong>LangFuse</strong> (open-source, self-hostable), or <strong>Phoenix/Arize</strong> (embedding visualization). Log every production query with its retrieved docs and answer. Run weekly Ragas evaluation on a sample.',color:'#7c3aed'},
+    4:{text:'<strong>User feedback:</strong> Add thumbs up/down to every answer (explicit). Track follow-ups and rephrases (implicit). Use feedback to: (1) identify failure clusters, (2) build evaluation sets from real queries, (3) fine-tune retrieval, (4) improve prompts. The feedback flywheel is what separates good RAG from great RAG. Start collecting from day one.',color:'#d97706'},
+    5:{text:'<strong>Optimization order:</strong> (1) Fix chunking (biggest lever). (2) Add hybrid search (catches keyword matches). (3) Add reranking (dramatically better precision). (4) Stream responses (perceived latency drops 80%). (5) Add caching (repeat queries become instant). (6) Model routing (GPT-4o-mini for simple, GPT-4o for complex). Measure with Ragas after each change.',color:'#db2777'},
+    6:{text:'<strong>Data freshness:</strong> Track document hashes for incremental ingestion. Schedule syncs based on data change frequency. Delete vectors for removed documents. <strong>Continuous improvement:</strong> Week 1-2: deploy + collect feedback. Week 3-4: fix top failure mode. Month 2: hybrid search + reranking + automated eval. Month 3+: advanced patterns as needed.',color:'#0d9488'},
+    7:{text:'<strong>RAG maturity model:</strong> Level 1 (Prototype) = basic RAG, no eval. Level 2 (MVP) = deployed + evaluation + feedback. Level 3 (Production) = hybrid search + reranking + CI/CD eval + streaming. Level 4 (Advanced) = agentic + A/B testing + custom reranker + caching. <strong>Most teams should reach Level 3 in 2-3 months.</strong> The biggest pitfall: skipping evaluation.',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--green)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

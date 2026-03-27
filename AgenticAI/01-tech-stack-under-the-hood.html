@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: Tech Stack Overview — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --bg-white: #ffffff;
+    --bg-muted: #f0f2f7;
+    --border: #dfe3ed;
+    --border-light: #eaedf4;
+    --text-1: #1b2035;
+    --text-2: #505872;
+    --text-3: #8892ab;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --blue-border: #bfdbfe;
+    --violet: #7c3aed;
+    --violet-light: #ede9fe;
+    --violet-border: #c4b5fd;
+    --pink: #db2777;
+    --pink-light: #fdf2f8;
+    --pink-border: #f9a8d4;
+    --teal: #0d9488;
+    --teal-light: #f0fdfa;
+    --teal-border: #99f6e4;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --amber-border: #fcd34d;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --green-border: #bbf7d0;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --red-border: #fecaca;
+    --slate: #64748b;
+    --slate-light: #f1f5f9;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text-1);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 20px 60px;
+  }
+
+  .material-symbols-rounded {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+
+  .canvas {
+    width:100%;
+    max-width:1120px;
+    background:var(--bg-white);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg);
+    overflow:hidden;
+  }
+
+  .title-bar {
+    padding:18px 36px;
+    border-bottom:1px solid var(--border-light);
+    display:flex; align-items:center; gap:12px;
+  }
+  .title-bar h2 { font-size:16px; font-weight:800; letter-spacing:-.5px; }
+  .title-bar .tb-sub { font-size:11px; color:var(--text-3); }
+  .title-bar .tb-tag {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; font-weight:600;
+    letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--violet); padding:4px 12px;
+    background:var(--violet-light); border:1px solid var(--violet-border);
+    border-radius:6px; margin-left:auto;
+  }
+  .tb-nav {
+    display:flex; align-items:center; gap:8px; margin-right:8px;
+  }
+  .tb-nav a {
+    font-size:10px; font-weight:600; text-decoration:none;
+    padding:4px 10px; border-radius:6px;
+    transition:all .15s;
+  }
+  .tb-nav a.nav-back { color:var(--text-3); background:var(--bg-muted); }
+  .tb-nav a.nav-back:hover { color:var(--text-1); background:var(--border); }
+  .tb-nav a.nav-alt { color:var(--blue); background:var(--blue-light); border:1px solid var(--blue-border); }
+  .tb-nav a.nav-alt:hover { background:var(--blue); color:#fff; }
+
+  .narration {
+    padding:12px 36px;
+    background:linear-gradient(90deg, var(--violet-light) 0%, var(--pink-light) 25%, var(--teal-light) 50%, var(--amber-light) 75%, var(--green-light) 100%);
+    border-bottom:1px solid var(--border-light);
+    display:flex; align-items:center; gap:14px;
+    min-height:48px; cursor:pointer;
+    transition:background .3s ease;
+  }
+  .narration:hover {
+    background:linear-gradient(90deg, #e8e4fd 0%, #fce7f3 25%, #ccfbf1 50%, #fef3c7 75%, #dcfce7 100%);
+  }
+  .nar-step {
+    width:28px; height:28px; border-radius:50%;
+    background:var(--violet); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; font-weight:800; flex-shrink:0;
+    transition:background .4s ease;
+  }
+  .nar-text {
+    font-size:12px; font-weight:500; color:var(--text-1); line-height:1.5;
+  }
+  .nar-text strong { font-weight:700; }
+  .nar-text code {
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    background:rgba(0,0,0,0.05); padding:1px 5px; border-radius:3px;
+  }
+
+  .progress-track { height:3px; background:var(--bg-muted); position:relative; }
+  .progress-fill {
+    position:absolute; top:0; left:0; height:100%; width:0%;
+    background:linear-gradient(90deg, var(--violet), var(--pink), var(--teal), var(--amber), var(--green));
+    transition:width .5s ease;
+  }
+
+  .step-counter {
+    padding:8px 36px; display:flex; align-items:center; gap:12px;
+    background:var(--bg-white); border-bottom:1px solid var(--border-light);
+  }
+  .sc-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; font-weight:600; letter-spacing:1px;
+    text-transform:uppercase; color:var(--text-3);
+  }
+  .sc-num {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; font-weight:700; color:var(--violet); min-width:60px;
+  }
+  .sc-dots { display:flex; gap:4px; margin-left:auto; }
+  .sc-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--border); transition:all .3s ease;
+  }
+  .sc-dot.filled { background:var(--violet); box-shadow:0 0 5px rgba(124,58,237,0.3); }
+
+  .zone {
+    padding:22px 32px;
+    border-bottom:1px solid var(--border-light);
+    position:relative;
+  }
+  .zone:last-child { border-bottom:none; }
+
+  .zone-head {
+    display:flex; align-items:center; gap:10px; margin-bottom:16px;
+  }
+  .zone-tag {
+    padding:3px 10px; border-radius:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:700;
+    letter-spacing:1.2px; text-transform:uppercase; flex-shrink:0;
+  }
+  .zone-title { font-size:12px; font-weight:700; }
+  .zone-sub { font-size:10px; color:var(--text-3); margin-left:auto; }
+
+  .zone-runnable { background:linear-gradient(180deg, var(--violet-light) 0%, var(--bg-white) 100%); }
+  .zone-runnable .zone-tag { background:var(--violet-light); color:var(--violet); border:1px solid var(--violet-border); }
+  .zone-runnable .zone-title { color:var(--violet); }
+
+  .zone-compose { background:linear-gradient(180deg, var(--pink-light) 0%, var(--bg-white) 100%); }
+  .zone-compose .zone-tag { background:var(--pink-light); color:var(--pink); border:1px solid var(--pink-border); }
+  .zone-compose .zone-title { color:var(--pink); }
+
+  .zone-sg { background:linear-gradient(180deg, var(--teal-light) 0%, var(--bg-white) 100%); }
+  .zone-sg .zone-tag { background:var(--teal-light); color:var(--teal); border:1px solid var(--teal-border); }
+  .zone-sg .zone-title { color:var(--teal); }
+
+  .zone-pregel { background:linear-gradient(180deg, var(--blue-light) 0%, var(--bg-white) 100%); }
+  .zone-pregel .zone-tag { background:var(--blue-light); color:var(--blue); border:1px solid var(--blue-border); }
+  .zone-pregel .zone-title { color:var(--blue); }
+
+  .zone-loop { background:linear-gradient(180deg, var(--amber-light) 0%, var(--bg-white) 100%); }
+  .zone-loop .zone-tag { background:var(--amber-light); color:var(--amber); border:1px solid var(--amber-border); }
+  .zone-loop .zone-title { color:var(--amber); }
+
+  .zone-cl { background:linear-gradient(180deg, var(--green-light) 0%, var(--bg-white) 100%); }
+  .zone-cl .zone-tag { background:var(--green-light); color:var(--green); border:1px solid var(--green-border); }
+  .zone-cl .zone-title { color:var(--green); }
+
+  .zone-trace { background:linear-gradient(180deg, var(--slate-light) 0%, var(--bg-white) 100%); }
+  .zone-trace .zone-tag { background:var(--slate-light); color:var(--slate); border:1px solid var(--border); }
+  .zone-trace .zone-title { color:var(--slate); }
+
+  .flow-row {
+    display:flex; align-items:center; justify-content:center;
+    gap:0; flex-wrap:wrap;
+  }
+
+  .fnode {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:14px 16px;
+    background:var(--bg-white);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    min-width:115px; max-width:140px;
+    text-align:center;
+    box-shadow:var(--shadow-sm);
+    transition:all .5s ease;
+    cursor:default; position:relative;
+  }
+  .fnode:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+
+  .fnode-icon {
+    width:36px; height:36px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fnode-icon .material-symbols-rounded { font-size:20px; }
+  .fnode-label { font-size:10px; font-weight:700; letter-spacing:-.1px; }
+  .fnode-sub { font-size:8px; color:var(--text-3); line-height:1.4; }
+
+  .fnode.c-violet .fnode-icon { background:var(--violet-light); color:var(--violet); }
+  .fnode.c-violet .fnode-label { color:var(--violet); }
+  .fnode.c-violet { border-color:var(--violet-border); }
+  .fnode.c-violet.active { box-shadow:0 0 0 3px rgba(124,58,237,0.15), var(--shadow-md); }
+
+  .fnode.c-pink .fnode-icon { background:var(--pink-light); color:var(--pink); }
+  .fnode.c-pink .fnode-label { color:var(--pink); }
+  .fnode.c-pink { border-color:var(--pink-border); }
+  .fnode.c-pink.active { box-shadow:0 0 0 3px rgba(219,39,119,0.15), var(--shadow-md); }
+
+  .fnode.c-teal .fnode-icon { background:var(--teal-light); color:var(--teal); }
+  .fnode.c-teal .fnode-label { color:var(--teal); }
+  .fnode.c-teal { border-color:var(--teal-border); }
+  .fnode.c-teal.active { box-shadow:0 0 0 3px rgba(13,148,136,0.15), var(--shadow-md); }
+
+  .fnode.c-blue .fnode-icon { background:var(--blue-light); color:var(--blue); }
+  .fnode.c-blue .fnode-label { color:var(--blue); }
+  .fnode.c-blue { border-color:var(--blue-border); }
+  .fnode.c-blue.active { box-shadow:0 0 0 3px rgba(37,99,235,0.15), var(--shadow-md); }
+
+  .fnode.c-amber .fnode-icon { background:var(--amber-light); color:var(--amber); }
+  .fnode.c-amber .fnode-label { color:var(--amber); }
+  .fnode.c-amber { border-color:var(--amber-border); }
+  .fnode.c-amber.active { box-shadow:0 0 0 3px rgba(217,119,6,0.15), var(--shadow-md); }
+
+  .fnode.c-green .fnode-icon { background:var(--green-light); color:var(--green); }
+  .fnode.c-green .fnode-label { color:var(--green); }
+  .fnode.c-green { border-color:var(--green-border); }
+  .fnode.c-green.active { box-shadow:0 0 0 3px rgba(22,163,74,0.15), var(--shadow-md); }
+
+  .fnode.c-slate .fnode-icon { background:var(--slate-light); color:var(--slate); }
+  .fnode.c-slate .fnode-label { color:var(--slate); }
+  .fnode.c-slate.active { box-shadow:0 0 0 3px rgba(100,116,139,0.15), var(--shadow-md); }
+
+  .fnode.active { transform:translateY(-2px); }
+
+  .farr {
+    display:flex; align-items:center;
+    width:36px; height:2px;
+    position:relative; margin:0 2px; flex-shrink:0;
+    transition:opacity .5s ease;
+  }
+  .farr::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg, var(--border), var(--text-3));
+    border-radius:1px;
+  }
+  .farr::after {
+    content:''; position:absolute; right:-2px; top:50%; transform:translateY(-50%);
+    border:4px solid transparent; border-left:5px solid var(--text-3);
+  }
+  .farr-label {
+    position:absolute; top:-15px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace;
+    font-size:7px; font-weight:500; color:var(--text-3);
+    white-space:nowrap; letter-spacing:.3px;
+  }
+
+  .loop-conn {
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    padding:6px 32px;
+    background:var(--bg-muted);
+    border-bottom:1px solid var(--border-light);
+    transition:opacity .5s ease;
+  }
+  .loop-dash {
+    flex:1; height:1px;
+    background:repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 10px);
+  }
+  .loop-pill {
+    display:flex; align-items:center; gap:6px;
+    padding:4px 14px;
+    background:var(--bg-white); border:1px solid var(--border);
+    border-radius:7px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:500;
+    color:var(--text-3); white-space:nowrap; letter-spacing:.3px;
+    transition:all .5s ease;
+  }
+  .loop-pill .material-symbols-rounded { font-size:13px; }
+  .loop-conn.active .loop-pill {
+    background:var(--violet-light); border-color:var(--violet-border); color:var(--violet);
+  }
+  .loop-conn.c-pink.active .loop-pill {
+    background:var(--pink-light); border-color:var(--pink-border); color:var(--pink);
+  }
+  .loop-conn.c-teal.active .loop-pill {
+    background:var(--teal-light); border-color:var(--teal-border); color:var(--teal);
+  }
+  .loop-conn.c-blue.active .loop-pill {
+    background:var(--blue-light); border-color:var(--blue-border); color:var(--blue);
+  }
+  .loop-conn.c-amber.active .loop-pill {
+    background:var(--amber-light); border-color:var(--amber-border); color:var(--amber);
+  }
+  .loop-conn.c-green.active .loop-pill {
+    background:var(--green-light); border-color:var(--green-border); color:var(--green);
+  }
+  .loop-conn.c-slate.active .loop-pill {
+    background:var(--slate-light); border-color:var(--border); color:var(--slate);
+  }
+
+  .step-badge {
+    position:absolute; top:-8px; right:-8px;
+    width:20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:800; color:#fff;
+    z-index:10; opacity:0; transform:scale(0);
+    transition:all .4s cubic-bezier(.34,1.56,.64,1);
+    pointer-events:none;
+  }
+  .loop-conn .step-badge {
+    position:relative; top:auto; right:auto; transform:none; flex-shrink:0;
+    width:20px; height:20px; font-size:8px;
+  }
+
+  [data-step].dimmed { opacity:0.15; filter:grayscale(0.7); }
+  [data-step].active { opacity:1; filter:none; }
+  [data-step].active .step-badge { opacity:1; transform:scale(1); }
+
+  .bg-violet { background:var(--violet); }
+  .bg-pink { background:var(--pink); }
+  .bg-teal { background:var(--teal); }
+  .bg-blue { background:var(--blue); }
+  .bg-amber { background:var(--amber); }
+  .bg-green { background:var(--green); }
+  .bg-slate { background:var(--slate); }
+
+  .detail-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.2);
+    z-index:199; opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .detail-overlay.visible { opacity:1; pointer-events:auto; }
+
+  .detail-panel {
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.95);
+    width:560px; max-width:92vw; max-height:82vh;
+    overflow-y:auto;
+    background:var(--bg-white);
+    border:1.5px solid var(--border);
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.15);
+    z-index:200; opacity:0; pointer-events:none;
+    transition:all .3s cubic-bezier(.4,0,.2,1);
+  }
+  .detail-panel.visible {
+    opacity:1; pointer-events:auto;
+    transform:translate(-50%,-50%) scale(1);
+  }
+  .dp-head {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 20px;
+    border-bottom:1px solid var(--border-light);
+    position:sticky; top:0; background:var(--bg-white);
+    border-radius:16px 16px 0 0; z-index:1;
+  }
+  .dp-step {
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; font-weight:800; color:#fff; flex-shrink:0;
+  }
+  .dp-title { font-size:12px; font-weight:700; }
+  .dp-close {
+    margin-left:auto; width:28px; height:28px;
+    border:none; background:var(--bg-muted); border-radius:50%;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s;
+  }
+  .dp-close:hover { background:var(--border); }
+  .dp-close .material-symbols-rounded { font-size:16px; color:var(--text-3); }
+
+  .dp-body { padding:16px 20px 20px; }
+  .dp-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:700;
+    letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:6px;
+  }
+  .dp-code {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; line-height:1.7; color:var(--text-1);
+    background:var(--bg-muted); border:1px solid var(--border-light);
+    border-radius:8px; padding:12px 14px; margin-bottom:14px;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .dp-code .hl-key { color:var(--violet); font-weight:600; }
+  .dp-code .hl-str { color:var(--teal); }
+  .dp-code .hl-num { color:var(--amber); }
+  .dp-code .hl-comment { color:var(--text-3); font-style:italic; }
+  .dp-code .hl-cmd { color:var(--pink); font-weight:600; }
+  .dp-code .hl-err { color:var(--red); font-weight:600; }
+  .dp-code .hl-ok { color:var(--green); font-weight:600; }
+  .dp-note {
+    font-size:11px; color:var(--text-2); line-height:1.6;
+    padding:10px 14px; border-radius:8px; margin-bottom:14px;
+  }
+  .dp-note.n-violet { background:var(--violet-light); border:1px solid var(--violet-border); }
+  .dp-note.n-violet strong { color:var(--violet); }
+  .dp-note.n-pink { background:var(--pink-light); border:1px solid var(--pink-border); }
+  .dp-note.n-pink strong { color:var(--pink); }
+  .dp-note.n-teal { background:var(--teal-light); border:1px solid var(--teal-border); }
+  .dp-note.n-teal strong { color:var(--teal); }
+  .dp-note.n-blue { background:var(--blue-light); border:1px solid var(--blue-border); }
+  .dp-note.n-blue strong { color:var(--blue); }
+  .dp-note.n-amber { background:var(--amber-light); border:1px solid var(--amber-border); }
+  .dp-note.n-amber strong { color:var(--amber); }
+  .dp-note.n-green { background:var(--green-light); border:1px solid var(--green-border); }
+  .dp-note.n-green strong { color:var(--green); }
+  .dp-note.n-slate { background:var(--slate-light); border:1px solid var(--border); }
+  .dp-note.n-slate strong { color:var(--slate); }
+  .dp-note:last-child, .dp-code:last-child { margin-bottom:0; }
+
+  .controls {
+    position:fixed; bottom:24px; right:24px;
+    display:flex; align-items:center; gap:6px;
+    background:var(--bg-white); border:1.5px solid var(--border);
+    border-radius:28px; padding:5px 6px;
+    box-shadow:var(--shadow-lg); z-index:100;
+  }
+  .ctrl-btn {
+    width:36px; height:36px; border-radius:50%;
+    border:none; background:transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .15s; color:var(--text-2);
+  }
+  .ctrl-btn:hover { background:var(--bg-muted); color:var(--text-1); }
+  .ctrl-btn:active { transform:scale(0.92); }
+  .ctrl-btn .material-symbols-rounded { font-size:20px; }
+  .ctrl-play {
+    width:40px; height:40px;
+    background:var(--violet); color:#fff; border-radius:50%;
+  }
+  .ctrl-play:hover { background:#6d28d9; color:#fff; }
+  .ctrl-play .material-symbols-rounded { font-size:22px; color:#fff; }
+
+  @media (max-width:900px) {
+    body { padding:16px 10px 48px; }
+    .zone { padding:18px 18px; }
+    .narration, .loop-conn { padding:10px 18px; }
+    .title-bar, .step-counter { padding:14px 18px; }
+    .flow-row { gap:4px; }
+    .farr { width:24px; }
+    .fnode { min-width:90px; padding:10px 10px; }
+  }
+
+  @media (max-width:600px) {
+    .flow-row { flex-direction:column; gap:0; }
+    .farr { width:2px; height:20px; margin:0; }
+    .farr::before { background:var(--border); }
+    .farr::after {
+      right:auto; bottom:-2px; top:auto; left:50%; transform:translateX(-50%);
+      border:4px solid transparent; border-top:5px solid var(--text-3);
+    }
+    .title-bar { flex-direction:column; gap:6px; align-items:flex-start; }
+    .title-bar .tb-tag { margin-left:0; }
+    .step-counter { flex-wrap:wrap; }
+    .tb-nav { margin-right:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="canvas">
+
+  <!-- TITLE -->
+  <div class="title-bar">
+    <div>
+      <h2>Ch 1 &mdash; Tech Stack Under the Hood</h2>
+      <span class="tb-sub">Code-level internals: Runnable protocol, StateGraph, Pregel engine, event loops, tracing</span>
+    </div>
+    <div class="tb-nav">
+      <a class="nav-back" href="index.html">Index</a>
+      <a class="nav-alt" href="01-tech-stack-high-level.html">&larr; High Level</a>
+    </div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+
+  <!-- NARRATION -->
+  <div class="narration" id="narration">
+    <div class="nar-step" id="narStep">-</div>
+    <div class="nar-text" id="narText">Click play or press Space to begin...</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter">
+    <span class="sc-label">Step</span>
+    <span class="sc-num" id="stepLabel">- / 10</span>
+    <div class="sc-dots" id="stepDots"></div>
+  </div>
+
+  <!-- ZONE A: RUNNABLE PROTOCOL -->
+  <div class="zone zone-runnable">
+    <div class="zone-head">
+      <span class="zone-tag">A</span>
+      <span class="zone-title">The Runnable Protocol</span>
+      <span class="zone-sub">LangChain's universal interface</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="1">
+        <span class="step-badge bg-violet">1</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">api</span></div>
+        <span class="fnode-label">Runnable</span>
+        <span class="fnode-sub">Base class for<br>every component</span>
+      </div>
+      <div class="farr dimmed" data-step="1"><span class="farr-label">.invoke()</span></div>
+      <div class="fnode c-violet dimmed" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">play_arrow</span></div>
+        <span class="fnode-label">.invoke()</span>
+        <span class="fnode-sub">Single input<br>single output</span>
+      </div>
+      <div class="farr dimmed" data-step="1"><span class="farr-label">.stream()</span></div>
+      <div class="fnode c-violet dimmed" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">stream</span></div>
+        <span class="fnode-label">.stream()</span>
+        <span class="fnode-sub">Yields chunks<br>as they arrive</span>
+      </div>
+      <div class="farr dimmed" data-step="1"><span class="farr-label">.batch()</span></div>
+      <div class="fnode c-violet dimmed" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">dynamic_feed</span></div>
+        <span class="fnode-label">.batch()</span>
+        <span class="fnode-sub">Parallel execution<br>of multiple inputs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-pink dimmed" data-step="2">
+    <span class="step-badge bg-pink">2</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      Runnables compose via the | pipe operator
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE B: COMPOSITION -->
+  <div class="zone zone-compose">
+    <div class="zone-head">
+      <span class="zone-tag">B</span>
+      <span class="zone-title">RunnableSequence &amp; Composition</span>
+      <span class="zone-sub">How the | pipe operator works</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-pink dimmed" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">edit_note</span></div>
+        <span class="fnode-label">Prompt</span>
+        <span class="fnode-sub">Runnable that<br>formats messages</span>
+      </div>
+      <div class="farr dimmed" data-step="2"><span class="farr-label">|</span></div>
+      <div class="fnode c-pink dimmed" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">smart_toy</span></div>
+        <span class="fnode-label">Model</span>
+        <span class="fnode-sub">Runnable that<br>calls the LLM</span>
+      </div>
+      <div class="farr dimmed" data-step="2"><span class="farr-label">|</span></div>
+      <div class="fnode c-pink dimmed" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">output</span></div>
+        <span class="fnode-label">Parser</span>
+        <span class="fnode-sub">Runnable that<br>extracts output</span>
+      </div>
+      <div class="farr dimmed" data-step="2"><span class="farr-label">=</span></div>
+      <div class="fnode c-pink dimmed" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">link</span></div>
+        <span class="fnode-label">RunnableSequence</span>
+        <span class="fnode-sub">Also a Runnable!<br>Recursive composition</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-teal dimmed" data-step="3">
+    <span class="step-badge bg-teal">3</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      LangGraph: StateGraph definition
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE C: STATEGRAPH -->
+  <div class="zone zone-sg">
+    <div class="zone-head">
+      <span class="zone-tag">C</span>
+      <span class="zone-title">StateGraph Definition</span>
+      <span class="zone-sub">Nodes, edges, and typed state</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">data_object</span></div>
+        <span class="fnode-label">TypedDict State</span>
+        <span class="fnode-sub">Schema for the<br>graph's memory</span>
+      </div>
+      <div class="farr dimmed" data-step="3"><span class="farr-label">used by</span></div>
+      <div class="fnode c-teal dimmed" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">hub</span></div>
+        <span class="fnode-label">add_node()</span>
+        <span class="fnode-sub">Register a<br>function as node</span>
+      </div>
+      <div class="farr dimmed" data-step="4"><span class="farr-label">wired by</span></div>
+      <div class="fnode c-teal dimmed" data-step="4">
+        <span class="step-badge bg-teal">4</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">call_split</span></div>
+        <span class="fnode-label">add_edge()</span>
+        <span class="fnode-sub">Static or<br>conditional routing</span>
+      </div>
+      <div class="farr dimmed" data-step="4"><span class="farr-label">compiles</span></div>
+      <div class="fnode c-teal dimmed" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">compiled</span></div>
+        <span class="fnode-label">.compile()</span>
+        <span class="fnode-sub">Produces a<br>CompiledGraph</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-blue dimmed" data-step="5">
+    <span class="step-badge bg-blue">5</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      Under the hood: the Pregel execution engine
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE D: PREGEL ENGINE -->
+  <div class="zone zone-pregel">
+    <div class="zone-head">
+      <span class="zone-tag">D</span>
+      <span class="zone-title">Pregel Execution Engine</span>
+      <span class="zone-sub">How CompiledGraph actually runs</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="5">
+        <div class="fnode-icon"><span class="material-symbols-rounded">inbox</span></div>
+        <span class="fnode-label">Channels</span>
+        <span class="fnode-sub">State fields as<br>message channels</span>
+      </div>
+      <div class="farr dimmed" data-step="5"><span class="farr-label">read</span></div>
+      <div class="fnode c-blue dimmed" data-step="5">
+        <div class="fnode-icon"><span class="material-symbols-rounded">hub</span></div>
+        <span class="fnode-label">Nodes Execute</span>
+        <span class="fnode-sub">Read channels,<br>run function</span>
+      </div>
+      <div class="farr dimmed" data-step="6"><span class="farr-label">write</span></div>
+      <div class="fnode c-blue dimmed" data-step="6">
+        <span class="step-badge bg-blue">6</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">edit</span></div>
+        <span class="fnode-label">State Update</span>
+        <span class="fnode-sub">Reducer merges<br>partial updates</span>
+      </div>
+      <div class="farr dimmed" data-step="6"><span class="farr-label">check</span></div>
+      <div class="fnode c-blue dimmed" data-step="6">
+        <div class="fnode-icon"><span class="material-symbols-rounded">route</span></div>
+        <span class="fnode-label">Edge Check</span>
+        <span class="fnode-sub">Evaluate edges,<br>pick next node</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-amber dimmed" data-step="7">
+    <span class="step-badge bg-amber">7</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      The execution loop and checkpointing
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE E: EXECUTION LOOP -->
+  <div class="zone zone-loop">
+    <div class="zone-head">
+      <span class="zone-tag">E</span>
+      <span class="zone-title">The Execution Loop</span>
+      <span class="zone-sub">Read state &rarr; execute node &rarr; write state &rarr; repeat</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-amber dimmed" data-step="7">
+        <div class="fnode-icon"><span class="material-symbols-rounded">visibility</span></div>
+        <span class="fnode-label">Read State</span>
+        <span class="fnode-sub">Snapshot current<br>state from channels</span>
+      </div>
+      <div class="farr dimmed" data-step="7"><span class="farr-label">run</span></div>
+      <div class="fnode c-amber dimmed" data-step="7">
+        <div class="fnode-icon"><span class="material-symbols-rounded">psychology</span></div>
+        <span class="fnode-label">Execute Node</span>
+        <span class="fnode-sub">LLM call happens<br>HERE inside node</span>
+      </div>
+      <div class="farr dimmed" data-step="8"><span class="farr-label">save</span></div>
+      <div class="fnode c-amber dimmed" data-step="8">
+        <span class="step-badge bg-amber">8</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">save</span></div>
+        <span class="fnode-label">Checkpoint</span>
+        <span class="fnode-sub">Persist state<br>for resumability</span>
+      </div>
+      <div class="farr dimmed" data-step="8"><span class="farr-label">loop?</span></div>
+      <div class="fnode c-amber dimmed" data-step="8">
+        <div class="fnode-icon"><span class="material-symbols-rounded">loop</span></div>
+        <span class="fnode-label">Continue?</span>
+        <span class="fnode-sub">Conditional edge<br>decides: loop or end</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-green dimmed" data-step="9">
+    <span class="step-badge bg-green">9</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      Chainlit: event wiring and callbacks
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE F: CHAINLIT INTERNALS -->
+  <div class="zone zone-cl">
+    <div class="zone-head">
+      <span class="zone-tag">F</span>
+      <span class="zone-title">Chainlit Event Wiring</span>
+      <span class="zone-sub">Decorators, messages, streaming callbacks</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-green dimmed" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">alternate_email</span></div>
+        <span class="fnode-label">@cl.on_message</span>
+        <span class="fnode-sub">Decorator registers<br>message handler</span>
+      </div>
+      <div class="farr dimmed" data-step="9"><span class="farr-label">creates</span></div>
+      <div class="fnode c-green dimmed" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">chat</span></div>
+        <span class="fnode-label">cl.Message</span>
+        <span class="fnode-sub">Object with content,<br>author, elements</span>
+      </div>
+      <div class="farr dimmed" data-step="9"><span class="farr-label">streams</span></div>
+      <div class="fnode c-green dimmed" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">stream</span></div>
+        <span class="fnode-label">stream_token()</span>
+        <span class="fnode-sub">Pushes tokens<br>to browser via WS</span>
+      </div>
+      <div class="farr dimmed" data-step="9"><span class="farr-label">shows</span></div>
+      <div class="fnode c-green dimmed" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">account_tree</span></div>
+        <span class="fnode-label">cl.Step()</span>
+        <span class="fnode-sub">Nested steps for<br>tool calls, reasoning</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-slate dimmed" data-step="10">
+    <span class="step-badge bg-slate">10</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      LangSmith: how tracing hooks into every Runnable
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE G: LANGSMITH TRACING -->
+  <div class="zone zone-trace">
+    <div class="zone-head">
+      <span class="zone-tag">G</span>
+      <span class="zone-title">LangSmith Tracing Internals</span>
+      <span class="zone-sub">Callbacks, runs, and trace structure</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-slate dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">settings</span></div>
+        <span class="fnode-label">Env Variable</span>
+        <span class="fnode-sub">LANGCHAIN_<br>TRACING_V2=true</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">activates</span></div>
+      <div class="fnode c-slate dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">webhook</span></div>
+        <span class="fnode-label">CallbackHandler</span>
+        <span class="fnode-sub">Wraps every<br>Runnable execution</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">emits</span></div>
+      <div class="fnode c-slate dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">account_tree</span></div>
+        <span class="fnode-label">Run Tree</span>
+        <span class="fnode-sub">Parent &rarr; child<br>run hierarchy</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">captures</span></div>
+      <div class="fnode c-slate dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">analytics</span></div>
+        <span class="fnode-label">Trace Data</span>
+        <span class="fnode-sub">Inputs, outputs,<br>latency, tokens, $</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL POPUP -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head">
+    <div class="dp-step" id="dpStep">1</div>
+    <div class="dp-title" id="dpTitle">Detail</div>
+    <button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button>
+  </div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="ctrl-btn" id="prevBtn" title="Previous (Left arrow)">
+    <span class="material-symbols-rounded">chevron_left</span>
+  </button>
+  <button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause (Space)">
+    <span class="material-symbols-rounded" id="playIcon">play_arrow</span>
+  </button>
+  <button class="ctrl-btn" id="nextBtn" title="Next (Right arrow)">
+    <span class="material-symbols-rounded">chevron_right</span>
+  </button>
+</div>
+
+<script>
+(function() {
+  const TOTAL = 10;
+  const STEP_MS = 4500;
+  const PAUSE_MS = 4000;
+
+  const NARRATION = {
+    1:  { text:'Every component in LangChain implements the <strong>Runnable</strong> protocol — a universal interface with <code>.invoke()</code>, <code>.stream()</code>, <code>.batch()</code>, and their async variants. This is the foundation everything else builds on.', color:'#7c3aed' },
+    2:  { text:'The <code>|</code> pipe operator creates a <strong>RunnableSequence</strong> — which is itself a Runnable. Output of one step becomes input of the next. This recursive composition is how chains are built.', color:'#db2777' },
+    3:  { text:'LangGraph\'s <strong>StateGraph</strong> defines your agent as a graph: a <code>TypedDict</code> for state, <code>add_node()</code> to register functions, and <code>add_edge()</code> / <code>add_conditional_edges()</code> for routing.', color:'#0d9488' },
+    4:  { text:'<code>add_conditional_edges()</code> is the decision point — it takes a function that inspects state and returns the name of the next node. This is how the agent decides to loop or finish.', color:'#0d9488' },
+    5:  { text:'<code>.compile()</code> produces a <strong>CompiledGraph</strong> backed by the <strong>Pregel</strong> engine. State fields become channels. Nodes read from and write to channels in supersteps.', color:'#2563eb' },
+    6:  { text:'State updates use <strong>reducers</strong> — e.g., <code>add_messages</code> appends new messages instead of replacing the list. The reducer is defined via <code>Annotated[list, add_messages]</code> in the TypedDict.', color:'#2563eb' },
+    7:  { text:'The execution loop: <strong>read state</strong> from channels &rarr; <strong>execute</strong> the current node (this is where the LLM call happens) &rarr; <strong>write</strong> partial state updates &rarr; <strong>evaluate edges</strong> &rarr; repeat.', color:'#d97706' },
+    8:  { text:'After each node, LangGraph can <strong>checkpoint</strong> the state — persisting it to a database. This enables resumability, time-travel debugging, and human-in-the-loop approval patterns.', color:'#d97706' },
+    9:  { text:'Chainlit uses <strong>decorators</strong> like <code>@cl.on_message</code> to register handlers. Inside, <code>cl.Message</code> objects are created and <code>stream_token()</code> pushes tokens to the browser over WebSocket.', color:'#16a34a' },
+    10: { text:'Setting <code>LANGCHAIN_TRACING_V2=true</code> activates LangSmith\'s <strong>CallbackHandler</strong>, which wraps every Runnable. It builds a <strong>run tree</strong> capturing inputs, outputs, latency, token counts, and cost.', color:'#64748b' },
+  };
+
+  const DETAILS = {
+    1: {
+      title:'The Runnable Protocol',
+      body:'<div class="dp-label">The Universal Interface</div>'+
+        '<div class="dp-code"><span class="hl-comment"># Every LangChain component is a Runnable.</span>\n<span class="hl-comment"># The Runnable protocol defines these methods:</span>\n\n<span class="hl-key">class</span> Runnable(ABC):\n\n    <span class="hl-comment"># Synchronous</span>\n    <span class="hl-key">def</span> <span class="hl-cmd">invoke</span>(self, input, config=None) -> output\n    <span class="hl-key">def</span> <span class="hl-cmd">stream</span>(self, input, config=None) -> Iterator[output]\n    <span class="hl-key">def</span> <span class="hl-cmd">batch</span>(self, inputs, config=None) -> list[output]\n\n    <span class="hl-comment"># Asynchronous (same semantics, async)</span>\n    <span class="hl-key">async def</span> <span class="hl-cmd">ainvoke</span>(self, input, config=None) -> output\n    <span class="hl-key">async def</span> <span class="hl-cmd">astream</span>(self, input, config=None) -> AsyncIterator\n    <span class="hl-key">async def</span> <span class="hl-cmd">abatch</span>(self, inputs, config=None) -> list\n\n    <span class="hl-comment"># Composition</span>\n    <span class="hl-key">def</span> <span class="hl-cmd">__or__</span>(self, other) -> RunnableSequence\n    <span class="hl-comment"># This is the | pipe operator</span></div>'+
+        '<div class="dp-label">Who Implements Runnable?</div>'+
+        '<div class="dp-code"><span class="hl-key">ChatPromptTemplate</span>  → Runnable[dict, ChatPromptValue]\n<span class="hl-key">ChatOpenAI</span>           → Runnable[list[Message], AIMessage]\n<span class="hl-key">StrOutputParser</span>      → Runnable[AIMessage, str]\n<span class="hl-key">RunnableSequence</span>     → Runnable[input_of_first, output_of_last]\n<span class="hl-key">RunnableLambda</span>       → Runnable wrapping any Python function\n<span class="hl-key">RunnableParallel</span>     → Runs multiple Runnables in parallel\n<span class="hl-key">CompiledGraph</span>        → LangGraph\'s compiled graph is also a Runnable!</div>'+
+        '<div class="dp-note n-violet"><strong>This is the key insight:</strong> Because everything is a Runnable, you can call <code>.invoke()</code> on a prompt, a model, a parser, a chain, or an entire LangGraph agent — they all have the same interface. This uniformity is what makes composition, streaming, and tracing work seamlessly across all components.</div>'
+    },
+    2: {
+      title:'RunnableSequence & the Pipe Operator',
+      body:'<div class="dp-label">How | Actually Works</div>'+
+        '<div class="dp-code"><span class="hl-comment"># When you write:</span>\nchain = prompt <span class="hl-cmd">|</span> model <span class="hl-cmd">|</span> parser\n\n<span class="hl-comment"># Python calls prompt.__or__(model), which returns:</span>\nRunnableSequence(first=prompt, last=model)\n\n<span class="hl-comment"># Then that.__or__(parser), which returns:</span>\nRunnableSequence(\n    first=prompt,\n    middle=[model],\n    last=parser\n)\n\n<span class="hl-comment"># When you call chain.invoke({"question": "..."}):</span>\n<span class="hl-key">Step 1:</span> prompt.invoke({<span class="hl-str">"question"</span>: <span class="hl-str">"..."</span>})\n        → ChatPromptValue([SystemMessage, HumanMessage])\n\n<span class="hl-key">Step 2:</span> model.invoke(ChatPromptValue)\n        → AIMessage(content=<span class="hl-str">"The answer is..."</span>)\n\n<span class="hl-key">Step 3:</span> parser.invoke(AIMessage)\n        → <span class="hl-str">"The answer is..."</span>  <span class="hl-comment">(plain string)</span></div>'+
+        '<div class="dp-label">Streaming Through a Sequence</div>'+
+        '<div class="dp-code"><span class="hl-comment"># When you call chain.stream(input):</span>\n<span class="hl-comment"># Only the LAST streamable component actually streams.</span>\n<span class="hl-comment"># Earlier steps run to completion, then the last streams.</span>\n\n<span class="hl-key">for</span> chunk <span class="hl-key">in</span> chain.stream({<span class="hl-str">"question"</span>: <span class="hl-str">"..."</span>}):\n    print(chunk, end=<span class="hl-str">""</span>)  <span class="hl-comment"># prints token by token</span>\n\n<span class="hl-comment"># Under the hood:</span>\n<span class="hl-comment"># 1. prompt.invoke() runs fully (not streamable)</span>\n<span class="hl-comment"># 2. model.stream() yields AIMessageChunks</span>\n<span class="hl-comment"># 3. parser.stream() passes through each chunk</span></div>'+
+        '<div class="dp-note n-pink"><strong>The pipe operator is just Python\'s <code>__or__</code> dunder method.</strong> RunnableSequence is itself a Runnable, so you can nest sequences inside sequences. This is how complex chains are built from simple pieces — each piece only needs to implement the Runnable interface.</div>'
+    },
+    3: {
+      title:'StateGraph Definition',
+      body:'<div class="dp-label">Building a Graph Step by Step</div>'+
+        '<div class="dp-code"><span class="hl-key">from</span> langgraph.graph <span class="hl-key">import</span> StateGraph, START, END\n<span class="hl-key">from</span> typing <span class="hl-key">import</span> TypedDict, Annotated\n<span class="hl-key">from</span> langgraph.graph.message <span class="hl-key">import</span> add_messages\n\n<span class="hl-comment"># 1. Define state schema</span>\n<span class="hl-key">class</span> AgentState(TypedDict):\n    messages: Annotated[list, add_messages]  <span class="hl-comment"># reducer!</span>\n    next_action: str\n\n<span class="hl-comment"># 2. Define node functions</span>\n<span class="hl-comment"># Each receives state, returns partial update</span>\n<span class="hl-key">def</span> <span class="hl-cmd">call_llm</span>(state: AgentState) -> dict:\n    response = model.invoke(state[<span class="hl-str">"messages"</span>])\n    <span class="hl-key">return</span> {<span class="hl-str">"messages"</span>: [response]}\n\n<span class="hl-key">def</span> <span class="hl-cmd">run_tools</span>(state: AgentState) -> dict:\n    last_msg = state[<span class="hl-str">"messages"</span>][-1]\n    result = execute_tool(last_msg.tool_calls[0])\n    <span class="hl-key">return</span> {<span class="hl-str">"messages"</span>: [ToolMessage(content=result)]}\n\n<span class="hl-comment"># 3. Build the graph</span>\ngraph = StateGraph(AgentState)\ngraph.<span class="hl-cmd">add_node</span>(<span class="hl-str">"llm"</span>, call_llm)\ngraph.<span class="hl-cmd">add_node</span>(<span class="hl-str">"tools"</span>, run_tools)</div>'+
+        '<div class="dp-note n-teal"><strong>Node functions are just regular Python functions.</strong> They receive the full state dict and return a partial update dict. The framework handles merging the update back into state using the reducers you defined (like <code>add_messages</code>). There\'s no magic — you have full control over what each node does.</div>'
+    },
+    4: {
+      title:'Edges & Conditional Routing',
+      body:'<div class="dp-label">Wiring the Graph Together</div>'+
+        '<div class="dp-code"><span class="hl-comment"># Static edges — always go from A to B</span>\ngraph.<span class="hl-cmd">add_edge</span>(START, <span class="hl-str">"llm"</span>)      <span class="hl-comment"># entry point</span>\ngraph.<span class="hl-cmd">add_edge</span>(<span class="hl-str">"tools"</span>, <span class="hl-str">"llm"</span>)    <span class="hl-comment"># after tools → back to LLM</span>\n\n<span class="hl-comment"># Conditional edge — the DECISION POINT</span>\n<span class="hl-key">def</span> <span class="hl-cmd">should_continue</span>(state: AgentState) -> str:\n    last_msg = state[<span class="hl-str">"messages"</span>][-1]\n    <span class="hl-key">if</span> last_msg.tool_calls:       <span class="hl-comment"># LLM wants a tool</span>\n        <span class="hl-key">return</span> <span class="hl-str">"tools"</span>            <span class="hl-comment"># → go to tools node</span>\n    <span class="hl-key">return</span> END                    <span class="hl-comment"># → finish</span>\n\ngraph.<span class="hl-cmd">add_conditional_edges</span>(\n    <span class="hl-str">"llm"</span>,              <span class="hl-comment"># source node</span>\n    should_continue,     <span class="hl-comment"># routing function</span>\n    {                    <span class="hl-comment"># mapping of return values to nodes</span>\n        <span class="hl-str">"tools"</span>: <span class="hl-str">"tools"</span>,\n        END: END,\n    }\n)\n\n<span class="hl-comment"># Compile into executable</span>\napp = graph.<span class="hl-cmd">compile</span>()</div>'+
+        '<div class="dp-note n-teal"><strong>The routing function is where agent "decisions" become code.</strong> It inspects the state (specifically the LLM\'s response) and returns a string naming the next node. The LLM decides <em>what</em> to do (by including tool_calls in its response); the routing function translates that into <em>where</em> to go in the graph. This separation is what makes LangGraph explicit and debuggable.</div>'
+    },
+    5: {
+      title:'The Pregel Execution Engine',
+      body:'<div class="dp-label">What Happens Inside .compile()</div>'+
+        '<div class="dp-code"><span class="hl-comment"># CompiledGraph is backed by the Pregel engine</span>\n<span class="hl-comment"># (named after Google\'s Pregel graph processing model)</span>\n\n<span class="hl-comment"># State fields become "channels":</span>\n<span class="hl-key">channels</span> = {\n    <span class="hl-str">"messages"</span>: BinaryOperatorChannel(\n        typ=list,\n        operator=add_messages  <span class="hl-comment"># the reducer</span>\n    ),\n    <span class="hl-str">"next_action"</span>: LastValue(str)\n}\n\n<span class="hl-comment"># Execution happens in "supersteps":</span>\n<span class="hl-key">Superstep 1:</span>\n  Read channels → snapshot state\n  Execute scheduled nodes (in parallel if independent)\n  Collect partial state updates from nodes\n\n<span class="hl-key">Between supersteps:</span>\n  Apply updates to channels via reducers\n  Evaluate edges to determine next nodes\n  Schedule next nodes for execution\n\n<span class="hl-key">Superstep 2:</span>\n  Read updated channels → new snapshot\n  Execute next scheduled nodes\n  ...</div>'+
+        '<div class="dp-note n-blue"><strong>The Pregel model is borrowed from distributed graph processing.</strong> Each "superstep" reads the current state, executes nodes, and writes updates. Between supersteps, reducers merge updates and edges determine what runs next. This model naturally supports parallelism (independent nodes run concurrently) and deterministic replay (same inputs → same execution).</div>'
+    },
+    6: {
+      title:'State Updates & Reducers',
+      body:'<div class="dp-label">How Partial Updates Merge Into State</div>'+
+        '<div class="dp-code"><span class="hl-comment"># Without a reducer — last write wins:</span>\n<span class="hl-key">class</span> State(TypedDict):\n    count: int           <span class="hl-comment"># no reducer → overwrites</span>\n\n<span class="hl-comment"># Node returns: {"count": 5}</span>\n<span class="hl-comment"># State becomes: {"count": 5}  (replaced)</span>\n\n\n<span class="hl-comment"># With a reducer — custom merge logic:</span>\n<span class="hl-key">class</span> State(TypedDict):\n    messages: Annotated[list, add_messages]  <span class="hl-comment"># reducer!</span>\n\n<span class="hl-comment"># add_messages reducer logic:</span>\n<span class="hl-key">def</span> <span class="hl-cmd">add_messages</span>(existing: list, new: list) -> list:\n    <span class="hl-comment"># If new message has same ID → update in place</span>\n    <span class="hl-comment"># Otherwise → append to the list</span>\n    <span class="hl-key">for</span> msg <span class="hl-key">in</span> new:\n        <span class="hl-key">if</span> existing_msg := find_by_id(existing, msg.id):\n            replace(existing_msg, msg)\n        <span class="hl-key">else</span>:\n            existing.append(msg)\n    <span class="hl-key">return</span> existing\n\n<span class="hl-comment"># Node returns: {"messages": [AIMessage("hello")]}</span>\n<span class="hl-comment"># Reducer APPENDS, not replaces!</span></div>'+
+        '<div class="dp-note n-blue"><strong>Reducers are the secret to safe concurrent state updates.</strong> When multiple nodes run in parallel and both write to the same state field, the reducer defines how to merge their outputs. The <code>Annotated[type, reducer]</code> syntax is standard Python typing — LangGraph reads the annotation to find the reducer function.</div>'
+    },
+    7: {
+      title:'The Execution Loop in Detail',
+      body:'<div class="dp-label">One Complete Agent Loop Iteration</div>'+
+        '<div class="dp-code"><span class="hl-comment"># Pseudocode for one iteration of the Pregel loop:</span>\n\n<span class="hl-key">def</span> <span class="hl-cmd">run_superstep</span>(state, scheduled_nodes):\n\n    <span class="hl-comment"># 1. Snapshot current state</span>\n    snapshot = read_channels(state)\n\n    <span class="hl-comment"># 2. Execute all scheduled nodes</span>\n    updates = {}\n    <span class="hl-key">for</span> node <span class="hl-key">in</span> scheduled_nodes:\n        result = node.func(snapshot)  <span class="hl-comment"># ← LLM call here!</span>\n        updates[node.name] = result\n\n    <span class="hl-comment"># 3. Apply updates via reducers</span>\n    <span class="hl-key">for</span> name, update <span class="hl-key">in</span> updates.items():\n        <span class="hl-key">for</span> key, value <span class="hl-key">in</span> update.items():\n            state[key] = reducer(state[key], value)\n\n    <span class="hl-comment"># 4. Evaluate edges</span>\n    next_nodes = []\n    <span class="hl-key">for</span> edge <span class="hl-key">in</span> outgoing_edges(scheduled_nodes):\n        <span class="hl-key">if</span> edge.is_conditional:\n            target = edge.func(state)  <span class="hl-comment"># routing decision</span>\n        <span class="hl-key">else</span>:\n            target = edge.target\n        <span class="hl-key">if</span> target != END:\n            next_nodes.append(target)\n\n    <span class="hl-comment"># 5. If next_nodes is empty → done</span>\n    <span class="hl-comment">#    Otherwise → run next superstep</span>\n    <span class="hl-key">return</span> next_nodes</div>'+
+        '<div class="dp-note n-amber"><strong>The LLM call happens inside <code>node.func(snapshot)</code> at step 2.</strong> The framework doesn\'t do any reasoning — it just orchestrates the loop. The LLM decides what to do (inside the node function), and the conditional edge translates that decision into graph routing. This is why LangGraph is "low-level" — you write the node functions, you write the routing logic, you control everything.</div>'
+    },
+    8: {
+      title:'Checkpointing & Resumability',
+      body:'<div class="dp-label">Persisting State Between Steps</div>'+
+        '<div class="dp-code"><span class="hl-comment"># Enable checkpointing with a checkpointer:</span>\n<span class="hl-key">from</span> langgraph.checkpoint.memory <span class="hl-key">import</span> MemorySaver\n<span class="hl-comment"># Or for production:</span>\n<span class="hl-comment"># from langgraph.checkpoint.postgres import PostgresSaver</span>\n\ncheckpointer = MemorySaver()\napp = graph.<span class="hl-cmd">compile</span>(checkpointer=checkpointer)\n\n<span class="hl-comment"># Every invocation needs a thread_id:</span>\nconfig = {<span class="hl-str">"configurable"</span>: {<span class="hl-str">"thread_id"</span>: <span class="hl-str">"user-123"</span>}}\nresult = app.<span class="hl-cmd">invoke</span>(input, config)\n\n<span class="hl-comment"># After each node, state is saved:</span>\n<span class="hl-key">checkpoint</span> = {\n    <span class="hl-str">"thread_id"</span>: <span class="hl-str">"user-123"</span>,\n    <span class="hl-str">"checkpoint_id"</span>: <span class="hl-str">"1ef7..."</span>,\n    <span class="hl-str">"channel_values"</span>: {\n        <span class="hl-str">"messages"</span>: [HumanMessage(...), AIMessage(...)],\n    },\n    <span class="hl-str">"next"</span>: [<span class="hl-str">"tools"</span>],  <span class="hl-comment"># which node runs next</span>\n}\n\n<span class="hl-comment"># Resume from checkpoint (e.g., after human approval):</span>\napp.<span class="hl-cmd">invoke</span>(None, config)  <span class="hl-comment"># continues from last checkpoint</span></div>'+
+        '<div class="dp-note n-amber"><strong>Checkpointing enables three powerful patterns:</strong> (1) <strong>Resumability</strong> — if the process crashes, restart from the last checkpoint. (2) <strong>Human-in-the-loop</strong> — pause before a dangerous tool call, wait for approval, then resume. (3) <strong>Time-travel debugging</strong> — replay the agent from any past checkpoint to understand what went wrong.</div>'
+    },
+    9: {
+      title:'Chainlit Event Wiring',
+      body:'<div class="dp-label">How Chainlit Connects to LangGraph</div>'+
+        '<div class="dp-code"><span class="hl-key">import</span> chainlit <span class="hl-key">as</span> cl\n<span class="hl-key">from</span> langchain_core.callbacks <span class="hl-key">import</span> AsyncCallbackHandler\n\n<span class="hl-comment"># 1. @cl.on_message registers a WebSocket handler</span>\n<span class="hl-comment"># When user sends a message, Chainlit\'s server:</span>\n<span class="hl-comment">#   - Receives it over WebSocket</span>\n<span class="hl-comment">#   - Creates a cl.Message object</span>\n<span class="hl-comment">#   - Calls your decorated function</span>\n\n<span class="hl-key">@cl.on_message</span>\n<span class="hl-key">async def</span> <span class="hl-cmd">handle</span>(message: cl.Message):\n\n    <span class="hl-comment"># 2. Show intermediate steps</span>\n    <span class="hl-key">async with</span> cl.Step(name=<span class="hl-str">"Agent Thinking"</span>) <span class="hl-key">as</span> step:\n        step.input = message.content\n\n        <span class="hl-comment"># 3. Stream from LangGraph</span>\n        msg = cl.Message(content=<span class="hl-str">""</span>)\n        <span class="hl-key">async for</span> event <span class="hl-key">in</span> app.astream_events(\n            {<span class="hl-str">"messages"</span>: [message.content]},\n            version=<span class="hl-str">"v2"</span>\n        ):\n            kind = event[<span class="hl-str">"event"</span>]\n            <span class="hl-key">if</span> kind == <span class="hl-str">"on_chat_model_stream"</span>:\n                token = event[<span class="hl-str">"data"</span>][<span class="hl-str">"chunk"</span>].content\n                <span class="hl-key">await</span> msg.<span class="hl-cmd">stream_token</span>(token)\n\n        step.output = <span class="hl-str">"Done"</span>\n    <span class="hl-key">await</span> msg.send()</div>'+
+        '<div class="dp-note n-green"><strong>The key integration point is <code>astream_events()</code>.</strong> LangGraph emits events for every step — LLM tokens, tool calls, state updates. Chainlit listens to these events and pushes them to the browser over WebSocket. The <code>cl.Step()</code> context manager creates collapsible sections in the UI showing what the agent did at each stage.</div>'
+    },
+    10: {
+      title:'LangSmith Tracing Internals',
+      body:'<div class="dp-label">How Tracing Hooks Into Every Runnable</div>'+
+        '<div class="dp-code"><span class="hl-comment"># 1. Set environment variables:</span>\n<span class="hl-key">LANGCHAIN_TRACING_V2</span>=<span class="hl-str">"true"</span>\n<span class="hl-key">LANGCHAIN_API_KEY</span>=<span class="hl-str">"lsv2_pt_..."</span>\n<span class="hl-key">LANGCHAIN_PROJECT</span>=<span class="hl-str">"flight-agent"</span>\n\n<span class="hl-comment"># 2. What happens under the hood:</span>\n<span class="hl-comment"># LangChain\'s Runnable.invoke() internally does:</span>\n\n<span class="hl-key">def</span> <span class="hl-cmd">invoke</span>(self, input, config):\n    callback_manager = get_callback_manager(config)\n    run = callback_manager.<span class="hl-cmd">on_chain_start</span>(\n        name=self.name, input=input\n    )\n    <span class="hl-key">try</span>:\n        output = self._invoke(input)  <span class="hl-comment"># actual work</span>\n        callback_manager.<span class="hl-cmd">on_chain_end</span>(output, run)\n    <span class="hl-key">except</span> Exception <span class="hl-key">as</span> e:\n        callback_manager.<span class="hl-cmd">on_chain_error</span>(e, run)\n        <span class="hl-key">raise</span>\n    <span class="hl-key">return</span> output</div>'+
+        '<div class="dp-label">The Run Tree Structure</div>'+
+        '<div class="dp-code"><span class="hl-comment"># LangSmith builds a tree of "runs":</span>\n\n<span class="hl-key">Run</span> (root): <span class="hl-str">"flight-agent"</span>\n  type: <span class="hl-str">"chain"</span>\n  start: <span class="hl-num">2024-03-14T10:00:00Z</span>\n  inputs: {<span class="hl-str">"messages"</span>: [<span class="hl-str">"Find flights..."</span>]}\n  <span class="hl-key">├─ Child Run</span>: <span class="hl-str">"ChatOpenAI"</span>\n  │  type: <span class="hl-str">"llm"</span>\n  │  latency: <span class="hl-num">1.1s</span>\n  │  tokens: {prompt: <span class="hl-num">312</span>, completion: <span class="hl-num">45</span>}\n  │  cost: <span class="hl-num">$0.0036</span>\n  <span class="hl-key">├─ Child Run</span>: <span class="hl-str">"search_flights"</span>\n  │  type: <span class="hl-str">"tool"</span>\n  │  latency: <span class="hl-num">0.8s</span>\n  │  input: {<span class="hl-str">"dest"</span>: <span class="hl-str">"Tokyo"</span>}\n  │  output: <span class="hl-str">[3 flights]</span>\n  <span class="hl-key">└─ Child Run</span>: <span class="hl-str">"ChatOpenAI"</span>\n     type: <span class="hl-str">"llm"</span>\n     latency: <span class="hl-num">0.5s</span>\n     tokens: {prompt: <span class="hl-num">890</span>, completion: <span class="hl-num">600</span>}\n     cost: <span class="hl-num">$0.0053</span></div>'+
+        '<div class="dp-note n-slate"><strong>Tracing is non-invasive — it uses the callback system.</strong> Every Runnable already calls <code>on_chain_start</code> / <code>on_chain_end</code> as part of its execution. LangSmith\'s handler just listens to these callbacks and sends the data to the LangSmith API. Open-source alternative: <strong>Langfuse</strong> provides the same callback-based tracing with a self-hostable MIT-licensed server and OpenTelemetry export.</div>'
+    }
+  };
+
+  let current = 0, playing = false, timer = null;
+
+  const all = document.querySelectorAll('[data-step]');
+  const progress = document.getElementById('progressFill');
+  const stepLabel = document.getElementById('stepLabel');
+  const dotsBox = document.getElementById('stepDots');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const narStep = document.getElementById('narStep');
+  const narText = document.getElementById('narText');
+  const detailPanel = document.getElementById('detailPanel');
+  const detailOverlay = document.getElementById('detailOverlay');
+  const dpStep = document.getElementById('dpStep');
+  const dpTitle = document.getElementById('dpTitle');
+  const dpBody = document.getElementById('dpBody');
+  const dpClose = document.getElementById('dpClose');
+
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'sc-dot';
+    dotsBox.appendChild(d);
+  }
+  const dots = dotsBox.querySelectorAll('.sc-dot');
+
+  function showDetail(step) {
+    const d = DETAILS[step], nar = NARRATION[step];
+    if (!d) { hideDetail(); return; }
+    dpStep.textContent = step;
+    dpStep.style.background = nar ? nar.color : '#7c3aed';
+    dpTitle.textContent = d.title;
+    dpBody.innerHTML = d.body;
+    detailPanel.classList.add('visible');
+    detailOverlay.classList.add('visible');
+  }
+  function hideDetail() {
+    detailPanel.classList.remove('visible');
+    detailOverlay.classList.remove('visible');
+  }
+  dpClose.addEventListener('click', hideDetail);
+  detailOverlay.addEventListener('click', hideDetail);
+
+  function activate(step) {
+    all.forEach(el => {
+      const s = parseInt(el.dataset.step);
+      if (s <= step) { el.classList.remove('dimmed'); el.classList.add('active'); }
+      else { el.classList.add('dimmed'); el.classList.remove('active'); }
+    });
+    progress.style.width = ((step / TOTAL) * 100) + '%';
+    stepLabel.textContent = step + ' / ' + TOTAL;
+    dots.forEach((d, i) => d.classList.toggle('filled', i < step));
+    const nar = NARRATION[step];
+    if (nar) {
+      narStep.textContent = step;
+      narStep.style.background = nar.color;
+      narText.innerHTML = nar.text;
+    }
+    if (!playing) showDetail(step); else hideDetail();
+  }
+
+  function showReset() {
+    all.forEach(el => { el.classList.add('dimmed'); el.classList.remove('active'); });
+    progress.style.width = '0%';
+    stepLabel.textContent = '- / ' + TOTAL;
+    dots.forEach(d => d.classList.remove('filled'));
+    narStep.textContent = '-';
+    narStep.style.background = '#7c3aed';
+    narText.innerHTML = 'Click play or press Space to begin...';
+    hideDetail();
+  }
+  function reset() { showReset(); current = 0; }
+
+  function pause() {
+    if (!playing) return;
+    playing = false; clearTimeout(timer); timer = null;
+    playIcon.textContent = 'play_arrow';
+  }
+  function play() {
+    if (playing) return;
+    playing = true; playIcon.textContent = 'pause';
+    if (current >= TOTAL) { reset(); timer = setTimeout(tick, 800); }
+    else { timer = setTimeout(tick, STEP_MS); }
+  }
+  function goTo(step) {
+    pause();
+    current = Math.max(0, Math.min(TOTAL, step));
+    if (current === 0) showReset(); else activate(current);
+  }
+  function stepNext() { if (current < TOTAL) goTo(current + 1); }
+  function stepPrev() { if (current > 0) goTo(current - 1); }
+
+  function tick() {
+    current++;
+    if (current > TOTAL) {
+      setTimeout(() => { reset(); if (playing) timer = setTimeout(tick, 1000); }, PAUSE_MS);
+      return;
+    }
+    activate(current);
+    if (playing) timer = setTimeout(tick, STEP_MS);
+  }
+
+  playBtn.addEventListener('click', () => { if (playing) pause(); else play(); });
+  prevBtn.addEventListener('click', stepPrev);
+  nextBtn.addEventListener('click', stepNext);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hideDetail(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepNext(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stepPrev(); }
+    else if (e.key === ' ') { e.preventDefault(); if (playing) pause(); else play(); }
+  });
+
+  document.getElementById('narration').addEventListener('click', () => {
+    if (current > 0) { pause(); showDetail(current); }
+  });
+
+  reset();
+})();
+</script>
+
+</body>
+</html>

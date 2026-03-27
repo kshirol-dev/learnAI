@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: UX Patterns for AI Products — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; UX Patterns for AI Products</h2><span class="tb-sub">Designing for uncertainty, building calibrated trust, and handling the 23% that goes wrong.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Trust</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Confidence</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">touch_app</span></div><span class="pipe-label">Interaction</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">error</span></div><span class="pipe-label">Errors</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">support_agent</span></div><span class="pipe-label">Handoff</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Patterns</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Designing for Calibrated Trust</div><div class="cc-sub">The goal: users who trust AI where it&rsquo;s strong and override it where it&rsquo;s not</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Trust Spectrum</div><div class="cc-text">AI products face a unique UX challenge: the output is <strong>probabilistic</strong>. Sometimes it&rsquo;s brilliant. Sometimes it&rsquo;s confidently wrong. The UX must help users navigate this uncertainty.<br><br>Two failure modes of trust:<br><br><strong>Zero trust (complete avoidance):</strong> Users don&rsquo;t believe the AI, manually verify everything, and eventually stop using the product. The AI adds friction instead of removing it.<br><br><strong>Blind trust (uncritical acceptance):</strong> Users accept every AI output without review. When the AI is wrong (and it will be), the consequences are undetected until they cause real damage.<br><br>The goal is <strong>calibrated trust</strong>: users develop an accurate mental model of what the AI is good at and where it struggles. They rely on it for routine tasks and apply extra scrutiny for edge cases.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Building Calibrated Trust</div><div class="cc-text"><strong>1. Set expectations early.</strong><br>During onboarding, clearly communicate what the AI can and cannot do. &ldquo;I can help with billing questions and order tracking. For account security issues, I&rsquo;ll connect you with a specialist.&rdquo;<br><br><strong>2. Show your work.</strong><br>Explain how the AI arrived at its answer. Source citations, reasoning steps, and confidence indicators help users evaluate outputs.<br><br><strong>3. Make errors visible, not hidden.</strong><br>When the AI is uncertain, say so. &ldquo;I&rsquo;m not confident about this answer&rdquo; is better than a wrong answer delivered with false confidence.<br><br><strong>4. Enable easy correction.</strong><br>Make it trivial for users to flag wrong outputs, edit AI suggestions, and provide feedback. Every correction is training data for improvement.<br><br><strong>5. Progressive disclosure.</strong><br>Start with simple, high-confidence features. As users build trust, introduce more complex capabilities. Don&rsquo;t overwhelm new users with the full AI feature set on day one.</div></div>
+          <div class="cc-note n-violet"><strong>The trust equation:</strong> Trust = (Reliability &times; Transparency) / (Risk of Failure). Increase reliability through better models. Increase transparency through UX. Decrease risk through guardrails and human oversight. The PM controls all three levers.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">The Confidence UI Pattern</div><div class="cc-sub">Displaying uncertainty without undermining user confidence in the product</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Questions Users Need Answered</div><div class="cc-text">Every AI output should help users quickly answer three questions:<br><br><strong>1. How sure is the AI?</strong><br>Is this a high-confidence answer based on strong evidence, or a best guess? Users need this signal to decide how much scrutiny to apply.<br><br><strong>2. What is this based on?</strong><br>What data, documents, or reasoning led to this output? Source attribution lets users verify the answer independently.<br><br><strong>3. What should I do if it&rsquo;s wrong?</strong><br>Is there a way to correct it, get a different answer, or escalate to a human? Users need an escape hatch.</div></div>
+          <div class="cc-block"><div class="cc-label">Confidence Indicators</div><div class="cc-text"><strong>Visual confidence signals:</strong><br>&bull; <strong>Color coding:</strong> Green for high confidence, yellow for moderate, red for low<br>&bull; <strong>Language hedging:</strong> &ldquo;Based on your order history, your package should arrive Tuesday&rdquo; vs. &ldquo;I&rsquo;m not certain, but it may arrive Tuesday&rdquo;<br>&bull; <strong>Source count:</strong> &ldquo;Based on 3 matching documents&rdquo; vs. &ldquo;I couldn&rsquo;t find a direct match&rdquo;<br>&bull; <strong>Verification prompts:</strong> &ldquo;Please verify this information before proceeding&rdquo; for lower-confidence outputs</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What NOT to Do</div><div class="cc-text"><strong>Don&rsquo;t show raw percentages.</strong><br>&ldquo;87.3% confidence&rdquo; means nothing to most users. Is 87% good? Bad? It depends on the task. Translate confidence into actionable language: &ldquo;High confidence&rdquo; or &ldquo;You may want to double-check this.&rdquo;<br><br><strong>Don&rsquo;t show confidence on everything.</strong><br>If every answer has a confidence badge, users develop badge blindness. Reserve confidence indicators for cases where it changes user behavior &mdash; when the AI is less certain than usual or when the stakes are high.<br><br><strong>Don&rsquo;t undermine the product.</strong><br>Excessive uncertainty language (&ldquo;I might be wrong about this, but...&rdquo; on every response) erodes trust in the entire product. Calibrate the uncertainty language to actual error rates.</div></div>
+          <div class="cc-note n-blue"><strong>The design principle:</strong> Confidence UI should change user behavior proportionally to actual risk. High-confidence, low-stakes outputs need no indicator. Low-confidence, high-stakes outputs need prominent warnings. The PM defines the confidence thresholds and the corresponding UX treatment for each.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">touch_app</span></div><div><div class="cc-title">AI Interaction Patterns</div><div class="cc-sub">Six patterns for the three phases of AI interaction: before, during, and after</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pre-Action Patterns</div><div class="cc-text"><strong>1. Intent Preview</strong><br>Before the AI acts, show the user what it&rsquo;s about to do and ask for confirmation. &ldquo;I&rsquo;ll send a refund of $49.99 to your original payment method. Proceed?&rdquo;<br><br>Use for: Any action with real-world consequences (sending emails, making purchases, modifying data). Never auto-execute irreversible actions.<br><br><strong>2. Autonomy Dial</strong><br>Let users control how much autonomy the AI has. A spectrum from &ldquo;suggest only&rdquo; (AI proposes, human decides) to &ldquo;act autonomously&rdquo; (AI decides and acts, human reviews after).<br><br>Use for: Agentic AI products where the AI can take multiple actions. Let users start with low autonomy and increase it as they build trust. Power users may want full autonomy; new users want approval gates.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">In-Action Patterns</div><div class="cc-text"><strong>3. Explainable Rationale</strong><br>Show the AI&rsquo;s reasoning as it works. &ldquo;I found 3 relevant policies. The most recent one (updated March 2026) says...&rdquo; This builds trust and helps users catch errors in the reasoning, not just the output.<br><br><strong>4. Confidence Signal</strong><br>Real-time indicators of certainty during the interaction. Streaming responses with source citations appearing as the AI generates. Progress indicators that show the AI is searching, analyzing, or generating.</div></div>
+          <div class="cc-block"><div class="cc-label">Post-Action Patterns</div><div class="cc-text"><strong>5. Action Audit &amp; Undo</strong><br>After the AI acts, provide a clear log of what was done and a way to reverse it. &ldquo;I updated 3 records. View changes. Undo all.&rdquo; Every AI action should be reversible for at least a reasonable window.<br><br><strong>6. Escalation Pathway</strong><br>A clear, always-available path from AI to human help. Not buried in a menu &mdash; prominently accessible. &ldquo;Talk to a person&rdquo; should never be more than one click away.</div></div>
+          <div class="cc-note n-teal"><strong>The pattern selection rule:</strong> Higher stakes = more patterns. A low-stakes content suggestion needs only a confidence signal. A high-stakes financial action needs intent preview + explainable rationale + action audit + escalation pathway. Match the UX overhead to the risk level.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">error</span></div><div><div class="cc-title">Designing for AI Failures</div><div class="cc-sub">Three types of failures, three design responses</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Type 1: Predictable Errors</div><div class="cc-text"><strong>What:</strong> The system recognizes its own uncertainty. The retrieval confidence is low, the input is ambiguous, or the query is outside the AI&rsquo;s scope.<br><br><strong>Design response:</strong><br>&bull; Show uncertainty explicitly: &ldquo;I&rsquo;m not confident about this answer.&rdquo;<br>&bull; Ask for clarification: &ldquo;Did you mean X or Y?&rdquo;<br>&bull; Offer alternatives: &ldquo;I couldn&rsquo;t find an exact match, but here are related topics.&rdquo;<br>&bull; Suggest human help: &ldquo;For this type of question, I&rsquo;d recommend speaking with a specialist.&rdquo;<br><br>These are the easiest to handle because the system knows it&rsquo;s uncertain.</div></div>
+          <div class="cc-block"><div class="cc-label">Type 2: Edge Case Failures</div><div class="cc-text"><strong>What:</strong> Unexpected scenarios the system wasn&rsquo;t designed for. A user asks in a language the AI doesn&rsquo;t support. An input format the system can&rsquo;t parse. A query that requires real-time data the system doesn&rsquo;t have.<br><br><strong>Design response:</strong><br>&bull; Graceful degradation: Fall back to a simpler capability rather than failing completely<br>&bull; Clear error messaging: Explain what went wrong in user-friendly language<br>&bull; Human handoff: Automatically route to a human when the AI can&rsquo;t handle the request<br>&bull; Feedback capture: Log the failure for the team to analyze and fix</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Type 3: Silent Failures (The Dangerous Ones)</div><div class="cc-text"><strong>What:</strong> The AI is confident but wrong. Hallucinations. Plausible-sounding but fabricated information. The system shows no uncertainty because it doesn&rsquo;t know it&rsquo;s wrong.<br><br>This is the hardest failure to design for because the system itself can&rsquo;t detect it in real time.<br><br><strong>Design response:</strong><br>&bull; <strong>Source citations:</strong> Always show where the answer came from so users can verify<br>&bull; <strong>Feedback loops:</strong> Thumbs up/down, &ldquo;flag as incorrect&rdquo; buttons on every output<br>&bull; <strong>Verification prompts:</strong> For high-stakes outputs, add &ldquo;Please verify this before acting on it&rdquo;<br>&bull; <strong>Human-in-the-loop:</strong> For critical decisions, require human approval before the AI output is finalized<br>&bull; <strong>Confidence calibration:</strong> Continuously improve the model&rsquo;s ability to know when it doesn&rsquo;t know</div></div>
+          <div class="cc-note n-red"><strong>The 23% problem:</strong> Research shows roughly 23% of AI interactions produce unsatisfactory outputs. Your UX must handle this gracefully. The difference between a good AI product and a bad one isn&rsquo;t the 77% that works &mdash; it&rsquo;s how the product handles the 23% that doesn&rsquo;t.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">support_agent</span></div><div><div class="cc-title">Human Handoff Design</div><div class="cc-sub">The most important UX pattern in AI products &mdash; knowing when to stop being AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Hand Off</div><div class="cc-text">The AI should escalate to a human when:<br><br><strong>Confidence-based triggers:</strong><br>&bull; Retrieval confidence below threshold (no good documents found)<br>&bull; Multiple conflicting answers with no clear winner<br>&bull; User has asked the same question multiple times (indicating dissatisfaction)<br><br><strong>Scope-based triggers:</strong><br>&bull; Request is outside the AI&rsquo;s defined scope (legal advice, medical diagnosis)<br>&bull; User explicitly asks for a human<br>&bull; Sensitive topics (complaints, cancellations, safety concerns)<br><br><strong>Behavior-based triggers:</strong><br>&bull; User sentiment turns negative (frustration, anger detected)<br>&bull; Conversation exceeds a length threshold without resolution<br>&bull; User provides feedback that the AI is wrong multiple times</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How to Hand Off</div><div class="cc-text"><strong>1. Preserve context.</strong><br>When the human agent takes over, they should see the full conversation history, the AI&rsquo;s attempted answers, and any user feedback. Nothing is more frustrating than repeating yourself to a human after the AI failed.<br><br><strong>2. Explain the handoff.</strong><br>&ldquo;I want to make sure you get the best help. I&rsquo;m connecting you with a specialist who can assist with this.&rdquo; Frame it as a service upgrade, not an AI failure.<br><br><strong>3. Set expectations.</strong><br>&ldquo;A specialist will be with you in approximately 2 minutes.&rdquo; Don&rsquo;t leave users in limbo.<br><br><strong>4. Make it seamless.</strong><br>The transition should feel like a natural part of the experience, not a jarring context switch. Same interface, same conversation thread, clear indicator that a human is now responding.<br><br><strong>5. Learn from handoffs.</strong><br>Every handoff is a signal that the AI couldn&rsquo;t handle something. Track handoff reasons, analyze patterns, and use them to improve the AI over time.</div></div>
+          <div class="cc-note n-amber"><strong>The handoff metric:</strong> Track your &ldquo;containment rate&rdquo; (% of interactions resolved without human handoff) and your &ldquo;handoff satisfaction&rdquo; (user satisfaction with the handoff experience). A low containment rate means the AI scope is too broad. Low handoff satisfaction means the transition is broken. Both are PM-owned metrics.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">hourglass_top</span></div><div><div class="cc-title">Loading States &amp; Latency</div><div class="cc-sub">AI is slow. Here&rsquo;s how to make it feel fast.</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Latency Problem</div><div class="cc-text">LLM responses take <strong>2&ndash;15 seconds</strong> depending on model, prompt length, and output length. Traditional web apps respond in under 200ms. Users notice the difference.<br><br>Without proper loading UX, users think the product is broken, click away, or submit duplicate requests. Latency is the #1 UX complaint for AI products.</div></div>
+          <div class="cc-block"><div class="cc-label">Streaming Responses</div><div class="cc-text">The most impactful pattern: <strong>stream the response token by token</strong> as the LLM generates it. Users see the answer forming in real time, which:<br><br>&bull; Reduces perceived wait time dramatically (users start reading immediately)<br>&bull; Gives a sense of progress (something is happening)<br>&bull; Allows early abandonment (user can see the answer is off-track and interrupt)<br><br>Streaming is now table stakes for any chat-based AI product. If your AI product shows a spinner for 8 seconds and then dumps a wall of text, you&rsquo;re losing users.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Beyond Streaming</div><div class="cc-text"><strong>Skeleton screens:</strong> Show the structure of the response before content loads. For structured outputs (tables, cards, lists), display the layout immediately and fill in content as it arrives.<br><br><strong>Progress narration:</strong> For multi-step AI tasks, narrate the progress: &ldquo;Searching knowledge base... Found 5 relevant articles... Generating answer...&rdquo; This builds trust by showing the AI&rsquo;s process.<br><br><strong>Optimistic UI:</strong> For predictable actions, show the expected result immediately and update if the AI&rsquo;s actual output differs. Works well for auto-complete and suggestions.<br><br><strong>Background processing:</strong> For non-urgent AI tasks (document analysis, batch processing), process in the background and notify when complete. Don&rsquo;t block the user&rsquo;s workflow.<br><br><strong>Cached responses:</strong> For common queries, serve cached responses instantly and refresh in the background if the cache is stale.</div></div>
+          <div class="cc-note n-green"><strong>The latency budget:</strong> &lt;1s = instant (auto-complete, suggestions). 1&ndash;3s = streaming (chat responses). 3&ndash;10s = progress narration (complex analysis). &gt;10s = background processing with notification. Match the UX pattern to the expected latency. Never show a blank screen for more than 1 second.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">feedback</span></div><div><div class="cc-title">Feedback Mechanisms</div><div class="cc-sub">Every user interaction is training data &mdash; if you design the feedback loops right</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Explicit Feedback</div><div class="cc-text"><strong>Thumbs up / thumbs down:</strong><br>The simplest and most common pattern. Low friction, high volume. Provides a binary quality signal. Place it on every AI output. Expect 5&ndash;15% of users to provide feedback.<br><br><strong>Corrections:</strong><br>Let users edit the AI&rsquo;s output directly. &ldquo;The AI suggested X, but the correct answer is Y.&rdquo; Higher quality signal than thumbs up/down but higher friction. Use for high-value outputs where accuracy matters.<br><br><strong>Ratings:</strong><br>1&ndash;5 star ratings or multi-dimension ratings (accuracy, helpfulness, tone). More nuanced than binary but lower completion rates. Use sparingly &mdash; after key interactions, not every message.<br><br><strong>Free-text feedback:</strong><br>&ldquo;What was wrong with this response?&rdquo; Richest signal but lowest volume. Use as an optional follow-up to negative feedback.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Implicit Feedback</div><div class="cc-text"><strong>Acceptance signals:</strong><br>&bull; User copies the AI&rsquo;s response (positive)<br>&bull; User accepts the AI&rsquo;s suggestion (positive)<br>&bull; User acts on the AI&rsquo;s recommendation (positive)<br><br><strong>Rejection signals:</strong><br>&bull; User regenerates the response (negative)<br>&bull; User edits the response significantly (partially negative)<br>&bull; User ignores the suggestion (negative)<br>&bull; User escalates to human help (negative)<br><br><strong>Engagement signals:</strong><br>&bull; Time spent reading the response (longer = more engaged or more confused)<br>&bull; Follow-up questions (may indicate incomplete answer)<br>&bull; Session length and return rate</div></div>
+          <div class="cc-block"><div class="cc-label">Closing the Loop</div><div class="cc-text">Feedback is only valuable if it reaches the team and influences the product. Build a pipeline: collect feedback &rarr; aggregate &rarr; surface patterns &rarr; prioritize fixes &rarr; retrain/improve &rarr; measure impact. Show users their feedback matters: &ldquo;Thanks to user feedback, we improved accuracy on billing questions by 15%.&rdquo;</div></div>
+          <div class="cc-note n-pink"><strong>The feedback flywheel:</strong> More users &rarr; more feedback &rarr; better AI &rarr; more trust &rarr; more users. This is the core growth loop for AI products. The PM who designs effective feedback mechanisms accelerates this flywheel. The PM who ignores feedback lets the AI stagnate.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">The AI UX Checklist</div><div class="cc-sub">A practical checklist for designing AI product experiences that build trust</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Trust &amp; Transparency</div><div class="cc-text"><strong>&square; Expectations set during onboarding</strong><br>Users know what the AI can and cannot do before they start.<br><br><strong>&square; Source citations on AI outputs</strong><br>Users can verify where the answer came from.<br><br><strong>&square; Confidence indicators for uncertain outputs</strong><br>Users know when to apply extra scrutiny.<br><br><strong>&square; &ldquo;I don&rsquo;t know&rdquo; behavior defined</strong><br>The AI admits uncertainty rather than hallucinating.</div></div>
+          <div class="cc-block"><div class="cc-label">Control &amp; Recovery</div><div class="cc-text"><strong>&square; Intent preview for consequential actions</strong><br>Users confirm before the AI takes irreversible actions.<br><br><strong>&square; Undo capability for AI actions</strong><br>Users can reverse what the AI did.<br><br><strong>&square; Human escalation always accessible</strong><br>&ldquo;Talk to a person&rdquo; is never more than one click away.<br><br><strong>&square; Edit and correct AI outputs</strong><br>Users can fix wrong answers directly.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Performance &amp; Feedback</div><div class="cc-text"><strong>&square; Streaming responses for chat interactions</strong><br>Users see the answer forming in real time.<br><br><strong>&square; Progress indicators for multi-step tasks</strong><br>Users know the AI is working, not stuck.<br><br><strong>&square; Thumbs up/down on every AI output</strong><br>Low-friction feedback mechanism always available.<br><br><strong>&square; Feedback pipeline to the team</strong><br>User signals reach the people who can improve the AI.</div></div>
+          <div class="cc-block"><div class="cc-label">Error Handling</div><div class="cc-text"><strong>&square; Graceful degradation for edge cases</strong><br>The product falls back to simpler capabilities rather than crashing.<br><br><strong>&square; Clear, human-friendly error messages</strong><br>No technical jargon in error states.<br><br><strong>&square; Automatic handoff triggers defined</strong><br>The system knows when to escalate to a human.<br><br><strong>&square; Error patterns tracked and prioritized</strong><br>Recurring failures are systematically addressed.</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> AI UX is fundamentally about managing uncertainty. Traditional software is deterministic &mdash; the same input always produces the same output. AI products are probabilistic &mdash; the same input might produce different outputs of varying quality. Every pattern in this chapter exists to help users navigate that uncertainty productively. The PM who masters AI UX patterns ships products that users trust, use, and recommend.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="12-rag-knowledge-integration-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 12: RAG &amp; Knowledge Integration</a>
+    <a class="ch-nav-btn next" href="14-testing-ai-products-high-level.html">Ch 14: Testing AI Products <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[2],4:[3],5:[3,4],6:[2],7:[2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Calibrated trust.</strong> Two failure modes: zero trust (users ignore the AI) and blind trust (users accept everything uncritically). The goal: users who trust AI where it&rsquo;s strong and override it where it&rsquo;s not. Build this through clear expectations, transparency, visible errors, easy correction, and progressive disclosure.',color:'#7c3aed'},
+    2:{text:'<strong>Confidence UI.</strong> Help users answer three questions: How sure is the AI? What is this based on? What if it&rsquo;s wrong? Use color coding, language hedging, source counts &mdash; but don&rsquo;t show raw percentages (meaningless to users) and don&rsquo;t over-hedge (erodes product trust). Match uncertainty signals to actual risk.',color:'#2563eb'},
+    3:{text:'<strong>Six interaction patterns.</strong> Pre-action: intent preview (confirm before acting) + autonomy dial (user controls AI freedom). In-action: explainable rationale (show reasoning) + confidence signal (real-time certainty). Post-action: action audit &amp; undo (reverse what AI did) + escalation pathway (one click to a human). Higher stakes = more patterns.',color:'#0d9488'},
+    4:{text:'<strong>Three failure types.</strong> Predictable errors (system knows it&rsquo;s uncertain) &rarr; show uncertainty, ask clarification. Edge cases (unexpected scenarios) &rarr; graceful degradation, human handoff. Silent failures (AI confident but wrong) &rarr; source citations, feedback loops, verification prompts. The 23% that goes wrong defines your product quality.',color:'#dc2626'},
+    5:{text:'<strong>Human handoff.</strong> Trigger on low confidence, out-of-scope requests, or negative user sentiment. Preserve full context for the human agent. Frame as a service upgrade, not AI failure. Set wait-time expectations. Track containment rate and handoff satisfaction. Every handoff is a signal for AI improvement.',color:'#d97706'},
+    6:{text:'<strong>Latency UX.</strong> LLMs take 2&ndash;15 seconds. Stream responses token-by-token (table stakes for chat). Use skeleton screens, progress narration, optimistic UI, background processing, and cached responses. Latency budget: &lt;1s instant, 1&ndash;3s streaming, 3&ndash;10s progress narration, &gt;10s background + notification. Never show a blank screen for &gt;1 second.',color:'#16a34a'},
+    7:{text:'<strong>Feedback mechanisms.</strong> Explicit: thumbs up/down (high volume), corrections (high quality), ratings (nuanced), free-text (richest). Implicit: acceptance, regeneration, edits, escalation, engagement time. Close the loop: collect &rarr; aggregate &rarr; surface patterns &rarr; fix &rarr; measure. The feedback flywheel is the core AI product growth loop.',color:'#db2777'},
+    8:{text:'<strong>The AI UX checklist:</strong> Trust (expectations, citations, confidence, &ldquo;I don&rsquo;t know&rdquo;). Control (intent preview, undo, human escalation, edit). Performance (streaming, progress, feedback pipeline). Errors (graceful degradation, clear messages, auto-handoff, pattern tracking). AI UX is fundamentally about managing uncertainty productively.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

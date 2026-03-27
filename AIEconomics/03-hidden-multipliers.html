@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Hidden Multipliers — AI Economics</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Hidden Multipliers</h2><span class="tb-sub">Reasoning tokens, quadratic scaling &amp; surcharges &mdash; the iceberg analogy</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">ac_unit</span></div><span class="pipe-label">Iceberg</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Thinking</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">expand</span></div><span class="pipe-label">Scaling</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">add_shopping_cart</span></div><span class="pipe-label">Surcharges</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">discount</span></div><span class="pipe-label">Discounts</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">Formula</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Step 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">ac_unit</span></div>
+        <div><div class="cc-title">The Iceberg Analogy</div><div class="cc-sub">The visible response is the tip; the real cost is underwater</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What You See</div>
+            <div class="cc-text">When you use a reasoning model like OpenAI&rsquo;s o3 or DeepSeek R1, you see a clean, concise response &mdash; maybe 500 tokens. That&rsquo;s the <strong>tip of the iceberg</strong>. It looks manageable. You multiply 500 tokens by the output price and think, &ldquo;That&rsquo;s cheap.&rdquo;</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What You Don&rsquo;t See</div>
+            <div class="cc-text">Beneath the surface, the model generated <strong>thousands of invisible &ldquo;thinking tokens&rdquo;</strong> before producing your visible response. These tokens represent the model&rsquo;s internal chain-of-thought reasoning &mdash; exploring solution paths, verifying logic, self-correcting. They&rsquo;re billed at <strong>full output token rates</strong> but you never see them. A 500-token visible response can actually cost the same as a 10,000-token response.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Reasoning models are 5&ndash;14x more expensive per request than standard models, not because the visible output is longer, but because the invisible thinking process generates enormous token volumes beneath the surface.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div>
+        <div><div class="cc-title">Reasoning Tokens by Complexity</div><div class="cc-sub">Simple questions vs hard problems &mdash; the thinking tax</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Thinking Token Volume</div>
+            <div class="cc-code"><span class="hl-cmt">// Invisible thinking tokens by task complexity</span>
+<span class="hl-key">Simple question</span>     <span class="hl-num">200&ndash;500</span> thinking tokens
+<span class="hl-key">Moderate reasoning</span>  <span class="hl-num">2,000&ndash;5,000</span> thinking tokens
+<span class="hl-key">Complex problem</span>     <span class="hl-num">5,000&ndash;20,000</span> thinking tokens
+<span class="hl-key">Extremely hard</span>      <span class="hl-num">20,000&ndash;50,000+</span> thinking tokens
+
+<span class="hl-cmt">// Real cost example (o3 at $2/$8 per M)</span>
+<span class="hl-key">Visible response:</span>   <span class="hl-num">500</span> tokens  = $<span class="hl-num">0.004</span>
+<span class="hl-key">Thinking tokens:</span>    <span class="hl-num">9,500</span> tokens = $<span class="hl-num">0.076</span>
+<span class="hl-key">Total output cost:</span>  <span class="hl-num">10,000</span> tokens = $<span class="hl-num">0.080</span>
+<span class="hl-cmt">// You thought you paid for 500 tokens</span>
+<span class="hl-cmt">// You actually paid for 10,000</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Unpredictability Problem</div>
+            <div class="cc-text">Unlike standard models where output length is somewhat predictable, <strong>thinking token volume is entirely unpredictable</strong>. The same question asked slightly differently can trigger 500 or 15,000 thinking tokens. This makes cost forecasting for reasoning models extremely difficult. You can&rsquo;t budget for what you can&rsquo;t predict.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The 400x price gap between reasoning models is real: DeepSeek R1 at $0.42/M output vs o3-pro at $80/M output. For a task generating 20,000 thinking tokens, that&rsquo;s $0.008 vs $1.60 &mdash; a 200x difference for the same reasoning quality tier.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">expand</span></div>
+        <div><div class="cc-title">Quadratic Attention Scaling</div><div class="cc-sub">The shipping weight analogy &mdash; double the package, quadruple the cost</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Shipping Weight Analogy</div>
+            <div class="cc-text">Imagine shipping costs worked like this: a 1 kg package costs $1, but a 2 kg package costs $4 (not $2). A 4 kg package costs $16. That&rsquo;s <strong>quadratic scaling</strong> &mdash; doubling the weight quadruples the cost. This is exactly how transformer attention works. Every token must compare itself with <strong>every other token</strong> in the context, creating O(n&sup2;) complexity.</div>
+          </div>
+          <div class="cc-code"><span class="hl-cmt">// Attention comparisons by context length</span>
+<span class="hl-key">  1K tokens</span> &rarr; <span class="hl-num">    1 million</span> comparisons/layer
+<span class="hl-key">  4K tokens</span> &rarr; <span class="hl-num">   16 million</span> comparisons/layer
+<span class="hl-key"> 32K tokens</span> &rarr; <span class="hl-num">    1 billion</span> comparisons/layer
+<span class="hl-key">128K tokens</span> &rarr; <span class="hl-num">   16 billion</span> comparisons/layer
+<span class="hl-key">  1M tokens</span> &rarr; <span class="hl-num">1,000 billion</span> comparisons/layer</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why This Matters for Your Bill</div>
+            <div class="cc-text">Quadratic scaling means the <strong>cost per token increases as context grows</strong>. The 128,001st token is more expensive to process than the 1st token, because it must attend to all 128,000 tokens before it. This is why providers charge surcharges for long contexts &mdash; the infrastructure cost genuinely increases non-linearly.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> This is the fundamental reason why &ldquo;just throw everything into the context window&rdquo; is an expensive strategy. A 128K context doesn&rsquo;t cost 128x more than a 1K context &mdash; it costs orders of magnitude more in compute. Context compression (Chapter 6) exists to fight this curve.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">add_shopping_cart</span></div>
+        <div><div class="cc-title">Context Window Surcharges</div><div class="cc-sub">The 2x price jump above 200K tokens</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Provider Surcharges (March 2026)</div>
+            <div class="cc-text">Both <strong>Anthropic and Google</strong> apply explicit price surcharges for long contexts. When your request exceeds 200K tokens, the per-token price <strong>doubles</strong>. This isn&rsquo;t hidden &mdash; it&rsquo;s documented on their pricing pages &mdash; but many developers miss it when estimating costs.</div>
+          </div>
+          <div class="cc-code"><span class="hl-cmt">// Context surcharge examples</span>
+<span class="hl-key">Claude Opus 4.6</span>
+  &lt;200K tokens: $<span class="hl-num">5.00</span>/M input
+  &gt;200K tokens: $<span class="hl-num">10.00</span>/M input  <span class="hl-str">(2x)</span>
+
+<span class="hl-key">Gemini 2.5 Pro</span>
+  &lt;200K tokens: $<span class="hl-num">1.25</span>/M input
+  &gt;200K tokens: $<span class="hl-num">2.50</span>/M input  <span class="hl-str">(2x)</span>
+
+<span class="hl-key">GPT-5</span>
+  400K context, <span class="hl-str">no surcharge</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Practical Impact</div>
+            <div class="cc-text">A RAG system that retrieves 50 documents averaging 5,000 tokens each loads <strong>250K tokens</strong> per request. On Claude Opus, the first 200K costs $1.00 and the remaining 50K costs $0.50 (at the 2x rate). The surcharge adds <strong>50% to the total input cost</strong> for that last 50K tokens. Keeping context under 200K becomes a concrete cost optimization target.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Context surcharges create a pricing cliff. Staying just under 200K tokens can save you 2x on the marginal cost. This is why context compression and selective retrieval aren&rsquo;t just nice-to-haves &mdash; they have direct, measurable cost impact.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">discount</span></div>
+        <div><div class="cc-title">Discounts That Reduce the Bill</div><div class="cc-sub">Cached tokens, batch APIs, and volume pricing</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Prompt Caching</div>
+            <div class="cc-text">When you send the same prefix (system prompt, tool definitions, few-shot examples) across multiple requests, providers can <strong>cache the processed tokens</strong> and reuse them. Anthropic offers <strong>~90% discount</strong> on cached token reads. OpenAI offers <strong>~50% discount</strong> for prompts over 1,024 tokens. This is the single highest-ROI optimization &mdash; 10 minutes to implement, 45&ndash;90% savings on repeated prefixes.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Batch API</div>
+            <div class="cc-text">For workloads that don&rsquo;t need real-time responses, batch APIs process requests asynchronously at <strong>50% off</strong> the standard price. Ideal for data processing, evaluation, content generation, and any task where a few hours of latency is acceptable.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Discount Impact</div>
+            <div class="cc-code"><span class="hl-cmt">// Discount stacking example</span>
+<span class="hl-key">Base cost:</span>        $<span class="hl-num">10,000</span>/month
+<span class="hl-key">Prompt caching:</span>   -$<span class="hl-num">4,500</span> (45% of input)
+<span class="hl-key">Batch API:</span>        -$<span class="hl-num">1,500</span> (50% off async)
+<span class="hl-key">After discounts:</span>  $<span class="hl-num">4,000</span>/month
+<span class="hl-cmt">// 60% reduction with zero quality impact</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Discounts are the &ldquo;good&rdquo; hidden multipliers. Most teams leave 40&ndash;60% savings on the table simply because they don&rsquo;t enable prompt caching or use batch APIs for eligible workloads. These are covered in depth in Chapter 6.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">functions</span></div>
+        <div><div class="cc-title">The Full Cost Formula</div><div class="cc-sub">Everything that goes into your actual bill</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Complete Equation</div>
+            <div class="cc-code"><span class="hl-cmt">// Your actual cost per request</span>
+<span class="hl-key">actual_cost</span> =
+  (input_tokens &times; input_price)
++ (output_tokens &times; output_price)
++ (<span class="hl-str">thinking_tokens</span> &times; output_price)
++ (surcharge on tokens &gt; 200K)
+- (cached_tokens &times; cache_discount)
+- (batch_discount if async)
+
+<span class="hl-cmt">// The sticker price formula</span>
+<span class="hl-key">sticker_cost</span> =
+  (input_tokens &times; input_price)
++ (output_tokens &times; output_price)
+
+<span class="hl-cmt">// actual_cost can be 2&ndash;20x higher
+// than sticker_cost for reasoning models</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Sticker Price Is Misleading</div>
+            <div class="cc-text">Most cost estimates use the sticker price formula &mdash; input tokens times input price plus output tokens times output price. But the actual cost includes <strong>thinking tokens</strong> (which can be 10&ndash;20x the visible output), <strong>surcharges</strong> (2x above 200K), and misses <strong>discounts</strong> (caching, batching). Teams that budget on sticker price alone typically <strong>underestimate by 2&ndash;3x</strong>.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Always ask three questions before estimating cost: (1) Does this model use reasoning/thinking tokens? (2) Will my context exceed 200K tokens? (3) Am I using caching and batch discounts? The answers can swing your estimate by 5&ndash;10x in either direction.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">compare_arrows</span></div>
+        <div><div class="cc-title">The 400x Reasoning Model Gap</div><div class="cc-sub">DeepSeek R1 vs o3-pro &mdash; same capability class, wildly different price</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Reasoning Model Pricing (March 2026)</div>
+            <div class="cc-code"><span class="hl-cmt">// Reasoning models: input / output per M tokens</span>
+<span class="hl-key">DeepSeek R1 V3.2</span>  $<span class="hl-num">0.28</span> / $<span class="hl-num">0.42</span>
+<span class="hl-key">o3</span>                 $<span class="hl-num">2.00</span> / $<span class="hl-num">8.00</span>
+<span class="hl-key">o3-pro</span>             $<span class="hl-num">20.00</span> / $<span class="hl-num">80.00</span>
+<span class="hl-key">o1-pro</span>             $<span class="hl-num">150</span>  / $<span class="hl-num">600</span>
+
+<span class="hl-cmt">// Same task (20K thinking + 500 visible output)</span>
+<span class="hl-key">DeepSeek R1:</span>  $<span class="hl-num">0.009</span>
+<span class="hl-key">o3:</span>           $<span class="hl-num">0.164</span>   (18x more)
+<span class="hl-key">o3-pro:</span>       $<span class="hl-num">1.640</span>   (182x more)
+<span class="hl-key">o1-pro:</span>       $<span class="hl-num">12.30</span>   (1,367x more)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Use Each Tier</div>
+            <div class="cc-text"><strong>DeepSeek R1</strong> handles 80% of reasoning tasks at negligible cost. <strong>o3</strong> is the sweet spot for hard coding and math problems. <strong>o3-pro</strong> is for competition-level problems where accuracy is paramount. <strong>o1-pro</strong> is rarely justified outside research labs. The quality difference between tiers is real but narrow for most practical tasks.</div>
+          </div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The reasoning model you choose has a bigger cost impact than any other decision. Running 1,000 complex tasks/day on o1-pro costs $12,300/day ($369,000/month). The same tasks on DeepSeek R1 cost $9/day ($270/month). That&rsquo;s a 1,367x difference.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">lightbulb</span></div>
+        <div><div class="cc-title">The Iceberg, Mapped</div><div class="cc-sub">All hidden multipliers in one view</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Above the Waterline (Visible)</div>
+            <div class="cc-text"><strong>Input tokens</strong> &mdash; your prompt, context, documents. <strong>Visible output tokens</strong> &mdash; the response you see. These are what the sticker price covers. For standard models (GPT-4o, Claude Sonnet), this is the full picture. For reasoning models, it&rsquo;s just the tip.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Below the Waterline (Hidden)</div>
+            <div class="cc-text"><strong>Thinking tokens</strong> &mdash; 5&ndash;100x the visible output, billed at output rates. <strong>Quadratic scaling</strong> &mdash; each additional token costs more than the last. <strong>Context surcharges</strong> &mdash; 2x price above 200K tokens. <strong>Conversation accumulation</strong> &mdash; history grows with every turn. <strong>Tool schema overhead</strong> &mdash; 500+ tokens per tool, every request.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What&rsquo;s Next</div>
+            <div class="cc-text">Chapter 4 takes everything from Chapters 1&ndash;3 and applies it to <strong>real-world bills</strong>. Five worked examples with March 2026 pricing: a consumer chat app, a customer support bot, a code assistant, a RAG system, and an autonomous agent fleet. The electricity bill analogy &mdash; moving from per-token thinking to monthly bill thinking.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The hidden multipliers work in both directions. Thinking tokens and surcharges inflate your bill 2&ndash;20x above sticker price. Caching and batch discounts reduce it 40&ndash;60%. The teams that understand both sides of the iceberg are the ones that build sustainable AI economics.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-the-token-price-tag.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: The Token Price Tag</a>
+    <a class="ch-nav-btn next" href="04-real-world-bills.html">Ch 4: Real-World Bills <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The iceberg analogy \u2014 your visible 500-token response is the tip. Beneath it: thousands of invisible thinking tokens billed at full output rates.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> Thinking tokens scale with complexity: 200\u2013500 for simple questions, 20,000\u201350,000+ for hard problems. Unpredictable and always billed as output.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Quadratic attention scaling: doubling context length quadruples compute. 128K tokens = 16 billion comparisons per layer.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Context surcharges: Anthropic and Google charge 2x above 200K tokens. Staying under 200K is a concrete cost optimization target.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> Good hidden multipliers: prompt caching (45\u201390% savings) and batch APIs (50% off). Most teams leave 40\u201360% savings on the table.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> The full cost formula includes thinking tokens, surcharges, and discounts. Sticker price underestimates actual cost by 2\u20133x for reasoning models.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> The 400x reasoning model gap: DeepSeek R1 at $0.009/task vs o1-pro at $12.30/task. Same capability class, 1,367x price difference.',color:'#dc2626'},
+    8:{text:'<strong>Step 8:</strong> Hidden multipliers work both ways \u2014 thinking tokens inflate 2\u201320x, while caching and batching reduce 40\u201360%. Understanding both sides is the key.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

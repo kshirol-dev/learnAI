@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: Text to Tokens — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 1 &mdash; Text to Tokens</h2><span class="tb-sub">How raw text becomes numbers &mdash; the very first step in every LLM</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Foundation</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Raw Text</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Split</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">merge</span></div><span class="pipe-label">BPE</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">dictionary</span></div><span class="pipe-label">Vocab</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Special</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">pin</span></div><span class="pipe-label">IDs</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Compare</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Why It Matters</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Raw Text -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">text_fields</span></div><div><div class="cc-title">The Problem: Computers Don&rsquo;t Read</div><div class="cc-sub">Why we need tokenization at all</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine you speak English and need to communicate with someone who only understands numbers. You&rsquo;d need a <strong>codebook</strong> &mdash; a dictionary that maps every word (or piece of a word) to a unique number. That&rsquo;s exactly what a <strong>tokenizer</strong> does. It&rsquo;s the translator between human language and the numbers a neural network can process.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> An LLM never sees text. It only sees sequences of integers. &ldquo;Hello world&rdquo; might become [15339, 1917]. Everything the model does &mdash; understanding, reasoning, generating &mdash; happens in the world of numbers. Tokenization is the bridge.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Happens</div>
+            <div class="cc-code"><span class="hl-cmt"># What you type:</span>
+<span class="hl-str">"Hello, how are you?"</span>
+
+<span class="hl-cmt"># What the LLM actually sees:</span>
+[<span class="hl-num">9906</span>, <span class="hl-num">11</span>, <span class="hl-num">1268</span>, <span class="hl-num">527</span>, <span class="hl-num">499</span>, <span class="hl-num">30</span>]
+
+<span class="hl-cmt"># Each number = one "token"</span>
+<span class="hl-cmt"># 9906 → "Hello"</span>
+<span class="hl-cmt"># 11   → ","</span>
+<span class="hl-cmt"># 1268 → " how"</span>
+<span class="hl-cmt"># 527  → " are"</span>
+<span class="hl-cmt"># 499  → " you"</span>
+<span class="hl-cmt"># 30   → "?"</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">A codebook that translates English words into numbered codes for a telegraph</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In LLMs</div><div class="cb-text">A tokenizer that maps text chunks to integer IDs from a fixed vocabulary</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Splitting Strategies -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">content_cut</span></div><div><div class="cc-title">How to Split Text: Three Approaches</div><div class="cc-sub">Characters, words, or something in between?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine chopping a sentence for a Scrabble game. You could split into <strong>individual letters</strong> (tiny tiles, lots of them), <strong>whole words</strong> (big tiles, but you need millions), or <strong>common chunks</strong> like &ldquo;ing&rdquo;, &ldquo;tion&rdquo;, &ldquo;un&rdquo; (medium tiles, reusable). Modern LLMs use the third approach: <strong>subword tokenization</strong>.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Word-level tokenization fails on new words (&ldquo;ChatGPT&rdquo; would be unknown). Character-level needs extremely long sequences (a 1000-word essay = ~5000 characters). Subword tokenization is the sweet spot &mdash; common words stay whole, rare words get split into known pieces.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three Approaches</div>
+            <div class="cc-code"><span class="hl-cmt"># Character-level: tiny vocab, long sequences</span>
+<span class="hl-str">"unhappiness"</span> → [<span class="hl-str">"u"</span>,<span class="hl-str">"n"</span>,<span class="hl-str">"h"</span>,<span class="hl-str">"a"</span>,<span class="hl-str">"p"</span>,<span class="hl-str">"p"</span>,<span class="hl-str">"i"</span>,<span class="hl-str">"n"</span>,<span class="hl-str">"e"</span>,<span class="hl-str">"s"</span>,<span class="hl-str">"s"</span>]
+<span class="hl-cmt"># Vocab: ~256 (bytes). 11 tokens for 1 word!</span>
+
+<span class="hl-cmt"># Word-level: huge vocab, OOV problem</span>
+<span class="hl-str">"unhappiness"</span> → [<span class="hl-str">"unhappiness"</span>]
+<span class="hl-cmt"># Vocab: 500K+ words. "ChatGPT" = unknown!</span>
+
+<span class="hl-cmt"># Subword (BPE): balanced vocab, no OOV</span>
+<span class="hl-str">"unhappiness"</span> → [<span class="hl-str">"un"</span>, <span class="hl-str">"happiness"</span>]
+<span class="hl-cmt"># Vocab: 32K-128K. Handles any text.</span>
+<span class="hl-cmt"># Common words stay whole: "the" → ["the"]</span>
+<span class="hl-cmt"># Rare words split: "ChatGPT" → ["Chat","GPT"]</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: BPE Algorithm -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">merge</span></div><div><div class="cc-title">Byte-Pair Encoding (BPE)</div><div class="cc-sub">The algorithm behind GPT, Llama, and most modern tokenizers</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine you&rsquo;re creating shorthand for note-taking. You notice you write &ldquo;th&rdquo; constantly, so you create a symbol for it. Then &ldquo;the&rdquo; appears a lot, so you merge &ldquo;th&rdquo;+&ldquo;e&rdquo; into one symbol. Then &ldquo;the &rdquo; (with space), and so on. <strong>BPE</strong> does exactly this &mdash; it starts with individual bytes and repeatedly merges the most frequent pair into a new token.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> BPE was originally a data compression algorithm (Gage, 1994). Sennrich et al. (2016) adapted it for NLP. OpenAI&rsquo;s GPT-2 was the first major model to use byte-level BPE, and it&rsquo;s been the standard ever since. The &ldquo;byte&rdquo; part means it starts from raw bytes (0-255), so it can handle any language, emoji, or even binary data.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">BPE Step by Step</div>
+            <div class="cc-code"><span class="hl-cmt"># Training corpus: "low lower lowest"</span>
+<span class="hl-cmt"># Start with characters:</span>
+<span class="hl-cmt"># l o w _ l o w e r _ l o w e s t</span>
+
+<span class="hl-cmt"># Count pairs: (l,o)=3 (o,w)=3 (w,e)=2 ...</span>
+<span class="hl-cmt"># Merge most frequent: (l,o) → "lo"</span>
+<span class="hl-cmt"># lo w _ lo w e r _ lo w e s t</span>
+
+<span class="hl-cmt"># Count again: (lo,w)=3 is most frequent</span>
+<span class="hl-cmt"># Merge: (lo,w) → "low"</span>
+<span class="hl-cmt"># low _ low e r _ low e s t</span>
+
+<span class="hl-cmt"># Next: (low,e)=2 → "lowe"</span>
+<span class="hl-cmt"># low _ lowe r _ lowe s t</span>
+
+<span class="hl-cmt"># Continue until vocab size reached...</span>
+<span class="hl-cmt"># Final merge rules (ordered):</span>
+<span class="hl-cmt"># 1. l + o → lo</span>
+<span class="hl-cmt"># 2. lo + w → low</span>
+<span class="hl-cmt"># 3. low + e → lowe</span>
+<span class="hl-cmt"># ...</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Vocabulary -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">dictionary</span></div><div><div class="cc-title">The Vocabulary: Your Model&rsquo;s Dictionary</div><div class="cc-sub">Real vocabulary sizes from actual models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">A vocabulary is like a phrase book for a traveler. A tiny phrase book (256 entries = raw bytes) can express anything but requires many lookups per sentence. A massive dictionary (500K words) is fast but can&rsquo;t handle new slang. The sweet spot is 32K&ndash;128K subword tokens &mdash; enough to keep common words whole while splitting rare ones.</div></div>
+          <div class="cc-block"><div class="cc-label">Real Model Vocabularies</div>
+            <div class="cc-code"><span class="hl-cmt"># Actual vocabulary sizes:</span>
+<span class="hl-cmt"># GPT-2:         50,257 tokens (BPE)</span>
+<span class="hl-cmt"># GPT-3.5/4:    100,258 tokens (cl100k_base)</span>
+<span class="hl-cmt"># GPT-4o:       200,019 tokens (o200k_base)</span>
+<span class="hl-cmt"># Llama 2:       32,000 tokens (SentencePiece)</span>
+<span class="hl-cmt"># Llama 3:      128,256 tokens (tiktoken-based)</span>
+<span class="hl-cmt"># Claude 3:     ~100K tokens (BPE variant)</span>
+<span class="hl-cmt"># Gemini:       256,000 tokens (SentencePiece)</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Larger vocabularies mean fewer tokens per sentence (faster inference, fits more text in context window) but more parameters in the embedding layer. GPT-4o doubled the vocab from 100K to 200K specifically to improve efficiency on non-English languages, where smaller vocabs waste tokens on single characters.</div>
+          <div class="cc-block" style="margin-top:12px"><div class="cc-label">Compression Ratio</div>
+            <div class="cc-code"><span class="hl-cmt"># Average characters per token:</span>
+<span class="hl-cmt"># GPT-2 (50K vocab):  ~4.0 chars/token (English)</span>
+<span class="hl-cmt"># GPT-4 (100K vocab): ~4.0 chars/token (English)</span>
+<span class="hl-cmt"># Llama 3 (128K):     ~4.0 chars/token (English)</span>
+<span class="hl-cmt">#                     ~2.5 chars/token (Chinese)</span>
+<span class="hl-cmt">#                     ~1.5 chars/token (Japanese)</span>
+
+<span class="hl-cmt"># "Hello world" = 2 tokens (11 chars)</span>
+<span class="hl-cmt"># → 5.5 chars/token (very efficient!)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Special Tokens -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">tag</span></div><div><div class="cc-title">Special Tokens: The Control Signals</div><div class="cc-sub">Hidden markers that tell the model where things start, stop, and change</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Special tokens are like <strong>punctuation marks for the model</strong> &mdash; but invisible to you. Just as a period tells you a sentence ended, <code>&lt;|endoftext|&gt;</code> tells the model a document ended. <code>&lt;|im_start|&gt;</code> marks where a chat message begins. These tokens never appear in normal text &mdash; they&rsquo;re injected by the system to give the model structural cues.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> When you chat with ChatGPT, your message gets wrapped in special tokens before the model sees it. The model doesn&rsquo;t see &ldquo;What is Python?&rdquo; &mdash; it sees something like <code>&lt;|im_start|&gt;user\nWhat is Python?&lt;|im_end|&gt;&lt;|im_start|&gt;assistant\n</code>. These invisible markers are how the model knows who&rsquo;s speaking and when to stop generating.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Special Tokens</div>
+            <div class="cc-code"><span class="hl-cmt"># GPT-4 special tokens (cl100k_base):</span>
+<span class="hl-str">&lt;|endoftext|&gt;</span>    <span class="hl-cmt"># document boundary</span>
+<span class="hl-str">&lt;|im_start|&gt;</span>     <span class="hl-cmt"># chat message start</span>
+<span class="hl-str">&lt;|im_end|&gt;</span>       <span class="hl-cmt"># chat message end</span>
+<span class="hl-str">&lt;|fim_prefix|&gt;</span>   <span class="hl-cmt"># fill-in-the-middle</span>
+<span class="hl-str">&lt;|fim_middle|&gt;</span>   <span class="hl-cmt"># (for code completion)</span>
+<span class="hl-str">&lt;|fim_suffix|&gt;</span>   <span class="hl-cmt"># (for code completion)</span>
+
+<span class="hl-cmt"># Llama 3 special tokens:</span>
+<span class="hl-str">&lt;|begin_of_text|&gt;</span>  <span class="hl-cmt"># sequence start</span>
+<span class="hl-str">&lt;|end_of_text|&gt;</span>    <span class="hl-cmt"># sequence end</span>
+<span class="hl-str">&lt;|start_header_id|&gt;</span> <span class="hl-cmt"># role marker</span>
+<span class="hl-str">&lt;|end_header_id|&gt;</span>   <span class="hl-cmt"># role marker</span>
+<span class="hl-str">&lt;|eot_id|&gt;</span>         <span class="hl-cmt"># end of turn</span></div>
+          </div>
+          <div class="cc-block"><div class="cc-label">Chat Template Example</div>
+            <div class="cc-code"><span class="hl-cmt"># What the model actually receives:</span>
+<span class="hl-str">&lt;|begin_of_text|&gt;</span>
+<span class="hl-str">&lt;|start_header_id|&gt;</span>system<span class="hl-str">&lt;|end_header_id|&gt;</span>
+You are a helpful assistant.
+<span class="hl-str">&lt;|eot_id|&gt;</span>
+<span class="hl-str">&lt;|start_header_id|&gt;</span>user<span class="hl-str">&lt;|end_header_id|&gt;</span>
+What is Python?
+<span class="hl-str">&lt;|eot_id|&gt;</span>
+<span class="hl-str">&lt;|start_header_id|&gt;</span>assistant<span class="hl-str">&lt;|end_header_id|&gt;</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Token IDs in Practice -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">pin</span></div><div><div class="cc-title">Token IDs: Try It Yourself</div><div class="cc-sub">Real code you can run to see tokenization in action</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">OpenAI tiktoken</div>
+            <div class="cc-code"><span class="hl-key">import</span> tiktoken
+
+<span class="hl-cmt"># GPT-4 tokenizer</span>
+enc = tiktoken.get_encoding(<span class="hl-str">"cl100k_base"</span>)
+
+text = <span class="hl-str">"Tokenization is surprisingly important!"</span>
+tokens = enc.encode(text)
+<span class="hl-cmt"># [5765, 2065, 374, 29729, 3062, 0]</span>
+
+<span class="hl-cmt"># Decode back to see each token's text:</span>
+<span class="hl-key">for</span> t <span class="hl-key">in</span> tokens:
+    print(f<span class="hl-str">"{t:6d} → '{enc.decode([t])}'"</span>)
+<span class="hl-cmt">#  5765 → 'Token'</span>
+<span class="hl-cmt">#  2065 → 'ization'</span>
+<span class="hl-cmt">#   374 → ' is'</span>
+<span class="hl-cmt"># 29729 → ' surprisingly'</span>
+<span class="hl-cmt">#  3062 → ' important'</span>
+<span class="hl-cmt">#     0 → '!'</span>
+
+print(f<span class="hl-str">"Tokens: {len(tokens)}"</span>)  <span class="hl-cmt"># 6</span>
+print(f<span class="hl-str">"Chars:  {len(text)}"</span>)    <span class="hl-cmt"># 40</span>
+print(f<span class="hl-str">"Ratio:  {len(text)/len(tokens):.1f} chars/token"</span>)
+<span class="hl-cmt"># 6.7 chars/token</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hugging Face Transformers</div>
+            <div class="cc-code"><span class="hl-key">from</span> transformers <span class="hl-key">import</span> AutoTokenizer
+
+<span class="hl-cmt"># Llama 3 tokenizer</span>
+tok = AutoTokenizer.from_pretrained(
+    <span class="hl-str">"meta-llama/Meta-Llama-3-8B"</span>
+)
+
+text = <span class="hl-str">"Tokenization is surprisingly important!"</span>
+ids = tok.encode(text)
+tokens = tok.convert_ids_to_tokens(ids)
+<span class="hl-cmt"># ['Token', 'ization', 'Ġis', 'Ġsurprisingly',</span>
+<span class="hl-cmt">#  'Ġimportant', '!']</span>
+<span class="hl-cmt"># Ġ = space character (byte 0x20)</span>
+
+<span class="hl-cmt"># Decode back to string:</span>
+tok.decode(ids)
+<span class="hl-cmt"># "Tokenization is surprisingly important!"</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Why it matters:</strong> The <code>Ġ</code> prefix (displayed as a special character) represents a leading space. Tokens like <code>Ġis</code> mean &ldquo; is&rdquo; (with space). This is how the tokenizer preserves whitespace &mdash; spaces aren&rsquo;t separate tokens, they&rsquo;re attached to the next word.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Comparing Tokenizers -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">BPE vs. WordPiece vs. SentencePiece</div><div class="cc-sub">Different models use different tokenizers &mdash; here&rsquo;s how they compare</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three Main Algorithms</div><div class="cc-text"><strong>BPE</strong> (GPT, Llama 3): Merges the most frequent byte pair, bottom-up. Starts from bytes, builds up. <strong>WordPiece</strong> (BERT, DistilBERT): Similar to BPE but picks merges that maximize likelihood of the training data, not just frequency. Uses <code>##</code> prefix for continuations. <strong>Unigram/SentencePiece</strong> (Llama 2, T5, Gemini): Starts with a large vocab and prunes tokens that contribute least. Works directly on raw text (no pre-tokenization).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The choice of tokenizer affects model performance more than most people realize. Llama 3 switched from SentencePiece (32K vocab) to a tiktoken-based BPE (128K vocab), improving compression from ~3.2 to ~4.0 chars/token on English. That means the same context window fits 25% more text.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Side-by-Side Comparison</div>
+            <div class="cc-code"><span class="hl-cmt"># Input: "unbelievable"</span>
+
+<span class="hl-cmt"># BPE (GPT-4, cl100k_base):</span>
+[<span class="hl-str">"un"</span>, <span class="hl-str">"believ"</span>, <span class="hl-str">"able"</span>]  <span class="hl-cmt"># 3 tokens</span>
+
+<span class="hl-cmt"># WordPiece (BERT):</span>
+[<span class="hl-str">"un"</span>, <span class="hl-str">"##bel"</span>, <span class="hl-str">"##ie"</span>, <span class="hl-str">"##va"</span>, <span class="hl-str">"##ble"</span>]
+<span class="hl-cmt"># 5 tokens (## = continuation)</span>
+
+<span class="hl-cmt"># SentencePiece (Llama 2):</span>
+[<span class="hl-str">"▁un"</span>, <span class="hl-str">"bel"</span>, <span class="hl-str">"iev"</span>, <span class="hl-str">"able"</span>]
+<span class="hl-cmt"># 4 tokens (▁ = word boundary)</span></div>
+          </div>
+          <div class="cc-block"><div class="cc-label">Which Models Use What</div>
+            <div class="cc-code"><span class="hl-cmt"># BPE (byte-level):</span>
+<span class="hl-cmt">#   GPT-2, GPT-3, GPT-4, GPT-4o</span>
+<span class="hl-cmt">#   Llama 3, Mistral, Falcon</span>
+
+<span class="hl-cmt"># WordPiece:</span>
+<span class="hl-cmt">#   BERT, DistilBERT, ELECTRA</span>
+
+<span class="hl-cmt"># SentencePiece (Unigram or BPE):</span>
+<span class="hl-cmt">#   Llama 2, T5, Gemini, PaLM</span>
+<span class="hl-cmt">#   XLNet, ALBERT, mBART</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Why Tokenization Matters -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why Tokenization Matters More Than You Think</div><div class="cc-sub">Tokenization quirks explain many LLM behaviors</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Tokenization Explains LLM Quirks</div><div class="cc-text"><strong>Why LLMs struggle with counting letters:</strong> &ldquo;strawberry&rdquo; might be tokenized as [&ldquo;str&rdquo;, &ldquo;aw&rdquo;, &ldquo;berry&rdquo;] &mdash; the model never sees individual letters, so counting &ldquo;r&rdquo;s is hard. <strong>Why code is expensive:</strong> Python code uses ~2&times; more tokens than English prose (whitespace, symbols, variable names). <strong>Why non-English costs more:</strong> Chinese text uses ~2-3&times; more tokens per character than English with English-optimized tokenizers.</div></div>
+          <div class="cc-note n-green"><strong>The complete picture:</strong> Tokenization is not just a preprocessing step &mdash; it fundamentally shapes what the model can and cannot do. The vocabulary defines the model&rsquo;s &ldquo;alphabet.&rdquo; The compression ratio determines how much text fits in the context window. The token boundaries affect what patterns the model can learn. Every LLM limitation you encounter has a tokenization component.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Real-World Implications</div>
+            <div class="cc-code"><span class="hl-cmt"># Token cost = real money cost</span>
+<span class="hl-cmt"># GPT-4o: $2.50 per 1M input tokens</span>
+<span class="hl-cmt"># 1M tokens ≈ 750K words ≈ 3,000 pages</span>
+
+<span class="hl-cmt"># Same text, different token counts:</span>
+<span class="hl-cmt"># "Hello" in English: 1 token</span>
+<span class="hl-cmt"># "こんにちは" in Japanese: 3-4 tokens</span>
+<span class="hl-cmt"># → Japanese users pay 3-4× more per word!</span>
+
+<span class="hl-cmt"># Context window = token limit</span>
+<span class="hl-cmt"># GPT-4o: 128K tokens ≈ 96K words (English)</span>
+<span class="hl-cmt"># GPT-4o: 128K tokens ≈ 40K words (Chinese)</span>
+
+<span class="hl-cmt"># Code is token-hungry:</span>
+<span class="hl-cmt"># "for i in range(10):" = 7 tokens</span>
+<span class="hl-cmt"># "loop ten times" = 3 tokens</span>
+<span class="hl-cmt"># Same meaning, 2.3× more tokens for code</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">A translator who chunks text differently will understand and convey meaning differently</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In LLMs</div><div class="cb-text">The tokenizer defines what &ldquo;atoms&rdquo; the model thinks in &mdash; it literally shapes the model&rsquo;s perception of language</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href=""></a>
+    <a class="ch-nav-btn next" href="02-embeddings.html">Ch 2: Embeddings <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> LLMs never see text — only sequences of integers. A tokenizer is the codebook that translates human language into numbers the model can process.',color:'#7c3aed'},
+    2:{text:'<strong>Step 2:</strong> Three ways to split text: characters (tiny, slow), words (huge vocab, can\'t handle new words), or subwords (the sweet spot). Modern LLMs all use subword tokenization.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> BPE starts with individual bytes and repeatedly merges the most frequent pair. "l"+"o" → "lo", "lo"+"w" → "low". Originally a compression algorithm from 1994, now the backbone of GPT and Llama.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Vocabulary sizes range from 32K (Llama 2) to 256K (Gemini). GPT-4 uses 100,258 tokens. Larger vocab = fewer tokens per sentence = more text fits in context window.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Special tokens are invisible control signals. &lt;|im_start|&gt; marks chat messages. &lt;|endoftext|&gt; marks document boundaries. They\'re how the model knows who\'s speaking and when to stop.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Try it yourself with tiktoken (OpenAI) or Hugging Face tokenizers. "Tokenization" splits into ["Token", "ization"]. The Ġ prefix represents a leading space.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> BPE (GPT, Llama 3), WordPiece (BERT), SentencePiece (Llama 2, Gemini). Llama 3 switched to BPE with 128K vocab, fitting 25% more text in the same context window.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Tokenization explains why LLMs can\'t count letters in "strawberry," why code costs more than prose, and why non-English users pay more per word. It shapes everything.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

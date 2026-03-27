@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: How Diffusion Models Work &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; How Diffusion Models Work</h2><span class="tb-sub">Forward noise, reverse denoising, U-Net, latent diffusion, classifier-free guidance &mdash; the math made intuitive</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">blur_on</span></div><span class="pipe-label">Noise</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Denoise</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">architecture</span></div><span class="pipe-label">U-Net</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Latent</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">CFG</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Generate</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1: Forward Process -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">blur_on</span></div>
+        <div><div class="cc-title">The Forward Process</div><div class="cc-sub">Gradually destroying an image with noise</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Adding Noise Step by Step</div>
+            <div class="cc-text">The forward process takes a clean image and adds <strong>Gaussian noise</strong> over T steps (typically T=1,000). At step 0, you have the original image. At step T, you have pure random noise. Each step adds a small amount of noise controlled by a <strong>noise schedule</strong> (&beta;).<br><br>Think of it like dissolving a sugar cube in water. At first, you can still see the cube. Gradually, it dissolves until the water is uniformly sweet. The forward process &ldquo;dissolves&rdquo; the image into noise.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Math (Intuitive)</div>
+            <div class="cc-code"><span class="hl-cmt">// Forward process: add noise at each step</span>
+
+<span class="hl-key">x_0</span> = clean image
+<span class="hl-key">x_1</span> = x_0 + small noise      <span class="hl-str">(barely visible)</span>
+<span class="hl-key">x_2</span> = x_1 + small noise      <span class="hl-str">(slightly fuzzy)</span>
+  ...
+<span class="hl-key">x_500</span> = mostly noise          <span class="hl-str">(image barely visible)</span>
+  ...
+<span class="hl-key">x_1000</span> = pure Gaussian noise   <span class="hl-str">(image gone)</span>
+
+<span class="hl-cmt">// Key: this process is FIXED (no learning)</span>
+<span class="hl-cmt">// All the intelligence is in the reverse</span></div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The forward process requires no learning &mdash; it&rsquo;s just adding noise according to a schedule. All the intelligence is in the <strong>reverse process</strong>, where the model learns to undo the noise step by step. This separation is what makes diffusion training so stable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Reverse Process -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">replay</span></div>
+        <div><div class="cc-title">The Reverse Process</div><div class="cc-sub">Learning to denoise step by step</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Denoising Network</div>
+            <div class="cc-text">A neural network (typically a <strong>U-Net</strong>) is trained to predict the noise added at each step. Given a noisy image at step t, it predicts what noise was added, and we subtract it to get a slightly cleaner image at step t-1. Repeat this T times to go from pure noise to a clean image.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Training</div>
+            <div class="cc-text">For each training image:<br>1. Pick a random timestep t (e.g., t=347)<br>2. Add noise corresponding to step t<br>3. Ask the network: &ldquo;What noise was added?&rdquo;<br>4. Loss = MSE between predicted noise and actual noise<br><br>Simple, stable, no adversarial training. Just <strong>predict the noise</strong>.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Generation</div>
+            <div class="cc-code"><span class="hl-cmt">// Generating an image from scratch</span>
+
+<span class="hl-key">x_T</span> = sample pure Gaussian noise
+
+<span class="hl-key">for</span> t = T, T-1, ..., 1:
+  noise_pred = model(x_t, t)   <span class="hl-cmt">// predict noise</span>
+  x_{t-1} = remove_noise(x_t, noise_pred)
+
+<span class="hl-key">x_0</span> = final clean image <span class="hl-str">done!</span>
+
+<span class="hl-cmt">// Each step: a small, learnable refinement</span>
+<span class="hl-cmt">// Like a sculptor removing material gradually</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Each denoising step is a small, learnable transformation. The model doesn&rsquo;t generate the whole image at once &mdash; it refines it gradually over many steps. This iterative refinement is why diffusion models produce such high-quality, detailed images.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: U-Net -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">architecture</span></div>
+        <div><div class="cc-title">The U-Net Architecture</div><div class="cc-sub">The workhorse neural network inside diffusion models</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why U-Net?</div>
+            <div class="cc-text">The U-Net has an <strong>encoder-decoder structure with skip connections</strong>, shaped like the letter U:<br><br>&bull; <strong>Encoder (downsampling):</strong> Compresses spatial dimensions, increases channels &mdash; captures &ldquo;what&rdquo; is in the image<br>&bull; <strong>Bottleneck:</strong> Self-attention at lowest resolution &mdash; global context<br>&bull; <strong>Decoder (upsampling):</strong> Restores spatial dimensions &mdash; generates details<br>&bull; <strong>Skip connections:</strong> Connect encoder to decoder at each level &mdash; preserve fine details that would otherwise be lost</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Cross-Attention: Where Text Meets Image</div>
+            <div class="cc-text">The U-Net&rsquo;s <strong>cross-attention layers</strong> are where CLIP text embeddings are injected. At each resolution level, the model attends to the text embeddings, allowing the text prompt to guide what gets generated. This is the mechanism behind text-to-image.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The DiT Alternative</div>
+            <div class="cc-text"><strong>Diffusion Transformers (DiT)</strong> replace the U-Net with a pure Transformer architecture. Used in Sora, SD3, and Flux. Advantages: better scaling with compute, simpler architecture, stronger global attention. Disadvantage: more compute-intensive per step.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The U-Net&rsquo;s cross-attention layers are where text meets image. CLIP text embeddings are injected here, telling the denoiser what to generate. This is why prompt quality matters so much &mdash; the cross-attention mechanism is literally &ldquo;reading&rdquo; your prompt at every denoising step.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Latent Diffusion -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compress</span></div>
+        <div><div class="cc-title">Latent Diffusion</div><div class="cc-sub">Running diffusion in compressed space for 10&ndash;100x efficiency</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Efficiency Problem</div>
+            <div class="cc-text">Running diffusion directly on 1024&times;1024 images requires processing 3.1 million values at each of 50+ denoising steps. That&rsquo;s <strong>enormous compute</strong> &mdash; impractical for consumer hardware.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Solution: Compress First</div>
+            <div class="cc-code"><span class="hl-cmt">// Latent Diffusion pipeline</span>
+
+<span class="hl-key">1. VAE Encoder</span> (pre-trained, frozen)
+   1024&times;1024 image &rarr; 128&times;128 latent
+   <span class="hl-str">64x spatial compression</span>
+
+<span class="hl-key">2. Diffusion in Latent Space</span>
+   Add/remove noise on 128&times;128 latents
+   <span class="hl-str">10-100x cheaper per step</span>
+
+<span class="hl-key">3. VAE Decoder</span> (pre-trained, frozen)
+   128&times;128 latent &rarr; 1024&times;1024 image
+
+<span class="hl-cmt">// This is literally what "Stable Diffusion" is</span>
+<span class="hl-cmt">// Paper: "High-Resolution Image Synthesis</span>
+<span class="hl-cmt">//  with Latent Diffusion Models" (2022)</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why It Works</div>
+            <div class="cc-text">&bull; <strong>Perceptual compression:</strong> The VAE preserves perceptually important information while discarding imperceptible details<br>&bull; <strong>Semantic latent space:</strong> Nearby points in latent space correspond to similar images &mdash; diffusion operates in a meaningful space<br>&bull; <strong>Decoupled training:</strong> VAE is trained once; diffusion model is trained separately in the latent space<br>&bull; <strong>Consumer-friendly:</strong> Runs on 8GB VRAM GPUs instead of requiring data-center hardware</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Latent diffusion is why Stable Diffusion can run on your laptop. Without VAE compression, you&rsquo;d need data-center hardware for every image. The VAE handles the &ldquo;pixel details&rdquo; while diffusion handles the &ldquo;creative generation&rdquo; in compressed space.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: CFG -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div>
+        <div><div class="cc-title">Classifier-Free Guidance (CFG)</div><div class="cc-sub">The &ldquo;creativity dial&rdquo; that controls prompt adherence</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Problem</div>
+            <div class="cc-text">Diffusion models can generate diverse images, but how do you make them follow a specific text prompt? Without guidance, the model generates random samples from the training distribution. <strong>Classifier-Free Guidance (CFG)</strong> amplifies the influence of the text condition.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">How CFG Works</div>
+            <div class="cc-text">At each denoising step, run the model <strong>twice</strong>:<br>1. <strong>Conditional:</strong> Denoise with the text prompt<br>2. <strong>Unconditional:</strong> Denoise without any prompt (empty text)<br><br>Final prediction = unconditional + <strong>guidance_scale</strong> &times; (conditional &minus; unconditional)<br><br>The guidance scale amplifies the &ldquo;direction&rdquo; the text pushes the generation.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Guidance Scale Effects</div>
+            <div class="cc-code"><span class="hl-cmt">// CFG scale = the "creativity dial"</span>
+
+<span class="hl-key">scale = 1.0</span>   No guidance (random, diverse)
+<span class="hl-key">scale = 3.0</span>   Mild guidance (creative, loose)
+<span class="hl-key">scale = 7.5</span>   Default <span class="hl-str">&larr; sweet spot for most use</span>
+<span class="hl-key">scale = 12.0</span>  Strong (very prompt-faithful)
+<span class="hl-key">scale = 20.0</span>  Over-saturated, artifacts
+
+<span class="hl-cmt">// Higher = more prompt adherence, less diversity</span>
+<span class="hl-cmt">// Lower = more creative, less controlled</span>
+<span class="hl-cmt">// Cost: 2x inference (conditional + unconditional)</span></div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> CFG is the most important user-facing parameter in image generation. When your images look &ldquo;too generic,&rdquo; increase CFG. When they look &ldquo;over-saturated&rdquo; or have artifacts, decrease it. 7.5 is the sweet spot for most use cases.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6: Sampling Speed -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">speed</span></div>
+        <div><div class="cc-title">Sampling &amp; Speed</div><div class="cc-sub">From 1,000 steps to real-time generation</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Speed Problem</div>
+            <div class="cc-text">Original DDPM: 1,000 denoising steps per image. At ~50ms per step on a GPU, that&rsquo;s <strong>50 seconds per image</strong>. Modern sampling techniques dramatically reduce this:</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Sampling Methods</div>
+            <div class="cc-code"><span class="hl-cmt">// Evolution of sampling speed</span>
+
+<span class="hl-key">DDPM (2020)</span>       1000 steps  ~50 sec
+<span class="hl-key">DDIM (2021)</span>        50 steps   ~3 sec
+<span class="hl-key">DPM-Solver (2022)</span>  20 steps   ~1.5 sec
+<span class="hl-key">LCM (2023)</span>         4-8 steps  ~0.5 sec
+<span class="hl-key">Consistency (2023)</span> 1-4 steps  ~0.2 sec
+<span class="hl-key">SDXL Turbo (2023)</span>  1 step     ~0.1 sec
+
+<span class="hl-cmt">// 500x speedup in 3 years!</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Real-Time Generation</div>
+            <div class="cc-text">With consistency models and optimized inference:<br><br>&bull; <strong>SDXL Turbo:</strong> 1&ndash;4 steps, ~0.1 seconds per image<br>&bull; <strong>LCM-LoRA:</strong> 4 steps, ~0.5 seconds<br>&bull; <strong>StreamDiffusion:</strong> Real-time at 30+ FPS<br>&bull; <strong>FLUX.1-schnell:</strong> 4 steps, high quality<br><br>We&rsquo;ve gone from minutes to milliseconds in 3 years. This enables entirely new applications: interactive design, live video effects, and responsive creative tools.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The speed improvements in diffusion models are as important as the quality improvements. Real-time generation enables interactive applications that were impossible with 50-second generation times. The tradeoff is usually quality vs speed &mdash; fewer steps = faster but slightly lower quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7: Noise Schedules -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">settings</span></div>
+        <div><div class="cc-title">Noise Schedules &amp; Flow Matching</div><div class="cc-sub">The details that make diffusion work &mdash; and the next evolution</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Noise Schedules</div>
+            <div class="cc-text">The noise schedule (&beta;_t) controls how much noise is added at each step. The choice matters:<br><br>&bull; <strong>Linear:</strong> Simple, works okay but wastes steps on very noisy/very clean regions<br>&bull; <strong>Cosine:</strong> Better distribution of noise levels, used in improved DDPM<br>&bull; <strong>Sigmoid:</strong> Used in newer models, concentrates steps where they matter most<br><br>The schedule affects both training stability and generation quality.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Flow Matching: The Next Evolution</div>
+            <div class="cc-text"><strong>Flow Matching</strong> (used in Stable Diffusion 3 and Flux) replaces the noise schedule with <strong>learned straight-line paths</strong> from noise to data. Instead of gradually adding/removing noise, the model learns to transport samples along optimal paths.<br><br>&bull; <strong>Simpler math:</strong> No noise schedule to tune<br>&bull; <strong>Faster convergence:</strong> Straighter paths = fewer steps needed<br>&bull; <strong>Better quality:</strong> More efficient use of each denoising step<br>&bull; <strong>Flexible:</strong> Can interpolate between any two distributions</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Flow Matching is to diffusion what DDIM was to DDPM &mdash; a more efficient way to traverse the same generative process. SD3 and Flux use Flow Matching and produce better results with fewer steps. This is the current state of the art.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8: Key Takeaways -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">Key Takeaways</div><div class="cc-sub">The essential diffusion model concepts</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Remember These</div>
+            <div class="cc-text">1. <strong>Forward:</strong> Add noise gradually until pure noise (fixed, no learning)<br><br>2. <strong>Reverse:</strong> Learn to denoise step by step (the neural network&rsquo;s job)<br><br>3. <strong>U-Net:</strong> Encoder-decoder with skip connections and cross-attention for text<br><br>4. <strong>Latent:</strong> Compress with VAE first for 64x efficiency (Stable Diffusion)<br><br>5. <strong>CFG:</strong> Amplify text conditioning &mdash; guidance scale 7.5 is the sweet spot<br><br>6. <strong>Sampling:</strong> Modern methods need only 4&ndash;50 steps (down from 1,000)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why This Matters</div>
+            <div class="cc-text">Every image and video generation tool you use &mdash; Stable Diffusion, DALL-E, Midjourney, Sora, Flux &mdash; runs this pipeline. Understanding it helps you:<br><br>&bull; <strong>Write better prompts</strong> (understanding what CFG and cross-attention do)<br>&bull; <strong>Choose the right settings</strong> (steps, guidance scale, sampler)<br>&bull; <strong>Debug generation failures</strong> (artifacts, wrong content, low quality)<br>&bull; <strong>Evaluate new models</strong> (what changed: U-Net vs DiT, noise schedule vs flow matching)</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 6 puts diffusion into practice with text-to-image generation &mdash; Stable Diffusion, DALL-E 3, Midjourney, Flux, ControlNet, inpainting, and the creative workflow.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-contrastive-learning.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Contrastive Learning &amp; CLIP</a>
+    <a class="ch-nav-btn next" href="06-text-to-image.html">Ch 6: Text-to-Image Generation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The forward process gradually adds Gaussian noise to an image over 1,000 steps until it becomes pure noise. No learning required \u2014 just math.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> The reverse process trains a neural network to predict and remove noise at each step. Simple MSE loss, stable training, stunning results.',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> The U-Net architecture has encoder-decoder with skip connections. Cross-attention layers inject CLIP text embeddings to guide generation.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Latent Diffusion compresses images 64x with a VAE first, then runs diffusion in latent space. This is Stable Diffusion\u2019s core innovation.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Classifier-Free Guidance (CFG) amplifies text conditioning. Scale 7.5 is the sweet spot \u2014 higher = more faithful, lower = more creative.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Sampling speed improved 500x in 3 years: from 1,000 steps (50 sec) to 1 step (0.1 sec). Real-time generation is now possible.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Flow Matching (SD3, Flux) replaces noise schedules with learned straight-line paths \u2014 simpler math, faster convergence, better quality.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Every image/video generation tool runs this pipeline. Understanding it helps you write better prompts, choose settings, and debug failures.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

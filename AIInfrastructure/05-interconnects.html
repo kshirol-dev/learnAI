@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Interconnects — How GPUs Talk — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Interconnects: How GPUs Talk</h2><span class="tb-sub">NVLink, NVSwitch, PCIe, InfiniBand, RoCEv2 &mdash; the bandwidth hierarchy</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Core</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Why Connect</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">cable</span></div><span class="pipe-label">PCIe</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">NVLink</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">NVSwitch</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">lan</span></div><span class="pipe-label">InfiniBand</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">router</span></div><span class="pipe-label">RoCEv2</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">stacked_bar_chart</span></div><span class="pipe-label">Hierarchy</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Impact</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">link</span></div><div><div class="cc-title">Why GPUs Need to Talk</div><div class="cc-sub">Models don&rsquo;t fit on one GPU &mdash; so GPUs must share data constantly</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Team Project Analogy</div><div class="cc-text">Imagine a team of 8 people working on a massive jigsaw puzzle. Each person has a section, but the pieces at the edges need to match. Every few minutes, they need to <strong>compare edge pieces</strong> with their neighbors.<br><br>If they&rsquo;re sitting at the same table (fast interconnect), sharing is instant. If they&rsquo;re in different rooms connected by a hallway (slow interconnect), every comparison takes minutes. The puzzle gets done at the speed of the <strong>slowest communication</strong>, not the fastest worker.<br><br>This is exactly what happens in distributed AI training. A 70B model split across 8 GPUs needs constant synchronization &mdash; gradients must be averaged (AllReduce), activations must be passed between layers (pipeline parallelism), and tensor slices must be gathered (tensor parallelism).<br><br>The speed of GPU-to-GPU communication directly determines training speed. Slow interconnects mean GPUs spend more time waiting than computing.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Communication Patterns in AI</div><div class="cc-code"><span class="hl-key">Data Parallelism (AllReduce):</span>
+  Every GPU has full model copy
+  After each batch: average all
+  gradients across all GPUs
+  Data moved: <span class="hl-num">2× model_size</span>
+  per training step
+
+<span class="hl-key">Tensor Parallelism (AllGather):</span>
+  Model layers split across GPUs
+  Each forward pass: gather partial
+  results from all GPUs
+  Data moved: <span class="hl-num">~activations_size</span>
+  per layer, per step
+
+<span class="hl-key">Pipeline Parallelism:</span>
+  Model layers on different GPUs
+  Activations passed GPU→GPU
+  Data moved: <span class="hl-num">~batch × hidden_dim</span>
+  per pipeline stage
+
+<span class="hl-cmt">For a 70B model on 8 GPUs:
+AllReduce moves ~280 GB per step.
+At 3,350 GB/s NVLink: ~0.08 sec.
+At 50 GB/s PCIe: ~5.6 sec.
+That's a 70x difference.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> In distributed training, the interconnect is often the bottleneck, not the GPU compute. A cluster of 8 GPUs connected by slow PCIe can be slower than 4 GPUs connected by fast NVLink. Communication speed determines how efficiently you can scale to more GPUs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">cable</span></div><div><div class="cc-title">PCIe: The Baseline</div><div class="cc-sub">Universal but slow &mdash; the minimum connection every GPU has</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PCIe in AI Systems</div><div class="cc-text"><strong>PCI Express (PCIe)</strong> is the standard interface that connects GPUs to the CPU and to each other in consumer and entry-level server systems. Every GPU has a PCIe connection.<br><br><strong>PCIe 4.0 x16:</strong> 32 GB/s per direction, 64 GB/s bidirectional. Used in older servers and consumer PCs.<br><br><strong>PCIe 5.0 x16:</strong> 64 GB/s per direction, 128 GB/s bidirectional. Current standard in modern servers.<br><br><strong>PCIe 6.0 x16:</strong> 128 GB/s per direction, 256 GB/s bidirectional. Emerging in 2025&ndash;2026.<br><br>PCIe is <strong>fine for single-GPU workloads</strong> (loading model weights from CPU memory to GPU) but becomes a severe bottleneck for multi-GPU communication. At 128 GB/s, transferring a 70B model&rsquo;s gradients (280 GB in FP32) takes over 2 seconds &mdash; an eternity when training steps should take milliseconds.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PCIe Generation Comparison</div><div class="cc-code"><span class="hl-key">PCIe Bandwidth (x16 slot):</span>
+
+Gen 3.0:  <span class="hl-num">16</span> GB/s per direction
+Gen 4.0:  <span class="hl-num">32</span> GB/s per direction
+Gen 5.0:  <span class="hl-num">64</span> GB/s per direction
+Gen 6.0:  <span class="hl-num">128</span> GB/s per direction
+
+<span class="hl-key">Compare to NVLink 5.0:</span>
+  NVLink: <span class="hl-num">900</span> GB/s per direction
+  PCIe 5: <span class="hl-num">64</span> GB/s per direction
+  Ratio:  <span class="hl-num">14x</span> faster
+
+<span class="hl-key">PCIe use cases in AI:</span>
+  ✓ CPU ↔ GPU data transfer
+  ✓ Single-GPU inference
+  ✓ Loading model weights
+  ✓ Storage I/O (GPUDirect)
+
+  ✗ Multi-GPU training sync
+  ✗ Tensor parallelism
+  ✗ High-performance inference
+
+<span class="hl-cmt">PCIe is the "last resort" for
+GPU-to-GPU communication.
+NVLink is always preferred
+when available.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> PCIe is like a country road connecting two cities. It works, but it&rsquo;s slow for heavy traffic. For multi-GPU AI workloads, you need a highway (NVLink) or a railroad (InfiniBand). PCIe remains important for CPU-GPU communication and storage I/O, but it&rsquo;s never the right choice for GPU-to-GPU data exchange at scale.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">NVLink: The GPU Highway</div><div class="cc-sub">Direct GPU-to-GPU connections at 14x PCIe speed</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">NVLink Architecture</div><div class="cc-text">NVLink is NVIDIA&rsquo;s proprietary high-speed interconnect that connects GPUs directly to each other, bypassing the CPU and PCIe entirely. Think of it as a <strong>private highway between GPUs</strong> &mdash; dedicated lanes, no traffic lights, no speed limits.<br><br>Each NVLink generation has dramatically increased bandwidth:<br><br><strong>NVLink 2.0 (Volta, 2017):</strong> 300 GB/s bidirectional per GPU. Connected up to 6 GPUs.<br><br><strong>NVLink 3.0 (Ampere, 2020):</strong> 600 GB/s. 12 links per GPU.<br><br><strong>NVLink 4.0 (Hopper, 2022):</strong> 900 GB/s. 18 links per GPU. Used in H100 and H200.<br><br><strong>NVLink 5.0 (Blackwell, 2024):</strong> 1,800 GB/s (1.8 TB/s). 18 links at 100 GB/s each. Used in B200 and GB200.<br><br>NVLink 5.0 delivers <strong>14x the bandwidth of PCIe 5.0</strong>. For tensor parallelism (which requires constant GPU-to-GPU data exchange), this difference is the difference between feasible and impossible.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">NVLink Generation Comparison</div><div class="cc-code"><span class="hl-key">NVLink Evolution:</span>
+
+Gen   Year  BW/GPU    Links  Arch
+2.0   2017  <span class="hl-num">300</span> GB/s  6      Volta
+3.0   2020  <span class="hl-num">600</span> GB/s  12     Ampere
+4.0   2022  <span class="hl-num">900</span> GB/s  18     Hopper
+5.0   2024  <span class="hl-num">1,800</span> GB/s 18     Blackwell
+
+<span class="hl-key">Practical impact (AllReduce):</span>
+
+70B model gradient sync (280 GB):
+  PCIe 5.0:   <span class="hl-num">~2.2</span> sec
+  NVLink 4.0: <span class="hl-num">~0.31</span> sec
+  NVLink 5.0: <span class="hl-num">~0.16</span> sec
+
+<span class="hl-key">Tensor parallelism overhead:</span>
+  PCIe 5.0:   <span class="hl-num">~40-60%</span> of step time
+  NVLink 4.0: <span class="hl-num">~5-10%</span> of step time
+  NVLink 5.0: <span class="hl-num">~3-5%</span> of step time
+
+<span class="hl-cmt">NVLink makes tensor parallelism
+practical. Without it, splitting
+a model across GPUs within a
+node would be too slow.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> NVLink is what makes multi-GPU training within a server practical. Without NVLink, you&rsquo;d be limited to data parallelism (each GPU has a full model copy) which requires much more memory. NVLink enables tensor parallelism (splitting layers across GPUs) which is essential for models too large to fit on a single GPU.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">NVSwitch: Full-Mesh GPU Connectivity</div><div class="cc-sub">Every GPU talks to every other GPU at full bandwidth &mdash; no bottlenecks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Telephone Exchange Analogy</div><div class="cc-text">NVLink connects pairs of GPUs. But in a server with 8 GPUs, you can&rsquo;t directly connect every GPU to every other GPU &mdash; that would require 28 direct links (8 choose 2).<br><br><strong>NVSwitch</strong> solves this. It&rsquo;s a dedicated chip that acts like a <strong>telephone exchange</strong> &mdash; any GPU can talk to any other GPU at full NVLink bandwidth, simultaneously.<br><br>In a DGX H100 server (8 GPUs), 4 NVSwitch chips create a full-mesh fabric. Every GPU has 900 GB/s to every other GPU. Total bisection bandwidth: 3.6 TB/s.<br><br>The Blackwell GB200 NVL72 takes this further: <strong>9 NVSwitch trays</strong> connect 72 GPUs in a single NVLink domain with 130 TB/s total bandwidth. Any GPU can access any other GPU&rsquo;s memory as if it were local. This creates a single &ldquo;virtual GPU&rdquo; with 72 &times; 192 GB = <strong>13.8 TB of unified memory</strong>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">NVSwitch Scaling</div><div class="cc-code"><span class="hl-key">DGX H100 (8 GPUs):</span>
+  NVSwitch chips:    <span class="hl-num">4</span>
+  GPU-GPU BW:        <span class="hl-num">900</span> GB/s each
+  Total bisection:   <span class="hl-num">3.6</span> TB/s
+  NVLink domain:     <span class="hl-num">8</span> GPUs
+
+<span class="hl-key">GB200 NVL72 (72 GPUs):</span>
+  NVSwitch trays:    <span class="hl-num">9</span>
+  GPU-GPU BW:        <span class="hl-num">1,800</span> GB/s each
+  Total bisection:   <span class="hl-num">130</span> TB/s
+  NVLink domain:     <span class="hl-num">72</span> GPUs
+  Unified memory:    <span class="hl-num">13.8</span> TB
+
+<span class="hl-key">5th Gen NVSwitch (Blackwell):</span>
+  Can connect up to <span class="hl-num">576</span> GPUs
+  in a single NVLink domain
+  Total fabric BW:   <span class="hl-num">1 PB/s</span>
+
+<span class="hl-cmt">576 GPUs × 192 GB = 110 TB
+of unified GPU memory. Enough
+to hold a 55 trillion parameter
+model in FP16.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> NVSwitch transforms multiple discrete GPUs into what behaves like a single massive GPU. The 72-GPU GB200 NVL72 with 13.8 TB of unified memory can hold and serve the largest models without any model partitioning complexity. This is NVIDIA&rsquo;s answer to &ldquo;models keep getting bigger&rdquo; &mdash; just make the GPU bigger.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">lan</span></div><div><div class="cc-title">InfiniBand: The Data Center Fabric</div><div class="cc-sub">When GPUs in different servers need to communicate &mdash; the gold standard</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Beyond the Server</div><div class="cc-text">NVLink connects GPUs <strong>within</strong> a server. But training at scale requires hundreds or thousands of GPUs across <strong>many servers</strong>. This is where network fabric comes in.<br><br><strong>InfiniBand</strong> is the traditional choice for HPC and AI clusters. Originally developed for supercomputers, it provides:<br><br>&bull; <strong>Ultra-low latency:</strong> 1&ndash;1.6 microseconds end-to-end. Cut-through switching means data starts forwarding before the full packet arrives.<br><br>&bull; <strong>Native RDMA:</strong> Remote Direct Memory Access lets one GPU read/write another GPU&rsquo;s memory directly, bypassing the CPU entirely. Zero-copy, kernel-bypass.<br><br>&bull; <strong>Credit-based flow control:</strong> Guaranteed lossless delivery without the complexity of TCP congestion control.<br><br>&bull; <strong>Current speed:</strong> 400 Gb/s (NDR) per port, with 800 Gb/s (XDR) arriving in 2025&ndash;2026 via NVIDIA Quantum-X800 switches.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">InfiniBand Specs</div><div class="cc-code"><span class="hl-key">InfiniBand Generations:</span>
+
+HDR (2019):   <span class="hl-num">200</span> Gb/s per port
+NDR (2022):   <span class="hl-num">400</span> Gb/s per port
+XDR (2025):   <span class="hl-num">800</span> Gb/s per port
+
+<span class="hl-key">InfiniBand characteristics:</span>
+  Latency:       <span class="hl-num">1-1.6</span> μs
+  RDMA:          Native (hardware)
+  Flow control:  Credit-based
+  Packet loss:   Near zero
+  Vendor:        NVIDIA (Mellanox)
+
+<span class="hl-key">DGX H100 cluster networking:</span>
+  8 GPUs per server
+  Each GPU: 1× 400G InfiniBand NIC
+  Per server: <span class="hl-num">3.2</span> Tb/s aggregate
+  8:1 GPU-to-NIC ratio
+
+<span class="hl-key">Market position (2023):</span>
+  <span class="hl-num">~80%</span> of AI clusters used IB
+  
+<span class="hl-key">Market position (2025):</span>
+  Ethernet now taking the lead
+  as RoCEv2 matures</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> InfiniBand&rsquo;s 1&ndash;1.6 microsecond latency vs RoCEv2&rsquo;s 5&ndash;6 microseconds matters enormously for distributed training. In AllReduce operations that happen thousands of times per training step, those extra microseconds compound. But InfiniBand costs 1.5&ndash;2.5x more per port than Ethernet, and it&rsquo;s controlled by NVIDIA (via Mellanox acquisition).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">router</span></div><div><div class="cc-title">RoCEv2: Ethernet Fights Back</div><div class="cc-sub">RDMA over standard Ethernet &mdash; cheaper, more familiar, and catching up fast</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RoCEv2 Explained</div><div class="cc-text"><strong>RoCEv2 (RDMA over Converged Ethernet v2)</strong> brings RDMA capabilities to standard Ethernet networks. Instead of InfiniBand&rsquo;s proprietary fabric, RoCEv2 carries RDMA traffic over UDP/IP on commodity Ethernet switches.<br><br><strong>Advantages over InfiniBand:</strong><br>&bull; <strong>Cost:</strong> 1.5&ndash;2.5x cheaper per port<br>&bull; <strong>Familiarity:</strong> Network engineers already know Ethernet<br>&bull; <strong>Vendor choice:</strong> Multiple switch vendors (Arista, Cisco, Broadcom) vs NVIDIA-only for InfiniBand<br>&bull; <strong>Convergence:</strong> Same fabric for AI traffic and general data center traffic<br><br><strong>Challenges:</strong><br>&bull; Higher latency (5&ndash;6 μs vs 1&ndash;1.6 μs)<br>&bull; Requires careful tuning: Priority Flow Control (PFC), Explicit Congestion Notification (ECN), and Dynamic Congestion Control<br>&bull; Store-and-forward switching adds latency vs InfiniBand&rsquo;s cut-through<br>&bull; Packet loss under congestion requires more complex handling</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">InfiniBand vs RoCEv2</div>
+          <div class="compare-row">
+            <div class="compare-box good"><div class="cb-tag">InfiniBand</div><div class="cb-text"><strong>Latency:</strong> 1&ndash;1.6 μs<br><strong>RDMA:</strong> Native hardware<br><strong>Loss:</strong> Near zero (credit-based)<br><strong>Cost:</strong> 1.5&ndash;2.5x higher<br><strong>Vendor:</strong> NVIDIA only<br><strong>Best for:</strong> Top-tier training</div></div>
+            <div class="compare-box good"><div class="cb-tag">RoCEv2 Ethernet</div><div class="cb-text"><strong>Latency:</strong> 5&ndash;6 μs<br><strong>RDMA:</strong> Over UDP/IP<br><strong>Loss:</strong> Requires PFC/ECN tuning<br><strong>Cost:</strong> Baseline<br><strong>Vendor:</strong> Multi-vendor<br><strong>Best for:</strong> Cost-sensitive, hybrid</div></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The InfiniBand vs Ethernet debate is shifting. In 2023, InfiniBand dominated 80% of AI clusters. By 2025, Ethernet has taken the lead as hyperscalers (Google, Meta, Microsoft) validated RoCEv2 at massive scale. The Ultra Ethernet Consortium is standardizing AI-optimized Ethernet features. For most organizations, RoCEv2 at 400G/800G is &ldquo;good enough&rdquo; and significantly cheaper.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">stacked_bar_chart</span></div><div><div class="cc-title">The Bandwidth Hierarchy</div><div class="cc-sub">From 128 GB/s to 1.8 TB/s &mdash; each level serves a different purpose</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Complete Picture</div><div class="cc-text">AI infrastructure has a clear bandwidth hierarchy. Each level connects different scopes of hardware:<br><br><strong>Level 1 &mdash; Within the GPU:</strong> HBM to compute cores. 3,350&ndash;8,000 GB/s. This is the memory bandwidth we covered in Chapter 4.<br><br><strong>Level 2 &mdash; GPU to GPU (same server):</strong> NVLink. 900&ndash;1,800 GB/s. Enables tensor parallelism within a node.<br><br><strong>Level 3 &mdash; GPU to CPU:</strong> PCIe. 64&ndash;128 GB/s. For data loading, model weight transfer, and orchestration.<br><br><strong>Level 4 &mdash; Server to server (same rack):</strong> InfiniBand or RoCEv2. 50&ndash;100 GB/s per link. Enables data parallelism across nodes.<br><br><strong>Level 5 &mdash; Rack to rack:</strong> Spine switches. 400G&ndash;800G links. The backbone of the cluster network.<br><br>Each level is roughly <strong>10&ndash;20x slower</strong> than the one above it. This hierarchy determines how you partition your model and your training strategy.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Bandwidth at Each Level</div><div class="cc-code"><span class="hl-key">Bandwidth Hierarchy (B200):</span>
+
+<span class="hl-str">L1: HBM → Compute</span>
+  <span class="hl-num">8,000</span> GB/s (8 TB/s)
+
+<span class="hl-str">L2: GPU ↔ GPU (NVLink 5.0)</span>
+  <span class="hl-num">1,800</span> GB/s (1.8 TB/s)
+  Ratio to L1: <span class="hl-num">4.4x</span> slower
+
+<span class="hl-str">L3: GPU ↔ CPU (PCIe 5.0)</span>
+  <span class="hl-num">128</span> GB/s
+  Ratio to L2: <span class="hl-num">14x</span> slower
+
+<span class="hl-str">L4: Server ↔ Server (IB NDR)</span>
+  <span class="hl-num">50</span> GB/s (400 Gb/s)
+  Ratio to L3: <span class="hl-num">2.6x</span> slower
+
+<span class="hl-str">L5: Rack ↔ Rack (spine)</span>
+  <span class="hl-num">50-100</span> GB/s (aggregated)
+  Varies by topology
+
+<span class="hl-cmt">The 160x gap between NVLink and
+InfiniBand is why tensor
+parallelism stays within a node
+and data parallelism goes across.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The bandwidth hierarchy dictates your parallelism strategy. Tensor parallelism (which needs the most communication) uses NVLink within a node. Data parallelism (less communication) uses InfiniBand/Ethernet across nodes. Pipeline parallelism (moderate communication) can span nodes if the network is fast enough. Matching your parallelism strategy to the bandwidth hierarchy is the key to efficient distributed training.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Real-World Impact: Communication Overhead</div><div class="cc-sub">How interconnect speed affects training time and GPU utilization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Scaling Efficiency Problem</div><div class="cc-text">In a perfect world, doubling the number of GPUs would halve training time. In reality, communication overhead means you get less than 2x speedup:<br><br><strong>Linear scaling (ideal):</strong> 8 GPUs = 8x faster. Never happens in practice.<br><br><strong>Good scaling (NVLink + IB):</strong> 8 GPUs = 6&ndash;7x faster. ~80&ndash;90% efficiency. Achievable with fast interconnects and optimized communication.<br><br><strong>Poor scaling (PCIe only):</strong> 8 GPUs = 3&ndash;4x faster. ~40&ndash;50% efficiency. Communication dominates, GPUs idle waiting.<br><br>At 1,000+ GPU scale, even small inefficiencies compound. If each AllReduce takes 10% of step time with InfiniBand, it takes 25% with Ethernet. Over months of training, that&rsquo;s millions of dollars in wasted GPU-hours.<br><br>This is why organizations like Meta and Google invest billions in networking infrastructure &mdash; the ROI on faster interconnects is enormous at scale.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scaling Efficiency Numbers</div><div class="cc-code"><span class="hl-key">Training 70B model, 8 GPUs:</span>
+
+<span class="hl-str">NVLink 4.0 + InfiniBand NDR:</span>
+  Compute time:    <span class="hl-num">85%</span>
+  Communication:   <span class="hl-num">12%</span>
+  Overhead:        <span class="hl-num">3%</span>
+  Scaling eff:     <span class="hl-num">~87%</span>
+
+<span class="hl-str">PCIe 5.0 + 100G Ethernet:</span>
+  Compute time:    <span class="hl-num">45%</span>
+  Communication:   <span class="hl-num">50%</span>
+  Overhead:        <span class="hl-num">5%</span>
+  Scaling eff:     <span class="hl-num">~45%</span>
+
+<span class="hl-key">At 16,384 GPUs (Meta Llama 3):</span>
+  Network config errors caused
+  <span class="hl-num">10.7%</span> of significant job failures
+  
+  Even 1% communication overhead
+  = <span class="hl-num">163</span> idle GPUs worth of waste
+  = ~$<span class="hl-num">47K</span>/day at $3/GPU-hr
+
+<span class="hl-cmt">At scale, interconnect investment
+pays for itself many times over.
+A $10M networking upgrade that
+saves 5% communication overhead
+saves $850K/month on a 16K cluster.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Interconnect speed has diminishing returns at small scale but enormous returns at large scale. For a team with 8 GPUs, PCIe might be acceptable. For a team with 1,000+ GPUs, every microsecond of communication latency translates to millions of dollars in wasted compute. This is why the biggest AI labs invest disproportionately in networking.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-memory-bottleneck.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Memory Bottleneck</a>
+    <a class="ch-nav-btn next" href="06-network-topologies.html">Ch 6: Network Topologies <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Models don\'t fit on one GPU, so GPUs must constantly share data. AllReduce for a 70B model moves ~280 GB per step — interconnect speed determines training speed.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> PCIe 5.0: 128 GB/s bidirectional. Fine for CPU↔GPU transfers, but 14x slower than NVLink. The baseline, not the goal.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> NVLink 5.0 (Blackwell): 1.8 TB/s per GPU — 14x PCIe. Makes tensor parallelism practical. Gradient sync drops from 2.2s (PCIe) to 0.16s (NVLink).',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> NVSwitch creates full-mesh connectivity. GB200 NVL72: 72 GPUs with 130 TB/s total bandwidth and 13.8 TB unified memory — one virtual super-GPU.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> InfiniBand: 1-1.6μs latency, native RDMA, near-zero packet loss. The gold standard for cross-server AI networking. 400Gb/s (NDR), 800Gb/s (XDR) coming.',color:'#dc2626'},
+    6:{text:'<strong>Step 6:</strong> RoCEv2: RDMA over Ethernet at 5-6μs latency. 1.5-2.5x cheaper than InfiniBand. Now taking market lead as hyperscalers validate it at scale.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> The bandwidth hierarchy: HBM (8 TB/s) → NVLink (1.8 TB/s) → PCIe (128 GB/s) → InfiniBand (50 GB/s). Each level is 4-14x slower. This dictates parallelism strategy.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> At 16K GPUs, 1% communication overhead = 163 idle GPUs = $47K/day wasted. Interconnect investment pays for itself many times over at scale.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

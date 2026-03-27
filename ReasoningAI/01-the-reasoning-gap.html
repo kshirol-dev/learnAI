@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: The Reasoning Gap — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 1 &mdash; The Reasoning Gap</h2><span class="tb-sub">Why LLMs struggle with logic, math, and multi-step problems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">LLM</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Fast</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Slow</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">error</span></div><span class="pipe-label">Fail</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">lightbulb</span></div><span class="pipe-label">CoT</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Reason</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">LLMs Are Pattern Matchers, Not Reasoners</div><div class="cc-sub">Next-token prediction vs. logical reasoning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Core Problem</div><div class="cc-text">Large language models are trained to predict the next token. This makes them excellent at pattern matching, fluent text generation, and retrieving memorized knowledge. But <strong>reasoning</strong> &mdash; the ability to follow logical steps, perform multi-step computation, and arrive at correct conclusions through deduction &mdash; is fundamentally different from pattern matching. When you ask an LLM &ldquo;What is 23 &times; 47?&rdquo;, it doesn&rsquo;t compute the answer. It predicts what tokens are likely to follow that question based on training data. For simple problems it has seen many times, this works. For novel problems requiring genuine computation, it fails. This is the <strong>reasoning gap</strong>: the difference between what LLMs appear to understand and what they can actually reason about.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Where LLMs Fail</div><div class="cc-code"><span class="hl-cmt">// Tasks that expose the reasoning gap</span>
+
+<span class="hl-key">Multi-step math</span>:
+  "If a train travels 60 mph for
+  2.5 hours, then 80 mph for 1.5
+  hours, what's the total distance?"
+  <span class="hl-cmt">// Requires: multiply, then add</span>
+
+<span class="hl-key">Logical deduction</span>:
+  "All roses are flowers. Some flowers
+  fade quickly. Can we conclude that
+  some roses fade quickly?"
+  <span class="hl-cmt">// Answer: No (invalid syllogism)</span>
+  <span class="hl-cmt">// LLMs often say Yes</span>
+
+<span class="hl-key">Planning</span>:
+  "Move blocks A, B, C to form a
+  specific tower configuration"
+  <span class="hl-cmt">// Requires: state tracking + search</span>
+
+<span class="hl-key">Counting</span>:
+  "How many r's in 'strawberry'?"
+  <span class="hl-cmt">// Famously difficult for LLMs</span>
+
+<span class="hl-key">Pattern</span>:
+  Easy tasks: memorized patterns
+  Hard tasks: require actual reasoning
+  <span class="hl-cmt">// LLMs fake reasoning via patterns</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> LLMs don&rsquo;t reason &mdash; they pattern-match. When the pattern is familiar (common math problems), they appear to reason. When the problem is novel, the illusion breaks. The entire field of reasoning AI is about closing this gap.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">System 1 vs System 2 Thinking</div><div class="cc-sub">Kahneman&rsquo;s framework applied to AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Two Systems</div><div class="cc-text">Daniel Kahneman&rsquo;s &ldquo;Thinking, Fast and Slow&rdquo; describes two modes of human cognition: <strong>System 1</strong> &mdash; fast, automatic, intuitive. Recognizing faces, reading text, answering &ldquo;2 + 2 = ?&rdquo;. Requires no deliberate effort. <strong>System 2</strong> &mdash; slow, deliberate, analytical. Solving &ldquo;17 &times; 24&rdquo;, planning a route, writing a proof. Requires focused attention and step-by-step reasoning. Standard LLMs are <strong>System 1 machines</strong>: they generate responses in a single forward pass, with no ability to &ldquo;think harder&rdquo; about difficult problems. They spend the same compute on &ldquo;What color is the sky?&rdquo; as on &ldquo;Prove Fermat&rsquo;s Last Theorem.&rdquo; The revolution in reasoning AI is about giving LLMs <strong>System 2 capabilities</strong>: the ability to slow down, think step by step, explore multiple paths, and verify their work.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">System 1 vs System 2</div><div class="cc-code"><span class="hl-cmt">// Kahneman's framework for AI</span>
+
+<span class="hl-key">System 1 (Standard LLMs)</span>:
+  Fast, single forward pass
+  Pattern matching
+  Same compute for easy and hard
+  No self-correction
+  <span class="hl-cmt">// "What's 2+2?" = same effort as
+  // "Prove the Riemann hypothesis"</span>
+
+<span class="hl-key">System 2 (Reasoning Models)</span>:
+  Slow, deliberate
+  Step-by-step reasoning
+  More compute for harder problems
+  Self-verification and backtracking
+  <span class="hl-cmt">// Thinks harder when needed</span>
+
+<span class="hl-key">How to Add System 2</span>:
+  Chain-of-Thought prompting
+  Tree-of-Thought search
+  Test-time compute scaling (o1/o3)
+  Process reward models
+  Tool use (calculators, code)
+
+<span class="hl-key">The Key Insight</span>:
+  System 2 = more compute at inference
+  Not more parameters, more thinking
+  <span class="hl-cmt">// Trade inference cost for accuracy</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The fundamental shift in reasoning AI is from &ldquo;bigger models&rdquo; to &ldquo;more thinking.&rdquo; Instead of scaling parameters (training compute), we scale inference compute &mdash; letting models think longer on harder problems. This is the System 1 &rarr; System 2 transition.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Types of Reasoning</div><div class="cc-sub">Mathematical, logical, commonsense, and causal</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reasoning Categories</div><div class="cc-text">Not all reasoning is the same. LLMs struggle differently with each type: <strong>Mathematical reasoning</strong> &mdash; arithmetic, algebra, word problems. LLMs fail on novel computations but can solve problems similar to training data. Chain-of-thought helps significantly. <strong>Logical reasoning</strong> &mdash; deduction, induction, abduction. LLMs struggle with formal logic, especially negation and quantifiers (&ldquo;all&rdquo;, &ldquo;some&rdquo;, &ldquo;none&rdquo;). <strong>Commonsense reasoning</strong> &mdash; understanding physical world, social norms, temporal relationships. LLMs are surprisingly good at this because it&rsquo;s heavily represented in training data. <strong>Causal reasoning</strong> &mdash; understanding cause and effect, counterfactuals. LLMs learn correlations, not causation. <strong>Planning</strong> &mdash; multi-step goal-directed behavior with state tracking. One of the weakest areas for LLMs.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reasoning Difficulty</div><div class="cc-code"><span class="hl-cmt">// LLM reasoning capabilities</span>
+
+<span class="hl-key">Commonsense</span>: ████████░░ Good
+  "Is ice cream usually cold?" → Yes
+  Well-represented in training data
+
+<span class="hl-key">Mathematical</span>: █████░░░░░ Mixed
+  Simple: "5 × 3 = ?" → 15 ✓
+  Complex: "∫x²dx from 0 to 3" → ?
+  CoT helps dramatically
+
+<span class="hl-key">Logical</span>: ████░░░░░░ Weak
+  "All A are B. All B are C.
+   Are all A also C?" → Usually ✓
+  "Not all A are B..." → Often ✗
+
+<span class="hl-key">Causal</span>: ███░░░░░░░ Weak
+  Correlation ≠ causation
+  Counterfactuals are hard
+
+<span class="hl-key">Planning</span>: ██░░░░░░░░ Very Weak
+  State tracking fails
+  Can't search solution spaces
+  <span class="hl-cmt">// Worst reasoning category</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> LLMs are best at commonsense reasoning (pattern-heavy) and worst at planning (requires search and state tracking). The techniques in this course &mdash; CoT, ToT, tool use &mdash; target the weak areas by adding structure and computation to the reasoning process.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">error</span></div><div><div class="cc-title">Why Standard Prompting Fails</div><div class="cc-sub">The limitations of direct answer generation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Direct Prompting</div><div class="cc-text">Standard prompting asks the model to produce an answer directly: &ldquo;Q: Roger has 5 tennis balls. He buys 2 more cans of 3. How many does he have now? A:&rdquo; The model must jump from question to answer in a single step. For simple problems, this works. But for multi-step problems, the model must perform all intermediate computations <strong>implicitly</strong> within its forward pass. This is like asking a human to solve a complex math problem entirely in their head, without writing anything down. <strong>The problem</strong>: the model&rsquo;s &ldquo;working memory&rdquo; is its hidden state, which has limited capacity. Complex reasoning requires more intermediate state than the model can maintain in a single forward pass. The solution: let the model &ldquo;write down its work&rdquo; by generating intermediate reasoning steps as text.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Direct vs Chain-of-Thought</div><div class="cc-code"><span class="hl-cmt">// Direct prompting (fails)</span>
+
+<span class="hl-key">Q</span>: Roger has 5 tennis balls. He buys
+2 more cans of 3 tennis balls each.
+How many tennis balls does he have?
+<span class="hl-key">A</span>: <span class="hl-num">11</span>
+<span class="hl-cmt">// Correct! But only because simple</span>
+
+<span class="hl-key">Q</span>: A cafeteria had 23 apples. They
+used 20 for lunch and bought 6 more.
+How many apples do they have?
+<span class="hl-key">A</span>: <span class="hl-num">27</span>  <span class="hl-cmt">// Wrong! Should be 9</span>
+
+<span class="hl-cmt">// Chain-of-thought (succeeds)</span>
+
+<span class="hl-key">Q</span>: Same question...
+<span class="hl-key">A</span>: The cafeteria started with 23.
+They used 20, so 23 - 20 = 3.
+They bought 6 more, so 3 + 6 = 9.
+The answer is <span class="hl-num">9</span>. <span class="hl-cmt">// Correct!</span>
+
+<span class="hl-key">Why it works</span>:
+  Intermediate steps = external memory
+  Each step is a simple computation
+  Model "writes down its work"</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Chain-of-thought works because it converts one hard problem into many easy problems. Each intermediate step is simple enough for the model to handle in a single forward pass. The chain of text serves as &ldquo;external working memory.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">The Reasoning Revolution Timeline</div><div class="cc-sub">From CoT prompting to o3: a brief history</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Key Milestones</div><div class="cc-text">The field of LLM reasoning has evolved rapidly: <strong>Jan 2022</strong> &mdash; Wei et al. publish &ldquo;Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.&rdquo; The foundational paper. <strong>Mar 2022</strong> &mdash; Kojima et al. discover zero-shot CoT: &ldquo;Let&rsquo;s think step by step&rdquo; works without examples. <strong>Mar 2022</strong> &mdash; Wang et al. introduce self-consistency: sample multiple reasoning paths, take majority vote. <strong>May 2023</strong> &mdash; Yao et al. publish Tree-of-Thought: BFS/DFS over reasoning paths. <strong>Sep 2024</strong> &mdash; OpenAI releases o1: the first model trained specifically for reasoning with test-time compute scaling. <strong>Jan 2025</strong> &mdash; DeepSeek releases R1: open-source reasoning model matching o1 performance. <strong>Jan 2025</strong> &mdash; OpenAI releases o3-mini: 14x cheaper than o1 with better math performance.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Timeline</div><div class="cc-code"><span class="hl-cmt">// Reasoning AI timeline</span>
+
+<span class="hl-key">2022</span>:
+  Jan: CoT prompting (Wei et al.)
+  Mar: Zero-shot CoT (Kojima et al.)
+  Mar: Self-consistency (Wang et al.)
+  <span class="hl-cmt">// The prompting era</span>
+
+<span class="hl-key">2023</span>:
+  Feb: Toolformer (Schick et al.)
+  May: Tree-of-Thought (Yao et al.)
+  Nov: Let's Verify Step by Step (PRM)
+  <span class="hl-cmt">// Search + verification era</span>
+
+<span class="hl-key">2024</span>:
+  Sep: OpenAI o1 released
+  Dec: o1 system card published
+  <span class="hl-cmt">// Test-time compute era begins</span>
+
+<span class="hl-key">2025</span>:
+  Jan: DeepSeek-R1 (open source!)
+  Jan: OpenAI o3-mini (14x cheaper)
+  Apr: o3 + o4-mini system card
+  <span class="hl-cmt">// Reasoning becomes accessible</span>
+
+<span class="hl-key">Trend</span>:
+  Prompting → Search → Training
+  External tricks → Built-in reasoning</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The field evolved from external tricks (prompting) to built-in reasoning (o1/o3). The trend is clear: reasoning is moving from something we add at inference time to something trained into the model itself. DeepSeek-R1 made this accessible to everyone.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">analytics</span></div><div><div class="cc-title">Scaling Laws: Parameters vs Compute</div><div class="cc-sub">Two dimensions of scaling for AI capability</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Two Scaling Dimensions</div><div class="cc-text">AI capability can be improved along two dimensions: <strong>Training compute</strong> (traditional scaling) &mdash; more parameters, more data, more training time. This is the approach that gave us GPT-3 &rarr; GPT-4. Diminishing returns: doubling parameters doesn&rsquo;t double capability. <strong>Test-time compute</strong> (reasoning scaling) &mdash; more computation at inference. Let the model think longer on harder problems. This is the approach behind o1/o3. The key insight from OpenAI&rsquo;s research: for reasoning tasks, scaling test-time compute can be <strong>more efficient</strong> than scaling model size. A smaller model that thinks longer can outperform a larger model that answers immediately. This changes the economics of AI: instead of always needing bigger models, you can use smaller models with more inference compute for reasoning-heavy tasks.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Scaling Comparison</div><div class="cc-code"><span class="hl-cmt">// Two dimensions of scaling</span>
+
+<span class="hl-key">Training Compute Scaling</span>:
+  GPT-3 (175B) → GPT-4 (~1.8T?)
+  More params = better at everything
+  But: diminishing returns
+  Cost: $100M+ per training run
+  <span class="hl-cmt">// Traditional approach</span>
+
+<span class="hl-key">Test-Time Compute Scaling</span>:
+  Same model, more thinking time
+  Easy question: think briefly
+  Hard question: think extensively
+  Cost: pay per query, scales with
+  difficulty
+  <span class="hl-cmt">// The reasoning approach</span>
+
+<span class="hl-key">Key Finding</span>:
+  For reasoning tasks:
+  Small model + long thinking
+  > Large model + quick answer
+  <span class="hl-cmt">// o3-mini beats o1 on math
+  // at 14x lower cost</span>
+
+<span class="hl-key">Implication</span>:
+  Not always "bigger is better"
+  Sometimes "think harder" is better
+  Adaptive compute per problem</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Test-time compute scaling is the most important paradigm shift in AI since the transformer. It means we can improve AI reasoning without training bigger models &mdash; just by letting existing models think longer. This democratizes access to reasoning capabilities.</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">The Reasoning Toolkit</div><div class="cc-sub">Techniques covered in this course</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Course Overview</div><div class="cc-text">This course covers the full spectrum of reasoning techniques: <strong>Chain-of-Thought</strong> (Ch 2) &mdash; the foundational technique. Generate intermediate reasoning steps. Zero-shot and few-shot variants. Self-consistency for robustness. <strong>Tree-of-Thought</strong> (Ch 3) &mdash; explore multiple reasoning paths using search algorithms (BFS, DFS, MCTS). <strong>Test-Time Compute</strong> (Ch 4) &mdash; the o1/o3 approach. Train models to reason with &ldquo;thinking tokens.&rdquo; Scale compute at inference. <strong>Verification</strong> (Ch 5) &mdash; process reward models (PRMs) that verify each reasoning step. Outcome reward models (ORMs). <strong>Tool Use</strong> (Ch 6) &mdash; augment reasoning with code interpreters, calculators, and retrieval. <strong>Benchmarks</strong> (Ch 7) &mdash; how we measure reasoning. GSM8K, MATH, ARC-AGI, GPQA. <strong>Future</strong> (Ch 8) &mdash; open-source reasoning models, hybrid approaches, and what&rsquo;s next.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Technique Spectrum</div><div class="cc-code"><span class="hl-cmt">// Reasoning techniques spectrum</span>
+
+<span class="hl-key">Prompting (no training needed)</span>:
+  Chain-of-Thought (few-shot)
+  Zero-shot CoT ("think step by step")
+  Self-consistency (majority vote)
+  <span class="hl-cmt">// Cheapest, easiest to apply</span>
+
+<span class="hl-key">Search (inference-time)</span>:
+  Tree-of-Thought (BFS/DFS)
+  Monte Carlo Tree Search
+  Beam search over reasoning paths
+  <span class="hl-cmt">// More compute, better results</span>
+
+<span class="hl-key">Verification (trained)</span>:
+  Process Reward Models (PRM)
+  Outcome Reward Models (ORM)
+  Step-level verification
+  <span class="hl-cmt">// Learned quality checking</span>
+
+<span class="hl-key">Built-in Reasoning (trained)</span>:
+  OpenAI o1/o3 (thinking tokens)
+  DeepSeek-R1 (open source)
+  Test-time compute scaling
+  <span class="hl-cmt">// Most powerful, most expensive</span>
+
+<span class="hl-key">Tool Augmentation</span>:
+  Code interpreters, calculators
+  Retrieval, databases
+  <span class="hl-cmt">// Offload computation to tools</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> These techniques are not mutually exclusive &mdash; they&rsquo;re complementary. The most powerful reasoning systems combine multiple approaches: built-in reasoning (o1) + tool use (code interpreter) + verification (PRM) + search (best-of-N sampling).</div>
+        </div>
+      </div>
+    </div>
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Why This Matters Now</div><div class="cc-sub">Reasoning is the frontier of AI capability</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Stakes</div><div class="cc-text">Reasoning is arguably the most important frontier in AI: <strong>AGI connection</strong> &mdash; many researchers believe that robust reasoning is the key missing piece for artificial general intelligence. If we can make AI truly reason, we unlock capabilities far beyond pattern matching. <strong>Practical impact</strong> &mdash; reasoning AI enables: reliable code generation (plan before coding), scientific discovery (hypothesis generation and testing), mathematical proof (formal verification), medical diagnosis (multi-step differential diagnosis), legal analysis (complex argument construction). <strong>Economic shift</strong> &mdash; reasoning models change the cost structure of AI. Instead of paying for the biggest model, you pay for the right amount of thinking. o3-mini costs 14x less than o1 but outperforms it on math. <strong>Democratization</strong> &mdash; DeepSeek-R1 (open source, Jan 2025) made reasoning capabilities available to everyone, not just OpenAI customers.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Impact Areas</div><div class="cc-code"><span class="hl-cmt">// Why reasoning AI matters</span>
+
+<span class="hl-key">Code Generation</span>:
+  Plan → implement → test → debug
+  Not just autocomplete
+  <span class="hl-cmt">// Reasoning = reliable code</span>
+
+<span class="hl-key">Science</span>:
+  Hypothesis → experiment → analyze
+  AlphaFold, AlphaProof
+  <span class="hl-cmt">// AI as research partner</span>
+
+<span class="hl-key">Mathematics</span>:
+  o3 scored 25.2% on ARC-AGI
+  (previous SOTA: 5%)
+  Formal proof verification
+  <span class="hl-cmt">// Approaching human-level</span>
+
+<span class="hl-key">Medicine</span>:
+  Multi-step differential diagnosis
+  Drug interaction reasoning
+  <span class="hl-cmt">// Where errors cost lives</span>
+
+<span class="hl-key">Economics</span>:
+  o3-mini: $<span class="hl-num">1.10</span>/$<span class="hl-num">4.40</span> per M tokens
+  o1: $<span class="hl-num">15</span>/$<span class="hl-num">60</span> per M tokens
+  <span class="hl-cmt">// 14x cheaper, better at math</span>
+
+<span class="hl-key">Open Source</span>:
+  DeepSeek-R1: matches o1
+  Fully open weights
+  <span class="hl-cmt">// Reasoning for everyone</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> We are living through the most important shift in AI since the transformer: the transition from &ldquo;predict the next token&rdquo; to &ldquo;reason about the problem.&rdquo; This course will give you a deep understanding of how this works and where it&rsquo;s going.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ch-nav">
+    <span></span>
+    <a class="ch-nav-btn next" href="02-chain-of-thought-prompting.html">Ch 2: Chain-of-Thought Prompting <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[0,2],4:[0,3],5:[0,4],6:[0],7:[0,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> LLMs are pattern matchers, not reasoners. They predict plausible text, not correct answers. Novel problems expose the reasoning gap.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> System 1 (fast, intuitive) vs System 2 (slow, deliberate). Standard LLMs are System 1. Reasoning AI adds System 2 — more compute for harder problems.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Types of reasoning: mathematical, logical, commonsense, causal, planning. LLMs are best at commonsense (pattern-heavy) and worst at planning (search-heavy).',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Direct prompting fails on multi-step problems. Chain-of-thought lets the model "write down its work" — converting one hard problem into many easy ones.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Timeline: CoT (2022) → ToT (2023) → o1 (2024) → DeepSeek-R1 (2025). The field evolved from prompting tricks to built-in reasoning capabilities.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Two scaling dimensions: training compute (bigger models) and test-time compute (more thinking). For reasoning, thinking longer beats being bigger.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> The reasoning toolkit: CoT, ToT, test-time compute, verification, tool use, benchmarks. These techniques are complementary, not competing.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Reasoning is the frontier of AI. It enables reliable code, scientific discovery, and medical diagnosis. DeepSeek-R1 made it open source for everyone.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

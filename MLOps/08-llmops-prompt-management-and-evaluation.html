@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: LLMOps — Prompt Management & Evaluation — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; LLMOps: Prompt Management &amp; Evaluation</h2><span class="tb-sub">Prompt versioning, A/B testing prompts, LLM evaluation in CI, and guardrails integration</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">Author</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">history</span></div><span class="pipe-label">Version</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Evaluate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">ab_testing</span></div><span class="pipe-label">A/B Test</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">shield</span></div><span class="pipe-label">Guard</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">edit_note</span></div><div><div class="cc-title">Prompts Are the New Code</div><div class="cc-sub">Why prompts need the same rigor as software</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Shift</div><div class="cc-text">In traditional ML, you engineer <strong>features</strong>. In LLM applications, you engineer <strong>prompts</strong>. A prompt change can completely alter your application&rsquo;s behavior &mdash; just like a code change. But most teams treat prompts casually: they live in hardcoded strings, get edited in production without review, and have no version history. This is the equivalent of editing production code directly on the server. <strong>Prompt management</strong> applies software engineering discipline to prompts: version control, code review, testing, staging environments, and rollback. Teams that handle 10K+ daily LLM queries, have multiple engineers editing prompts, or run 5+ distinct prompts across features need formal prompt management.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Prompt Anti-Patterns</div><div class="cc-code"><span class="hl-cmt">// Anti-patterns (how most teams start)</span>
+
+<span class="hl-key">1. Hardcoded strings</span>:
+   prompt = <span class="hl-str">"You are a helpful assistant..."</span>
+   <span class="hl-cmt">// buried in application code</span>
+   <span class="hl-cmt">// changes require full deploy</span>
+
+<span class="hl-key">2. No version history</span>:
+   <span class="hl-cmt">// "Who changed the prompt last week?"</span>
+   <span class="hl-cmt">// "What did it say before?"</span>
+   <span class="hl-cmt">// No one knows.</span>
+
+<span class="hl-key">3. No testing</span>:
+   <span class="hl-cmt">// "I tested it on 3 examples in ChatGPT"</span>
+   <span class="hl-cmt">// Ships to production. Breaks edge cases.</span>
+
+<span class="hl-key">4. No review</span>:
+   <span class="hl-cmt">// One person edits, no one reviews</span>
+   <span class="hl-cmt">// Subtle regressions go unnoticed</span>
+
+<span class="hl-cmt">// The fix: treat prompts like code</span>
+<span class="hl-cmt">// Version → Test → Review → Stage → Deploy</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> A single word change in a prompt can shift model behavior dramatically. &ldquo;You must always&rdquo; vs. &ldquo;You should try to&rdquo; produces very different outputs. Prompts deserve the same change management rigor as code.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">history</span></div><div><div class="cc-title">Prompt Versioning</div><div class="cc-sub">Semantic versioning and registries for prompts</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Versioning Strategy</div><div class="cc-text">Apply <strong>semantic versioning</strong> to prompts: <strong>MAJOR</strong> (output format changes &mdash; e.g., switching from free text to JSON), <strong>MINOR</strong> (new capabilities &mdash; e.g., adding a new instruction), <strong>PATCH</strong> (wording fixes that don&rsquo;t change behavior). Store prompts in a <strong>prompt registry</strong> &mdash; a centralized store separate from application code. This decouples prompt changes from code deploys, enabling faster iteration. Tools: <strong>MLflow Prompt Registry</strong> (open-source, integrates with MLflow ecosystem), <strong>Langfuse</strong> (open-source observability + prompt management), <strong>Humanloop</strong> (managed platform with evaluation), <strong>PromptLayer</strong> (logging + versioning). Each version should have a commit message explaining what changed and why.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Prompt Registry</div><div class="cc-code"><span class="hl-cmt"># MLflow Prompt Registry example</span>
+<span class="hl-key">import</span> mlflow
+
+<span class="hl-cmt"># Register a prompt</span>
+prompt = mlflow.register_prompt(
+    name=<span class="hl-str">"customer-support-v1"</span>,
+    template=<span class="hl-str">"""You are a support agent for {{company}}.
+Answer the customer's question using only the
+provided context. If unsure, say "I don't know."
+
+Context: {{context}}
+Question: {{question}}"""</span>
+)
+
+<span class="hl-cmt"># Load in application (by alias)</span>
+prompt = mlflow.load_prompt(
+    <span class="hl-str">"customer-support-v1"</span>,
+    alias=<span class="hl-str">"production"</span>
+)
+
+<span class="hl-cmt"># Promote new version</span>
+client.set_prompt_alias(
+    name=<span class="hl-str">"customer-support-v1"</span>,
+    alias=<span class="hl-str">"production"</span>,
+    version=<span class="hl-num">3</span>
+)
+<span class="hl-cmt"># → No code deploy needed!</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Decoupling prompts from code means you can update a prompt in seconds (change the alias in the registry) instead of minutes or hours (full code deploy). This is critical for rapid iteration and incident response.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">LLM Evaluation in CI</div><div class="cc-sub">Automated testing for prompt changes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evaluation Framework</div><div class="cc-text">Every prompt change should trigger an <strong>evaluation suite</strong> before deployment. The suite runs the new prompt against a curated <strong>test dataset</strong> (50&ndash;200 examples covering normal cases, edge cases, and known failure modes) and measures: <strong>correctness</strong> (does the output match expected answers?), <strong>format compliance</strong> (is the output valid JSON/markdown as required?), <strong>safety</strong> (does it refuse harmful requests?), <strong>consistency</strong> (does it give similar answers to similar questions?), and <strong>regression</strong> (is it at least as good as the current production prompt?). Use <strong>LLM-as-judge</strong> for subjective quality (have GPT-4o rate outputs on a 1&ndash;5 scale) and <strong>deterministic checks</strong> for format and safety.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Eval Pipeline</div><div class="cc-code"><span class="hl-cmt"># prompt_eval.py (runs in CI)</span>
+<span class="hl-key">import</span> json
+
+<span class="hl-key">def</span> evaluate_prompt(prompt_version, test_data):
+    results = []
+    <span class="hl-key">for</span> case <span class="hl-key">in</span> test_data:
+        output = call_llm(prompt_version, case.input)
+        results.append({
+            <span class="hl-str">"correct"</span>: judge_correctness(
+                output, case.expected),
+            <span class="hl-str">"format_ok"</span>: is_valid_json(output),
+            <span class="hl-str">"safe"</span>: passes_safety_check(output),
+            <span class="hl-str">"tokens"</span>: count_tokens(output),
+            <span class="hl-str">"latency_ms"</span>: measure_latency(),
+        })
+
+    metrics = aggregate(results)
+    <span class="hl-key">assert</span> metrics[<span class="hl-str">"correctness"</span>] &gt;= <span class="hl-num">0.85</span>
+    <span class="hl-key">assert</span> metrics[<span class="hl-str">"format_compliance"</span>] &gt;= <span class="hl-num">0.95</span>
+    <span class="hl-key">assert</span> metrics[<span class="hl-str">"safety_pass_rate"</span>] == <span class="hl-num">1.0</span>
+    <span class="hl-key">return</span> metrics</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The test dataset is your most valuable asset. Curate it carefully: include real user queries that caused problems, edge cases from production logs, and adversarial examples. Update it continuously as you discover new failure modes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">ab_testing</span></div><div><div class="cc-title">A/B Testing Prompts</div><div class="cc-sub">Comparing prompt versions in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">A/B Testing Workflow</div><div class="cc-text">Offline evaluation catches most issues, but some things can only be measured in production with real users. <strong>A/B testing prompts</strong>: assign users randomly to prompt variant A (current) or variant B (candidate), measure business metrics (not just LLM metrics), and promote the winner. Key metrics to compare: <strong>task completion rate</strong> (did the user accomplish their goal?), <strong>user satisfaction</strong> (thumbs up/down, CSAT), <strong>escalation rate</strong> (did the user need human help?), <strong>cost per interaction</strong>, and <strong>latency</strong>. Tools: <strong>Langfuse</strong> (open-source, tracks metrics per prompt variant), <strong>Humanloop</strong> (managed, with built-in A/B testing), or custom implementation with feature flags (LaunchDarkly, Statsig).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">A/B Test Setup</div><div class="cc-code"><span class="hl-cmt">// Prompt A/B testing with Langfuse</span>
+
+<span class="hl-key">Variant A</span> (production, 90% traffic):
+  prompt: customer-support@production
+  version: 2.1.0
+
+<span class="hl-key">Variant B</span> (candidate, 10% traffic):
+  prompt: customer-support@staging
+  version: 2.2.0
+
+<span class="hl-key">Metrics tracked</span>:
+  ✓ Task completion: 78% vs 82%
+  ✓ User satisfaction: 4.1 vs 4.3
+  ✓ Escalation rate: 12% vs 9%
+  ✓ Avg cost/interaction: $0.04 vs $0.03
+  ✓ p95 latency: 1.2s vs 1.1s
+
+<span class="hl-key">Decision</span>:
+  Variant B wins on all metrics
+  → Promote to 100% after 7 days
+  → Statistical significance: p &lt; 0.05</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> A/B test on <strong>business metrics</strong> (task completion, satisfaction), not LLM metrics (perplexity, BLEU). A prompt that scores lower on automated evals but higher on user satisfaction is the better prompt.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">visibility</span></div><div><div class="cc-title">LLM Observability</div><div class="cc-sub">Logging, tracing, and debugging LLM applications</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What to Observe</div><div class="cc-text">LLM applications are non-deterministic &mdash; the same input can produce different outputs. <strong>Observability</strong> is essential for debugging and improvement. Log: <strong>full request/response</strong> (prompt, completion, model, parameters), <strong>latency breakdown</strong> (time to first token, total generation time, retrieval time for RAG), <strong>token usage</strong> (input/output tokens, cost), <strong>user feedback</strong> (thumbs up/down, corrections), and <strong>traces</strong> (for multi-step agents: each tool call, retrieval, and LLM call in the chain). Tools: <strong>Langfuse</strong> (open-source, best for tracing), <strong>LangSmith</strong> (by LangChain, tight integration), <strong>Arize Phoenix</strong> (open-source, evaluation + tracing), <strong>Portkey</strong> (gateway + observability combined).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Langfuse Tracing</div><div class="cc-code"><span class="hl-cmt"># Langfuse observability example</span>
+<span class="hl-key">from</span> langfuse <span class="hl-key">import</span> Langfuse
+
+lf = Langfuse()
+
+<span class="hl-cmt"># Create a trace for each user interaction</span>
+trace = lf.trace(
+    name=<span class="hl-str">"customer-query"</span>,
+    user_id=<span class="hl-str">"user-123"</span>,
+    metadata={<span class="hl-str">"feature"</span>: <span class="hl-str">"support-chat"</span>}
+)
+
+<span class="hl-cmt"># Log retrieval step</span>
+retrieval = trace.span(name=<span class="hl-str">"rag-retrieval"</span>)
+docs = retrieve(query)
+retrieval.end(output={<span class="hl-str">"docs"</span>: len(docs)})
+
+<span class="hl-cmt"># Log LLM call</span>
+generation = trace.generation(
+    name=<span class="hl-str">"answer"</span>,
+    model=<span class="hl-str">"gpt-4o"</span>,
+    input=messages,
+    output=response,
+    usage={<span class="hl-str">"input"</span>: <span class="hl-num">1200</span>, <span class="hl-str">"output"</span>: <span class="hl-num">350</span>}
+)
+
+<span class="hl-cmt"># Log user feedback</span>
+trace.score(name=<span class="hl-str">"user-rating"</span>, value=<span class="hl-num">1</span>)</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Tracing is essential for debugging multi-step LLM applications (RAG, agents). When a user gets a bad answer, you need to see: was the retrieval wrong? Was the prompt wrong? Was the model hallucinating? Traces answer these questions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">shield</span></div><div><div class="cc-title">Guardrails</div><div class="cc-sub">Preventing harmful, off-topic, and incorrect outputs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Guardrail Types</div><div class="cc-text"><strong>Guardrails</strong> are automated checks that validate LLM inputs and outputs before they reach the user. <strong>Input guardrails</strong>: detect and block prompt injection attempts, PII in user input, off-topic requests, and jailbreak attempts. <strong>Output guardrails</strong>: detect hallucinations (check claims against source documents), block toxic/harmful content, enforce format compliance (valid JSON, correct schema), and prevent data leakage (model revealing system prompt or training data). Tools: <strong>Guardrails AI</strong> (open-source, Python validators), <strong>NeMo Guardrails</strong> (NVIDIA, dialog-level safety), <strong>Lakera Guard</strong> (managed, prompt injection detection), and <strong>LLM-based validators</strong> (use a fast model to check the output of a powerful model).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Guardrails Example</div><div class="cc-code"><span class="hl-cmt"># Guardrails AI example</span>
+<span class="hl-key">from</span> guardrails <span class="hl-key">import</span> Guard
+<span class="hl-key">from</span> guardrails.hub <span class="hl-key">import</span> (
+    ToxicLanguage,
+    DetectPII,
+    ValidJSON,
+)
+
+guard = Guard().use_many(
+    ToxicLanguage(on_fail=<span class="hl-str">"fix"</span>),
+    DetectPII(
+        pii_entities=[<span class="hl-str">"EMAIL"</span>, <span class="hl-str">"PHONE"</span>, <span class="hl-str">"SSN"</span>],
+        on_fail=<span class="hl-str">"fix"</span>  <span class="hl-cmt"># redact PII</span>
+    ),
+    ValidJSON(on_fail=<span class="hl-str">"reask"</span>),
+)
+
+result = guard(
+    llm_api=openai.chat.completions.create,
+    model=<span class="hl-str">"gpt-4o"</span>,
+    messages=messages,
+)
+
+<span class="hl-cmt"># result.validated_output → safe, clean output</span>
+<span class="hl-cmt"># result.validation_passed → True/False</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Guardrails add latency (50&ndash;200ms per check). Use fast, deterministic checks (regex, schema validation) for every request, and reserve expensive LLM-based checks (hallucination detection) for high-risk outputs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">gavel</span></div><div><div class="cc-title">LLM-as-Judge</div><div class="cc-sub">Using LLMs to evaluate LLM outputs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>LLM-as-judge</strong> uses a powerful LLM (typically GPT-4o or Claude Sonnet) to evaluate the quality of outputs from another LLM. The judge receives: the original question, the generated answer, optionally a reference answer, and a rubric (scoring criteria). It returns a score (1&ndash;5) and reasoning. This is cheaper and faster than human evaluation while correlating well with human judgments (70&ndash;85% agreement). Common rubrics: <strong>correctness</strong> (factually accurate?), <strong>helpfulness</strong> (answers the question?), <strong>relevance</strong> (stays on topic?), <strong>coherence</strong> (well-structured?), and <strong>safety</strong> (no harmful content?). Limitations: judges have biases (prefer verbose answers, prefer their own outputs), so calibrate against human labels.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LLM-as-Judge Prompt</div><div class="cc-code"><span class="hl-cmt">// LLM-as-Judge evaluation prompt</span>
+<span class="hl-key">System</span>: You are an expert evaluator.
+Rate the answer on a scale of 1-5.
+
+<span class="hl-key">Rubric</span>:
+5 = Perfect, complete, accurate
+4 = Good, minor issues
+3 = Acceptable, some gaps
+2 = Poor, significant errors
+1 = Unacceptable, wrong or harmful
+
+<span class="hl-key">Question</span>: {{question}}
+<span class="hl-key">Answer</span>: {{answer}}
+<span class="hl-key">Reference</span>: {{reference}} <span class="hl-cmt">(optional)</span>
+
+Respond in JSON:
+{
+  <span class="hl-str">"score"</span>: &lt;1-5&gt;,
+  <span class="hl-str">"reasoning"</span>: <span class="hl-str">"..."</span>
+}
+
+<span class="hl-cmt">// Cost: ~$0.01 per evaluation</span>
+<span class="hl-cmt">// Speed: ~2 seconds per evaluation</span>
+<span class="hl-cmt">// Agreement with humans: ~75-85%</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> LLM-as-judge is not a replacement for human evaluation &mdash; it&rsquo;s a scalable complement. Use it for automated regression testing in CI (hundreds of test cases), and reserve human evaluation for high-stakes decisions and calibrating the judge.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Prompt Management Maturity</div><div class="cc-sub">From ad-hoc to production-grade</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Maturity Model</div><div class="cc-text"><strong>Level 0 (Ad-hoc)</strong>: Prompts hardcoded in application code. No versioning, no testing. Changes require full deploy. <strong>Level 1 (Versioned)</strong>: Prompts in a registry with version history. Changes decoupled from code deploys. Changelog maintained. <strong>Level 2 (Tested)</strong>: Evaluation suite runs on every prompt change. Test dataset curated and maintained. LLM-as-judge for quality scoring. <strong>Level 3 (CI/CD)</strong>: Automated evaluation in CI pipeline. Regression gates block bad prompts. A/B testing in production. <strong>Level 4 (Observable)</strong>: Full tracing and logging. User feedback loop. Continuous improvement based on production data. Guardrails on all inputs and outputs. Most teams should aim for Level 2 within 3 months of production launch.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Maturity Levels</div><div class="cc-code"><span class="hl-cmt">// Prompt management maturity</span>
+
+<span class="hl-key">Level 0</span>: Ad-hoc
+  Hardcoded strings, no history
+  "I tested it in ChatGPT"
+
+<span class="hl-key">Level 1</span>: Versioned
+  Prompt registry, version history
+  Aliases (production, staging)
+  Decoupled from code deploys
+
+<span class="hl-key">Level 2</span>: Tested
+  Evaluation suite (50-200 cases)
+  LLM-as-judge scoring
+  Regression checks vs production
+
+<span class="hl-key">Level 3</span>: CI/CD
+  Automated eval in CI pipeline
+  Gates block bad prompts
+  A/B testing in production
+
+<span class="hl-key">Level 4</span>: Observable
+  Full tracing (Langfuse/LangSmith)
+  User feedback → dataset updates
+  Guardrails on all I/O
+  Continuous improvement loop</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The biggest ROI is going from Level 0 to Level 1 (add a prompt registry) and from Level 1 to Level 2 (add an evaluation suite). These two steps prevent most production incidents caused by prompt changes.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-llmops-gateways-and-routing.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: LLMOps: Gateways &amp; Routing</a>
+    <a class="ch-nav-btn next" href="09-monitoring-and-drift-detection.html">Ch 9: Monitoring &amp; Drift Detection <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[0,1,2,3,4,5],6:[4],7:[2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Prompts are the new code. A single word change can shift model behavior dramatically. They need version control, testing, review, and rollback — just like software.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Prompt versioning: semantic versioning (MAJOR.MINOR.PATCH), prompt registries (MLflow, Langfuse), aliases for deployment. Decouple prompts from code deploys.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> LLM evaluation in CI: run new prompts against a curated test dataset (50-200 cases). Check correctness, format, safety, and regression vs. production prompt.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> A/B testing prompts in production: measure business metrics (task completion, satisfaction), not just LLM metrics. Use Langfuse or feature flags.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> LLM observability: log full requests/responses, trace multi-step chains, track token usage and cost, capture user feedback. Langfuse and LangSmith are the top tools.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Guardrails: input checks (prompt injection, PII) and output checks (hallucination, toxicity, format). Use fast deterministic checks for all requests, LLM checks for high-risk.',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> LLM-as-judge: use GPT-4o to score outputs on correctness, helpfulness, safety. ~75-85% agreement with humans. Scalable complement to human evaluation.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Maturity model: Level 0 (ad-hoc) → Level 1 (versioned) → Level 2 (tested) → Level 3 (CI/CD) → Level 4 (observable). Aim for Level 2 within 3 months.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: The ML Pipeline — From Idea to Production — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--orange)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; The ML Pipeline: From Idea to Production</h2><span class="tb-sub">Why building the model is 20% of the work &mdash; and why 87% of models never make it to production</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">target</span></div><span class="pipe-label">Define</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">database</span></div><span class="pipe-label">Data</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Build</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Validate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Monitor</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">target</span></div><div><div class="cc-title">The Reality Check</div><div class="cc-sub">Why most AI projects fail before they start</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Sobering Numbers</div><div class="cc-text"><strong>87% of machine learning models never reach production.</strong> Of those that do make it to a proof of concept, 88% fail to scale beyond the pilot. Only 15% of organizations successfully operationalize ML at scale. These aren&rsquo;t technology failures &mdash; they&rsquo;re execution, governance, and organizational failures. The model itself is rarely the problem.</div></div>
+          <div class="cc-block"><div class="cc-label">The 80/20 Rule of ML</div><div class="cc-text">Building the model &mdash; the part that gets all the attention &mdash; is roughly <strong>20% of the total effort</strong>. The other 80% is everything around it: defining the right problem, collecting and cleaning data, building infrastructure, deploying to production, monitoring performance, and retraining when the world changes. This is the ML pipeline, and understanding it is essential for any leader funding AI initiatives.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Projects Fail</div><div class="cc-text"><strong>Wrong problem definition</strong> &mdash; Solving a technically interesting problem that doesn&rsquo;t map to a business decision.<br><strong>Data not ready</strong> &mdash; 62% of enterprises cite data versioning complexity as their top pipeline bottleneck.<br><strong>No production path</strong> &mdash; Teams build models in notebooks with no plan for deployment.<br><strong>Siloed teams</strong> &mdash; Data scientists, engineers, and business stakeholders operating in isolation. Cross-functional projects experience 2.8&times; longer deployment cycles.</div></div>
+          <div class="cc-note n-red"><strong>Critical for leaders:</strong> Before approving any AI project, ask: &ldquo;What decision will this model improve, and how will it reach the person making that decision?&rdquo; If the team can&rsquo;t answer both parts clearly, the project isn&rsquo;t ready.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">edit_note</span></div><div><div class="cc-title">Stage 1: Problem Definition</div><div class="cc-sub">The most underrated stage of the entire pipeline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Framing the Right Question</div><div class="cc-text">The first and most consequential decision is <strong>translating a business problem into a machine learning problem</strong>. &ldquo;We want to reduce customer churn&rdquo; is a business goal, not an ML problem. The ML problem might be: &ldquo;Predict which customers have a &gt;60% probability of churning in the next 90 days, so the retention team can intervene.&rdquo; The specificity of the framing determines everything downstream.</div></div>
+          <div class="cc-block"><div class="cc-label">What Good Framing Includes</div><div class="cc-text"><strong>Clear prediction target</strong> &mdash; What exactly are we predicting? A category? A number? A ranking?<br><strong>Time horizon</strong> &mdash; Predict churn in 30 days? 90 days? 12 months?<br><strong>Success metric</strong> &mdash; How will we know the model is good enough? What&rsquo;s the minimum performance threshold?<br><strong>Action pathway</strong> &mdash; What will the business do differently based on the prediction?<br><strong>Baseline</strong> &mdash; What&rsquo;s the current performance without ML? (If you can&rsquo;t measure the baseline, you can&rsquo;t measure improvement.)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Feasibility Check</div><div class="cc-text">Before any modeling begins, the team should validate:<br><br><strong>Is the data available?</strong> &mdash; Not &ldquo;does data exist somewhere&rdquo; but &ldquo;can we access it, at the right granularity, with sufficient history?&rdquo;<br><strong>Is the signal there?</strong> &mdash; Is there a reasonable expectation that the inputs contain enough information to predict the output?<br><strong>Is the ROI justified?</strong> &mdash; Will the improvement over the current approach (even a simple rule-based system) justify the investment?</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The best data science teams spend more time on problem definition than on model building. A well-framed problem with a mediocre model outperforms a poorly framed problem with a state-of-the-art model every time. Framing is where business expertise and technical capability must meet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">database</span></div><div><div class="cc-title">Stage 2: Data Preparation</div><div class="cc-sub">Where 60&ndash;80% of the time actually goes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Real Work</div><div class="cc-text">Data preparation consumes the majority of any ML project. It includes <strong>collecting data from multiple sources</strong>, cleaning inconsistencies, handling missing values, engineering features (creating new variables from raw data that make patterns easier to detect), and splitting data into training, validation, and test sets. None of this is glamorous. All of it is essential.</div></div>
+          <div class="cc-block"><div class="cc-label">Feature Engineering</div><div class="cc-text">Raw data is rarely useful as-is. <strong>Feature engineering</strong> transforms raw data into signals the model can learn from. A timestamp becomes &ldquo;day of week,&rdquo; &ldquo;hour of day,&rdquo; and &ldquo;days since last purchase.&rdquo; A customer address becomes &ldquo;distance to nearest store&rdquo; and &ldquo;median household income of zip code.&rdquo; The quality of features often matters more than the choice of algorithm.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Versioning &amp; Lineage</div><div class="cc-text"><strong>73% of ML failures trace to undocumented schema changes in production data.</strong> When the format of an input field changes silently &mdash; a date format shifts, a category gets renamed, a new source is added &mdash; the model can break without warning. Data versioning tracks exactly which data was used to train each model version. Data lineage traces where each data point came from. Both are critical for debugging and compliance.</div></div>
+          <div class="cc-note n-amber"><strong>Why it matters:</strong> 58% of companies cannot fully trace training data origins for deployed models. If a regulator asks &ldquo;what data was this credit decision based on?&rdquo; and you can&rsquo;t answer, you have a governance problem. Data lineage isn&rsquo;t a nice-to-have &mdash; it&rsquo;s a regulatory requirement in many industries.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Stage 3: Model Building &amp; Experimentation</div><div class="cc-sub">The 20% that gets 80% of the attention</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">The team trains multiple models using different algorithms, different feature combinations, and different parameter settings. Each experiment is tracked: which data was used, which algorithm, which settings, and what performance resulted. This is <strong>systematic experimentation, not trial and error</strong>. Modern ML platforms (MLflow, Weights &amp; Biases, SageMaker) automate experiment tracking so every run is reproducible.</div></div>
+          <div class="cc-block"><div class="cc-label">Model Selection</div><div class="cc-text">The winning model isn&rsquo;t always the most accurate one. Selection balances multiple factors:<br><strong>Performance</strong> &mdash; Does it meet the minimum accuracy/recall threshold?<br><strong>Speed</strong> &mdash; Can it make predictions fast enough for the use case? (Real-time fraud detection needs milliseconds; weekly forecasts can take hours.)<br><strong>Interpretability</strong> &mdash; Can we explain its decisions if required?<br><strong>Complexity</strong> &mdash; Can the team maintain and update it over time?<br><strong>Cost</strong> &mdash; What are the compute costs for training and inference?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Experimentation Trap</div><div class="cc-text">Teams can spend months chasing marginal accuracy improvements &mdash; going from 94.2% to 94.7% &mdash; while the model sits in a notebook, delivering zero business value. <strong>A deployed model at 90% accuracy creates more value than a perfect model that never ships.</strong> The best teams set a &ldquo;good enough&rdquo; threshold upfront and move to deployment once it&rsquo;s met.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> When reviewing AI project timelines, be wary of teams that spend months in &ldquo;model development&rdquo; without a deployment date. The goal is not the best possible model &mdash; it&rsquo;s the best model that can be deployed, monitored, and improved in production. Perfection is the enemy of production.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Stage 4: Validation &amp; Testing</div><div class="cc-sub">Proving the model works before it touches real decisions</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Offline Validation</div><div class="cc-text">Before deployment, the model is tested on <strong>data it has never seen</strong> &mdash; the held-out test set. This simulates real-world performance. The team evaluates not just overall accuracy but performance across different segments: Does the model work equally well for all customer types? All regions? All product categories? Disparities here can indicate bias or data gaps.</div></div>
+          <div class="cc-block"><div class="cc-label">A/B Testing</div><div class="cc-text">The gold standard for validation is a <strong>controlled experiment in production</strong>. Route 50% of traffic to the new model and 50% to the existing system (or no model). Measure the business outcome &mdash; not just model accuracy, but actual revenue, conversion, or cost impact. This is the only way to prove the model creates real business value, not just statistical improvement.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Shadow Mode</div><div class="cc-text">Before full deployment, many organizations run models in <strong>&ldquo;shadow mode&rdquo;</strong> &mdash; the model makes predictions on live data, but those predictions aren&rsquo;t used for decisions. Instead, they&rsquo;re compared against actual outcomes. This catches issues that offline testing misses: data format differences between training and production, latency problems, edge cases that didn&rsquo;t appear in historical data.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Validation is where many projects stall. The model works in the lab but fails in production because real-world data is messier, faster, and more varied than training data. Shadow mode is the bridge between controlled testing and live deployment &mdash; it de-risks the transition without exposing customers to an unproven system.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Stage 5: Deployment</div><div class="cc-sub">Where the &ldquo;valley of death&rdquo; claims most projects</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Deployment Gap</div><div class="cc-text">The gap between a working model and a production system is where most AI projects die. A model in a Jupyter notebook is a prototype. A production system requires <strong>APIs, infrastructure, security, logging, error handling, rollback procedures, and integration with existing business systems</strong>. Companies without deployment automation experience 71% higher failure rates in production.</div></div>
+          <div class="cc-block"><div class="cc-label">Deployment Patterns</div><div class="cc-text"><strong>Batch prediction</strong> &mdash; Run the model periodically (daily, weekly) and store predictions. Used for demand forecasting, customer segmentation, risk scoring. Simpler to implement and debug.<br><br><strong>Real-time prediction</strong> &mdash; The model responds to individual requests in milliseconds. Used for fraud detection, recommendations, pricing. Requires more infrastructure but enables immediate action.<br><br><strong>Edge deployment</strong> &mdash; The model runs on the device itself (phone, sensor, vehicle). Used when latency or connectivity constraints make cloud calls impractical.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">MLOps: The Discipline</div><div class="cc-text"><strong>MLOps</strong> (Machine Learning Operations) is the practice of reliably deploying and maintaining ML models in production. It borrows from DevOps &mdash; the discipline that transformed software deployment &mdash; and adapts it for the unique challenges of ML: data dependencies, model versioning, performance degradation over time, and the need for continuous retraining. MLOps spending grew from near-zero to over <strong>$2 billion in 2024</strong>, projected to reach $17&ndash;40 billion by 2030.</div></div>
+          <div class="cc-note n-green"><strong>Why it matters:</strong> Manual ML processes consume 45% of data scientists&rsquo; time versus 12% in automated systems. Investing in MLOps infrastructure isn&rsquo;t overhead &mdash; it&rsquo;s the difference between a one-off experiment and a scalable AI capability. The organizations winning at AI aren&rsquo;t building better models; they&rsquo;re building better pipelines.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">Stage 6: Monitoring &amp; Drift</div><div class="cc-sub">Models decay &mdash; the world doesn&rsquo;t stand still</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Models Degrade</div><div class="cc-text">Unlike traditional software, ML models <strong>degrade over time</strong> even without any code changes. The world changes: customer behavior shifts, competitors launch new products, regulations evolve, economic conditions fluctuate. A model trained on 2023 data makes increasingly poor predictions as 2025 reality diverges from 2023 patterns. Models left unchanged for 6+ months see <strong>error rates jump 35%</strong> on new data.</div></div>
+          <div class="cc-block"><div class="cc-label">Four Types of Drift</div><div class="cc-text"><strong>Data drift</strong> &mdash; The input data distribution changes (new customer demographics, seasonal shifts).<br><strong>Concept drift</strong> &mdash; The relationship between inputs and outputs changes (fraud tactics evolve, market preferences shift).<br><strong>Prediction drift</strong> &mdash; Model outputs shift while inputs appear stable, signaling calibration problems.<br><strong>Operational drift</strong> &mdash; Infrastructure deteriorates (latency increases, feature pipelines break, resource constraints emerge).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Monitoring in Practice</div><div class="cc-text">Production monitoring tracks multiple signals continuously:<br><strong>Performance metrics</strong> &mdash; Accuracy, precision, recall measured against ground truth as it becomes available.<br><strong>Data quality</strong> &mdash; Missing values, distribution shifts, schema changes.<br><strong>System health</strong> &mdash; Latency, throughput, error rates.<br><strong>Business impact</strong> &mdash; The actual downstream metric the model is supposed to improve.</div></div>
+          <div class="cc-note n-pink"><strong>Critical gap:</strong> 53% of organizations discover critical model issues more than 3 weeks after deployment. By then, the model has been making poor decisions at scale for weeks. Automated monitoring with real-time alerts is not optional &mdash; it&rsquo;s the difference between a controlled degradation and an undetected failure.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--orange),var(--amber))"><span class="material-symbols-rounded">autorenew</span></div><div><div class="cc-title">The Continuous Loop</div><div class="cc-sub">ML is a product, not a project</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Retraining Strategy</div><div class="cc-text">When monitoring detects degradation, the model needs retraining. This can be:<br><strong>Scheduled</strong> &mdash; Retrain on a fixed cadence (weekly, monthly) regardless of performance. Simple but wasteful if the model hasn&rsquo;t degraded, and risky if degradation happens between cycles.<br><strong>Triggered</strong> &mdash; Retrain automatically when performance drops below a threshold or significant drift is detected. More efficient but requires robust monitoring infrastructure.<br><strong>Continuous</strong> &mdash; The model learns incrementally from new data as it arrives. Most complex but keeps the model perpetually current.</div></div>
+          <div class="cc-block"><div class="cc-label">The Feedback Loop</div><div class="cc-text">The most powerful ML systems create a <strong>virtuous cycle</strong>: the model makes predictions, those predictions drive actions, the outcomes of those actions become new training data, and the model improves. This is the data flywheel from Chapter 4 in action. Each cycle makes the model better, which makes the data better, which makes the model better.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Executive Mental Model</div><div class="cc-text">Think of an ML model not as a piece of software you build once and deploy, but as a <strong>living system that requires ongoing care</strong>. It&rsquo;s closer to managing a team of analysts than installing an ERP. You need to define what they work on, give them good data, evaluate their performance, course-correct when they drift, and continuously invest in their development.</div></div>
+          <div class="cc-note n-amber"><strong>Five questions for every AI initiative:</strong><br>1. What specific business decision does this model improve?<br>2. Is the data available, accessible, and of sufficient quality?<br>3. What&rsquo;s the plan for getting from notebook to production?<br>4. How will we know when the model is degrading?<br>5. Who owns the model after launch &mdash; and what&rsquo;s the retraining budget?</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-unsupervised-learning-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Unsupervised Learning</a>
+    <a class="ch-nav-btn next" href="08-ml-business-cases-high-level.html">Ch 8: ML Business Cases <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=6000;
+
+  const PIPE_MAP={
+    1:[0],
+    2:[0],
+    3:[0,1],
+    4:[1,2],
+    5:[2,3],
+    6:[3,4],
+    7:[4,5],
+    8:[0,1,2,3,4,5]
+  };
+
+  const NARRATION={
+    1:{text:'<strong>87% of ML models never reach production.</strong> These aren&rsquo;t technology failures &mdash; they&rsquo;re execution failures. Building the model is 20% of the work. The other 80% is everything around it. Before approving any AI project, ask: &ldquo;What decision does this improve, and how does it reach the decision-maker?&rdquo;',color:'#ea580c'},
+    2:{text:'<strong>Problem definition</strong> is the most underrated stage. &ldquo;Reduce churn&rdquo; is a business goal, not an ML problem. A well-framed problem with a mediocre model outperforms a poorly framed problem with a state-of-the-art model every time.',color:'#7c3aed'},
+    3:{text:'<strong>Data preparation</strong> consumes 60&ndash;80% of project time. Feature engineering transforms raw data into learnable signals. 73% of ML failures trace to undocumented schema changes. Data lineage isn&rsquo;t a nice-to-have &mdash; it&rsquo;s a regulatory requirement.',color:'#d97706'},
+    4:{text:'<strong>Model building</strong> is systematic experimentation, not trial and error. The winning model balances performance, speed, interpretability, and cost. A deployed model at 90% accuracy creates more value than a perfect model that never ships.',color:'#2563eb'},
+    5:{text:'<strong>Validation</strong> proves the model works before it touches real decisions. A/B testing is the gold standard. Shadow mode &mdash; running predictions without acting on them &mdash; bridges the gap between lab and production.',color:'#0d9488'},
+    6:{text:'<strong>Deployment</strong> is where the &ldquo;valley of death&rdquo; claims most projects. MLOps &mdash; the discipline of reliably deploying ML &mdash; grew from near-zero to $2B in 2024. The organizations winning at AI aren&rsquo;t building better models; they&rsquo;re building better pipelines.',color:'#16a34a'},
+    7:{text:'<strong>Models decay.</strong> The world changes; the model doesn&rsquo;t. Models unchanged for 6+ months see error rates jump 35%. Four types of drift to watch: data, concept, prediction, and operational. 53% of organizations discover critical issues 3+ weeks after deployment.',color:'#db2777'},
+    8:{text:'<strong>ML is a product, not a project.</strong> Think of it as managing a team of analysts, not installing software. Five questions for every initiative: What decision? Is the data ready? What&rsquo;s the production path? How do we detect degradation? Who owns it after launch?',color:'#d97706'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--orange)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

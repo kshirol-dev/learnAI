@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Text-to-Video &amp; Motion &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Text-to-Video &amp; Motion</h2><span class="tb-sub">Sora&rsquo;s DiT, spacetime patches, temporal coherence, and current capabilities vs hard limits</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Prompt</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">view_in_ar</span></div><span class="pipe-label">3D Patch</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">movie</span></div><span class="pipe-label">Generate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">sync</span></div><span class="pipe-label">Coherence</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Limits</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Future</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">movie</span></div>
+        <div><div class="cc-title">From Images to Video</div><div class="cc-sub">Why video generation is orders of magnitude harder</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Scale Challenge</div>
+            <div class="cc-code"><span class="hl-cmt">// Data scale: image vs video</span>
+
+<span class="hl-key">1 image</span>  (1024&times;1024):
+  3.1M pixel values
+  ~765 tokens
+
+<span class="hl-key">1 second of video</span> (1080p, 24fps):
+  24 frames &times; 2M pixels = 149M values
+  ~18,000 tokens
+
+<span class="hl-key">10 seconds of video</span>:
+  1.49 BILLION values
+  ~180,000 tokens
+
+<span class="hl-cmt">// Video = images + TIME dimension</span>
+<span class="hl-cmt">// 100-1000x more data than a single image</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Temporal Challenge</div>
+            <div class="cc-text">Generating beautiful individual frames is &ldquo;solved&rdquo; by image diffusion. The hard part is <strong>temporal coherence</strong>:<br><br>&bull; <strong>Object persistence:</strong> A car must look the same across all frames<br>&bull; <strong>Motion consistency:</strong> Movement must follow physics (gravity, momentum)<br>&bull; <strong>Camera coherence:</strong> Camera movements must be smooth and realistic<br>&bull; <strong>Lighting continuity:</strong> Shadows and reflections must be consistent<br>&bull; <strong>Cause and effect:</strong> Actions must have logical consequences</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Video generation isn&rsquo;t just &ldquo;many images in sequence.&rdquo; It requires understanding time, physics, and causality. A model that generates each frame independently produces unwatchable flickering. The breakthrough was learning to generate all frames together.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">view_in_ar</span></div>
+        <div><div class="cc-title">Spacetime Patches &amp; DiT</div><div class="cc-sub">Sora&rsquo;s Diffusion Transformer architecture</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Spacetime Patches</div>
+            <div class="cc-text">Just as ViT splits images into 2D patches, video models split video into <strong>3D spacetime patches</strong>. Each patch covers a small spatial region across several frames:<br><br>&bull; <strong>Spatial:</strong> 2&times;16&times;16 pixels (height &times; width)<br>&bull; <strong>Temporal:</strong> 1&ndash;4 frames per patch<br>&bull; <strong>Result:</strong> A 10-second 1080p video becomes ~100,000 spacetime tokens<br><br>These 3D patches capture both appearance and motion in a single token.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Sora&rsquo;s DiT Architecture</div>
+            <div class="cc-text">Sora uses a <strong>Diffusion Transformer (DiT)</strong> instead of a U-Net:<br><br>&bull; <strong>Input:</strong> Spacetime patches of noisy latent video<br>&bull; <strong>Architecture:</strong> Pure Transformer with self-attention across all spacetime tokens<br>&bull; <strong>Conditioning:</strong> Text embeddings via cross-attention (like image diffusion)<br>&bull; <strong>Output:</strong> Denoised spacetime patches<br><br>The key advantage: self-attention across <strong>all spacetime tokens</strong> means every frame &ldquo;sees&rdquo; every other frame, enabling temporal coherence.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Sora&rsquo;s breakthrough was treating video as a single sequence of spacetime tokens and using a Transformer to attend across all of them. This is computationally expensive but produces far better temporal coherence than frame-by-frame approaches.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">sync</span></div>
+        <div><div class="cc-title">Temporal Coherence</div><div class="cc-sub">How models maintain consistency across frames</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Approaches to Coherence</div>
+            <div class="cc-text">&bull; <strong>Joint generation (Sora):</strong> Generate all frames simultaneously with full spacetime attention. Best coherence but most expensive.<br>&bull; <strong>Temporal attention layers:</strong> Add temporal self-attention between frames in the U-Net. Used by Runway Gen-3, AnimateDiff.<br>&bull; <strong>Autoregressive frames:</strong> Generate keyframes first, then interpolate. Used by some video models for longer clips.<br>&bull; <strong>Motion modules:</strong> Separate modules that learn motion patterns, plugged into image diffusion models.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Models Learn About Physics</div>
+            <div class="cc-text">Sora&rsquo;s technical report revealed that large video models learn <strong>emergent physics simulation</strong>:<br><br>&bull; <strong>3D consistency:</strong> Objects maintain shape as camera moves around them<br>&bull; <strong>Reflections:</strong> Mirrors and water surfaces show correct reflections<br>&bull; <strong>Shadows:</strong> Cast shadows move consistently with light sources<br>&bull; <strong>Fluid dynamics:</strong> Water, smoke, and fire behave realistically<br><br>These physics aren&rsquo;t programmed &mdash; they emerge from training on millions of videos.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Video models are learning to be &ldquo;world simulators&rdquo; &mdash; they don&rsquo;t just generate pixels, they learn implicit models of physics, geometry, and causality. This is why video generation is considered a path toward general world understanding.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">landscape</span></div>
+        <div><div class="cc-title">The Video Model Landscape</div><div class="cc-sub">Sora, Runway, Veo, Kling, and the open-source frontier</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Major Models</div>
+            <div class="cc-code"><span class="hl-cmt">// Text-to-video models (2025)</span>
+
+<span class="hl-key">Sora (OpenAI)</span>
+  DiT architecture, up to 60 sec
+  1080p, best physics understanding
+  Closed, limited access
+
+<span class="hl-key">Veo 2 (Google)</span>
+  Up to 120 sec, 4K resolution
+  Strong prompt adherence
+  Available via Vertex AI
+
+<span class="hl-key">Runway Gen-3 Alpha</span>
+  10 sec clips, fast generation
+  Strong motion control
+  Commercial API available
+
+<span class="hl-key">Kling (Kuaishou)</span>
+  Up to 120 sec, 1080p
+  Strong character consistency
+  Available via API
+
+<span class="hl-key">Open-source: CogVideoX, Mochi</span>
+  Shorter clips, lower quality
+  Rapidly improving</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Capabilities Comparison</div>
+            <div class="cc-text">&bull; <strong>Best quality:</strong> Sora, Veo 2 (photorealistic, coherent motion)<br>&bull; <strong>Best length:</strong> Veo 2, Kling (up to 2 minutes)<br>&bull; <strong>Best control:</strong> Runway Gen-3 (motion brushes, camera control)<br>&bull; <strong>Best accessibility:</strong> Runway, Kling (commercial APIs)<br>&bull; <strong>Best open-source:</strong> CogVideoX (improving rapidly)</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Video generation in 2025 is where image generation was in 2022 &mdash; impressive demos but not yet production-ready for most use cases. Quality is improving exponentially, and the gap between leaders (Sora, Veo) and open-source is closing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">Current Hard Limits</div><div class="cc-sub">What video generation still can&rsquo;t do reliably</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Known Failures</div>
+            <div class="cc-text">&bull; <strong>Physics violations:</strong> Objects passing through each other, impossible gravity, liquids behaving wrong<br>&bull; <strong>Counting &amp; consistency:</strong> Number of fingers, legs, or objects changes between frames<br>&bull; <strong>Long-term coherence:</strong> Beyond 30 seconds, characters and scenes drift<br>&bull; <strong>Text in video:</strong> Text on signs, screens, or documents is garbled<br>&bull; <strong>Complex interactions:</strong> Multiple characters interacting physically (handshakes, fights)<br>&bull; <strong>Cause and effect:</strong> Blowing out candles doesn&rsquo;t reliably extinguish them</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Compute &amp; Cost</div>
+            <div class="cc-code"><span class="hl-cmt">// Video generation costs (approximate)</span>
+
+<span class="hl-key">Sora</span>     ~$0.15-0.50 per 10-sec clip
+<span class="hl-key">Runway</span>   ~$0.05-0.25 per 10-sec clip
+<span class="hl-key">Kling</span>    ~$0.02-0.10 per 10-sec clip
+
+<span class="hl-cmt">// Generation time</span>
+<span class="hl-key">Sora</span>     2-10 minutes per clip
+<span class="hl-key">Runway</span>   30-90 seconds per clip
+<span class="hl-key">Kling</span>    1-5 minutes per clip
+
+<span class="hl-cmt">// Compare: text-to-image is ~$0.01</span>
+<span class="hl-cmt">// and takes 1-5 seconds</span></div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Video generation is 10&ndash;50x more expensive and 10&ndash;100x slower than image generation. This isn&rsquo;t just an engineering problem &mdash; video has fundamentally more data (time dimension). Costs will drop, but the gap with images will persist.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">videocam</span></div>
+        <div><div class="cc-title">Image-to-Video &amp; Video Editing</div><div class="cc-sub">Beyond text-to-video: animating images and editing clips</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Image-to-Video</div>
+            <div class="cc-text">Provide a <strong>reference image</strong> and the model animates it into a video clip. This is often more controllable than pure text-to-video because you start with a known visual:<br><br>&bull; <strong>Runway Gen-3:</strong> Upload image + describe motion<br>&bull; <strong>Stable Video Diffusion:</strong> Open-source image animation<br>&bull; <strong>Kling:</strong> Strong character animation from single images<br><br>Use case: animate product shots, bring illustrations to life, create dynamic social media content.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Video Editing with AI</div>
+            <div class="cc-text">&bull; <strong>Video inpainting:</strong> Remove or replace objects across frames<br>&bull; <strong>Style transfer:</strong> Apply artistic styles to existing footage<br>&bull; <strong>Motion transfer:</strong> Apply motion from one video to another<br>&bull; <strong>Video upscaling:</strong> Enhance resolution of existing footage<br>&bull; <strong>Frame interpolation:</strong> Generate intermediate frames for slow-motion<br>&bull; <strong>Lip sync:</strong> Match mouth movements to new audio</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Image-to-video is currently more practical than pure text-to-video for production use. Starting from a carefully crafted image gives you control over composition, style, and content &mdash; the model just adds motion.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">work</span></div>
+        <div><div class="cc-title">Production Use Cases</div><div class="cc-sub">Where video generation is already creating value</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Working Today</div>
+            <div class="cc-text">&bull; <strong>Social media content:</strong> Short clips for TikTok, Instagram Reels (5&ndash;15 sec)<br>&bull; <strong>Advertising:</strong> Concept videos and storyboard animation for pitches<br>&bull; <strong>E-commerce:</strong> Product videos from still photos<br>&bull; <strong>Music videos:</strong> Abstract and artistic visual accompaniment<br>&bull; <strong>Education:</strong> Animated explainers and visualizations<br>&bull; <strong>Film pre-visualization:</strong> Rapid storyboard-to-video for directors</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Not Yet Ready For</div>
+            <div class="cc-text">&bull; <strong>Feature films:</strong> Coherence breaks down beyond 30 seconds; character consistency is unreliable<br>&bull; <strong>Live sports/news:</strong> Real-time generation not fast enough; accuracy critical<br>&bull; <strong>Medical/legal:</strong> Hallucinated details are unacceptable<br>&bull; <strong>Long-form content:</strong> Multi-minute coherent narratives still out of reach<br>&bull; <strong>Interactive/gaming:</strong> Real-time generation at 30+ FPS not yet feasible</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Video generation excels at <strong>short, creative, non-critical</strong> content. The sweet spot is 5&ndash;15 second clips where slight imperfections are acceptable. For longer or accuracy-critical content, traditional production is still necessary.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">rocket_launch</span></div>
+        <div><div class="cc-title">The Future of Video Generation</div><div class="cc-sub">Where this technology is heading</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Near-Term (2025&ndash;2026)</div>
+            <div class="cc-text">&bull; <strong>Longer coherent clips:</strong> 2&ndash;5 minute videos with consistent characters<br>&bull; <strong>Better control:</strong> Camera paths, character actions, scene transitions<br>&bull; <strong>Real-time preview:</strong> See rough video as you type the prompt<br>&bull; <strong>Audio integration:</strong> Synchronized sound effects and music<br>&bull; <strong>Open-source parity:</strong> Open models matching closed-source quality</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Long-Term Vision</div>
+            <div class="cc-text">&bull; <strong>Interactive video:</strong> Generate video in real-time based on user input (gaming, simulation)<br>&bull; <strong>World models:</strong> Video models that truly understand physics and can predict outcomes<br>&bull; <strong>Personalized content:</strong> AI-generated shows tailored to individual viewers<br>&bull; <strong>Film production:</strong> Full scenes with dialogue, consistent characters, and narrative arcs<br>&bull; <strong>Embodied AI:</strong> Video generation as a planning tool for robots</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 8 covers speech and audio AI &mdash; Whisper for recognition, ElevenLabs for synthesis, music generation, audio tokenization, and real-time voice agents.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-text-to-image.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Text-to-Image Generation</a>
+    <a class="ch-nav-btn next" href="08-speech-audio.html">Ch 8: Speech &amp; Audio AI <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2,3],4:[2,3],5:[3,4],6:[2,3,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Video is 100\u20131000x more data than a single image. A 10-second 1080p clip has 1.49 billion pixel values \u2014 and temporal coherence is the hard problem.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> Sora uses spacetime patches (3D chunks of video) processed by a Diffusion Transformer. Every frame \u201csees\u201d every other frame via self-attention.',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> Temporal coherence: objects must persist, motion must follow physics, camera must be smooth. Models learn emergent physics simulation from training data.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> The landscape: Sora (best physics), Veo 2 (longest clips), Runway Gen-3 (best control), Kling (best value). Open-source is catching up.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Hard limits: physics violations, counting errors, long-term drift, garbled text, complex interactions. Video gen is where image gen was in 2022.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Image-to-video is more practical than pure text-to-video. Start from a crafted image for better control \u2014 the model just adds motion.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Production sweet spot: 5\u201315 second creative clips for social media, ads, e-commerce. Not yet ready for feature films or long-form content.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The future: longer coherent clips, real-time preview, audio integration, interactive video, and world models that truly understand physics.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

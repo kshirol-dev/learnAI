@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: What Is Fine-Tuning &amp; When to Use It — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--blue)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--violet-light) 50%,var(--pink-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet),var(--pink),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-yes{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-yes strong{color:var(--green)}.compare-item.ci-no{background:var(--red-light);border:1px solid var(--red-border)}.compare-item.ci-no strong{color:var(--red)}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{background:#1d4ed8;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 1 &mdash; What Is Fine-Tuning &amp; When to Use It</h2><span class="tb-sub">Why customize LLMs, and how to decide between fine-tuning, prompting, and RAG</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="01-what-is-fine-tuning-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Why</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">compare_arrows</span></div><span class="pipe-label">Compare</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">category</span></div><span class="pipe-label">Types</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Stages</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">dataset</span></div><span class="pipe-label">Data</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Risks</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Decide</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why Fine-Tune -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why Fine-Tune an LLM?</div><div class="cc-sub">When prompting alone isn't enough</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Fine-Tuning Is</div><div class="cc-text">Fine-tuning takes a <strong>pre-trained LLM</strong> (like Llama 3, Mistral, or GPT-4o) and continues training it on your own dataset. The model learns your specific patterns, terminology, style, and tasks. Think of it as taking a generally educated person and giving them specialized job training.</div></div>
+          <div class="cc-block"><div class="cc-label">Pre-Training vs Fine-Tuning</div><div class="cc-text"><strong>Pre-training:</strong> Train from scratch on trillions of tokens from the internet. Costs millions of dollars and takes months on thousands of GPUs. Creates a "base model" that can predict the next token but doesn't follow instructions.<br><br><strong>Fine-tuning:</strong> Continue training on thousands to millions of task-specific examples. Costs $10 to $10,000 depending on model size and method. Takes hours to days on 1-8 GPUs. Creates a specialized model that excels at your use case.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Top Reasons to Fine-Tune</div><div class="cc-text"><strong>1. Task specialization:</strong> Make the model excel at a specific task (code generation, medical Q&A, legal analysis, structured extraction).<br><br><strong>2. Style and tone:</strong> Match your brand voice, writing style, or communication patterns consistently.<br><br><strong>3. Domain knowledge:</strong> Teach specialized vocabulary and reasoning patterns (finance, healthcare, law).<br><br><strong>4. Cost reduction:</strong> A fine-tuned 8B model can match GPT-4 quality on your specific task at 1/100th the inference cost.<br><br><strong>5. Latency:</strong> Smaller fine-tuned models respond faster than large general-purpose ones.<br><br><strong>6. Privacy:</strong> Run the model on your own infrastructure. No data leaves your environment.</div></div>
+          <div class="cc-note n-blue"><strong>The key insight:</strong> Fine-tuning doesn't teach the model new facts. It teaches the model <em>how</em> to behave &mdash; what format to use, what tone to adopt, what tasks to prioritize, and how to apply its existing knowledge to your specific domain.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Fine-Tuning vs Prompting vs RAG -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">Fine-Tuning vs Prompting vs RAG</div><div class="cc-sub">Three approaches to customizing LLM behavior</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Prompting (In-Context Learning)</div><div class="cc-text"><strong>What:</strong> Write instructions and examples in the prompt. No model weights change.<br><strong>Best for:</strong> General tasks, rapid iteration, when you have a strong base model (GPT-4o, Claude).<br><strong>Limits:</strong> Context window constrains how much you can teach. Inconsistent on complex tasks. Expensive at scale (long prompts = more tokens).</div></div>
+          <div class="cc-block"><div class="cc-label">RAG (Retrieval-Augmented Generation)</div><div class="cc-text"><strong>What:</strong> Retrieve relevant documents and inject them into the prompt at query time.<br><strong>Best for:</strong> Grounding answers in up-to-date or proprietary data. Reducing hallucination on factual questions.<br><strong>Limits:</strong> Doesn't change model behavior or style. Retrieval quality is the bottleneck. Adds latency.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fine-Tuning</div><div class="cc-text"><strong>What:</strong> Train the model on your data. Model weights change permanently.<br><strong>Best for:</strong> Consistent behavior, specific output formats, domain expertise, cost optimization at scale.<br><strong>Limits:</strong> Requires training data and compute. Can't easily update knowledge (use RAG for that). Risk of catastrophic forgetting.</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-blue"><strong>Prompting</strong><br>Change behavior: prompt<br>Change knowledge: prompt<br>Cost: per-token<br>Setup: minutes</div>
+            <div class="compare-item ci-amber"><strong>RAG</strong><br>Change behavior: limited<br>Change knowledge: retrieval<br>Cost: infra + per-token<br>Setup: days</div>
+            <div class="compare-item ci-violet"><strong>Fine-Tuning</strong><br>Change behavior: weights<br>Change knowledge: limited<br>Cost: training + inference<br>Setup: days-weeks</div>
+            <div class="compare-item ci-yes"><strong>Best Combo</strong><br>Fine-tune for behavior<br>RAG for knowledge<br>Prompting for control<br>All three together</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Types of Fine-Tuning -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">category</span></div><div><div class="cc-title">Types of Fine-Tuning</div><div class="cc-sub">The spectrum from full to parameter-efficient</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Full Fine-Tuning</div><div class="cc-text">Update <strong>all parameters</strong> in the model. Maximum flexibility but requires the most memory and compute. For a 7B model: ~56 GB GPU memory (fp16 weights + optimizer states + gradients). Typically needs 4-8 A100 GPUs.<br><br><strong>When to use:</strong> Large high-quality dataset (100K+ examples), sufficient compute budget, need maximum quality.</div></div>
+          <div class="cc-block"><div class="cc-label">LoRA (Low-Rank Adaptation)</div><div class="cc-text">Freeze the base model. Train <strong>small adapter matrices</strong> (typically 0.1-1% of total parameters). Dramatically reduces memory: fine-tune a 7B model on a single GPU with 16 GB VRAM.<br><br><strong>When to use:</strong> Most use cases. Best quality-to-cost ratio. The default recommendation for 2024-2025.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">QLoRA (Quantized LoRA)</div><div class="cc-text">Load the base model in <strong>4-bit precision</strong> (NF4 quantization), then train LoRA adapters on top. Fine-tune a 70B model on a single 48 GB GPU (A100/A6000). Introduced by Dettmers et al. (2023).<br><br><strong>When to use:</strong> Limited GPU memory, large models (30B-70B), prototyping.</div></div>
+          <div class="cc-block"><div class="cc-label">Other PEFT Methods</div><div class="cc-text"><strong>Prefix Tuning:</strong> Prepend trainable virtual tokens to the input. Very few parameters but limited expressiveness.<br><br><strong>Prompt Tuning:</strong> Similar to prefix tuning but only at the input layer. Google's approach for T5 models.<br><br><strong>IA3 (Infused Adapter by Inhibiting and Amplifying Inner Activations):</strong> Learns rescaling vectors instead of matrices. Even fewer parameters than LoRA.<br><br><strong>DoRA (Weight-Decomposed Low-Rank Adaptation):</strong> Decomposes weights into magnitude and direction, applies LoRA to direction only. Often outperforms standard LoRA.</div></div>
+          <div class="cc-note n-pink"><strong>Start with QLoRA for prototyping, LoRA for production.</strong> Full fine-tuning only when you have abundant data and compute. The quality difference between LoRA and full fine-tuning is often small (within 1-2% on benchmarks), while the cost difference is 10-50x.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: The Training Stages -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">The LLM Training Stages</div><div class="cc-sub">From raw text to aligned assistant</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stage 1: Pre-Training</div><div class="cc-text">Train on trillions of tokens from the internet. The model learns language, facts, reasoning, and code. Output: a <strong>base model</strong> (e.g., Llama 3 base). It can complete text but doesn't follow instructions. This stage costs millions of dollars and is done by labs (Meta, Google, Mistral, etc.).</div></div>
+          <div class="cc-block"><div class="cc-label">Stage 2: Supervised Fine-Tuning (SFT)</div><div class="cc-text">Train on <strong>instruction/response pairs</strong>. The model learns to follow instructions, answer questions, and produce structured output. Output: an <strong>instruct model</strong> (e.g., Llama 3 Instruct). This is what most people mean by "fine-tuning." Costs $10-$10,000. This is the stage you'll do most often.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stage 3: Alignment (RLHF / DPO)</div><div class="cc-text">Train the model to prefer <strong>helpful, harmless, and honest</strong> responses using human preference data. Methods: RLHF (Reinforcement Learning from Human Feedback) or DPO (Direct Preference Optimization). Output: an <strong>aligned/chat model</strong>. Makes the model safer and more useful in conversation.</div></div>
+          <div class="cc-block"><div class="cc-label">The Full Pipeline</div></div>
+          <div class="cc-code"><span class="hl-cmt"># The LLM training pipeline</span>
+
+<span class="hl-key">Pre-Training</span>     <span class="hl-cmt"># Trillions of tokens, months</span>
+    &darr;              <span class="hl-cmt"># Base model (text completion)</span>
+<span class="hl-key">SFT</span>              <span class="hl-cmt"># 10K-1M instruction pairs, hours-days</span>
+    &darr;              <span class="hl-cmt"># Instruct model (follows instructions)</span>
+<span class="hl-key">Alignment</span>        <span class="hl-cmt"># Preference data, RLHF or DPO</span>
+    &darr;              <span class="hl-cmt"># Chat model (helpful, safe, aligned)</span>
+<span class="hl-key">Your Fine-Tune</span>   <span class="hl-cmt"># Your data, your task</span>
+    &darr;              <span class="hl-cmt"># Your specialized model</span></div>
+          <div class="cc-note n-teal"><strong>You typically start from an instruct or chat model</strong> (not the base model). The instruction-following ability is already baked in. Your fine-tuning adds domain expertise and task specialization on top. Starting from a base model means you'd also need to teach it to follow instructions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Data Requirements -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">dataset</span></div><div><div class="cc-title">Data Requirements</div><div class="cc-sub">How much data do you need?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quality Over Quantity</div><div class="cc-text">The <strong>LIMA paper</strong> (Zhou et al., 2023) showed that just <strong>1,000 carefully curated examples</strong> can produce a model competitive with GPT-3.5 on many tasks. Microsoft's <strong>Phi models</strong> demonstrated that high-quality synthetic data can outperform much larger datasets of lower quality.<br><br>The lesson: <strong>1,000 excellent examples beat 100,000 mediocre ones.</strong></div></div>
+          <div class="cc-block"><div class="cc-label">Practical Guidelines</div><div class="cc-text"><strong>Minimum viable:</strong> 100-500 examples for style/format transfer.<br><strong>Good baseline:</strong> 1,000-5,000 examples for task specialization.<br><strong>Strong model:</strong> 10,000-50,000 examples for complex reasoning tasks.<br><strong>Maximum quality:</strong> 50,000-500,000 examples for full fine-tuning on broad tasks.<br><br>More data helps, but with diminishing returns. The first 1,000 examples matter most.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Format</div><div class="cc-text">Fine-tuning data is typically <strong>instruction/response pairs</strong>:</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Alpaca format (most common)</span>
+{
+  <span class="hl-str">"instruction"</span>: <span class="hl-str">"Summarize this contract clause..."</span>,
+  <span class="hl-str">"input"</span>: <span class="hl-str">"The Licensee shall not..."</span>,
+  <span class="hl-str">"output"</span>: <span class="hl-str">"This clause restricts..."</span>
+}
+
+<span class="hl-cmt"># Chat format (ShareGPT / multi-turn)</span>
+{
+  <span class="hl-str">"conversations"</span>: [
+    {<span class="hl-str">"from"</span>: <span class="hl-str">"human"</span>, <span class="hl-str">"value"</span>: <span class="hl-str">"Explain LoRA..."</span>},
+    {<span class="hl-str">"from"</span>: <span class="hl-str">"gpt"</span>, <span class="hl-str">"value"</span>: <span class="hl-str">"LoRA is..."</span>}
+  ]
+}</div>
+          <div class="cc-note n-amber"><strong>You can generate training data with a stronger model.</strong> Use GPT-4o or Claude to generate high-quality instruction/response pairs for your domain. This is how Alpaca (Stanford, 2023) was created: 52K instruction-following examples generated by GPT-3.5 for $500. Validate the generated data manually before training.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Risks & Pitfalls -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Risks &amp; Pitfalls</div><div class="cc-sub">What can go wrong with fine-tuning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Catastrophic Forgetting</div><div class="cc-text">The model <strong>forgets general capabilities</strong> while learning your specific task. A model fine-tuned on legal text might lose its ability to write code or do math. Mitigation: use LoRA (base model stays frozen), keep learning rate low, mix in general-purpose data.</div></div>
+          <div class="cc-block"><div class="cc-label">Overfitting</div><div class="cc-text">The model <strong>memorizes training examples</strong> instead of learning patterns. It performs perfectly on training data but poorly on new inputs. Mitigation: use a validation set, early stopping, regularization (weight decay, dropout), and don't train for too many epochs (1-3 is typical).</div></div>
+          <div class="cc-block"><div class="cc-label">Data Quality Issues</div><div class="cc-text">Garbage in, garbage out. If your training data has errors, inconsistencies, or biases, the model will learn them. <strong>Always review a random sample</strong> of your training data before training. One bad pattern repeated 100 times can dominate the model's behavior.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Safety Degradation</div><div class="cc-text">Fine-tuning can <strong>undo safety alignment</strong>. Research has shown that even a small number of harmful examples can remove safety guardrails from aligned models. Always evaluate safety after fine-tuning. Consider re-applying alignment (DPO) after SFT.</div></div>
+          <div class="cc-block"><div class="cc-label">License & Legal Risks</div><div class="cc-text"><strong>Model licenses matter.</strong> Llama 3 has a community license (free for most uses, restrictions for 700M+ monthly active users). Mistral models are Apache 2.0 (fully permissive). Phi-3 is MIT licensed. GPT-4o fine-tuning is API-only (OpenAI hosts it). Always check the license before fine-tuning and deploying.</div></div>
+          <div class="cc-note n-orange"><strong>The biggest pitfall: fine-tuning when you don't need to.</strong> Try prompting first. Then try RAG. Only fine-tune when those approaches fail or are too expensive at scale. Fine-tuning adds complexity (training pipeline, evaluation, deployment, versioning) that you should only take on when the benefit is clear.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Decision Framework -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Decision Framework</div><div class="cc-sub">Should you fine-tune?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fine-Tune When</div><div class="cc-text"><strong>1. Consistent output format:</strong> You need the model to always produce JSON, XML, or a specific structure that prompting can't reliably enforce.<br><br><strong>2. Domain-specific behavior:</strong> Medical diagnosis, legal analysis, financial modeling &mdash; tasks requiring specialized reasoning patterns.<br><br><strong>3. Cost optimization:</strong> You're spending $10K+/month on GPT-4o API calls and a fine-tuned 8B model could handle 80% of queries at 1/100th the cost.<br><br><strong>4. Latency requirements:</strong> You need sub-100ms responses that only a small, local model can provide.<br><br><strong>5. Privacy:</strong> Data cannot leave your infrastructure. You need a self-hosted model.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Don't Fine-Tune When</div><div class="cc-text"><strong>1. Prompting works:</strong> If few-shot prompting with GPT-4o gives you 95% accuracy, fine-tuning won't add much.<br><br><strong>2. You need up-to-date knowledge:</strong> Fine-tuning doesn't update facts well. Use RAG instead.<br><br><strong>3. Small dataset (&lt;100 examples):</strong> Not enough signal for the model to learn meaningful patterns.<br><br><strong>4. Rapidly changing requirements:</strong> If your task changes weekly, retraining is impractical. Use prompting.<br><br><strong>5. No evaluation plan:</strong> If you can't measure whether fine-tuning improved the model, don't do it.</div></div>
+          <div class="cc-note n-green"><strong>The recommended path:</strong> Start with prompting (GPT-4o or Claude). If quality is good but cost is too high, fine-tune a smaller model (Llama 3 8B or Mistral 7B) with LoRA. Add RAG for knowledge grounding. This combination handles 90% of production use cases.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Fine-tuning</strong> continues training a pre-trained LLM on your own data. It teaches the model <em>how to behave</em> &mdash; what format to use, what tone to adopt, what tasks to prioritize. It does NOT teach new facts (use RAG for that). A fine-tuned 8B model can match GPT-4 on your specific task at a fraction of the cost.',color:'#2563eb'},
+    2:{text:'<strong>Three approaches to customization:</strong> <strong>Prompting</strong> &mdash; instructions in the prompt, no weight changes, fast iteration. <strong>RAG</strong> &mdash; retrieve documents at query time, grounds answers in data. <strong>Fine-tuning</strong> &mdash; change model weights, permanent behavior change. Best results: combine all three. Fine-tune for behavior, RAG for knowledge, prompting for control.',color:'#7c3aed'},
+    3:{text:'<strong>Types of fine-tuning:</strong> <strong>Full fine-tuning</strong> updates all parameters (maximum quality, maximum cost). <strong>LoRA</strong> (Hu et al., 2021) freezes the base and trains small adapter matrices (0.1-1% of parameters). <strong>QLoRA</strong> (Dettmers et al., 2023) loads the base in 4-bit and trains LoRA on top &mdash; fine-tune 70B on a single GPU. Start with QLoRA for prototyping, LoRA for production.',color:'#db2777'},
+    4:{text:'<strong>LLM training stages:</strong> (1) <strong>Pre-training</strong> on trillions of tokens &rarr; base model. (2) <strong>SFT</strong> on instruction/response pairs &rarr; instruct model. (3) <strong>Alignment</strong> with RLHF or DPO &rarr; chat model. Your fine-tuning typically starts from an instruct or chat model (Stage 2/3), adding domain expertise on top of existing instruction-following ability.',color:'#0d9488'},
+    5:{text:'<strong>Data requirements:</strong> Quality beats quantity. The LIMA paper (Zhou et al., 2023) showed 1,000 curated examples can compete with models trained on 100x more data. Practical minimums: 100-500 for style transfer, 1K-5K for task specialization, 10K-50K for complex reasoning. Use Alpaca or ShareGPT format. You can generate training data with GPT-4o.',color:'#d97706'},
+    6:{text:'<strong>Risks:</strong> <strong>Catastrophic forgetting</strong> &mdash; model loses general abilities (mitigate with LoRA). <strong>Overfitting</strong> &mdash; memorizes training data (mitigate with early stopping, 1-3 epochs). <strong>Safety degradation</strong> &mdash; fine-tuning can undo alignment guardrails. <strong>License issues</strong> &mdash; always check model licenses (Llama 3: community, Mistral: Apache 2.0, Phi-3: MIT).',color:'#dc2626'},
+    7:{text:'<strong>Decision framework:</strong> Fine-tune when you need consistent output format, domain-specific behavior, cost optimization, low latency, or privacy. Don\'t fine-tune when prompting works, you need current knowledge (use RAG), you have &lt;100 examples, or requirements change rapidly. <strong>Recommended path:</strong> Start with prompting, fine-tune a small model with LoRA when cost matters, add RAG for knowledge.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--blue)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

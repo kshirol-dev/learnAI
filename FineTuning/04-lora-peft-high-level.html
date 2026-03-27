@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: LoRA &amp; Parameter-Efficient Fine-Tuning — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--violet-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--violet),var(--blue),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{background:#0f766e;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; LoRA &amp; Parameter-Efficient Fine-Tuning</h2><span class="tb-sub">Low-rank adapters, QLoRA, rank/alpha tuning, and other PEFT methods</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="04-lora-peft-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">lightbulb</span></div><span class="pipe-label">Idea</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">Math</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Config</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">QLoRA</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">apps</span></div><span class="pipe-label">Others</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">merge</span></div><span class="pipe-label">Merge</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Best Practices</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: The Core Idea -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">The Core Idea Behind LoRA</div><div class="cc-sub">Hu et al. (2021): "LoRA: Low-Rank Adaptation of Large Language Models"</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Full fine-tuning updates <strong>all parameters</strong> in the model. For a 7B model, that means storing optimizer states for 7 billion parameters: ~56 GB of GPU memory just for AdamW states. This requires multiple expensive GPUs and creates a separate full copy of the model for each task.</div></div>
+          <div class="cc-block"><div class="cc-label">The Insight</div><div class="cc-text">Aghajanyan et al. (2020) showed that pre-trained language models have a <strong>low intrinsic dimensionality</strong>. When fine-tuning, the weight changes (&Delta;W) don't need the full rank of the weight matrix. The actual "useful" change lives in a much lower-dimensional subspace.<br><br>In other words: you don't need to change all 7 billion parameters. A few million carefully chosen changes are enough.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The LoRA Solution</div><div class="cc-text">Instead of updating the full weight matrix W (e.g., 4096 &times; 4096 = 16.8M params), LoRA decomposes the update into two small matrices:<br><br><strong>&Delta;W = B &times; A</strong><br><br>Where A is (r &times; 4096) and B is (4096 &times; r), with r being the <strong>rank</strong> (typically 8, 16, or 32). For r=16: A has 65K params, B has 65K params. Total: <strong>131K params instead of 16.8M</strong> (128x reduction).<br><br>The base model stays <strong>completely frozen</strong>. Only A and B are trained. At inference, the adapter output is added: <strong>h = Wx + BAx</strong>.</div></div>
+          <div class="cc-note n-teal"><strong>Why "low-rank"?</strong> A matrix of rank r can be decomposed into the product of two matrices where the inner dimension is r. If the weight change &Delta;W has low rank (most of the information is in a few dimensions), then B&times;A is a good approximation. Empirically, rank 16-64 captures most of the useful adaptation for LLM fine-tuning.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: The Math -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">LoRA Mathematics</div><div class="cc-sub">Rank, alpha, scaling, and initialization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Forward Pass</div><div class="cc-text">For a pre-trained weight matrix W<sub>0</sub>:<br><br><strong>h = W<sub>0</sub>x + (&alpha;/r) &middot; BAx</strong><br><br><strong>W<sub>0</sub>:</strong> Frozen pre-trained weights (not updated)<br><strong>B:</strong> Down-projection matrix (d &times; r), initialized to zeros<br><strong>A:</strong> Up-projection matrix (r &times; d), initialized with random Gaussian<br><strong>r:</strong> Rank (hyperparameter, typically 8-64)<br><strong>&alpha;:</strong> Scaling factor (hyperparameter, typically 16-64)<br><strong>&alpha;/r:</strong> The effective scaling applied to the adapter output</div></div>
+          <div class="cc-block"><div class="cc-label">Why Initialize B to Zero?</div><div class="cc-text">At the start of training, <strong>BA = 0</strong> (because B is all zeros). This means the model starts with <strong>exactly the same behavior</strong> as the pre-trained model. Training gradually learns the adaptation &Delta;W = BA. This is a key design choice: it ensures training starts from a known-good state.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Rank (r) and Alpha (&alpha;)</div><div class="cc-text"><strong>Rank (r):</strong> Controls the capacity of the adapter. Higher rank = more parameters = more expressive but more memory. Common values: 8, 16, 32, 64.<br><br><strong>Alpha (&alpha;):</strong> Scaling factor. The adapter output is multiplied by &alpha;/r. Common practice: set &alpha; = 2&times;r (e.g., r=16, &alpha;=32). This keeps the effective learning rate stable across different rank values.<br><br><strong>Rule of thumb:</strong> Start with r=16, &alpha;=32. If quality is insufficient, increase to r=32 or r=64. If you need to save memory, try r=8.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Parameter count for LoRA on Llama 3 8B</span>
+<span class="hl-cmt"># Target: q_proj, k_proj, v_proj, o_proj (4 modules)</span>
+<span class="hl-cmt"># Per module per layer:</span>
+<span class="hl-cmt">#   A: (r, d_in)  B: (d_out, r)</span>
+
+<span class="hl-cmt"># r=16, targeting Q,K,V,O across 32 layers:</span>
+<span class="hl-cmt"># q_proj: (16 x 4096) + (4096 x 16) = 131K</span>
+<span class="hl-cmt"># k_proj: (16 x 4096) + (1024 x 16) = 82K</span>
+<span class="hl-cmt"># v_proj: (16 x 4096) + (1024 x 16) = 82K</span>
+<span class="hl-cmt"># o_proj: (16 x 4096) + (4096 x 16) = 131K</span>
+<span class="hl-cmt"># Per layer: 426K params</span>
+<span class="hl-cmt"># 32 layers: 13.6M trainable params</span>
+<span class="hl-cmt"># = 0.17% of 8B total parameters</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Configuration -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">LoRA Configuration</div><div class="cc-sub">Target modules, rank, alpha, and dropout</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Target Modules</div><div class="cc-text"><strong>Which layers get LoRA adapters?</strong> You choose which weight matrices to target. More targets = more capacity but more memory.<br><br><strong>Minimal (attention only):</strong><br><code>["q_proj", "v_proj"]</code><br>The original LoRA paper found Q and V most important. ~6.8M params for r=16.<br><br><strong>Standard (all attention):</strong><br><code>["q_proj", "k_proj", "v_proj", "o_proj"]</code><br>Most common configuration. ~13.6M params for r=16.<br><br><strong>Full (attention + FFN):</strong><br><code>["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]</code><br>Maximum capacity. ~40M params for r=16. Best quality but most memory.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The LoraConfig</div></div>
+          <div class="cc-code"><span class="hl-key">from</span> peft <span class="hl-key">import</span> LoraConfig
+
+config = LoraConfig(
+    r=<span class="hl-num">16</span>,                    <span class="hl-cmt"># rank</span>
+    lora_alpha=<span class="hl-num">32</span>,            <span class="hl-cmt"># scaling (2x rank)</span>
+    target_modules=[
+        <span class="hl-str">"q_proj"</span>, <span class="hl-str">"k_proj"</span>,
+        <span class="hl-str">"v_proj"</span>, <span class="hl-str">"o_proj"</span>,
+    ],
+    lora_dropout=<span class="hl-num">0.05</span>,        <span class="hl-cmt"># regularization</span>
+    bias=<span class="hl-str">"none"</span>,               <span class="hl-cmt"># don't train biases</span>
+    task_type=<span class="hl-str">"CAUSAL_LM"</span>,     <span class="hl-cmt"># for decoder models</span>
+)</div>
+          <div class="cc-block"><div class="cc-label">Dropout</div><div class="cc-text"><strong>lora_dropout:</strong> Applied to the adapter input during training. Acts as regularization to prevent overfitting. Common values: 0.0 (no dropout) to 0.1. Use 0.05 as a default. Increase to 0.1 if you see overfitting on small datasets.</div></div>
+          <div class="cc-note n-blue"><strong>Recommended starting config:</strong> r=16, alpha=32, target all attention modules (Q, K, V, O), dropout=0.05. This gives ~13.6M trainable params (0.17% of 8B) and fits on a single 24 GB GPU. Increase rank to 32 or 64 if quality needs improvement.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: QLoRA -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">QLoRA: Quantized LoRA</div><div class="cc-sub">Dettmers et al. (2023): Fine-tune 70B on a single GPU</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What QLoRA Adds</div><div class="cc-text">QLoRA combines LoRA with <strong>4-bit quantization</strong> of the base model. The base model is loaded in 4-bit NF4 (Normal Float 4) precision, reducing its memory footprint by 4x. LoRA adapters are trained in bf16/fp16 on top of the quantized base.<br><br><strong>Memory savings:</strong><br>Llama 3 8B in bf16: ~16 GB<br>Llama 3 8B in NF4: ~4 GB<br>+ LoRA adapters + optimizer: ~2 GB<br><strong>Total QLoRA: ~6 GB</strong> (vs ~16 GB for standard LoRA)</div></div>
+          <div class="cc-block"><div class="cc-label">Key Innovations</div><div class="cc-text"><strong>1. NF4 (Normal Float 4-bit):</strong> Quantization format optimized for normally-distributed neural network weights. Better quality than uniform int4.<br><br><strong>2. Double Quantization:</strong> Quantize the quantization constants themselves, saving ~0.4 GB per 7B model.<br><br><strong>3. Paged Optimizers:</strong> Use CPU memory for optimizer state pages that don't fit in GPU memory, with automatic paging.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use QLoRA vs LoRA</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-teal"><strong>LoRA (bf16 base)</strong><br>Better quality (no quantization loss)<br>Faster training (no dequantization)<br>Needs more GPU memory<br>Use for production models</div>
+            <div class="compare-item ci-amber"><strong>QLoRA (4-bit base)</strong><br>Slight quality loss (~0.5-1%)<br>Slower training (~10-20%)<br>4x less GPU memory<br>Use for prototyping or large models</div>
+          </div>
+          <div class="cc-code"><span class="hl-cmt"># QLoRA configuration</span>
+<span class="hl-key">from</span> transformers <span class="hl-key">import</span> BitsAndBytesConfig
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=<span class="hl-key">True</span>,
+    bnb_4bit_quant_type=<span class="hl-str">"nf4"</span>,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=<span class="hl-key">True</span>,
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="hl-str">"meta-llama/Llama-3.1-8B-Instruct"</span>,
+    quantization_config=bnb_config,
+    device_map=<span class="hl-str">"auto"</span>,
+)</div>
+          <div class="cc-note n-amber"><strong>QLoRA quality:</strong> The original QLoRA paper showed that 4-bit QLoRA matches 16-bit LoRA quality on most benchmarks, with only 0.5-1% degradation. For prototyping and experimentation, QLoRA is the recommended default. For production models where every percentage point matters, use standard LoRA in bf16.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Other PEFT Methods -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">Other PEFT Methods</div><div class="cc-sub">DoRA, IA3, prefix tuning, and prompt tuning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">DoRA (Weight-Decomposed LoRA)</div><div class="cc-text">Liu et al. (2024) decompose weight matrices into <strong>magnitude</strong> and <strong>direction</strong> components. LoRA is applied only to the direction, while magnitude is trained separately. DoRA often <strong>outperforms standard LoRA by 1-2%</strong> on benchmarks with the same rank, at minimal extra cost.<br><br>In PEFT: <code>use_dora=True</code> in LoraConfig.</div></div>
+          <div class="cc-block"><div class="cc-label">IA3 (Infused Adapter by Inhibiting and Amplifying)</div><div class="cc-text">Liu et al. (2022) learn <strong>rescaling vectors</strong> instead of matrices. Multiplies activations by learned vectors in key, value, and FFN layers. Even fewer parameters than LoRA (just vectors, not matrices), but less expressive. Best for very small adaptation tasks.</div></div>
+          <div class="cc-block"><div class="cc-label">Prefix Tuning</div><div class="cc-text">Li &amp; Liang (2021) prepend <strong>trainable virtual tokens</strong> to the key and value sequences in each attention layer. The model attends to these virtual tokens as if they were part of the input. Very few parameters but limited expressiveness for complex tasks.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Prompt Tuning</div><div class="cc-text">Lester et al. (2021, Google) prepend trainable embeddings to the <strong>input layer only</strong> (not every layer like prefix tuning). Extremely parameter-efficient but only works well with very large models (100B+). Not recommended for 7-70B models.</div></div>
+          <div class="cc-block"><div class="cc-label">Comparison</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-teal"><strong>LoRA</strong><br>Trainable params: 0.1-1%<br>Quality: Excellent<br>The default choice</div>
+            <div class="compare-item ci-violet"><strong>DoRA</strong><br>Trainable params: 0.1-1%<br>Quality: Slightly better<br>Recommended upgrade</div>
+            <div class="compare-item ci-pink"><strong>IA3</strong><br>Trainable params: 0.01%<br>Quality: Good<br>Minimal adaptation</div>
+            <div class="compare-item ci-blue"><strong>Prefix Tuning</strong><br>Trainable params: 0.1%<br>Quality: Moderate<br>Niche use cases</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Practical recommendation:</strong> Use <strong>LoRA</strong> as your default. Try <strong>DoRA</strong> if you want a potential quality boost at minimal extra cost. Use <strong>IA3</strong> only if you need the absolute minimum parameter count. Skip prefix tuning and prompt tuning for most LLM fine-tuning tasks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Merging Adapters -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">merge</span></div><div><div class="cc-title">Merging &amp; Serving LoRA Adapters</div><div class="cc-sub">From training to deployment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Merge into Base Model</div><div class="cc-text">After training, you can <strong>merge the LoRA adapter into the base model</strong>: W<sub>new</sub> = W<sub>0</sub> + (&alpha;/r) &middot; BA. This produces a standard model with no adapter overhead. Inference speed is identical to the original model.<br><br>Use this when: deploying a single fine-tuned model, converting to GGUF for local inference, or sharing the model on HuggingFace Hub.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Merge adapter into base model</span>
+<span class="hl-key">from</span> peft <span class="hl-key">import</span> PeftModel
+
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="hl-str">"meta-llama/Llama-3.1-8B-Instruct"</span>,
+    torch_dtype=torch.bfloat16,
+)
+model = PeftModel.from_pretrained(model, <span class="hl-str">"./lora_adapter"</span>)
+model = model.merge_and_unload()
+model.save_pretrained(<span class="hl-str">"./merged_model"</span>)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Serve Without Merging</div><div class="cc-text">You can also serve the adapter <strong>separately</strong> from the base model. Load the base model once, then load/swap adapters dynamically. This enables:<br><br><strong>1. Multi-tenant serving:</strong> One base model + many task-specific adapters. Each user/task gets their own adapter.<br><br><strong>2. Hot-swapping:</strong> Switch between adapters without reloading the base model. vLLM and LoRAX support this.<br><br><strong>3. A/B testing:</strong> Serve different adapter versions to different users.</div></div>
+          <div class="cc-block"><div class="cc-label">Adapter Size</div><div class="cc-text">A LoRA adapter (r=16, attention only) for Llama 3 8B is approximately <strong>27 MB</strong>. Compare this to the full model at <strong>16 GB</strong>. You can store hundreds of adapters for the cost of one full model. This makes LoRA ideal for personalization at scale.</div></div>
+          <div class="cc-note n-green"><strong>Deployment strategy:</strong> For a single model: merge and deploy as a standard model. For multiple tasks/customers: keep the base model loaded and swap adapters. vLLM supports serving multiple LoRA adapters simultaneously with a single base model, with minimal overhead per adapter.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Best Practices -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">LoRA Best Practices</div><div class="cc-sub">Practical tips from the community</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hyperparameter Recommendations</div><div class="cc-text"><strong>Rank:</strong> Start with r=16. Increase to 32 or 64 if quality is insufficient. r=8 for very simple tasks. r=128+ rarely helps and wastes memory.<br><br><strong>Alpha:</strong> Set to 2&times;r (e.g., r=16, alpha=32). Some practitioners use alpha=r. The ratio alpha/r determines the effective scaling.<br><br><strong>Learning rate:</strong> 1e-4 to 3e-4 for LoRA (higher than full fine-tuning because fewer parameters). 2e-4 is the most common default.<br><br><strong>Dropout:</strong> 0.05 for most cases. 0.1 for small datasets (&lt;1000 examples). 0.0 for large datasets (&gt;50K).<br><br><strong>Epochs:</strong> 1-3 for SFT. Monitor validation loss to detect overfitting.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Mistakes</div><div class="cc-text"><strong>1. Wrong chat template:</strong> Always use the model's native chat template. This is the #1 cause of bad LoRA results.<br><br><strong>2. Rank too high:</strong> r=256 doesn't help and wastes memory. The quality improvement from r=16 to r=64 is small; from r=64 to r=256 is negligible.<br><br><strong>3. Not targeting enough modules:</strong> Targeting only Q and V (original paper) is suboptimal. Target all attention modules (Q, K, V, O) at minimum.<br><br><strong>4. Training too long:</strong> LoRA overfits faster than full fine-tuning because fewer parameters. 1-3 epochs is usually enough.<br><br><strong>5. Forgetting to merge:</strong> If deploying as a standalone model, always merge the adapter. Serving unmerged adds latency.</div></div>
+          <div class="cc-note n-orange"><strong>The LoRA recipe that works:</strong> Llama 3.1 8B Instruct + r=16, alpha=32, target Q/K/V/O + lr=2e-4, cosine schedule + 1-3 epochs + 1K-10K high-quality examples. This combination handles 90% of fine-tuning use cases. Adjust rank and target modules if you need more capacity.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>LoRA</strong> (Hu et al., 2021) freezes the base model and trains small adapter matrices. The key insight: weight changes during fine-tuning have <strong>low intrinsic dimensionality</strong>. Instead of updating a 4096\u00d74096 matrix (16.8M params), LoRA decomposes the update into two small matrices: B (4096\u00d7r) and A (r\u00d74096). With r=16, that is 131K params \u2014 a 128x reduction.',color:'#0d9488'},
+    2:{text:'<strong>LoRA math:</strong> h = W\u2080x + (\u03b1/r)\u00b7BAx. B is initialized to zeros (so the model starts unchanged). A is initialized with random Gaussian. \u03b1/r scales the adapter output. Common config: r=16, \u03b1=32. For Llama 3 8B targeting Q/K/V/O: 13.6M trainable params = 0.17% of total. The base model stays completely frozen.',color:'#7c3aed'},
+    3:{text:'<strong>LoRA configuration:</strong> Target modules determine which weight matrices get adapters. Minimal: Q+V only. Standard: Q+K+V+O (recommended). Full: all attention + FFN (7 modules per layer). Use <code>LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj","k_proj","v_proj","o_proj"], lora_dropout=0.05)</code>.',color:'#2563eb'},
+    4:{text:'<strong>QLoRA</strong> (Dettmers et al., 2023) loads the base model in 4-bit NF4 precision, reducing memory by 4x. Llama 3 8B: 16 GB (bf16) \u2192 4 GB (NF4). LoRA adapters train in bf16 on top. Total QLoRA memory: ~6 GB vs ~16 GB for standard LoRA. Quality loss is only 0.5-1% on benchmarks. Use for prototyping and large models.',color:'#d97706'},
+    5:{text:'<strong>Other PEFT methods:</strong> <strong>DoRA</strong> (Liu et al., 2024) decomposes weights into magnitude+direction, applies LoRA to direction only \u2014 often 1-2% better than standard LoRA. <strong>IA3</strong> learns rescaling vectors (fewer params than LoRA). <strong>Prefix tuning</strong> prepends virtual tokens. Recommendation: LoRA as default, DoRA as an upgrade, skip the rest for most tasks.',color:'#db2777'},
+    6:{text:'<strong>Merging adapters:</strong> After training, merge LoRA into the base model: W_new = W\u2080 + (\u03b1/r)\u00b7BA. This produces a standard model with zero inference overhead. Adapter size: ~27 MB for r=16 on 8B model (vs 16 GB for full model). For multi-tenant serving, keep the base loaded and hot-swap adapters. vLLM supports this natively.',color:'#16a34a'},
+    7:{text:'<strong>Best practices:</strong> r=16, \u03b1=32, target Q/K/V/O, lr=2e-4, dropout=0.05, 1-3 epochs. Common mistakes: wrong chat template (#1 cause of bad results), rank too high (r=256 wastes memory), not targeting enough modules, training too long (LoRA overfits faster). This recipe handles 90% of fine-tuning use cases.',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--teal)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

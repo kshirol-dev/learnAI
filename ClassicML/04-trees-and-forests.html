@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Decision Trees & Random Forests — Classic ML</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Decision Trees &amp; Random Forests</h2><span class="tb-sub">From 20 Questions to ensemble wisdom &mdash; the most practical algorithms in ML</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Classification</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">account_tree</span></div><span class="pipe-label">Splits</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">Gini/Entropy</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Pruning</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">inventory_2</span></div><span class="pipe-label">Bagging</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">forest</span></div><span class="pipe-label">Random Forest</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Importance</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Boosting</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Full Code</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">Decision Trees: Recursive Binary Splitting</div><div class="cc-sub">The 20 Questions game &mdash; ask the best question at each step</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The 20 Questions Analogy</div><div class="cc-text">A decision tree works exactly like the game <strong>20 Questions</strong>. At each step, it asks the single yes/no question that best separates the remaining items:<br><br>&ldquo;Is income &gt; $50K?&rdquo; &rarr; Yes: go left. No: go right.<br>&ldquo;Is age &gt; 35?&rdquo; &rarr; Yes: go left. No: go right.<br><br>Each internal node is a <strong>question</strong> (split on a feature at a threshold). Each leaf is a <strong>prediction</strong> (the majority class of samples that reached that leaf, or the mean value for regression).<br><br>The algorithm is <strong>greedy</strong>: at each node, it tries every feature and every threshold, picks the split that best separates the classes, then recurses on each child. It never backtracks &mdash; once a split is made, it&rsquo;s permanent.<br><br>Trees are <strong>non-parametric</strong>: they make no assumptions about the data distribution. They can capture nonlinear relationships, interactions between features, and complex decision boundaries that linear models can&rsquo;t.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">A Simple Tree Example</div><div class="cc-code"><span class="hl-key">Loan approval decision tree:</span>
+
+  [Income > $50K?]
+   ├── Yes: [Credit Score > 700?]
+   │    ├── Yes: <span class="hl-str">APPROVE</span> (95% of 200 samples)
+   │    └── No:  [Debt Ratio > 40%?]
+   │         ├── Yes: <span class="hl-str">DENY</span>    (88% of 50)
+   │         └── No:  <span class="hl-str">APPROVE</span> (72% of 30)
+   └── No:  [Employment > 2 years?]
+        ├── Yes: [Savings > $10K?]
+        │    ├── Yes: <span class="hl-str">APPROVE</span> (68% of 40)
+        │    └── No:  <span class="hl-str">DENY</span>    (81% of 60)
+        └── No:  <span class="hl-str">DENY</span>    (92% of 120)
+
+<span class="hl-cmt"># Each leaf shows the majority class and
+# the confidence (% of samples in that class).
+# The tree learned: high income + good credit
+# → approve. Low income + short employment
+# → deny. No rules were hand-written.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> A decision tree is like a flowchart that writes itself. Instead of a human expert deciding which questions to ask, the algorithm discovers the most informative questions from the data. The result is perfectly interpretable &mdash; you can trace any prediction from root to leaf and explain exactly why.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">Gini Impurity vs Entropy</div><div class="cc-sub">Two ways to measure how &ldquo;mixed&rdquo; a node is</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Gini Impurity</div><div class="cc-text"><strong>Gini impurity</strong> measures the probability that a randomly chosen sample would be misclassified if labeled according to the class distribution in the node:<br><br>Gini(D) = 1 &minus; &sum; p&#7522;&sup2;<br><br>where p&#7522; is the proportion of class i. A <strong>pure node</strong> (all one class) has Gini = 0. A <strong>maximally impure</strong> node (50/50 split) has Gini = 0.5 for binary classification.<br><br><strong>Entropy</strong> comes from information theory and measures the &ldquo;surprise&rdquo; or uncertainty:<br><br>H(D) = &minus;&sum; p&#7522; &middot; log&#8322;(p&#7522;)<br><br>Pure node: H = 0. Maximum impurity (50/50): H = 1.0 bit.<br><br><strong>Information Gain</strong> = parent entropy &minus; weighted average of children&rsquo;s entropy. The split with the highest information gain wins.<br><br>In practice, Gini and entropy produce nearly identical trees. Gini is slightly faster (no log computation). scikit-learn defaults to Gini.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Numerical Example</div><div class="cc-code"><span class="hl-key">Node with 100 samples: 70 cats, 30 dogs</span>
+
+<span class="hl-key">Gini:</span>
+  p_cat = <span class="hl-num">0.7</span>, p_dog = <span class="hl-num">0.3</span>
+  Gini = 1 - (0.7² + 0.3²) = 1 - 0.58 = <span class="hl-num">0.42</span>
+
+<span class="hl-key">Entropy:</span>
+  H = -(0.7·log₂(0.7) + 0.3·log₂(0.3))
+    = -(0.7·(-0.515) + 0.3·(-1.737))
+    = 0.360 + 0.521 = <span class="hl-num">0.881</span> bits
+
+<span class="hl-key">Split on "weight > 10kg":</span>
+  Left:  60 cats, 5 dogs  → Gini = <span class="hl-num">0.142</span>
+  Right: 10 cats, 25 dogs → Gini = <span class="hl-num">0.408</span>
+
+  Weighted Gini = (65/100)·0.142 + (35/100)·0.408
+               = 0.092 + 0.143 = <span class="hl-num">0.235</span>
+
+  <span class="hl-key">Gini reduction</span> = 0.42 - 0.235 = <span class="hl-num">0.185</span> ✓
+  <span class="hl-cmt"># This split reduced impurity by 0.185.
+  # The algorithm tries all features/thresholds
+  # and picks the one with the biggest reduction.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Gini and entropy both measure &ldquo;how mixed is this bag of marbles?&rdquo; A bag of all red marbles (pure) scores 0. A bag of half red, half blue (maximally mixed) scores the maximum. The tree picks the split that creates the purest children &mdash; like sorting marbles by asking the right question.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">content_cut</span></div><div><div class="cc-title">Tree Depth, Pruning, and Overfitting</div><div class="cc-sub">An unpruned tree memorizes &mdash; a pruned tree generalizes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Overfitting Problem</div><div class="cc-text">An unrestricted decision tree will keep splitting until every leaf is pure &mdash; one sample per leaf. This gives <strong>100% training accuracy</strong> but terrible test accuracy because the tree memorized every quirk in the training data.<br><br>A tree with depth 20 on 1,000 samples can have up to 2&sup2;&sup0; = 1,048,576 leaves &mdash; more leaves than data points. Each leaf captures noise, not signal.<br><br><strong>Pre-pruning</strong> (stopping early):<br>&bull; <code>max_depth</code>: Limit tree depth (e.g., 5&ndash;10)<br>&bull; <code>min_samples_split</code>: Minimum samples to split a node (e.g., 20)<br>&bull; <code>min_samples_leaf</code>: Minimum samples in each leaf (e.g., 5)<br>&bull; <code>max_leaf_nodes</code>: Cap total leaves<br><br><strong>Post-pruning</strong> (cost-complexity pruning): Grow the full tree, then remove branches that don&rsquo;t improve cross-validated performance. scikit-learn supports this via <code>ccp_alpha</code>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pruning in scikit-learn</div><div class="cc-code"><span class="hl-key">from</span> sklearn.tree <span class="hl-key">import</span> DecisionTreeClassifier
+
+<span class="hl-cmt"># Unpruned: overfits</span>
+tree_full = DecisionTreeClassifier()
+tree_full.fit(X_train, y_train)
+<span class="hl-cmt"># train_acc=1.00, test_acc=0.82</span>
+
+<span class="hl-cmt"># Pre-pruned: controlled depth</span>
+tree_pruned = DecisionTreeClassifier(
+    max_depth=<span class="hl-num">5</span>,
+    min_samples_leaf=<span class="hl-num">10</span>,
+    min_samples_split=<span class="hl-num">20</span>
+)
+tree_pruned.fit(X_train, y_train)
+<span class="hl-cmt"># train_acc=0.92, test_acc=0.89</span>
+
+<span class="hl-cmt"># Post-pruned: cost-complexity</span>
+tree_ccp = DecisionTreeClassifier(ccp_alpha=<span class="hl-num">0.01</span>)
+tree_ccp.fit(X_train, y_train)
+<span class="hl-cmt"># train_acc=0.91, test_acc=0.90</span>
+
+<span class="hl-cmt"># Typical depth vs accuracy:
+# depth=1:  train=0.75, test=0.74 (underfit)
+# depth=5:  train=0.92, test=0.89 (good)
+# depth=20: train=1.00, test=0.82 (overfit)</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> An unpruned tree is like a student who memorizes every practice problem verbatim, including the typos. They ace the practice test but bomb the real exam. Pruning forces the tree to learn general rules instead of memorizing specifics &mdash; like a student who studies concepts, not answers.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">inventory_2</span></div><div><div class="cc-title">Bagging: Bootstrap Aggregating</div><div class="cc-sub">Train many trees on random subsets, then vote &mdash; the wisdom of crowds</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Wisdom of Crowds</div><div class="cc-text">A single decision tree is <strong>high variance</strong>: small changes in the training data produce very different trees. The solution? Train many trees and let them vote.<br><br><strong>Bootstrap sampling:</strong> From n training samples, randomly draw n samples <strong>with replacement</strong>. On average, each bootstrap sample contains ~63.2% of the unique original samples (the rest are duplicates). The ~36.8% left out form the <strong>out-of-bag (OOB)</strong> set &mdash; a free validation set.<br><br><strong>Aggregating:</strong> Train one tree on each bootstrap sample. For classification, take a <strong>majority vote</strong>. For regression, take the <strong>average</strong>.<br><br>Mathematically, if each tree has variance &sigma;&sup2; and the trees are independent, the ensemble variance is &sigma;&sup2;/B where B is the number of trees. More trees = lower variance. The bias stays the same (each tree is still a full decision tree), but the variance drops dramatically.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Bagging Mechanics</div><div class="cc-code"><span class="hl-key">Original data: 1000 samples</span>
+
+<span class="hl-key">Bootstrap sample 1:</span> 1000 draws with replacement
+  → ~632 unique samples, ~368 duplicates
+  → Train tree₁
+
+<span class="hl-key">Bootstrap sample 2:</span> another 1000 draws
+  → different ~632 unique samples
+  → Train tree₂
+
+  ... repeat B=100 times ...
+
+<span class="hl-key">Prediction:</span>
+  tree₁ says: cat   tree₂ says: dog
+  tree₃ says: cat   tree₄ says: cat
+  ...
+  <span class="hl-num">67 trees say cat, 33 say dog → predict cat</span>
+
+<span class="hl-key">Variance reduction:</span>
+  Single tree variance: σ²
+  B independent trees:  σ²/B
+  100 trees → <span class="hl-num">100x</span> lower variance
+
+<span class="hl-cmt"># But trees trained on overlapping data aren't
+# truly independent. Correlation ρ between trees
+# means: Var = ρσ² + (1-ρ)σ²/B
+# Random Forests reduce ρ — that's the key.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Bagging is like asking 100 doctors for a diagnosis instead of 1. Each doctor sees a slightly different set of test results (bootstrap samples). Their individual opinions vary, but the majority vote is much more reliable than any single opinion. The key is that their errors are somewhat independent.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">forest</span></div><div><div class="cc-title">Random Forests: Bagging + Feature Randomization</div><div class="cc-sub">The trick that makes trees truly independent</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Not Just Bagging?</div><div class="cc-text">Plain bagging has a problem: if one feature is very strong (e.g., income for loan prediction), <strong>every tree splits on it first</strong>. The trees become correlated &mdash; they all make similar mistakes. Correlated trees don&rsquo;t reduce variance much.<br><br><strong>Random Forests</strong> add a second layer of randomness: at each split, only consider a <strong>random subset of features</strong>. If you have d features, typically try &radic;d features for classification or d/3 for regression.<br><br>This forces trees to explore different features. Some trees might discover that &ldquo;zip code&rdquo; is predictive even though &ldquo;income&rdquo; is stronger overall. The ensemble captures diverse patterns that no single tree would find.<br><br>The result: trees are less correlated (&rho; drops), so the ensemble variance drops further. Random Forests are one of the most robust, accurate, and easy-to-use algorithms in all of ML. They work well out of the box with minimal tuning.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Random Forest in scikit-learn</div><div class="cc-code"><span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> RandomForestClassifier
+
+rf = RandomForestClassifier(
+    n_estimators=<span class="hl-num">100</span>,      <span class="hl-cmt"># 100 trees</span>
+    max_depth=<span class="hl-num">None</span>,         <span class="hl-cmt"># grow full trees</span>
+    max_features=<span class="hl-str">'sqrt'</span>,    <span class="hl-cmt"># √d features/split</span>
+    min_samples_leaf=<span class="hl-num">1</span>,    <span class="hl-cmt"># default</span>
+    oob_score=<span class="hl-num">True</span>,         <span class="hl-cmt"># free validation</span>
+    n_jobs=-<span class="hl-num">1</span>,             <span class="hl-cmt"># all CPU cores</span>
+    random_state=<span class="hl-num">42</span>
+)
+rf.fit(X_train, y_train)
+
+<span class="hl-key">print</span>(f<span class="hl-str">"OOB Score: {rf.oob_score_:.3f}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Test Acc:  {rf.score(X_test, y_test):.3f}"</span>)
+
+<span class="hl-cmt"># Typical results:
+# Single tree:    test_acc = 0.82
+# Bagged trees:   test_acc = 0.88
+# Random Forest:  test_acc = 0.91
+# The feature randomization adds ~3% accuracy.</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Random Forests are like a jury where each juror is forced to focus on different evidence. One juror examines the financial records, another the witness testimony, a third the physical evidence. Because they each see different aspects, their collective verdict is far more reliable than any individual&rsquo;s &mdash; even if some jurors are wrong.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">star</span></div><div><div class="cc-title">Feature Importance from Trees</div><div class="cc-sub">Which features matter most? Trees tell you directly</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Two Methods</div><div class="cc-text"><strong>1. Mean Decrease in Impurity (MDI):</strong> For each feature, sum the Gini reduction across all splits in all trees where that feature was used. Features that create the biggest purity improvements rank highest. Fast but can be biased toward high-cardinality features (many unique values).<br><br><strong>2. Permutation Importance:</strong> Randomly shuffle one feature&rsquo;s values and measure how much the model&rsquo;s accuracy drops. If shuffling &ldquo;income&rdquo; drops accuracy from 91% to 72%, income is very important. If shuffling &ldquo;zip code&rdquo; drops it to 90%, zip code barely matters. More reliable than MDI but slower (requires re-evaluation).<br><br>scikit-learn provides both: <code>model.feature_importances_</code> for MDI and <code>permutation_importance()</code> for the permutation method. The scikit-learn docs recommend permutation importance for more reliable results.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Feature Importance in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.inspection <span class="hl-key">import</span> permutation_importance
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+<span class="hl-cmt"># Method 1: MDI (built-in, fast)</span>
+importances = rf.feature_importances_
+indices = np.argsort(importances)[::-<span class="hl-num">1</span>]
+<span class="hl-key">for</span> i <span class="hl-key">in</span> indices[:<span class="hl-num">5</span>]:
+    <span class="hl-key">print</span>(f<span class="hl-str">"  {names[i]:20s} {importances[i]:.3f}"</span>)
+
+<span class="hl-cmt"># Method 2: Permutation (more reliable)</span>
+perm = permutation_importance(
+    rf, X_test, y_test,
+    n_repeats=<span class="hl-num">10</span>, random_state=<span class="hl-num">42</span>
+)
+<span class="hl-key">for</span> i <span class="hl-key">in</span> perm.importances_mean.argsort()[::-<span class="hl-num">1</span>][:<span class="hl-num">5</span>]:
+    <span class="hl-key">print</span>(f<span class="hl-str">"  {names[i]:20s} "</span>
+          f<span class="hl-str">"{perm.importances_mean[i]:.3f} "</span>
+          f<span class="hl-str">"± {perm.importances_std[i]:.3f}"</span>)
+
+<span class="hl-cmt"># MDI can overweight features with many splits.
+# Permutation importance is model-agnostic and
+# works with any classifier, not just trees.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Feature importance from trees is like tracking which ingredients a chef uses most. MDI counts how often each ingredient appears in the recipe (fast but biased toward versatile ingredients). Permutation importance removes one ingredient at a time and checks if the dish still tastes good (slower but more honest).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">Gradient Boosted Trees: XGBoost &amp; LightGBM</div><div class="cc-sub">Sequential error correction &mdash; each tree fixes the previous tree&rsquo;s mistakes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Boosting vs Bagging</div><div class="cc-text"><strong>Bagging</strong> trains trees in parallel on random subsets. <strong>Boosting</strong> trains trees <strong>sequentially</strong>: each new tree focuses on the mistakes of the previous ensemble.<br><br><strong>Gradient Boosting</strong> works by fitting each new tree to the <strong>residuals</strong> (errors) of the current model. If the ensemble predicts $300K for a house worth $350K, the next tree tries to predict the $50K residual.<br><br>The ensemble prediction is a weighted sum: F(x) = &sum; &eta; &middot; h&#7511;(x), where &eta; is the <strong>learning rate</strong> (shrinkage, typically 0.01&ndash;0.3) and h&#7511; is each small tree.<br><br><strong>XGBoost</strong> adds L1/L2 regularization on tree weights and uses second-order gradients for better splits. <strong>LightGBM</strong> uses histogram-based splitting (bins features into 256 buckets) for 10&ndash;50x speed on large datasets. scikit-learn&rsquo;s <code>HistGradientBoostingClassifier</code> is inspired by LightGBM.<br><br>Gradient boosted trees dominate Kaggle competitions and are the go-to for tabular data in industry.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Boosting in scikit-learn</div><div class="cc-code"><span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> (
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier
+)
+
+<span class="hl-cmt"># Classic gradient boosting</span>
+gb = GradientBoostingClassifier(
+    n_estimators=<span class="hl-num">200</span>,
+    learning_rate=<span class="hl-num">0.1</span>,
+    max_depth=<span class="hl-num">3</span>,    <span class="hl-cmt"># shallow trees (stumps)</span>
+    random_state=<span class="hl-num">42</span>
+)
+
+<span class="hl-cmt"># Histogram-based (LightGBM-style, much faster)</span>
+hgb = HistGradientBoostingClassifier(
+    max_iter=<span class="hl-num">200</span>,
+    learning_rate=<span class="hl-num">0.1</span>,
+    max_depth=<span class="hl-num">6</span>,
+    random_state=<span class="hl-num">42</span>
+)
+
+<span class="hl-key">Typical accuracy comparison:</span>
+  Logistic Regression: <span class="hl-num">0.85</span>
+  Decision Tree:       <span class="hl-num">0.82</span>
+  Random Forest:       <span class="hl-num">0.91</span>
+  Gradient Boosting:   <span class="hl-num">0.93</span>  ← usually best
+  HistGradientBoosting:<span class="hl-num">0.93</span>  (10x faster)</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Bagging is a democracy &mdash; many independent voters. Boosting is a relay race &mdash; each runner picks up where the last one stumbled. Bagging reduces variance (stabilizes wild predictions). Boosting reduces bias (fixes systematic errors). That&rsquo;s why boosted trees often outperform random forests, especially on structured/tabular data.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--slate)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Complete Comparison Pipeline</div><div class="cc-sub">Tree, Forest, and Boosting head-to-head on real data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Head-to-Head: Wine Quality</div><div class="cc-code"><span class="hl-key">from</span> sklearn.datasets <span class="hl-key">import</span> load_wine
+<span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> cross_val_score
+<span class="hl-key">from</span> sklearn.tree <span class="hl-key">import</span> DecisionTreeClassifier
+<span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> (
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier
+)
+
+X, y = load_wine(return_X_y=<span class="hl-num">True</span>)
+
+models = {
+    <span class="hl-str">"Decision Tree"</span>: DecisionTreeClassifier(
+        max_depth=<span class="hl-num">5</span>, random_state=<span class="hl-num">42</span>),
+    <span class="hl-str">"Random Forest"</span>: RandomForestClassifier(
+        n_estimators=<span class="hl-num">100</span>, random_state=<span class="hl-num">42</span>),
+    <span class="hl-str">"Gradient Boost"</span>: GradientBoostingClassifier(
+        n_estimators=<span class="hl-num">100</span>, learning_rate=<span class="hl-num">0.1</span>,
+        max_depth=<span class="hl-num">3</span>, random_state=<span class="hl-num">42</span>),
+    <span class="hl-str">"HistGradBoost"</span>: HistGradientBoostingClassifier(
+        max_iter=<span class="hl-num">100</span>, random_state=<span class="hl-num">42</span>),
+}
+
+<span class="hl-key">for</span> name, model <span class="hl-key">in</span> models.items():
+    scores = cross_val_score(
+        model, X, y, cv=<span class="hl-num">5</span>, scoring=<span class="hl-str">"accuracy"</span>
+    )
+    <span class="hl-key">print</span>(f<span class="hl-str">"{name:18s} {scores.mean():.3f} "</span>
+          f<span class="hl-str">"± {scores.std():.3f}"</span>)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Expected Results</div><div class="cc-code"><span class="hl-key">Wine dataset (178 samples, 13 features, 3 classes):</span>
+
+  Decision Tree      <span class="hl-num">0.899</span> ± <span class="hl-num">0.050</span>
+  Random Forest      <span class="hl-num">0.978</span> ± <span class="hl-num">0.022</span>
+  Gradient Boost     <span class="hl-num">0.966</span> ± <span class="hl-num">0.033</span>
+  HistGradBoost      <span class="hl-num">0.972</span> ± <span class="hl-num">0.028</span>
+
+<span class="hl-key">Key takeaways:</span>
+  • Single tree: 90% — decent but unstable (±5%)
+  • Random Forest: 98% — best here, low variance
+  • Boosting: 97% — close, would win on larger data
+  • All ensembles crush the single tree
+
+<span class="hl-key">When to use which:</span>
+  Small data (<1K):   Random Forest (robust)
+  Medium data (1K-1M): HistGradientBoosting
+  Large data (>1M):   HistGradientBoosting/XGBoost
+  Need interpretability: Single tree + pruning
+  Need feature importance: Random Forest + perm</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Tree-based ensembles are the Swiss Army knife of ML. They handle mixed feature types, missing values, nonlinear relationships, and feature interactions without preprocessing. Random Forests are the safe default; gradient boosting squeezes out the last few percent of accuracy. For tabular data, they remain the state of the art &mdash; even in the age of deep learning.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-logistic-regression.html"><span class="material-symbols-rounded">arrow_back</span> Logistic Regression</a>
+    <a class="ch-nav-btn next" href="05-support-vector-machines.html">Support Vector Machines <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[0,2],4:[3],5:[3,4],6:[5],7:[6],8:[0,1,2,3,4,5,6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Decision trees play <strong>20 Questions</strong> with data — at each node, pick the yes/no question that best separates classes. Greedy, non-parametric, and perfectly interpretable.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> <strong>Gini</strong> = 1 - Σpᵢ² measures node impurity. <strong>Entropy</strong> = -Σpᵢ·log₂(pᵢ) measures uncertainty. The split with the biggest impurity reduction wins. Both give nearly identical trees.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Unpruned trees memorize noise (train=100%, test=82%). <strong>Pruning</strong> via max_depth, min_samples_leaf, or ccp_alpha forces generalization (train=92%, test=89%).',color:'#dc2626'},
+    4:{text:'<strong>Step 4:</strong> <strong>Bagging</strong>: train B trees on bootstrap samples, then vote. Variance drops by ~1/B. Each bootstrap uses ~63.2% unique samples; the rest form a free OOB validation set.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> <strong>Random Forests</strong> = bagging + random feature subsets (√d per split). This decorrelates trees, reducing ensemble variance further. Robust, accurate, minimal tuning needed.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> <strong>Feature importance</strong>: MDI sums Gini reductions per feature (fast, biased). Permutation importance shuffles features and measures accuracy drop (slower, more reliable).',color:'#d97706'},
+    7:{text:'<strong>Step 7:</strong> <strong>Gradient Boosting</strong> trains trees sequentially on residuals. XGBoost adds regularization; LightGBM uses histogram binning for 10-50x speed. Dominates tabular data competitions.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> On Wine data: single tree 90%, Random Forest 98%, Gradient Boosting 97%. Ensembles crush single trees. RF for robustness, boosting for maximum accuracy on large datasets.',color:'#64748b'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

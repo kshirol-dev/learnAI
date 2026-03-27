@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Tool Use & Function Calling — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Tool Use &amp; Function Calling</h2><span class="tb-sub">Prompting models to use tools, APIs, and structured actions &mdash; tool descriptions ARE prompts</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Mastery</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">How Tools Work</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Vague Tools</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Good Tools</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">support_agent</span></div><span class="pipe-label">Support Agent</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">rule</span></div><span class="pipe-label">When to Call</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">security</span></div><span class="pipe-label">Safety</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Chaining</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Checklist</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">How Function Calling Works</div><div class="cc-sub">You define the tools &mdash; the model decides when to call them and with what arguments</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Flow</div><div class="cc-text"><strong>1. You define tools:</strong> Name, description, parameters (as JSON Schema)<br><strong>2. User sends a message:</strong> &ldquo;What&rsquo;s the status of order #12345?&rdquo;<br><strong>3. Model decides:</strong> &ldquo;I should call <code>lookup_order</code> with <code>order_id: "12345"</code>&rdquo;<br><strong>4. Your code executes:</strong> Calls the actual API/database<br><strong>5. Result fed back:</strong> The tool result is added to the conversation<br><strong>6. Model responds:</strong> Uses the tool result to answer the user<br><br>The model never executes anything &mdash; it only <em>decides</em> which tool to call and with what arguments. Your code does the actual execution.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Tool Definition (OpenAI Format)</div><div class="cc-code">tools = [{
+  <span class="hl-str">"type"</span>: <span class="hl-str">"function"</span>,
+  <span class="hl-str">"function"</span>: {
+    <span class="hl-str">"name"</span>: <span class="hl-str">"lookup_order"</span>,
+    <span class="hl-str">"description"</span>: <span class="hl-str">"Look up an order by
+      its ID. Returns order status,
+      items, and shipping info."</span>,
+    <span class="hl-str">"parameters"</span>: {
+      <span class="hl-str">"type"</span>: <span class="hl-str">"object"</span>,
+      <span class="hl-str">"required"</span>: [<span class="hl-str">"order_id"</span>],
+      <span class="hl-str">"properties"</span>: {
+        <span class="hl-str">"order_id"</span>: {
+          <span class="hl-str">"type"</span>: <span class="hl-str">"string"</span>,
+          <span class="hl-str">"description"</span>: <span class="hl-str">"The order ID,
+            e.g. 'ORD-12345'"</span>
+        }
+      }
+    }
+  }
+}]</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Tool descriptions ARE prompts. The <code>description</code> field is the most important part of a tool definition &mdash; it&rsquo;s what the model reads to decide whether and how to use the tool. Every principle from this course (be specific, give examples, set constraints) applies to tool descriptions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Vague Tool Descriptions: Wrong Tool, Wrong Parameters</div><div class="cc-sub">When descriptions are ambiguous, the model guesses &mdash; and guesses wrong</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Vague Tool Definitions</div><div class="cc-code"><span class="hl-cmt">❌ BAD — vague descriptions</span>
+
+{
+  <span class="hl-str">"name"</span>: <span class="hl-str">"search"</span>,
+  <span class="hl-str">"description"</span>: <span class="hl-str">"Search for things"</span>,
+  <span class="hl-str">"parameters"</span>: {
+    <span class="hl-str">"query"</span>: {<span class="hl-str">"type"</span>: <span class="hl-str">"string"</span>}
+  }
+}
+
+{
+  <span class="hl-str">"name"</span>: <span class="hl-str">"get_data"</span>,
+  <span class="hl-str">"description"</span>: <span class="hl-str">"Get data from the
+    system"</span>,
+  <span class="hl-str">"parameters"</span>: {
+    <span class="hl-str">"id"</span>: {<span class="hl-str">"type"</span>: <span class="hl-str">"string"</span>}
+  }
+}</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Goes Wrong</div><div class="cc-text"><strong>User:</strong> &ldquo;Find order #12345&rdquo;<br><br><strong>Model&rsquo;s dilemma:</strong> Should I call <code>search</code> with query &ldquo;order #12345&rdquo;? Or <code>get_data</code> with id &ldquo;12345&rdquo;? Both descriptions are vague enough to match.<br><br><strong>Result:</strong> The model picks one randomly, or calls <code>search</code> with the full sentence as the query (wrong), or calls <code>get_data</code> with &ldquo;order #12345&rdquo; including the hash (wrong format).</div></div>
+          <div class="cc-block"><div class="cc-label">Common Failures</div><div class="cc-text"><strong>1. Wrong tool selected:</strong> Model can&rsquo;t distinguish between similar tools<br><strong>2. Wrong parameter format:</strong> Passes &ldquo;12345&rdquo; vs &ldquo;ORD-12345&rdquo; vs &ldquo;order #12345&rdquo;<br><strong>3. Missing required context:</strong> Model doesn&rsquo;t know it needs to extract the ID from the user&rsquo;s message<br><strong>4. Unnecessary tool calls:</strong> Model calls a tool when it could answer directly</div></div>
+          <div class="cc-note n-red"><strong>The pattern:</strong> Vague tool descriptions cause the same problems as vague prompts: the model guesses, and guesses are often wrong. The fix is the same too: be specific, give examples, set constraints.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">build</span></div><div><div class="cc-title">Writing Great Tool Descriptions</div><div class="cc-sub">The same prompt engineering principles, applied to tool definitions</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Good Tool Definition</div><div class="cc-code">{
+  <span class="hl-str">"name"</span>: <span class="hl-str">"lookup_order"</span>,
+  <span class="hl-str">"description"</span>: <span class="hl-str">"Look up a customer
+    order by its order ID. Returns the
+    order status, line items, shipping
+    address, and tracking number.
+
+    Use this when the customer asks about
+    an order status, delivery, or items
+    in their order.
+
+    Do NOT use for refund requests — use
+    refund_order instead."</span>,
+  <span class="hl-str">"parameters"</span>: {
+    <span class="hl-str">"type"</span>: <span class="hl-str">"object"</span>,
+    <span class="hl-str">"required"</span>: [<span class="hl-str">"order_id"</span>],
+    <span class="hl-str">"properties"</span>: {
+      <span class="hl-str">"order_id"</span>: {
+        <span class="hl-str">"type"</span>: <span class="hl-str">"string"</span>,
+        <span class="hl-str">"description"</span>: <span class="hl-str">"Order ID in format
+          ORD-XXXXX (e.g., 'ORD-12345').
+          Extract from the customer's
+          message. If they say just a
+          number like '12345', prepend
+          'ORD-'."</span>
+      }
+    }
+  }
+}</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The 5 Elements of a Great Tool Description</div><div class="cc-code"><span class="hl-key">1. WHAT it does</span>
+"Look up a customer order by its ID.
+Returns status, items, shipping, tracking."
+
+<span class="hl-key">2. WHEN to use it</span>
+"Use when customer asks about order
+status, delivery, or items."
+
+<span class="hl-key">3. WHEN NOT to use it</span>
+"Do NOT use for refund requests."
+
+<span class="hl-key">4. PARAMETER format</span>
+"Order ID in format ORD-XXXXX.
+If they say '12345', prepend 'ORD-'."
+
+<span class="hl-key">5. EXAMPLE</span>
+"e.g., 'ORD-12345'"</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Tool descriptions need the same specificity as any other prompt. What it does + when to use + when NOT to use + parameter format with examples. The &ldquo;when NOT to use&rdquo; is especially important when you have multiple similar tools.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">support_agent</span></div><div><div class="cc-title">Domain Example: Customer Support Agent</div><div class="cc-sub">Three tools that work together &mdash; lookup, refund, and escalate</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Tool Set</div><div class="cc-code"><span class="hl-key">Tool 1: lookup_order</span>
+"Look up order by ID. Returns status,
+items, shipping. Use for: status checks,
+delivery questions, item inquiries."
+
+<span class="hl-key">Tool 2: refund_order</span>
+"Process a refund for an order. ALWAYS
+call lookup_order first to verify the
+order exists and is eligible. Use for:
+refund requests, cancellation requests.
+Requires: order_id AND reason."
+
+<span class="hl-key">Tool 3: escalate_to_human</span>
+"Transfer to a human agent. Use ONLY
+when: (1) customer explicitly asks for
+a human, (2) issue involves data loss
+or security, (3) customer is angry
+after 2+ failed resolution attempts.
+Do NOT escalate for routine questions."</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Conversation Flow</div><div class="cc-code"><span class="hl-key">User:</span> "I want a refund for order 12345"
+
+<span class="hl-key">Model thinks:</span> Refund request → need to
+look up the order first (per refund_order
+description) → then process refund.
+
+<span class="hl-key">Model calls:</span> lookup_order("ORD-12345")
+<span class="hl-key">Result:</span> {status: "delivered", items: [...],
+  refund_eligible: true}
+
+<span class="hl-key">Model calls:</span> refund_order("ORD-12345",
+  "Customer requested refund")
+<span class="hl-key">Result:</span> {refund_id: "REF-789",
+  amount: "$49.99", eta: "3-5 days"}
+
+<span class="hl-key">Model responds:</span> "I've processed your
+refund of $49.99 for order ORD-12345.
+Refund ID: REF-789. You should see it
+in your account within 3-5 business
+days. Is there anything else?"</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The tool descriptions orchestrate the agent&rsquo;s behavior. &ldquo;ALWAYS call lookup_order first&rdquo; in the refund tool description creates a two-step workflow without any application code. The model follows the instructions in the descriptions like a protocol.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">rule</span></div><div><div class="cc-title">&ldquo;When to Call&rdquo; Guidance</div><div class="cc-sub">Preventing unnecessary tool calls and ensuring the right tool for the right situation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Without &ldquo;when to call&rdquo; guidance, models tend to:<br><br><strong>1. Over-call:</strong> Use a tool for every question, even when the model knows the answer<br><strong>2. Under-call:</strong> Answer from training data when they should use a tool (e.g., making up order statuses)<br><strong>3. Mis-call:</strong> Use the wrong tool for the situation</div></div>
+          <div class="cc-block"><div class="cc-label">System Prompt Guidance</div><div class="cc-code"><span class="hl-key">System prompt for the support agent:</span>
+
+You have access to 3 tools. Follow these
+rules:
+
+<span class="hl-str">1. ALWAYS use tools for customer-specific
+   data</span> (orders, account info, refunds).
+   Never guess or make up this data.
+
+<span class="hl-str">2. NEVER use tools for general questions</span>
+   ("What's your return policy?" — answer
+   from your knowledge, don't call a tool)
+
+<span class="hl-str">3. Call lookup_order BEFORE refund_order</span>
+   to verify the order exists.
+
+<span class="hl-str">4. Only escalate when the criteria in the
+   escalate_to_human description are met.</span>
+   Exhaust all other options first.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Parameter Validation in Descriptions</div><div class="cc-code"><span class="hl-cmt"># Tell the model how to handle
+# missing or ambiguous parameters</span>
+
+<span class="hl-str">"order_id"</span>: {
+  <span class="hl-str">"description"</span>: <span class="hl-str">"Order ID in format
+    ORD-XXXXX. If the customer doesn't
+    provide an order ID, ASK for it
+    before calling this tool. Do not
+    guess or make up an order ID."</span>
+}</div></div>
+          <div class="cc-block"><div class="cc-label">Handling Missing Parameters</div><div class="cc-text">Without the &ldquo;ASK for it&rdquo; instruction, the model might:<br><br>• Call the tool with a made-up ID<br>• Call the tool with an empty string<br>• Try to extract an ID from unrelated numbers in the conversation<br><br>The parameter description tells the model: <strong>if you don&rsquo;t have what you need, ask the user</strong> instead of guessing.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Tool call guidance lives in two places: the system prompt (global rules) and the tool descriptions (per-tool rules). Use the system prompt for cross-tool rules (&ldquo;always look up before refunding&rdquo;) and tool descriptions for tool-specific rules (&ldquo;ask for order ID if not provided&rdquo;).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">security</span></div><div><div class="cc-title">Safety: Preventing Dangerous Tool Calls</div><div class="cc-sub">When the model has access to write operations, guardrails are critical</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Risk</div><div class="cc-text">Read-only tools (lookup, search) are low risk. Write tools (refund, delete, update) are high risk. A model that can call <code>refund_order</code> can be tricked into issuing unauthorized refunds through prompt injection or misunderstanding.</div></div>
+          <div class="cc-block"><div class="cc-label">Safety Patterns</div><div class="cc-code"><span class="hl-key">Pattern 1: Confirmation before writes</span>
+<span class="hl-str">"Before calling refund_order, ALWAYS
+confirm with the customer: 'I'll process
+a refund of $X for order Y. Shall I go
+ahead?' Only call the tool after they
+confirm."</span>
+
+<span class="hl-key">Pattern 2: Amount limits</span>
+<span class="hl-str">"refund_order can only process refunds
+up to $500. For amounts over $500,
+use escalate_to_human instead."</span>
+
+<span class="hl-key">Pattern 3: Rate limiting in description</span>
+<span class="hl-str">"Maximum 1 refund per conversation.
+If the customer requests multiple
+refunds, escalate to human."</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Defense in Depth</div><div class="cc-text">Don&rsquo;t rely solely on the model following instructions. Layer defenses:<br><br><strong>Layer 1 (Prompt):</strong> Tool descriptions with safety rules<br><strong>Layer 2 (Code):</strong> Validate tool call arguments before execution<br><strong>Layer 3 (Backend):</strong> Business logic checks (is this order refund-eligible?)<br><strong>Layer 4 (Monitoring):</strong> Alert on unusual patterns (10 refunds in 1 hour)</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The model is the decision-maker, but your code is the executor. Never trust the model&rsquo;s tool calls blindly. Validate every argument, enforce business rules in your backend, and add confirmation steps for destructive operations. The prompt is the first line of defense, not the only one.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">link</span></div><div><div class="cc-title">Tool Chaining: Multi-Step Workflows</div><div class="cc-sub">When one tool call isn&rsquo;t enough &mdash; orchestrating sequences of tool calls</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Sequential Chaining</div><div class="cc-text">The model can call multiple tools in sequence, using the result of one to inform the next. The &ldquo;ALWAYS call lookup_order before refund_order&rdquo; pattern is a simple chain.<br><br>More complex example: a travel booking agent that needs to (1) search flights, (2) check seat availability, (3) book the seat, (4) send confirmation email &mdash; four tools in sequence.</div></div>
+          <div class="cc-block"><div class="cc-label">Parallel Calling</div><div class="cc-code"><span class="hl-cmt"># Modern APIs support parallel tool calls
+# Model can call multiple tools at once</span>
+
+<span class="hl-key">User:</span> "Compare prices for flights from
+SFO to NYC and SFO to LAX for next week"
+
+<span class="hl-key">Model calls (parallel):</span>
+  search_flights(from="SFO", to="NYC",
+    date="2025-03-20")
+  search_flights(from="SFO", to="LAX",
+    date="2025-03-20")
+
+<span class="hl-cmt"># Both results come back, model
+# compares and responds</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Orchestration in Tool Descriptions</div><div class="cc-code"><span class="hl-key">Tool: book_flight</span>
+<span class="hl-str">"Book a flight. Prerequisites:
+1. Must have called search_flights first
+2. Must have called check_availability
+   for the specific flight_id
+3. Must have confirmed with the user:
+   flight details, price, and seat
+
+Call order: search → check → confirm
+with user → book. Never skip steps."</span></div></div>
+          <div class="cc-block"><div class="cc-label">When Chaining Gets Complex</div><div class="cc-text">For workflows with 4+ tools and branching logic, consider:<br><br><strong>1. Explicit workflow in system prompt:</strong> Describe the full workflow as a numbered sequence<br><strong>2. State tracking:</strong> Include current workflow state in the system prompt<br><strong>3. Agentic frameworks:</strong> Use LangChain, CrewAI, or similar frameworks that manage tool orchestration programmatically</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Tool chaining is where prompt engineering meets system design. Simple chains (2&ndash;3 tools) work well with description-level orchestration. Complex chains (4+ tools with branching) need framework-level orchestration. Know when to graduate from prompts to code.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Tool Description Checklist</div><div class="cc-sub">Before deploying any tool-using agent, verify these</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Per-Tool Checklist</div><div class="cc-code"><span class="hl-key">□ Clear description</span>
+  What it does, what it returns
+
+<span class="hl-key">□ When to use</span>
+  Specific triggers ("when customer
+  asks about order status")
+
+<span class="hl-key">□ When NOT to use</span>
+  Explicit exclusions ("not for refunds")
+
+<span class="hl-key">□ Parameter descriptions</span>
+  Format, examples, edge case handling
+
+<span class="hl-key">□ Missing parameter behavior</span>
+  "Ask the user" not "guess"
+
+<span class="hl-key">□ Prerequisites</span>
+  "Call X before calling this tool"
+
+<span class="hl-key">□ Safety guardrails</span>
+  Confirmation for writes, limits,
+  escalation triggers</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">System-Level Checklist</div><div class="cc-code"><span class="hl-key">□ System prompt with global rules</span>
+  When to use tools vs answer directly
+
+<span class="hl-key">□ Tool disambiguation</span>
+  No two tools with overlapping triggers
+
+<span class="hl-key">□ Workflow orchestration</span>
+  Clear call order for multi-tool flows
+
+<span class="hl-key">□ Backend validation</span>
+  Never trust model arguments blindly
+
+<span class="hl-key">□ Error handling</span>
+  What should the model do when a tool
+  call fails? (Retry? Tell user? Escalate?)
+
+<span class="hl-key">□ Testing</span>
+  Test each tool with: correct use,
+  wrong tool, missing params, edge cases</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Tool use is where prompt engineering becomes agent engineering. The same principles apply &mdash; be specific, give examples, set constraints &mdash; but the stakes are higher because tools have real-world side effects. A bad text response is annoying; a bad tool call can refund money, delete data, or send emails. Invest in tool descriptions like you invest in production code.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-multi-turn-conversations.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: Multi-Turn Conversations</a>
+    <a class="ch-nav-btn next" href="13-evaluation-debugging.html">Ch 13: Evaluation &amp; Debugging <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> You define tools (name, description, parameters). The model decides when to call them. Your code executes. Tool descriptions ARE prompts — same principles apply.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Vague tool descriptions → wrong tool selected, wrong parameter format, unnecessary calls. "Search for things" tells the model nothing useful.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> Great tool descriptions: what it does + when to use + when NOT to use + parameter format with examples. The "when NOT to use" prevents tool confusion.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Support agent: lookup → refund → escalate. "ALWAYS call lookup first" in the refund description creates a two-step workflow without application code.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> "When to call" guidance: system prompt for global rules, tool descriptions for per-tool rules. "If order ID not provided, ASK — don\'t guess."',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Safety: confirmation before writes, amount limits, rate limiting. Defense in depth: prompt → code validation → backend checks → monitoring.',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> Tool chaining: sequential (lookup → refund) and parallel (search two flights at once). Simple chains in descriptions; complex chains need frameworks.',color:'#0d9488'},
+    8:{text:'<strong>Step 8:</strong> Checklist: clear description, when/when-not, parameter format, missing param behavior, prerequisites, safety guardrails, backend validation, testing.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

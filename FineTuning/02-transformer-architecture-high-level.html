@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Transformer Architecture for Fine-Tuning — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--blue)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--teal-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Transformer Architecture for Fine-Tuning</h2><span class="tb-sub">Model anatomy: where the billions of parameters live and what changes during fine-tuning</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="02-transformer-architecture-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">token</span></div><span class="pipe-label">Tokenizer</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_view</span></div><span class="pipe-label">Embedding</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Attention</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">FFN</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">stacks</span></div><span class="pipe-label">Layers</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">output</span></div><span class="pipe-label">LM Head</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">save</span></div><span class="pipe-label">Formats</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Tokenizer -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">token</span></div><div><div class="cc-title">Tokenizer: Text to Numbers</div><div class="cc-sub">The first step before any model computation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What a Tokenizer Does</div><div class="cc-text">LLMs don't see text. They see <strong>sequences of integers</strong> (token IDs). The tokenizer converts text into these IDs and back. Each model has its own tokenizer with a fixed vocabulary. Llama 3 uses a vocabulary of <strong>128,256 tokens</strong>. GPT-4o uses approximately <strong>200,000 tokens</strong>.<br><br>Tokenizers use <strong>Byte-Pair Encoding (BPE)</strong> or <strong>SentencePiece</strong>. Common words become single tokens; rare words are split into subword pieces. "unhappiness" might become ["un", "happiness"] or ["un", "happ", "iness"].</div></div>
+          <div class="cc-block"><div class="cc-label">Special Tokens</div><div class="cc-text">Models use special tokens to mark structure:<br><br><strong>Llama 3:</strong> <code>&lt;|begin_of_text|&gt;</code>, <code>&lt;|start_header_id|&gt;</code>, <code>&lt;|end_header_id|&gt;</code>, <code>&lt;|eot_id|&gt;</code><br><strong>ChatML:</strong> <code>&lt;|im_start|&gt;</code>, <code>&lt;|im_end|&gt;</code><br><strong>Mistral:</strong> <code>[INST]</code>, <code>[/INST]</code><br><br>These tokens tell the model where system prompts, user messages, and assistant responses begin and end. Getting them wrong during fine-tuning causes garbled output.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why It Matters for Fine-Tuning</div><div class="cc-text"><strong>1. Chat templates:</strong> Your training data must use the exact same special token format the model expects. Mismatched templates are the #1 cause of bad fine-tuning results.<br><br><strong>2. Vocabulary size:</strong> The tokenizer's vocabulary is fixed. You can't add new tokens easily (though it's possible with embedding resizing). If your domain has specialized terms, the tokenizer will split them into subwords.<br><br><strong>3. Token count:</strong> Tokenization determines training cost. A 1,000-word document might be 1,200-1,500 tokens. Training cost is proportional to total tokens processed.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Tokenization example</span>
+<span class="hl-key">from</span> transformers <span class="hl-key">import</span> AutoTokenizer
+
+tok = AutoTokenizer.from_pretrained(<span class="hl-str">"meta-llama/Llama-3.1-8B"</span>)
+tokens = tok.encode(<span class="hl-str">"Fine-tuning is powerful"</span>)
+<span class="hl-cmt"># [34, 500, 12, 83, 7926, 374, 8147]</span>
+<span class="hl-cmt"># 4 words → 7 tokens</span>
+
+<span class="hl-cmt"># Vocabulary size</span>
+len(tok)  <span class="hl-cmt"># 128256</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Embedding Layer -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">grid_view</span></div><div><div class="cc-title">Embedding Layer: IDs to Vectors</div><div class="cc-sub">Turning discrete tokens into continuous representations</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Token Embeddings</div><div class="cc-text">The embedding layer is a <strong>lookup table</strong>: a matrix of shape <code>(vocab_size, hidden_dim)</code>. For Llama 3 8B: <code>(128256, 4096)</code> = <strong>525 million parameters</strong>. Each token ID maps to a 4096-dimensional vector.<br><br>These vectors encode semantic meaning. Similar words have similar vectors. "king" and "queen" are close in embedding space; "king" and "bicycle" are far apart.</div></div>
+          <div class="cc-block"><div class="cc-label">Positional Information</div><div class="cc-text">Transformers have no built-in sense of word order. <strong>Positional encoding</strong> adds position information to the embeddings.<br><br><strong>RoPE (Rotary Position Embedding)</strong> is used by Llama 3, Mistral, and most modern models. It encodes position by rotating the embedding vectors. This allows the model to generalize to longer sequences than it was trained on (with some quality loss).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fine-Tuning Impact</div><div class="cc-text">The embedding layer is typically <strong>not fine-tuned</strong> with LoRA (it's already well-trained during pre-training). In full fine-tuning, embeddings change slightly but they represent a small fraction of total parameters (~6% for Llama 3 8B).<br><br>If you add new special tokens (e.g., for a custom chat template), you need to <strong>resize the embedding matrix</strong> and initialize the new token embeddings. The new embeddings start random and need training data to learn meaningful representations.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Embedding dimensions for popular models</span>
+
+<span class="hl-cmt"># Llama 3 8B:   128256 x 4096 = 525M params</span>
+<span class="hl-cmt"># Llama 3 70B:  128256 x 8192 = 1.05B params</span>
+<span class="hl-cmt"># Mistral 7B:   32000 x 4096  = 131M params</span>
+<span class="hl-cmt"># GPT-2:        50257 x 768   = 38.6M params</span>
+
+<span class="hl-cmt"># The embedding matrix is shared with the LM head</span>
+<span class="hl-cmt"># in most models (weight tying), so it appears twice</span>
+<span class="hl-cmt"># but is stored once in memory.</span></div>
+          <div class="cc-note n-blue"><strong>Weight tying:</strong> Most modern LLMs share the embedding matrix with the output (LM head) layer. The same matrix that converts token IDs to vectors also converts the final hidden states back to vocabulary probabilities. This saves memory and improves quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Self-Attention -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Self-Attention: The Core Mechanism</div><div class="cc-sub">How the model relates tokens to each other</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How Attention Works</div><div class="cc-text">For each token, attention asks: <strong>"Which other tokens should I pay attention to?"</strong> It computes three vectors from each token's representation:<br><br><strong>Query (Q):</strong> "What am I looking for?"<br><strong>Key (K):</strong> "What do I contain?"<br><strong>Value (V):</strong> "What information do I provide?"<br><br>Attention score = softmax(Q &middot; K<sup>T</sup> / &radic;d). High scores mean strong relevance. The output is a weighted sum of V vectors, where weights are the attention scores.</div></div>
+          <div class="cc-block"><div class="cc-label">Multi-Head Attention</div><div class="cc-text">Instead of one attention computation, the model runs <strong>multiple attention heads in parallel</strong>. Each head learns different relationship patterns: one head might track subject-verb agreement, another tracks coreference, another tracks semantic similarity.<br><br><strong>Llama 3 8B:</strong> 32 attention heads, each with dimension 128 (32 &times; 128 = 4096).<br><strong>Llama 3 70B:</strong> 64 attention heads, each with dimension 128 (64 &times; 128 = 8192).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Grouped-Query Attention (GQA)</div><div class="cc-text">Standard multi-head attention has separate Q, K, V projections per head. <strong>GQA</strong> (Ainslie et al., 2023) shares K and V across groups of query heads. This reduces memory during inference (smaller KV cache) with minimal quality loss.<br><br><strong>Llama 3 8B:</strong> 32 query heads, 8 KV heads (4:1 ratio).<br><strong>Llama 3 70B:</strong> 64 query heads, 8 KV heads (8:1 ratio).<br><strong>Mistral 7B:</strong> 32 query heads, 8 KV heads.</div></div>
+          <div class="cc-block"><div class="cc-label">Causal Masking</div><div class="cc-text">For autoregressive generation (predicting the next token), each token can only attend to <strong>previous tokens</strong>, not future ones. This is enforced by a causal mask: a triangular matrix that sets future attention scores to negative infinity before softmax.</div></div>
+          <div class="cc-note n-pink"><strong>Attention is where LoRA targets.</strong> The Q, K, V, and O (output) projection matrices are the primary targets for LoRA fine-tuning. These four matrices per layer contain the majority of the model's learned relationships. By adding small low-rank adapters to these projections, LoRA can modify the model's behavior with minimal parameter changes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Feed-Forward Network -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Feed-Forward Network (FFN)</div><div class="cc-sub">The "thinking" layer that processes each token independently</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What the FFN Does</div><div class="cc-text">After attention mixes information between tokens, the FFN processes each token <strong>independently</strong>. It's a two-layer neural network with a non-linear activation in between:<br><br><code>FFN(x) = W2 &middot; activation(W1 &middot; x)</code><br><br>The FFN expands the hidden dimension (4096 &rarr; 14336 for Llama 3 8B), applies a non-linearity, then projects back down (14336 &rarr; 4096). This expansion gives the model more capacity to learn complex transformations.</div></div>
+          <div class="cc-block"><div class="cc-label">SwiGLU Activation</div><div class="cc-text">Modern LLMs use <strong>SwiGLU</strong> (Shazeer, 2020) instead of ReLU. SwiGLU uses a gating mechanism: it multiplies two linear projections element-wise, with one passed through a Swish activation. This requires three weight matrices instead of two (gate_proj, up_proj, down_proj) but produces better results.<br><br><strong>Llama 3 8B FFN:</strong> gate_proj (4096 &times; 14336), up_proj (4096 &times; 14336), down_proj (14336 &times; 4096) = <strong>176M parameters per layer</strong>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Where Parameters Live</div><div class="cc-text">The FFN layers contain the <strong>majority of parameters</strong> in a transformer. For Llama 3 8B:<br><br><strong>Attention per layer:</strong> Q (4096&times;4096) + K (4096&times;1024) + V (4096&times;1024) + O (4096&times;4096) = <strong>41.9M params</strong><br><br><strong>FFN per layer:</strong> gate (4096&times;14336) + up (4096&times;14336) + down (14336&times;4096) = <strong>176.2M params</strong><br><br>FFN is <strong>4.2x larger</strong> than attention per layer. Across 32 layers: attention = 1.34B, FFN = 5.64B. The FFN is where most of the model's "knowledge" is stored.</div></div>
+          <div class="cc-note n-teal"><strong>For fine-tuning:</strong> LoRA typically targets the attention projections (q_proj, k_proj, v_proj, o_proj). Some practitioners also target the FFN projections (gate_proj, up_proj, down_proj) for more capacity. Targeting all seven matrices per layer gives the best results but uses more memory. A common middle ground: target Q, K, V, O + gate_proj and up_proj.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Stacking Layers -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">stacks</span></div><div><div class="cc-title">Stacking Transformer Layers</div><div class="cc-sub">How depth creates capability</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Layer Structure</div><div class="cc-text">Each transformer layer contains:<br><br><strong>1. RMSNorm</strong> (pre-normalization)<br><strong>2. Multi-Head Attention</strong> (with GQA)<br><strong>3. Residual connection</strong> (add input back)<br><strong>4. RMSNorm</strong> (pre-normalization)<br><strong>5. Feed-Forward Network</strong> (SwiGLU)<br><strong>6. Residual connection</strong> (add input back)<br><br>This block repeats N times. The residual connections are critical: they allow gradients to flow through the network without vanishing, enabling very deep models.</div></div>
+          <div class="cc-block"><div class="cc-label">Model Sizes</div><div class="cc-text"><strong>Llama 3 8B:</strong> 32 layers, hidden_dim=4096<br><strong>Llama 3 70B:</strong> 80 layers, hidden_dim=8192<br><strong>Llama 3 405B:</strong> 126 layers, hidden_dim=16384<br><strong>Mistral 7B:</strong> 32 layers, hidden_dim=4096<br><strong>Phi-3 Mini (3.8B):</strong> 32 layers, hidden_dim=3072<br><strong>Qwen 2.5 72B:</strong> 80 layers, hidden_dim=8192<br><br>More layers = more capacity but more memory and slower inference.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Each Layer Learns</div><div class="cc-text">Research shows different layers specialize:<br><br><strong>Early layers (1-10):</strong> Low-level features. Syntax, grammar, local word relationships. These change least during fine-tuning.<br><br><strong>Middle layers (11-22):</strong> Semantic understanding. Meaning, context, reasoning patterns. These change moderately.<br><br><strong>Late layers (23-32):</strong> Task-specific features. Output formatting, style, domain-specific patterns. These change most during fine-tuning.<br><br>This is why LoRA often works well: you only need to modify the upper layers' behavior, and small adapters are sufficient for that.</div></div>
+          <div class="cc-note n-amber"><strong>RMSNorm vs LayerNorm:</strong> Modern LLMs use RMSNorm (Root Mean Square Normalization) instead of the original LayerNorm. RMSNorm is simpler (no mean subtraction, just variance normalization) and 10-15% faster. It has very few parameters (just a scaling vector per layer, ~4096 params). Pre-normalization (normalizing before attention/FFN, not after) is now standard and improves training stability.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: LM Head -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">output</span></div><div><div class="cc-title">LM Head: Vectors to Words</div><div class="cc-sub">The final projection that produces token probabilities</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How the LM Head Works</div><div class="cc-text">The LM head takes the final hidden state (a 4096-dimensional vector for Llama 3 8B) and projects it to vocabulary size (128,256 dimensions). Each dimension represents the <strong>logit</strong> (unnormalized score) for one token in the vocabulary.<br><br>Apply <strong>softmax</strong> to convert logits to probabilities. The token with the highest probability is the model's prediction for the next token. During generation, this process repeats autoregressively.</div></div>
+          <div class="cc-block"><div class="cc-label">Temperature & Sampling</div><div class="cc-text"><strong>Temperature:</strong> Divides logits before softmax. T=0.0 is greedy (always pick the highest). T=1.0 is the trained distribution. T>1.0 makes output more random.<br><br><strong>Top-p (nucleus sampling):</strong> Only sample from the smallest set of tokens whose cumulative probability exceeds p (e.g., 0.9).<br><br><strong>Top-k:</strong> Only consider the k most likely tokens.<br><br>These are inference-time parameters. They don't affect fine-tuning, but understanding them helps you evaluate your fine-tuned model.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Parameter Count</div><div class="cc-text">The LM head is a single linear layer: <code>(hidden_dim, vocab_size)</code>. For Llama 3 8B: <code>(4096, 128256)</code> = <strong>525M parameters</strong>.<br><br>With weight tying, this matrix is the <strong>same</strong> as the embedding matrix (transposed). So the model's first and last layers share parameters. This is standard in Llama 3, Mistral, and most modern models.<br><br>The LM head is typically <strong>not targeted by LoRA</strong>. It's already well-trained and shares weights with the embedding layer.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Full parameter breakdown: Llama 3 8B</span>
+
+<span class="hl-cmt"># Embedding:     128256 x 4096  =  525M</span>
+<span class="hl-cmt"># Per layer (x32):</span>
+<span class="hl-cmt">#   Attention:   Q+K+V+O        =   42M</span>
+<span class="hl-cmt">#   FFN:         gate+up+down   =  176M</span>
+<span class="hl-cmt">#   Norms:       2 x 4096       =   ~8K</span>
+<span class="hl-cmt">#   Layer total:                 =  218M</span>
+<span class="hl-cmt"># All 32 layers:                 = 6.98B</span>
+<span class="hl-cmt"># Final norm:    4096            =   ~4K</span>
+<span class="hl-cmt"># LM Head:       (tied with embedding)</span>
+<span class="hl-cmt"># ─────────────────────────────────────</span>
+<span class="hl-cmt"># Total:         ~8.03B parameters</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Model Formats & Precision -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">save</span></div><div><div class="cc-title">Model Formats &amp; Precision</div><div class="cc-sub">How models are stored, loaded, and quantized</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">File Formats</div><div class="cc-text"><strong>safetensors:</strong> The modern standard (HuggingFace). Safe, fast, memory-mapped. Used by Llama 3, Mistral, and most open models. Files are named <code>model-00001-of-00004.safetensors</code> for sharded models.<br><br><strong>PyTorch (.bin):</strong> Legacy format using Python pickle. Can execute arbitrary code on load (security risk). Being phased out in favor of safetensors.<br><br><strong>GGUF:</strong> Format used by llama.cpp and Ollama. Optimized for CPU inference and quantized models. Single file containing model + metadata + tokenizer.</div></div>
+          <div class="cc-block"><div class="cc-label">Numerical Precision</div><div class="cc-text"><strong>fp32 (32-bit float):</strong> Full precision. 4 bytes per parameter. 7B model = 28 GB. Used for optimizer states.<br><br><strong>fp16 (16-bit float):</strong> Half precision. 2 bytes per parameter. 7B = 14 GB. Standard for training and inference.<br><br><strong>bf16 (bfloat16):</strong> Same size as fp16 but with fp32's exponent range. Better for training (less overflow/underflow). Preferred on A100/H100 GPUs.<br><br><strong>int8 (8-bit integer):</strong> 1 byte per parameter. 7B = 7 GB. Quantized inference with minimal quality loss.<br><br><strong>int4 (4-bit integer):</strong> 0.5 bytes per parameter. 7B = 3.5 GB. Used by QLoRA (NF4 format). Some quality loss but enables fine-tuning large models on consumer GPUs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quantization Methods</div><div class="cc-text"><strong>GPTQ:</strong> Post-training quantization. Calibrates on a small dataset. Good quality at 4-bit. Used for inference deployment.<br><br><strong>AWQ (Activation-Aware Weight Quantization):</strong> Preserves salient weights based on activation patterns. Often slightly better than GPTQ.<br><br><strong>NF4 (Normal Float 4-bit):</strong> Used by QLoRA. Quantization-aware format optimized for normally-distributed weights. Enables 4-bit base model loading during fine-tuning.<br><br><strong>GGUF quantization:</strong> Multiple levels (Q2_K through Q8_0). Q4_K_M is the most popular balance of quality and size for local inference.</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-blue"><strong>fp16 / bf16</strong><br>2 bytes/param<br>7B = 14 GB<br>Training + inference</div>
+            <div class="compare-item ci-violet"><strong>int8</strong><br>1 byte/param<br>7B = 7 GB<br>Inference only</div>
+            <div class="compare-item ci-teal"><strong>int4 (NF4)</strong><br>0.5 bytes/param<br>7B = 3.5 GB<br>QLoRA training</div>
+            <div class="compare-item ci-amber"><strong>GGUF Q4_K_M</strong><br>~0.56 bytes/param<br>7B = ~4.1 GB<br>Local inference</div>
+          </div>
+          <div class="cc-note n-orange"><strong>For fine-tuning:</strong> Train in bf16 (if GPU supports it) or fp16. Use NF4 quantization for QLoRA. For deployment, quantize to GPTQ/AWQ (4-bit) or GGUF for local inference. The precision you train in and the precision you deploy in are often different.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Tokenizer</strong> converts text into token IDs. Llama 3 uses BPE with a 128,256-token vocabulary. Each model has its own tokenizer and special tokens (chat template markers). Getting the chat template right is the #1 factor in fine-tuning success. Mismatched templates cause garbled output.',color:'#7c3aed'},
+    2:{text:'<strong>Embedding layer</strong> is a lookup table: (vocab_size, hidden_dim). For Llama 3 8B: 128256 x 4096 = 525M parameters. Each token ID maps to a 4096-dimensional vector. Position information is added via RoPE (Rotary Position Embedding). The embedding matrix is shared with the LM head (weight tying).',color:'#2563eb'},
+    3:{text:'<strong>Self-attention</strong> computes Q (query), K (key), V (value) projections for each token, then calculates attention scores: softmax(QK<sup>T</sup>/&radic;d). Llama 3 8B uses Grouped-Query Attention: 32 query heads, 8 KV heads. Causal masking ensures each token only attends to previous tokens. The Q, K, V, O projections are the primary targets for LoRA.',color:'#db2777'},
+    4:{text:'<strong>Feed-Forward Network (FFN)</strong> processes each token independently after attention. Uses SwiGLU activation with three projections: gate_proj, up_proj, down_proj. Expands 4096 to 14336 then back. The FFN contains 4.2x more parameters than attention per layer (176M vs 42M). This is where most of the model\'s "knowledge" is stored.',color:'#0d9488'},
+    5:{text:'<strong>Layers stack</strong> to create depth. Llama 3 8B has 32 layers; 70B has 80 layers. Each layer: RMSNorm, Attention, Residual, RMSNorm, FFN, Residual. Early layers learn syntax, middle layers learn semantics, late layers learn task-specific patterns. Late layers change most during fine-tuning.',color:'#d97706'},
+    6:{text:'<strong>LM Head</strong> projects the final hidden state (4096-dim) to vocabulary size (128,256-dim) to produce next-token probabilities. With weight tying, it shares the embedding matrix. Temperature, top-p, and top-k control sampling randomness at inference time. The LM head is typically not targeted by LoRA.',color:'#16a34a'},
+    7:{text:'<strong>Model formats:</strong> safetensors (modern standard), GGUF (llama.cpp/Ollama). <strong>Precision:</strong> fp32 (4 bytes), bf16/fp16 (2 bytes), int8 (1 byte), int4/NF4 (0.5 bytes). Train in bf16, use NF4 for QLoRA, deploy with GPTQ/AWQ/GGUF quantization. A 7B model ranges from 28 GB (fp32) to 3.5 GB (int4).',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

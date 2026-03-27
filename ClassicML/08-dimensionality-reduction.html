@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Dimensionality Reduction — Classic ML</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Dimensionality Reduction: PCA &amp; t-SNE</h2><span class="tb-sub">Compressing high-dimensional data &mdash; see the forest, not every leaf</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Unsupervised</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">expand</span></div><span class="pipe-label">Curse</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">PCA Idea</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">PCA Math</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Components</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">PCA Uses</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">bubble_chart</span></div><span class="pipe-label">t-SNE</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">t-SNE vs UMAP</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Full Code</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">expand</span></div><div><div class="cc-title">The Curse of Dimensionality</div><div class="cc-sub">Why high dimensions break everything &mdash; distances, volumes, and intuition</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Goes Wrong</div><div class="cc-text">In high dimensions, <strong>distances become meaningless</strong>. The ratio of the farthest point to the nearest point approaches 1 as dimensions increase. If all points are roughly equidistant, KNN, K-Means, and any distance-based algorithm fails.<br><br><strong>Volume explodes:</strong> A unit hypercube in 100D has volume 1, but a unit hypersphere inside it has volume &asymp; 10&sup{&minus;70}. Almost all the volume is in the corners. Random samples concentrate in a thin shell near the surface.<br><br><strong>Data becomes sparse:</strong> To maintain the same density of points, you need exponentially more data as dimensions grow. With 10 features and 1,000 samples, you have reasonable coverage. With 1,000 features and 1,000 samples, each point is alone in its neighborhood.<br><br><strong>Overfitting risk:</strong> More features = more parameters = more ways to memorize noise. A model with 10,000 features and 500 samples will overfit unless you reduce dimensions or regularize heavily.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Numbers</div><div class="cc-code"><span class="hl-key">Distance concentration in high dimensions:</span>
+  d=2:   max_dist/min_dist ≈ <span class="hl-num">3.2</span>   (meaningful)
+  d=10:  max_dist/min_dist ≈ <span class="hl-num">1.8</span>
+  d=100: max_dist/min_dist ≈ <span class="hl-num">1.2</span>   (all ~same!)
+  d=1000:max_dist/min_dist ≈ <span class="hl-num">1.06</span>  (useless)
+
+<span class="hl-key">Data needed for coverage:</span>
+  d=2:    ~100 samples for reasonable coverage
+  d=10:   ~10,000 samples
+  d=100:  ~10¹⁰ samples (impossible)
+
+<span class="hl-key">Real-world examples:</span>
+  Text (TF-IDF):   50,000+ features
+  Gene expression:  20,000 genes
+  Images (pixels):  784 (28×28) to millions
+  Tabular data:     10-500 features
+
+<span class="hl-cmt"># Solution: reduce dimensions to 2-50
+# while preserving the important structure.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The curse of dimensionality is like trying to find your friend in a room. In 1D (a hallway), easy. In 2D (a floor), harder. In 100D, everyone is equally far from everyone else &mdash; &ldquo;close&rdquo; and &ldquo;far&rdquo; lose meaning. Dimensionality reduction collapses the 100D room back to a 2D map where distances matter again.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">PCA: Finding Directions of Maximum Variance</div><div class="cc-sub">Project data onto the axes where it varies most</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Intuition</div><div class="cc-text">Imagine a cloud of 3D data points shaped like a flat pancake. The pancake has lots of spread in two directions but almost none in the third (thickness). PCA finds these directions and says: &ldquo;Keep the two spread-out directions, drop the thin one.&rdquo;<br><br><strong>Principal Component 1 (PC1):</strong> The direction of maximum variance in the data. If you project all points onto this line, the spread is maximized.<br><br><strong>PC2:</strong> The direction of maximum remaining variance, perpendicular to PC1.<br><br><strong>PC3, PC4, &hellip;:</strong> Each captures the next most variance, always perpendicular to all previous components.<br><br>If the first 2 PCs capture 95% of the variance, you can represent 100D data in 2D with only 5% information loss. This is <strong>lossy compression</strong> &mdash; like JPEG for data.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PCA Step by Step</div><div class="cc-code"><span class="hl-key">1. Center the data:</span>
+   X_centered = X - mean(X)
+
+<span class="hl-key">2. Compute covariance matrix:</span>
+   C = (1/(n-1)) × X_centeredᵀ × X_centered
+   <span class="hl-cmt"># C is d×d, symmetric, positive semi-definite</span>
+
+<span class="hl-key">3. Find eigenvalues & eigenvectors:</span>
+   C × v = λ × v
+   <span class="hl-cmt"># λ₁ ≥ λ₂ ≥ ... ≥ λd (sorted)</span>
+   <span class="hl-cmt"># v₁, v₂, ..., vd (principal components)</span>
+
+<span class="hl-key">4. Project data:</span>
+   X_reduced = X_centered × V_k
+   <span class="hl-cmt"># V_k = [v₁, v₂, ..., vₖ] (top k eigenvectors)</span>
+
+<span class="hl-key">Explained variance ratio:</span>
+   EVR_i = λᵢ / Σλⱼ
+   <span class="hl-cmt"># What fraction of total variance PC_i captures</span>
+
+<span class="hl-cmt"># In practice, scikit-learn uses SVD (more
+# numerically stable than eigendecomposition).</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> PCA is like taking a photograph of a 3D object. The camera angle (principal component direction) that shows the most detail is the best view. PC1 is the front view, PC2 is the side view. Together they capture most of the object&rsquo;s shape, even though you lost the depth dimension.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">PCA Math: Covariance, Eigenvalues, Eigenvectors</div><div class="cc-sub">The linear algebra behind the magic</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Covariance Matrix</div><div class="cc-text">The <strong>covariance matrix</strong> C is a d&times;d matrix where C&#7522;&#7524; measures how features i and j co-vary:<br><br>C&#7522;&#7524; = (1/(n&minus;1)) &sum;(x&#7522;&#8342; &minus; &mu;&#7522;)(x&#7524;&#8342; &minus; &mu;&#7524;)<br><br>Diagonal entries C&#7522;&#7522; = variance of feature i. Off-diagonal C&#7522;&#7524; = covariance between features i and j. If C&#7522;&#7524; &gt; 0, they increase together. If C&#7522;&#7524; &lt; 0, one increases as the other decreases.<br><br>The <strong>eigenvectors</strong> of C are the principal component directions. The <strong>eigenvalues</strong> are the variance along each direction. PCA sorts eigenvalues from largest to smallest and keeps the top k eigenvectors.<br><br>scikit-learn uses <strong>SVD</strong> instead: X = U&Sigma;V&#7488;. The columns of V are the principal components. The singular values &sigma;&#7522; relate to eigenvalues by &lambda;&#7522; = &sigma;&#7522;&sup2;/(n&minus;1). SVD is more numerically stable and doesn&rsquo;t require computing C explicitly.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Numerical Example</div><div class="cc-code"><span class="hl-key">3 features, covariance matrix:</span>
+  C = [[<span class="hl-num">4.0</span>, <span class="hl-num">2.0</span>, <span class="hl-num">0.1</span>],
+       [<span class="hl-num">2.0</span>, <span class="hl-num">3.0</span>, <span class="hl-num">0.2</span>],
+       [<span class="hl-num">0.1</span>, <span class="hl-num">0.2</span>, <span class="hl-num">0.5</span>]]
+
+<span class="hl-key">Eigenvalues:</span>  λ₁=<span class="hl-num">5.62</span>, λ₂=<span class="hl-num">1.38</span>, λ₃=<span class="hl-num">0.50</span>
+<span class="hl-key">Total variance:</span> 5.62 + 1.38 + 0.50 = <span class="hl-num">7.50</span>
+
+<span class="hl-key">Explained variance ratios:</span>
+  PC1: 5.62/7.50 = <span class="hl-num">74.9%</span>
+  PC2: 1.38/7.50 = <span class="hl-num">18.4%</span>
+  PC3: 0.50/7.50 = <span class="hl-num">6.7%</span>
+
+<span class="hl-key">Cumulative:</span>
+  PC1:     <span class="hl-num">74.9%</span>
+  PC1+PC2: <span class="hl-num">93.3%</span>  ← keep 2 PCs, lose 6.7%
+  All 3:   <span class="hl-num">100%</span>
+
+<span class="hl-cmt"># 2 components capture 93.3% of variance.
+# Reduced from 3D to 2D with minimal loss.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Eigenvalues are like the lengths of a shadow. Shine a light on a 3D object from different angles. The angle that casts the longest shadow (most variance) is PC1. The perpendicular angle with the next longest shadow is PC2. If the third shadow is tiny, the object is essentially flat &mdash; you can safely ignore that dimension.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">How Many Components to Keep</div><div class="cc-sub">Scree plots and the 95% variance threshold</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Two Methods</div><div class="cc-text"><strong>Scree plot:</strong> Plot eigenvalues (or explained variance ratios) in decreasing order. Look for the &ldquo;elbow&rdquo; where the curve flattens. Components after the elbow add little information.<br><br><strong>Cumulative variance threshold:</strong> Keep enough components to explain a target percentage of variance (commonly 95% or 99%). If 50 components out of 1,000 explain 95% of variance, you&rsquo;ve compressed 20x with 5% loss.<br><br>scikit-learn makes this easy: set <code>n_components=0.95</code> and PCA automatically selects the right number of components.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Choosing Components in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.decomposition <span class="hl-key">import</span> PCA
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+<span class="hl-cmt"># Method 1: specify exact number</span>
+pca = PCA(n_components=<span class="hl-num">50</span>)
+X_reduced = pca.fit_transform(X)
+
+<span class="hl-cmt"># Method 2: specify variance threshold</span>
+pca = PCA(n_components=<span class="hl-num">0.95</span>)  <span class="hl-cmt"># keep 95%</span>
+X_reduced = pca.fit_transform(X)
+<span class="hl-key">print</span>(f<span class="hl-str">"Components kept: {pca.n_components_}"</span>)
+
+<span class="hl-cmt"># Scree plot data</span>
+pca_full = PCA().fit(X)
+cumvar = np.cumsum(pca_full.explained_variance_ratio_)
+<span class="hl-cmt"># Plot cumvar → find where it crosses 0.95</span>
+
+<span class="hl-key">Typical results (MNIST, 784 features):</span>
+  95% variance → <span class="hl-num">154</span> components (5x compression)
+  99% variance → <span class="hl-num">331</span> components (2.4x compression)
+  For visualization → <span class="hl-num">2</span> components (~25% variance)</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Choosing components is like deciding how many pixels to keep in a photo. 95% quality looks nearly identical to the original. 50% quality is blurry but recognizable. 2 components (for visualization) is like a rough sketch &mdash; you lose detail but see the overall structure. The right choice depends on whether you&rsquo;re preprocessing (95%) or visualizing (2).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">build</span></div><div><div class="cc-title">PCA for Visualization, Denoising, and Preprocessing</div><div class="cc-sub">Three practical uses beyond just compression</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Use Cases</div><div class="cc-text"><strong>1. Visualization:</strong> Project 100D data to 2D for scatter plots. Color by class label to see if classes are separable. If clusters are visible in 2D PCA, a classifier will likely work well.<br><br><strong>2. Denoising:</strong> Noise lives in the low-variance components. Keep the top k components, discard the rest, then reconstruct: X&#770; = X&#7523;&#7497;&#7496; &times; V&#8342;&#7488; + &mu;. The reconstruction removes noise while preserving signal.<br><br><strong>3. Preprocessing:</strong> Reduce dimensions before training a classifier. Benefits: faster training (fewer features), less overfitting (fewer parameters), and sometimes better accuracy (noise removed). Common pipeline: PCA(n_components=0.95) &rarr; LogisticRegression.<br><br><strong>Important:</strong> Always <code>fit</code> PCA on training data only, then <code>transform</code> both train and test. Fitting on test data is data leakage.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PCA Pipeline Example</div><div class="cc-code"><span class="hl-key">from</span> sklearn.decomposition <span class="hl-key">import</span> PCA
+<span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> StandardScaler
+<span class="hl-key">from</span> sklearn.linear_model <span class="hl-key">import</span> LogisticRegression
+<span class="hl-key">from</span> sklearn.pipeline <span class="hl-key">import</span> make_pipeline
+
+<span class="hl-cmt"># PCA as preprocessing</span>
+pipe = make_pipeline(
+    StandardScaler(),       <span class="hl-cmt"># always scale first!</span>
+    PCA(n_components=<span class="hl-num">0.95</span>), <span class="hl-cmt"># keep 95% variance</span>
+    LogisticRegression(max_iter=<span class="hl-num">500</span>)
+)
+pipe.fit(X_train, y_train)
+<span class="hl-key">print</span>(f<span class="hl-str">"Accuracy: {pipe.score(X_test, y_test):.3f}"</span>)
+
+<span class="hl-cmt"># Visualization (2D)</span>
+pca_2d = PCA(n_components=<span class="hl-num">2</span>)
+X_2d = pca_2d.fit_transform(StandardScaler().fit_transform(X))
+<span class="hl-cmt"># Scatter plot X_2d[:, 0] vs X_2d[:, 1], color by y</span>
+
+<span class="hl-cmt"># MNIST: 784D → 154D (95% var) → LogReg
+# Accuracy drops from 0.92 to 0.91 (1% loss)
+# Training time drops from 12s to 3s (4x faster)</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> PCA is the Swiss Army knife of preprocessing. For visualization, it gives you a 2D map of high-dimensional data. For denoising, it strips away the static. For preprocessing, it speeds up training and reduces overfitting. Always scale your features first &mdash; PCA is sensitive to feature magnitudes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">bubble_chart</span></div><div><div class="cc-title">t-SNE: Nonlinear Embedding for Visualization</div><div class="cc-sub">Preserving neighborhoods &mdash; seeing clusters that PCA misses</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why t-SNE?</div><div class="cc-text">PCA is <strong>linear</strong> &mdash; it can only rotate and stretch data. If clusters are separated by curved boundaries in high-D, PCA&rsquo;s 2D projection may overlap them.<br><br><strong>t-SNE</strong> (t-distributed Stochastic Neighbor Embedding) is <strong>nonlinear</strong>. It preserves <strong>local neighborhoods</strong>: points that are close in high-D stay close in 2D. Points that are far apart in high-D are pushed apart in 2D.<br><br>The algorithm: (1) Compute pairwise similarities in high-D using Gaussian kernels. (2) Initialize random 2D positions. (3) Iteratively adjust 2D positions to match high-D similarities, using a Student-t distribution (heavier tails than Gaussian) to avoid the &ldquo;crowding problem.&rdquo;<br><br><strong>Perplexity</strong> (typically 5&ndash;50) controls the effective number of neighbors. Low perplexity = focus on very local structure. High perplexity = consider broader neighborhoods.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">t-SNE in scikit-learn</div><div class="cc-code"><span class="hl-key">from</span> sklearn.manifold <span class="hl-key">import</span> TSNE
+
+tsne = TSNE(
+    n_components=<span class="hl-num">2</span>,       <span class="hl-cmt"># always 2 or 3</span>
+    perplexity=<span class="hl-num">30</span>,        <span class="hl-cmt"># neighbors to consider</span>
+    learning_rate=<span class="hl-num">200</span>,    <span class="hl-cmt"># step size</span>
+    n_iter=<span class="hl-num">1000</span>,          <span class="hl-cmt"># optimization steps</span>
+    random_state=<span class="hl-num">42</span>
+)
+X_2d = tsne.fit_transform(X)
+
+<span class="hl-key">Caveats:</span>
+  • <span class="hl-str">Visualization only</span> — no transform() for new data
+  • Distances between clusters are meaningless
+  • Cluster sizes are meaningless
+  • Different runs give different layouts
+  • Slow: O(n²) — use PCA first to reduce to 50D
+
+<span class="hl-cmt"># Best practice: PCA to 50D first, then t-SNE
+# X_50 = PCA(n_components=50).fit_transform(X)
+# X_2d = TSNE().fit_transform(X_50)</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> t-SNE is like a social network layout algorithm. It places friends close together and strangers far apart. The resulting map shows community structure beautifully &mdash; but the distances between communities and the sizes of communities are artifacts, not real. Use t-SNE to <strong>see</strong> clusters, not to measure them.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">t-SNE vs UMAP: Speed, Global Structure, and Trade-offs</div><div class="cc-sub">The newer alternative that&rsquo;s often better</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">UMAP Advantages</div><div class="cc-text"><strong>UMAP</strong> (Uniform Manifold Approximation and Projection) is a newer nonlinear method that addresses t-SNE&rsquo;s weaknesses:<br><br><strong>1. Speed:</strong> UMAP is 10&ndash;100x faster than t-SNE on large datasets. It scales to millions of points.<br><br><strong>2. Global structure:</strong> t-SNE preserves local neighborhoods but distorts global relationships (distant clusters may appear at arbitrary distances). UMAP better preserves the relative positions of clusters.<br><br><strong>3. Deterministic:</strong> With a fixed random seed, UMAP gives consistent results. t-SNE can produce very different layouts across runs.<br><br><strong>4. Supports transform():</strong> UMAP can embed new data points without rerunning the full algorithm. t-SNE cannot.<br><br>UMAP is not in scikit-learn but is available via <code>pip install umap-learn</code>. For most visualization tasks in 2025, UMAP is the preferred choice over t-SNE.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box good"><div class="cb-tag">PCA</div><div class="cb-text">Linear, fast, interpretable<br>Preserves global variance<br>Has inverse_transform<br>Good for preprocessing<br>Deterministic</div></div>
+            <div class="compare-box good"><div class="cb-tag">t-SNE</div><div class="cb-text">Nonlinear, slow (O(n&sup2;))<br>Best local structure<br>No transform for new data<br>Visualization only<br>Non-deterministic</div></div>
+            <div class="compare-box good"><div class="cb-tag">UMAP</div><div class="cb-text">Nonlinear, fast<br>Good local + global<br>Has transform<br>Viz + preprocessing<br>Mostly deterministic</div></div>
+          </div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> PCA is a telescope (sees far, misses details). t-SNE is a microscope (sees local detail, loses the big picture). UMAP is a good pair of binoculars (reasonable detail at all scales, and much faster). For preprocessing, use PCA. For visualization, use UMAP (or t-SNE if you need the absolute best local cluster separation).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--slate)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Complete Dimensionality Reduction Pipeline</div><div class="cc-sub">PCA + t-SNE on MNIST digits &mdash; from 784D to 2D</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">MNIST Visualization Pipeline</div><div class="cc-code"><span class="hl-key">from</span> sklearn.datasets <span class="hl-key">import</span> load_digits
+<span class="hl-key">from</span> sklearn.decomposition <span class="hl-key">import</span> PCA
+<span class="hl-key">from</span> sklearn.manifold <span class="hl-key">import</span> TSNE
+<span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> StandardScaler
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+X, y = load_digits(return_X_y=<span class="hl-num">True</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Original: {X.shape}"</span>)  <span class="hl-cmt"># (1797, 64)</span>
+
+X_scaled = StandardScaler().fit_transform(X)
+
+<span class="hl-cmt"># PCA: 64D → 2D (for comparison)</span>
+pca = PCA(n_components=<span class="hl-num">2</span>)
+X_pca = pca.fit_transform(X_scaled)
+<span class="hl-key">print</span>(f<span class="hl-str">"PCA 2D variance: {pca.explained_variance_ratio_.sum():.1%}"</span>)
+
+<span class="hl-cmt"># PCA: 64D → 50D (preprocessing)</span>
+pca50 = PCA(n_components=<span class="hl-num">50</span>)
+X_50 = pca50.fit_transform(X_scaled)
+<span class="hl-key">print</span>(f<span class="hl-str">"PCA 50D variance: {pca50.explained_variance_ratio_.sum():.1%}"</span>)
+
+<span class="hl-cmt"># t-SNE: 50D → 2D (best practice: PCA first)</span>
+tsne = TSNE(n_components=<span class="hl-num">2</span>, perplexity=<span class="hl-num">30</span>,
+            random_state=<span class="hl-num">42</span>)
+X_tsne = tsne.fit_transform(X_50)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Results</div><div class="cc-code"><span class="hl-key">Digits dataset (1797 samples, 64 features):</span>
+
+  PCA 2D:   <span class="hl-num">28.6%</span> variance explained
+    <span class="hl-cmt">→ Digits overlap heavily in 2D PCA</span>
+
+  PCA 50D:  <span class="hl-num">98.5%</span> variance explained
+    <span class="hl-cmt">→ Great for preprocessing (64→50, minimal loss)</span>
+
+  t-SNE 2D (from 50D):
+    <span class="hl-cmt">→ 10 clear digit clusters visible!</span>
+    <span class="hl-cmt">→ 0s, 1s, 2s, ... each form distinct blobs</span>
+
+<span class="hl-key">When to use what:</span>
+  Preprocessing:    PCA(n_components=<span class="hl-num">0.95</span>)
+  Quick 2D plot:    PCA(n_components=<span class="hl-num">2</span>)
+  Beautiful 2D viz: PCA(<span class="hl-num">50</span>) → TSNE(<span class="hl-num">2</span>)
+  Large data viz:   PCA(<span class="hl-num">50</span>) → UMAP(<span class="hl-num">2</span>)
+  Denoising:        PCA(<span class="hl-num">k</span>) → inverse_transform</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The PCA &rarr; t-SNE pipeline is the gold standard for visualizing high-dimensional data. PCA removes noise and reduces computation (64D &rarr; 50D). t-SNE then creates a beautiful 2D map where clusters are clearly visible. On MNIST digits, you can literally see 10 distinct digit clusters &mdash; something impossible in the raw 64D space.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-clustering.html"><span class="material-symbols-rounded">arrow_back</span> Clustering</a>
+    <a class="ch-nav-btn next" href="09-model-evaluation.html">Model Evaluation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[1,4],6:[5],7:[5,6],8:[0,1,2,3,4,5,6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The <strong>curse of dimensionality</strong>: in high-D, distances converge (max/min ratio → 1), data becomes sparse, and models overfit. 100D needs exponentially more data than 2D.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> <strong>PCA</strong> finds directions of maximum variance. PC1 = most spread, PC2 = next most (perpendicular). Project onto top k PCs to compress d dimensions to k with minimal information loss.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> PCA math: center data → compute covariance matrix C → find eigenvalues λ and eigenvectors v → sort by λ → project onto top k eigenvectors. scikit-learn uses SVD for stability.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Choose components via <strong>scree plot</strong> (elbow) or <strong>variance threshold</strong> (95%). Set n_components=0.95 in scikit-learn. MNIST: 784D → 154D captures 95% variance.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> PCA for <strong>visualization</strong> (2D scatter), <strong>denoising</strong> (reconstruct from top PCs), and <strong>preprocessing</strong> (faster training, less overfitting). Always scale features first.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> <strong>t-SNE</strong>: nonlinear embedding preserving local neighborhoods. Perplexity controls neighbor count. Visualization only — distances between clusters are meaningless. O(n²), slow.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> <strong>UMAP</strong> is 10-100x faster than t-SNE, preserves global structure better, and supports transform() for new data. For most visualization tasks, UMAP > t-SNE.',color:'#dc2626'},
+    8:{text:'<strong>Step 8:</strong> Gold standard pipeline: StandardScaler → PCA(50) → TSNE(2). On digits: PCA 2D shows 28.6% variance (blurry), t-SNE shows 10 clear digit clusters. Use PCA for preprocessing, t-SNE/UMAP for viz.',color:'#64748b'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

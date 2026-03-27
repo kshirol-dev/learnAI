@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Benchmarks & Evaluation — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Benchmarks &amp; Evaluation</h2><span class="tb-sub">GSM8K, MATH, ARC-AGI, GPQA, HumanEval, contamination, and measuring reasoning vs memorization</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">target</span></div><span class="pipe-label">Goal</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">dataset</span></div><span class="pipe-label">Data</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Run</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">grading</span></div><span class="pipe-label">Score</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">shield</span></div><span class="pipe-label">Sanity</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">insights</span></div><span class="pipe-label">Learn</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">analytics</span></div><div><div class="cc-title">Why Reasoning Benchmarks Exist</div><div class="cc-sub">From perplexity to problem-solving metrics</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What We Want to Measure</div><div class="cc-text">Classic LM metrics (perplexity, BLEU) poorly capture <strong>multi-step correctness</strong>. Reasoning benchmarks provide <strong>tasks with reference answers</strong> (or verifiers) so you can compute <strong>accuracy</strong>, <strong>pass@k</strong>, or <strong>partial credit</strong>. Good benchmarks stress <strong>compositionality</strong> (combining skills), <strong>generalization</strong> (held-out templates), and <strong>robustness</strong> (paraphrases, distractors). Bad benchmarks are <strong>saturated</strong> (everyone scores ~100%), <strong>leaky</strong> (answers in common crawl), or <strong>gameable</strong> (format hacks). Your job as a practitioner is not just to read leaderboard numbers but to know <strong>what capability</strong> each benchmark isolates and <strong>what setup</strong> was used (CoT? tools? self-consistency? test-time compute?).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evaluation Dimensions</div><div class="cc-code"><span class="hl-key">Correctness</span>: exact match / verifier
+<span class="hl-key">Process</span>: step-level labels (PRMs)
+<span class="hl-key">Cost</span>: tokens, latency, $/task
+<span class="hl-key">Reliability</span>: variance across seeds
+<span class="hl-key">Safety</span>: refusal, injection, leaks
+<span class="hl-cmt">// Reasoning ≠ single scalar score</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> A higher score is meaningless if you don&rsquo;t know the <strong>conditions</strong>: prompting, tools, sampling temperature, and whether the benchmark is already in training data.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">GSM8K &amp; MATH</div><div class="cc-sub">Grade-school and competition-style math word problems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Standard Math Duo</div><div class="cc-text"><strong>GSM8K</strong> (Cobbe et al., 2021) is a widely used set of ~8K grade-school math word problems with natural language explanations and numeric final answers. It became the flagship benchmark for <strong>chain-of-thought</strong> improvements because it rewards multi-step arithmetic and planning. <strong>MATH</strong> (Hendrycks et al.) is a harder corpus of competition-style problems spanning algebra, geometry, calculus, and more, often requiring longer derivations. Together they anchor <strong>math reasoning</strong> evaluation. Typical reporting includes: accuracy with CoT, pass@k with sampling, and comparisons with/without tools (Python). When models approach ceiling on GSM8K, researchers emphasize <strong>MATH</strong> and <strong>harder subsets</strong> to separate models.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Practical Notes</div><div class="cc-code"><span class="hl-key">GSM8K</span>:
+  ~8K problems, school-level
+  Standard metric: final-answer acc
+  CoT / PAL / tool use common
+<span class="hl-key">MATH</span>:
+  Competition difficulty
+  Longer chains; harder verification
+<span class="hl-cmt">// Always log prompt + tool setup</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> GSM8K is a <strong>sanity check</strong>; MATH is where <strong>test-time compute</strong> and advanced methods really separate systems.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">HumanEval &amp; Code Reasoning Suites</div><div class="cc-sub">From single-function synthesis to repositories</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Coding as Executable Reasoning</div><div class="cc-text"><strong>HumanEval</strong> (Chen et al., OpenAI) popularized <strong>pass@k</strong> on Python docstring-to-code problems with hidden unit tests. It measures whether the model can produce code that <strong>executes correctly</strong> &mdash; a crisp verifier. Limitations: small size, risk of contamination, and narrow task format. The field has expanded to <strong>multi-file</strong> benchmarks (e.g., repository-level tasks) where models must navigate context, edit files, and pass broader test suites. For reasoning evaluation, coding benchmarks matter because they combine <strong>planning</strong>, <strong>API knowledge</strong>, and <strong>debugging loops</strong> (especially when paired with sandboxes).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Metrics</div><div class="cc-code"><span class="hl-key">pass@1</span>: single sample
+<span class="hl-key">pass@k</span>: success if any of k samples pass
+<span class="hl-key">Tests</span>: hidden unit tests (primary)
+<span class="hl-cmt">// Report k, temperature, and filters</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Code benchmarks reward <strong>executable correctness</strong> &mdash; closer to PAL/tool reasoning than free-form explanation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">grid_view</span></div><div><div class="cc-title">ARC-AGI &amp; Abstract Visual Reasoning</div><div class="cc-sub">Chollet&rsquo;s emphasis on generalization, not memorization tricks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What ARC Tests</div><div class="cc-text">The <strong>Abstraction and Reasoning Corpus (ARC)</strong>, introduced by Fran&ccedil;ois Chollet, presents small <strong>grid transformation puzzles</strong>: a few input/output examples define a latent rule; the model must predict the output for a new input. ARC is designed to stress <strong>few-shot generalization</strong> and <strong>core knowledge priors</strong> rather than memorized trivia. <strong>ARC-AGI</strong> is a related benchmark framing aimed at measuring progress toward more general reasoning; public reporting varies by model generation and evaluation setup. Treat ARC scores as <strong>indicators</strong> of progress on a particular style of puzzle generalization &mdash; not as a complete picture of &ldquo;AGI.&rdquo; It remains a valuable counterweight to benchmarks that large models can brute-force via pretraining scale.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Interpretation</div><div class="cc-code"><span class="hl-key">Strength</span>: novel rule induction
+<span class="hl-key">Weakness</span>: narrow domain (grids)
+<span class="hl-key">Caution</span>: compare only like-for-like
+         evaluation protocols
+<span class="hl-cmt">// Read benchmark cards carefully</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> ARC-style tasks punish <strong>pattern-matching without abstraction</strong>. They&rsquo;re useful precisely because many text benchmarks are easier to game with scale.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">GPQA &amp; Expert-Level QA</div><div class="cc-sub">Hard multiple-choice science questions</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Graduate-Level Knowledge + Reasoning</div><div class="cc-text"><strong>GPQA</strong> (Rein et al.) is a multiple-choice benchmark of difficult questions in biology, physics, and chemistry, written to be challenging for non-experts and validated by domain experts. <strong>GPQA Diamond</strong> is a filtered subset often used for cleaner evaluation. Strong scores indicate a combination of <strong>factual depth</strong> and <strong>discriminative reasoning</strong> (eliminating distractors). GPQA is frequently cited alongside reasoning models (e.g., OpenAI o-series reporting) because it remains difficult for models that only excel at surface pattern tasks. Like all MC benchmarks, watch for <strong>guessing baselines</strong> and calibration issues.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Usage Tips</div><div class="cc-code"><span class="hl-key">Report</span>: accuracy / normalized score
+<span class="hl-key">Controls</span>: random baseline, human expert
+<span class="hl-key">Variants</span>: Diamond vs full
+<span class="hl-cmt">// Pair with open-ended probes</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> GPQA measures <strong>expert difficulty</strong> in a constrained format. It complements math/code but does not replace safety or real-world task evals.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">dataset_linked</span></div><div><div class="cc-title">BIG-Bench Hard &amp; Broad Suites</div><div class="cc-sub">Multi-task stress tests and hard subsets</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Breadth vs Depth</div><div class="cc-text"><strong>BIG-Bench</strong> is a large collaborative benchmark spanning diverse tasks. <strong>BIG-Bench Hard (BBH)</strong> focuses on tasks that remained difficult for early instruction-tuned models, including multi-step reasoning, symbolic manipulation, and weird compositional puzzles. Suites like BBH are useful for <strong>regression testing</strong> across capabilities after you change a model or a prompt. They also appear in tool-learning papers (e.g., PAL reported gains on selected BBH tasks). The trade-off is complexity: aggregation can hide <strong>task-specific regressions</strong>, so teams often drill into per-task dashboards.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How to Use Suites</div><div class="cc-code"><span class="hl-key">Aggregate</span>: macro average with care
+<span class="hl-key">Drill-down</span>: per-task failures
+<span class="hl-key">Compare</span>: same tokenizer + parser
+<span class="hl-cmt">// Watch for formatting sensitivity</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Broad suites are great for <strong>coverage</strong>; narrow benchmarks are great for <strong>diagnosis</strong>. Use both in a tiered eval strategy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">find_in_page</span></div><div><div class="cc-title">Contamination, Memorization, and Leakage</div><div class="cc-sub">When high scores mislead</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Credibility Problem</div><div class="cc-text">If benchmark examples or solutions appear in pretraining data, models can succeed via <strong>memorization</strong> instead of reasoning. Mitigations include: <strong>n-gram overlap</strong> checks, training-time exclusion experiments, <strong>held-out rewrites</strong> of questions, and <strong>dynamic benchmarks</strong> (freshly generated instances). Another subtle issue is <strong>answer leakage through style</strong>: models learn dataset quirks. For chain-of-thought evaluation, also watch <strong>training on CoT traces</strong> from the same distribution. Contamination science is imperfect &mdash; treat it as <strong>risk management</strong>: assume some leakage unless you control data; prefer evaluations with <strong>private test sets</strong> for high-stakes decisions.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Signals of Trouble</div><div class="cc-code"><span class="hl-key">Suspicious</span>: perfect BBH + weak probes
+<span class="hl-key">Check</span>: paraphrase robustness
+<span class="hl-key">Check</span>: counterfactual numbers
+<span class="hl-key">Check</span>: tool-off vs tool-on gaps
+<span class="hl-cmt">// Memorization often breaks under edits</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Strong in-distribution scores plus <strong>fragility to small edits</strong> is a classic sign the model is matching surface patterns, not executing a stable procedure.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">Building an Evaluation Stack</div><div class="cc-sub">From playground experiments to production gates</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">A Practical Recipe</div><div class="cc-text">Layer evaluations: (1) <strong>Core reasoning</strong> &mdash; GSM8K/MATH + a small private set of your own word problems. (2) <strong>Code</strong> &mdash; HumanEval-style plus internal integration tests. (3) <strong>Knowledge-heavy reasoning</strong> &mdash; GPQA or domain exams. (4) <strong>Generalization probes</strong> &mdash; ARC-style or custom puzzles. (5) <strong>Operational metrics</strong> &mdash; latency, cost, tool failure rates, escalation to human. Automate runs in CI with pinned prompts; store <strong>traces</strong> (CoT, tool calls) for debugging. For product teams, add <strong>human rubrics</strong> on a sample of production tasks &mdash; benchmarks alone rarely capture UX.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Minimal Stack</div><div class="cc-code"><span class="hl-key">L1</span>: fast regression (GSM8K subset)
+<span class="hl-key">L2</span>: hard math (MATH subset)
+<span class="hl-key">L3</span>: code (unit tests)
+<span class="hl-key">L4</span>: domain private tests
+<span class="hl-key">L5</span>: online monitoring + rubrics
+<span class="hl-cmt">// Next chapter: future of reasoning</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Treat evaluation as <strong>infrastructure</strong>: versioned prompts, recorded configs, and per-task dashboards. Reasoning quality is a moving target &mdash; your harness must move with it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-tool-augmented-reasoning.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Tool-Augmented Reasoning</a>
+    <a class="ch-nav-btn next" href="08-the-future-of-reasoning.html">Ch 8: The Future of Reasoning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3,5],2:[0,1,2,3],3:[0,2,3],4:[0,1,2],5:[0,1,2,3],6:[0,1,5],7:[0,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Reasoning benchmarks measure multi-step correctness with verifiers. Always record prompts, tools, and sampling — leaderboard numbers without setup are not comparable.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> GSM8K (~8K grade-school problems) and MATH (competition-style) anchor math evaluation. GSM8K is a sanity check; MATH separates advanced systems.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> HumanEval popularized pass@k with hidden tests. Coding benchmarks combine planning, APIs, and debugging — often with sandboxes.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> ARC / ARC-AGI: few-shot grid puzzles stressing generalization. Useful counterweight to memorization-prone text benchmarks; interpret with protocol care.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> GPQA: hard multiple-choice science (Diamond subset common). Signals expert-level depth; mind guessing baselines and MC limitations.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> BIG-Bench Hard: broad, hard subset for regression testing. Aggregate scores can hide per-task issues — use dashboards.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Contamination and leakage inflate scores. Use paraphrases, fresh items, private sets, and robustness checks — strong but brittle results are suspicious.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Build a tiered eval stack: public benchmarks + private tests + code + online rubrics. Version prompts and store traces. Next: the future of reasoning.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

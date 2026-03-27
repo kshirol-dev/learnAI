@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Attention &amp; Transformers — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.c-red.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Attention &amp; Transformers</h2><span class="tb-sub">Scaled dot-product math, multi-head mechanics, positional encoding, and full architecture</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="09-attention-and-transformers-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: Scaled Dot-Product Attention -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">Zone A</span><span class="zone-title">Scaled Dot-Product Attention</span><span class="zone-sub">Steps 1&ndash;2</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red" data-step="1" onclick="openDetail(1)"><div class="step-badge bg-red">1</div><div class="fnode-icon"><span class="material-symbols-rounded">key</span></div><div class="fnode-label">QKV Projections</div><div class="fnode-sub">X&middot;W_Q, X&middot;W_K, X&middot;W_V</div></div>
+      <div class="farr" data-step="2"></div>
+      <div class="fnode c-red" data-step="2" onclick="openDetail(2)"><div class="step-badge bg-red">2</div><div class="fnode-icon"><span class="material-symbols-rounded">calculate</span></div><div class="fnode-label">Attention Scores</div><div class="fnode-sub">softmax(QK\u1d40/&radic;d\u2096)&middot;V</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange" data-step="3"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Single head &rarr; multiple heads</div><div class="step-badge bg-orange">3</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: Multi-Head & Transformer Block -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">Zone B</span><span class="zone-title">Multi-Head Attention &amp; Transformer Block</span><span class="zone-sub">Steps 3&ndash;5</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange" data-step="3" onclick="openDetail(3)"><div class="step-badge bg-orange">3</div><div class="fnode-icon"><span class="material-symbols-rounded">view_comfy</span></div><div class="fnode-label">Multi-Head</div><div class="fnode-sub">Concat + project</div></div>
+      <div class="farr" data-step="4"></div>
+      <div class="fnode c-orange" data-step="4" onclick="openDetail(4)"><div class="step-badge bg-orange">4</div><div class="fnode-icon"><span class="material-symbols-rounded">stacks</span></div><div class="fnode-label">FFN + Residual</div><div class="fnode-sub">LayerNorm + skip</div></div>
+      <div class="farr" data-step="5"></div>
+      <div class="fnode c-orange" data-step="5"><div class="step-badge bg-orange">5</div><div class="fnode-icon"><span class="material-symbols-rounded">calculate</span></div><div class="fnode-label">Parameter Count</div><div class="fnode-sub">Full model FLOPs</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet" data-step="6"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Inject position information</div><div class="step-badge bg-violet">6</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: Positional Encoding -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">Zone C</span><span class="zone-title">Positional Encoding &amp; Masking</span><span class="zone-sub">Steps 6&ndash;7</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="6" onclick="openDetail(6)"><div class="step-badge bg-violet">6</div><div class="fnode-icon"><span class="material-symbols-rounded">pin_drop</span></div><div class="fnode-label">Sinusoidal &amp; RoPE</div><div class="fnode-sub">Position encoding math</div></div>
+      <div class="farr" data-step="7"></div>
+      <div class="fnode c-violet" data-step="7" onclick="openDetail(7)"><div class="step-badge bg-violet">7</div><div class="fnode-icon"><span class="material-symbols-rounded">visibility_off</span></div><div class="fnode-label">Causal Mask</div><div class="fnode-sub">Autoregressive decoding</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue" data-step="8"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Efficiency optimizations</div><div class="step-badge bg-blue">8</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: Efficiency -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">Zone D</span><span class="zone-title">Efficiency &mdash; FlashAttention, KV Cache, GQA</span><span class="zone-sub">Steps 8&ndash;9</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="8" onclick="openDetail(8)"><div class="step-badge bg-blue">8</div><div class="fnode-icon"><span class="material-symbols-rounded">bolt</span></div><div class="fnode-label">FlashAttention</div><div class="fnode-sub">Tiling &amp; kernel fusion</div></div>
+      <div class="farr" data-step="9"></div>
+      <div class="fnode c-blue" data-step="9" onclick="openDetail(9)"><div class="step-badge bg-blue">9</div><div class="fnode-icon"><span class="material-symbols-rounded">cached</span></div><div class="fnode-label">KV Cache &amp; GQA</div><div class="fnode-sub">Inference optimization</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal" data-step="10"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Architecture variants</div><div class="step-badge bg-teal">10</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: Variants -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">Zone E</span><span class="zone-title">Architecture Variants &amp; Modern Innovations</span><span class="zone-sub">Step 10</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="10"><div class="step-badge bg-teal">10</div><div class="fnode-icon"><span class="material-symbols-rounded">hub</span></div><div class="fnode-label">BERT / GPT / T5</div><div class="fnode-sub">Encoder vs Decoder</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"><div class="dp-head"><div class="dp-step" id="dpStep">1</div><div class="dp-title" id="dpTitle">Title</div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div><div class="dp-body" id="dpBody"></div></div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+const TOTAL=10,STEP_MS=7000;
+const NARRATION={
+  1:{text:'<strong>QKV projections:</strong> Each token embedding x \u2208 \u211d\u1d48 is linearly projected into Q = x\u00b7W_Q, K = x\u00b7W_K, V = x\u00b7W_V, where W_Q, W_K \u2208 \u211d\u1d48\u02e3\u1d48\u2096 and W_V \u2208 \u211d\u1d48\u02e3\u1d48\u1d65. These are learned parameters \u2014 the model discovers what to query, what to advertise as keys, and what content to carry as values.',color:'#dc2626'},
+  2:{text:'<strong>Scaled dot-product attention:</strong> Attention(Q,K,V) = softmax(QK\u1d40/\u221ad\u2096)\u00b7V. The QK\u1d40 matrix is n\u00d7n (all pairs). Scaling by \u221ad\u2096 prevents dot products from growing with dimension \u2014 without it, softmax saturates and gradients vanish. The output is a weighted average of V rows.',color:'#dc2626'},
+  3:{text:'<strong>Multi-head attention:</strong> Split d_model into h heads, each with d\u2096 = d_model/h. Run attention independently per head, concatenate outputs, project with W_O. Cost is identical to single-head (same total d\u2096\u00d7h = d_model), but captures h different relationship types in parallel.',color:'#ea580c'},
+  4:{text:'<strong>Transformer block:</strong> x = x + MHA(LN(x)), then x = x + FFN(LN(x)). The FFN is two linear layers: W\u2081 \u2208 \u211d\u1d48\u02e3\u2074\u1d48, W\u2082 \u2208 \u211d\u2074\u1d48\u02e3\u1d48 with GELU activation. The FFN has 8d\u00b2 parameters per layer \u2014 2/3 of total parameters. It stores factual knowledge.',color:'#ea580c'},
+  5:{text:'<strong>Parameter count:</strong> Per layer: 4d\u00b2 (attention: W_Q + W_K + W_V + W_O) + 8d\u00b2 (FFN) = 12d\u00b2. GPT-3: d=12288, 96 layers \u2192 12 \u00d7 12288\u00b2 \u00d7 96 \u2248 173B parameters (plus embeddings). The 6:1 ratio of FFN to attention parameters is a consistent pattern.',color:'#ea580c'},
+  6:{text:'<strong>Positional encoding:</strong> Sinusoidal PE uses sin/cos at different frequencies. RoPE rotates Q and K vectors: q\u2032 = R(\u03b8\u2098)\u00b7q, k\u2032 = R(\u03b8\u2099)\u00b7k. The dot product q\u2032\u1d40k\u2032 depends only on relative position (m\u2212n), not absolute. RoPE is now standard in Llama, Mistral, and most modern LLMs.',color:'#7c3aed'},
+  7:{text:'<strong>Causal mask:</strong> For decoder models, set attention scores to \u2212\u221e for positions j > i before softmax. This ensures token i can only attend to tokens 0..i. The mask is an upper-triangular matrix of \u2212\u221e values. Cross-attention (encoder-decoder) uses no mask \u2014 decoder attends to all encoder positions.',color:'#7c3aed'},
+  8:{text:'<strong>FlashAttention:</strong> Standard attention materializes the n\u00d7n matrix in GPU HBM (slow). FlashAttention tiles the computation into SRAM blocks, fusing softmax + matmul in one kernel. Result: O(n) memory instead of O(n\u00b2), 2\u20134x wall-clock speedup, mathematically identical output.',color:'#2563eb'},
+  9:{text:'<strong>KV cache:</strong> During autoregressive generation, cache K and V from all previous tokens. For each new token, only compute its Q and attend to the cached KV. Cost per token: O(n) instead of O(n\u00b2). <strong>GQA</strong>: share KV heads across multiple Q heads (Llama 2: 64Q/8KV) \u2014 8x less cache memory.',color:'#2563eb'},
+  10:{text:'<strong>Architecture variants:</strong> BERT (encoder, bidirectional, MLM) excels at classification/retrieval. GPT (decoder, causal, next-token) excels at generation. T5 (encoder-decoder, span corruption) excels at seq2seq. Modern trend: decoder-only at massive scale + instruction tuning + RLHF = ChatGPT, Claude, Llama.',color:'#0d9488'},
+};
+const DETAILS={
+  1:{title:'QKV Projections: Worked Example',color:'#dc2626',body:`
+<div class="dp-label">Projection Mechanics</div>
+<div class="dp-code"><span class="hl-cmt">// Input: 3 tokens, d_model=4, d_k=2 (1 head)</span>
+
+<span class="hl-key">X</span> = [[1.0, 0.5, 0.3, 0.8],   <span class="hl-cmt">// "The"</span>
+      [0.2, 0.9, 0.7, 0.1],   <span class="hl-cmt">// "cat"</span>
+      [0.6, 0.3, 0.5, 0.4]]   <span class="hl-cmt">// "sat"</span>
+
+<span class="hl-key">W_Q</span> = [[0.1, 0.3],    <span class="hl-key">W_K</span> = [[0.2, 0.0],
+        [0.4, 0.2],            [0.1, 0.5],
+        [0.0, 0.5],            [0.3, 0.1],
+        [0.3, 0.1]]            [0.0, 0.4]]
+
+<span class="hl-key">Q</span> = X \u00b7 W_Q:
+  "The": [1\u00b70.1+0.5\u00b70.4+0.3\u00b70+0.8\u00b70.3, ...] = [<span class="hl-num">0.54</span>, <span class="hl-num">0.63</span>]
+  "cat": [...] = [<span class="hl-num">0.41</span>, <span class="hl-num">0.52</span>]
+  "sat": [...] = [<span class="hl-num">0.30</span>, <span class="hl-num">0.53</span>]
+
+<span class="hl-cmt">// Similarly compute K and V from W_K, W_V</span></div>
+<div class="dp-label">Why Three Separate Projections?</div>
+<div class="dp-code"><span class="hl-cmt">// Q, K, V serve different roles:</span>
+
+<span class="hl-key">Q (Query):</span>  "What am I looking for?"
+  Projects into a <span class="hl-str">search space</span>
+
+<span class="hl-key">K (Key):</span>    "What do I contain?"
+  Projects into the <span class="hl-str">same search space</span>
+
+<span class="hl-key">V (Value):</span>  "What info do I carry?"
+  Projects into a <span class="hl-str">content space</span>
+
+<span class="hl-cmt">// Q and K must be in the same space (dot product)</span>
+<span class="hl-cmt">// V can be a different space entirely</span>
+<span class="hl-cmt">// This separation lets the model decouple</span>
+<span class="hl-cmt">// "what to attend to" from "what to extract"</span></div>
+<div class="dp-note n-red"><strong>Learned projections:</strong> W_Q, W_K, W_V are learned during training. The model discovers that for coreference resolution, Q might project pronouns into a space where they match K projections of their antecedents. Different heads learn different projection strategies \u2014 this is why multi-head attention is so powerful.</div>`},
+  2:{title:'Scaled Dot-Product Attention: Step by Step',color:'#dc2626',body:`
+<div class="dp-label">Full Computation</div>
+<div class="dp-code"><span class="hl-cmt">// Given Q, K, V (each n\u00d7d_k), d_k = 2</span>
+
+<span class="hl-key">Step 1: QK\u1d40</span> (n\u00d7n attention scores)
+  Q = [[0.54, 0.63],    K\u1d40 = [[0.54, 0.41, 0.30],
+       [0.41, 0.52],           [0.63, 0.52, 0.53]]
+       [0.30, 0.53]]
+
+  QK\u1d40 = [[0.54\u00b70.54+0.63\u00b70.63, ...],
+          [...],
+          [...]]
+       = [[<span class="hl-num">0.689</span>, <span class="hl-num">0.549</span>, <span class="hl-num">0.496</span>],
+          [<span class="hl-num">0.549</span>, <span class="hl-num">0.439</span>, <span class="hl-num">0.399</span>],
+          [<span class="hl-num">0.496</span>, <span class="hl-num">0.399</span>, <span class="hl-num">0.371</span>]]
+
+<span class="hl-key">Step 2: Scale by \u221ad_k</span>
+  QK\u1d40 / \u221a2 = [[<span class="hl-num">0.487</span>, <span class="hl-num">0.388</span>, <span class="hl-num">0.351</span>],
+                  [<span class="hl-num">0.388</span>, <span class="hl-num">0.310</span>, <span class="hl-num">0.282</span>],
+                  [<span class="hl-num">0.351</span>, <span class="hl-num">0.282</span>, <span class="hl-num">0.262</span>]]
+
+<span class="hl-key">Step 3: Softmax (row-wise)</span>
+  \u03b1 = [[<span class="hl-ok">0.371</span>, <span class="hl-num">0.336</span>, <span class="hl-num">0.324</span>],
+        [<span class="hl-num">0.345</span>, <span class="hl-ok">0.319</span>, <span class="hl-num">0.311</span>],
+        [<span class="hl-num">0.340</span>, <span class="hl-num">0.317</span>, <span class="hl-ok">0.312</span>]]
+
+<span class="hl-key">Step 4: \u03b1 \u00b7 V</span> (weighted sum of values)
+  Output = \u03b1 \u00b7 V  <span class="hl-cmt">// each row is a blend of V rows</span></div>
+<div class="dp-label">Why Scale by \u221ad_k?</div>
+<div class="dp-code"><span class="hl-cmt">// Without scaling, dot products grow with d_k:</span>
+<span class="hl-cmt">// If q, k ~ N(0,1), then q\u00b7k ~ N(0, d_k)</span>
+
+<span class="hl-key">d_k = 64:</span>  q\u00b7k has std = <span class="hl-num">8</span>
+  softmax([8, -8]) = [<span class="hl-err">0.9999</span>, 0.0001]
+  <span class="hl-err">\u2192 nearly one-hot, gradient \u2248 0</span>
+
+<span class="hl-key">d_k = 64, scaled:</span>  q\u00b7k/\u221a64 has std = <span class="hl-num">1</span>
+  softmax([1, -1]) = [<span class="hl-ok">0.731</span>, <span class="hl-ok">0.269</span>]
+  <span class="hl-ok">\u2192 smooth distribution, healthy gradients</span></div>
+<div class="dp-note n-red"><strong>Complexity:</strong> QK\u1d40 is O(n\u00b2\u00b7d\u2096) to compute and O(n\u00b2) to store. For n=128K and d\u2096=128: the score matrix has 16.4 billion entries. This is why FlashAttention (step 8) is essential \u2014 it avoids materializing this entire matrix in memory.</div>`},
+  3:{title:'Multi-Head Attention: Mechanics',color:'#ea580c',body:`
+<div class="dp-label">Head Splitting</div>
+<div class="dp-code"><span class="hl-cmt">// d_model = 768, h = 12 heads, d_k = 64</span>
+
+<span class="hl-key">Input X</span> \u2208 \u211d\u207f\u02e3\u2077\u2076\u2078
+
+<span class="hl-cmt">// Each head has its own projections:</span>
+<span class="hl-key">Head i:</span>
+  W_Q\u1d62 \u2208 \u211d\u2077\u2076\u2078\u02e3\u2076\u2074    <span class="hl-cmt">// 768 \u2192 64</span>
+  W_K\u1d62 \u2208 \u211d\u2077\u2076\u2078\u02e3\u2076\u2074
+  W_V\u1d62 \u2208 \u211d\u2077\u2076\u2078\u02e3\u2076\u2074
+
+  Q\u1d62 = X \u00b7 W_Q\u1d62    <span class="hl-cmt">// n\u00d764</span>
+  K\u1d62 = X \u00b7 W_K\u1d62
+  V\u1d62 = X \u00b7 W_V\u1d62
+
+  head\u1d62 = softmax(Q\u1d62K\u1d62\u1d40/\u221a64) \u00b7 V\u1d62   <span class="hl-cmt">// n\u00d764</span>
+
+<span class="hl-cmt">// Concatenate all heads:</span>
+<span class="hl-key">MultiHead</span> = [head\u2081; head\u2082; ...; head\u2081\u2082]
+           \u2208 \u211d\u207f\u02e3\u2077\u2076\u2078  <span class="hl-cmt">// 12\u00d764 = 768</span>
+
+<span class="hl-cmt">// Final projection:</span>
+<span class="hl-key">Output</span> = MultiHead \u00b7 W_O    <span class="hl-cmt">// W_O \u2208 \u211d\u2077\u2076\u2078\u02e3\u2077\u2076\u2078</span></div>
+<div class="dp-label">Parameter Count per MHA Layer</div>
+<div class="dp-code"><span class="hl-cmt">// d = d_model = 768</span>
+
+<span class="hl-key">W_Q:</span> h \u00d7 (d \u00d7 d_k) = 12 \u00d7 (768 \u00d7 64) = <span class="hl-num">589,824</span>
+<span class="hl-key">W_K:</span> same = <span class="hl-num">589,824</span>
+<span class="hl-key">W_V:</span> same = <span class="hl-num">589,824</span>
+<span class="hl-key">W_O:</span> d \u00d7 d = 768 \u00d7 768 = <span class="hl-num">589,824</span>
+
+<span class="hl-key">Total MHA:</span> 4 \u00d7 d\u00b2 = 4 \u00d7 768\u00b2 = <span class="hl-ok">2,359,296</span>
+
+<span class="hl-cmt">// Note: h \u00d7 (d \u00d7 d_k) = h \u00d7 d \u00d7 (d/h) = d\u00b2</span>
+<span class="hl-cmt">// So total is always 4d\u00b2 regardless of h!</span></div>
+<div class="dp-note n-orange"><strong>Implementation trick:</strong> In practice, W_Q, W_K, W_V are stored as one large matrix W_QKV \u2208 \u211d\u1d48\u02e3\u00b3\u1d48 and computed in a single matmul. The output is then split into Q, K, V and reshaped into (batch, heads, seq_len, d_k). This is more efficient on GPUs than 3 separate matmuls.</div>`},
+  4:{title:'Feed-Forward Network & Layer Norm',color:'#ea580c',body:`
+<div class="dp-label">FFN Architecture</div>
+<div class="dp-code"><span class="hl-cmt">// Position-wise feed-forward network</span>
+<span class="hl-key">FFN(x)</span> = GELU(x \u00b7 W\u2081 + b\u2081) \u00b7 W\u2082 + b\u2082
+
+<span class="hl-key">W\u2081</span> \u2208 \u211d\u1d48\u02e3\u2074\u1d48    <span class="hl-cmt">// expand: 768 \u2192 3072</span>
+<span class="hl-key">W\u2082</span> \u2208 \u211d\u2074\u1d48\u02e3\u1d48    <span class="hl-cmt">// contract: 3072 \u2192 768</span>
+
+<span class="hl-cmt">// Parameters: 4d\u00b2 + 4d\u00b2 = 8d\u00b2</span>
+<span class="hl-cmt">// For d=768: 8 \u00d7 768\u00b2 = 4,718,592</span>
+<span class="hl-cmt">// That's 2/3 of each layer's parameters!</span>
+
+<span class="hl-cmt">// Modern variant: SwiGLU (Llama, PaLM)</span>
+<span class="hl-key">SwiGLU(x)</span> = (x\u00b7W\u2081 \u2299 Swish(x\u00b7W\u2083)) \u00b7 W\u2082
+<span class="hl-cmt">// 3 matrices instead of 2, d_ff = 8d/3</span></div>
+<div class="dp-label">Pre-LN vs Post-LN</div>
+<div class="dp-code"><span class="hl-cmt">// Post-LN (original transformer, 2017):</span>
+x = LayerNorm(x + MHA(x))
+x = LayerNorm(x + FFN(x))
+<span class="hl-err">// Harder to train, needs warmup</span>
+
+<span class="hl-cmt">// Pre-LN (GPT-2+, now standard):</span>
+x = x + MHA(LayerNorm(x))
+x = x + FFN(LayerNorm(x))
+<span class="hl-ok">// More stable, easier to train deep models</span>
+
+<span class="hl-cmt">// RMSNorm (Llama, modern models):</span>
+<span class="hl-key">RMSNorm(x)</span> = x / RMS(x) \u00b7 \u03b3
+<span class="hl-cmt">// Simpler than LayerNorm (no mean subtraction)</span>
+<span class="hl-cmt">// ~10% faster, same quality</span></div>
+<div class="dp-note n-orange"><strong>Knowledge storage:</strong> Research shows the FFN layers act as key-value memories. W\u2081 rows are \u201ckeys\u201d that match input patterns, and W\u2082 columns are \u201cvalues\u201d that produce outputs. Factual knowledge (\u201cParis is the capital of France\u201d) is stored in FFN weights, while attention handles relational reasoning.</div>`},
+  6:{title:'Positional Encoding: Sinusoidal & RoPE',color:'#7c3aed',body:`
+<div class="dp-label">Sinusoidal (Original Transformer)</div>
+<div class="dp-code"><span class="hl-key">PE(pos, 2i)</span>   = sin(pos / 10000^(2i/d))
+<span class="hl-key">PE(pos, 2i+1)</span> = cos(pos / 10000^(2i/d))
+
+<span class="hl-cmt">// d=4 example, pos=0,1,2:</span>
+<span class="hl-key">pos=0:</span> [sin(0/1), cos(0/1), sin(0/100), cos(0/100)]
+     = [<span class="hl-num">0.000</span>, <span class="hl-num">1.000</span>, <span class="hl-num">0.000</span>, <span class="hl-num">1.000</span>]
+
+<span class="hl-key">pos=1:</span> [sin(1/1), cos(1/1), sin(1/100), cos(1/100)]
+     = [<span class="hl-num">0.841</span>, <span class="hl-num">0.540</span>, <span class="hl-num">0.010</span>, <span class="hl-num">1.000</span>]
+
+<span class="hl-key">pos=2:</span> [sin(2/1), cos(2/1), sin(2/100), cos(2/100)]
+     = [<span class="hl-num">0.909</span>, <span class="hl-num">\u22120.416</span>, <span class="hl-num">0.020</span>, <span class="hl-num">1.000</span>]
+
+<span class="hl-cmt">// Low dims: high frequency (changes fast)</span>
+<span class="hl-cmt">// High dims: low frequency (changes slow)</span>
+<span class="hl-cmt">// Each position gets a unique "fingerprint"</span></div>
+<div class="dp-label">RoPE (Rotary Position Embedding)</div>
+<div class="dp-code"><span class="hl-cmt">// Rotate Q and K vectors by position-dependent angle</span>
+
+<span class="hl-key">R(\u03b8)</span> = [[cos\u03b8, \u2212sin\u03b8],
+         [sin\u03b8,  cos\u03b8]]
+
+<span class="hl-cmt">// For position m, dimension pair (2i, 2i+1):</span>
+<span class="hl-key">\u03b8\u1d62</span> = m / 10000^(2i/d)
+
+<span class="hl-cmt">// Apply rotation to each pair of Q, K dims:</span>
+<span class="hl-key">q\u2032\u2098</span> = R(\u03b8\u2098) \u00b7 q\u2098
+<span class="hl-key">k\u2032\u2099</span> = R(\u03b8\u2099) \u00b7 k\u2099
+
+<span class="hl-cmt">// Key property:</span>
+<span class="hl-key">q\u2032\u2098\u1d40 \u00b7 k\u2032\u2099</span> = q\u2098\u1d40 \u00b7 R(\u03b8\u2098 \u2212 \u03b8\u2099) \u00b7 k\u2099
+<span class="hl-ok">// Depends only on relative position (m\u2212n)!</span>
+<span class="hl-ok">// No extra parameters needed</span></div>
+<div class="dp-note n-violet"><strong>Long context scaling:</strong> RoPE can be extended beyond training length via NTK-aware scaling or YaRN. The idea: adjust the rotation frequencies to \u201cstretch\u201d the position encoding. Llama 3 uses RoPE with a base of 500,000 (vs original 10,000) to support 128K context natively.</div>`},
+  7:{title:'Causal Mask & Cross-Attention',color:'#7c3aed',body:`
+<div class="dp-label">Causal (Autoregressive) Mask</div>
+<div class="dp-code"><span class="hl-cmt">// For decoder models (GPT), prevent attending to future</span>
+
+<span class="hl-key">Mask</span> = [[ 0,   \u2212\u221e, \u2212\u221e, \u2212\u221e],
+         [ 0,    0,  \u2212\u221e, \u2212\u221e],
+         [ 0,    0,   0,  \u2212\u221e],
+         [ 0,    0,   0,   0 ]]
+
+<span class="hl-cmt">// Applied BEFORE softmax:</span>
+<span class="hl-key">scores</span> = QK\u1d40/\u221ad\u2096 + Mask
+
+<span class="hl-cmt">// softmax(\u2212\u221e) = 0, so future tokens get</span>
+<span class="hl-cmt">// zero attention weight</span>
+
+<span class="hl-cmt">// Example: "The cat sat on"</span>
+<span class="hl-key">"The"</span> attends to: [The]
+<span class="hl-key">"cat"</span> attends to: [The, cat]
+<span class="hl-key">"sat"</span> attends to: [The, cat, sat]
+<span class="hl-key">"on"</span>  attends to: [The, cat, sat, on]</div>
+<div class="dp-label">Cross-Attention (Encoder-Decoder)</div>
+<div class="dp-code"><span class="hl-cmt">// In encoder-decoder models (T5, original):</span>
+
+<span class="hl-key">Encoder self-attention:</span>
+  Q, K, V all from encoder  <span class="hl-ok">(bidirectional)</span>
+
+<span class="hl-key">Decoder self-attention:</span>
+  Q, K, V all from decoder  <span class="hl-err">(causal masked)</span>
+
+<span class="hl-key">Cross-attention:</span>
+  Q from decoder
+  K, V from encoder output  <span class="hl-ok">(no mask)</span>
+  <span class="hl-cmt">// Decoder queries encoder for relevant info</span>
+  <span class="hl-cmt">// This is how translation works:</span>
+  <span class="hl-cmt">// decoder asks "what English word maps here?"</span></div>
+<div class="dp-note n-violet"><strong>Prefix attention (modern hybrid):</strong> Some models use a prefix of bidirectional attention followed by causal attention. The prefix tokens can attend to each other freely (like an encoder), while generation tokens use causal masking. This gives the benefits of both approaches in a single decoder model.</div>`},
+  8:{title:'FlashAttention: Memory-Efficient Attention',color:'#2563eb',body:`
+<div class="dp-label">The Memory Problem</div>
+<div class="dp-code"><span class="hl-cmt">// Standard attention materializes n\u00d7n matrix</span>
+
+<span class="hl-key">Standard:</span>
+  1. S = Q \u00b7 K\u1d40           <span class="hl-cmt">// store n\u00d7n in HBM</span>
+  2. P = softmax(S/\u221ad)    <span class="hl-cmt">// store n\u00d7n in HBM</span>
+  3. O = P \u00b7 V             <span class="hl-cmt">// read n\u00d7n from HBM</span>
+
+  <span class="hl-err">Memory: O(n\u00b2) for S and P</span>
+  <span class="hl-err">HBM reads: O(n\u00b2) \u2014 slow!</span>
+
+<span class="hl-cmt">// GPU memory hierarchy:</span>
+<span class="hl-key">SRAM:</span>  ~20 MB,  ~19 TB/s  <span class="hl-ok">(fast, small)</span>
+<span class="hl-key">HBM:</span>   ~80 GB,  ~2 TB/s   <span class="hl-err">(slow, large)</span>
+<span class="hl-cmt">// 10x bandwidth gap!</span></div>
+<div class="dp-label">FlashAttention Algorithm</div>
+<div class="dp-code"><span class="hl-key">FlashAttention (Dao, 2022):</span>
+  1. Tile Q, K, V into blocks that fit in SRAM
+  2. For each Q block:
+     a. Load Q block into SRAM
+     b. For each K,V block:
+        - Compute local S = Q_block \u00b7 K_block\u1d40
+        - Compute local softmax (with running max)
+        - Accumulate O += softmax \u00b7 V_block
+     c. Write final O block to HBM
+
+  <span class="hl-ok">Memory: O(n) \u2014 never store full n\u00d7n matrix</span>
+  <span class="hl-ok">HBM reads: O(n\u00b2/M) where M = SRAM size</span>
+
+<span class="hl-cmt">// The trick: online softmax</span>
+<span class="hl-cmt">// Track running max and sum across K blocks</span>
+<span class="hl-cmt">// Rescale previous partial sums when max changes</span>
+<span class="hl-cmt">// Numerically identical to standard attention</span></div>
+<div class="dp-note n-blue"><strong>Impact:</strong> FlashAttention enabled training with 4\u201316x longer sequences at the same memory budget. FlashAttention-2 (2023) further improved by better work partitioning across GPU warps, achieving ~70% of theoretical max FLOPS. It\u2019s now the default in PyTorch, JAX, and all major training frameworks.</div>`},
+  9:{title:'KV Cache & Grouped-Query Attention',color:'#2563eb',body:`
+<div class="dp-label">KV Cache for Autoregressive Generation</div>
+<div class="dp-code"><span class="hl-cmt">// Without cache: recompute everything each token</span>
+<span class="hl-err">Token 1: compute Q\u2081,K\u2081,V\u2081, attend</span>
+<span class="hl-err">Token 2: compute Q\u2081,K\u2081,V\u2081,Q\u2082,K\u2082,V\u2082, attend</span>
+<span class="hl-err">Token n: compute ALL Q,K,V, attend  \u2192 O(n\u00b2) total</span>
+
+<span class="hl-cmt">// With KV cache:</span>
+<span class="hl-ok">Token 1: compute Q\u2081,K\u2081,V\u2081, attend, CACHE K\u2081,V\u2081</span>
+<span class="hl-ok">Token 2: compute Q\u2082,K\u2082,V\u2082, attend to [K\u2081;K\u2082],[V\u2081;V\u2082]</span>
+<span class="hl-ok">Token n: compute Q\u2099,K\u2099,V\u2099, attend to cached KV</span>
+<span class="hl-ok">\u2192 O(n) per token, O(n\u00b2) total but distributed</span>
+
+<span class="hl-cmt">// Cache size per token:</span>
+<span class="hl-key">2 \u00d7 n_layers \u00d7 n_heads \u00d7 d_k \u00d7 bytes</span>
+<span class="hl-cmt">// Llama 2 70B: 2\u00d780\u00d764\u00d7128\u00d72 = 2.6 MB/token</span>
+<span class="hl-cmt">// At 4096 tokens: ~10.5 GB just for KV cache!</span></div>
+<div class="dp-label">Grouped-Query Attention (GQA)</div>
+<div class="dp-code"><span class="hl-cmt">// Standard MHA: each head has its own K, V</span>
+<span class="hl-key">MHA:</span>  64 Q heads, 64 K heads, 64 V heads
+      KV cache = <span class="hl-err">64 \u00d7 d_k per layer</span>
+
+<span class="hl-cmt">// GQA: share K,V across groups of Q heads</span>
+<span class="hl-key">GQA:</span>  64 Q heads, 8 K heads, 8 V heads
+      Every 8 Q heads share 1 K,V pair
+      KV cache = <span class="hl-ok">8 \u00d7 d_k per layer</span>
+      <span class="hl-ok">8x reduction in KV cache memory!</span>
+
+<span class="hl-cmt">// Multi-Query Attention (MQA): extreme version</span>
+<span class="hl-key">MQA:</span>  64 Q heads, 1 K head, 1 V head
+      <span class="hl-ok">64x reduction</span> but slight quality loss
+
+<span class="hl-cmt">// GQA is the sweet spot (Llama 2/3, Mistral)</span></div>
+<div class="dp-note n-blue"><strong>Serving economics:</strong> For a 70B model serving 100 concurrent users at 4K context each, KV cache alone needs ~1 TB of GPU memory with standard MHA. GQA reduces this to ~125 GB \u2014 the difference between needing 16 GPUs vs 2. This is why GQA is critical for production deployment.</div>`},
+};
+
+let current=0,playing=false,timer=null;const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const overlay=document.getElementById('detailOverlay');const panel=document.getElementById('detailPanel');const dpStep=document.getElementById('dpStep');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');
+for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');const allSteps=document.querySelectorAll('[data-step]');
+function lightNodes(step){allSteps.forEach(n=>{const s=parseInt(n.dataset.step);if(s<=step){n.classList.add('active');n.classList.remove('dimmed')}else{n.classList.remove('active');n.classList.add('dimmed')}})}
+function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+function showReset(){allSteps.forEach(n=>{n.classList.remove('active','dimmed')});progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin the deep dive...'}
+function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')closeDetail()});
+window.openDetail=function(step){const d=DETAILS[step];if(!d)return;dpStep.textContent=step;dpStep.style.background=d.color;dpTitle.textContent=d.title;dpBody.innerHTML=d.body;overlay.classList.add('visible');panel.classList.add('visible')};function closeDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}dpClose.addEventListener('click',closeDetail);overlay.addEventListener('click',closeDetail);
+reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Special Tensors — Normalization, Positional Encoding, Output Head — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}.pipe-arrow.lit{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Special Tensors: Normalization, Positional Encoding, and the Output Head</h2><span class="tb-sub">The small but critical components that don't fit neatly into attention or FFN</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">RMSNorm</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">pin_drop</span></div><span class="pipe-label">RoPE</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">output</span></div><span class="pipe-label">lm_head</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Final Norm</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">MoE</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">inventory</span></div><span class="pipe-label">Inventory</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">balance</span></div>
+        <div><div class="cc-title">RMSNorm: The Stability Guardrails</div><div class="cc-sub">Tiny 1D tensors that keep values in a healthy range</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What RMSNorm Does</div>
+            <div class="cc-text"><strong>Root Mean Square Layer Normalization</strong> normalizes hidden states by dividing by the RMS of all values, then scaling by a learned weight vector. Unlike standard LayerNorm, RMSNorm <strong>skips the mean subtraction</strong> &mdash; it only rescales, making it simpler and ~10-15% faster. Each of the 4,096 dimensions gets its own learned scale factor. Without normalization, values would grow or shrink exponentially across 32 layers, causing numerical overflow or vanishing gradients.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">All Norm Tensors</div>
+            <div class="cc-code"><span class="hl-cmt">// Per-layer norms (×32 layers):</span>
+<span class="hl-key">model.layers.{N}.input_layernorm.weight</span>
+  <span class="hl-cmt">// Shape: [4096] — before attention</span>
+<span class="hl-key">model.layers.{N}.post_attention_layernorm.weight</span>
+  <span class="hl-cmt">// Shape: [4096] — before FFN</span>
+
+<span class="hl-cmt">// Final norm (after last layer):</span>
+<span class="hl-key">model.norm.weight</span>
+  <span class="hl-cmt">// Shape: [4096] — before lm_head</span>
+
+<span class="hl-cmt">// Total: 64 per-layer + 1 final = 65 norms</span>
+<span class="hl-cmt">// 65 × 4096 × 2 bytes = ~520 KB</span>
+<span class="hl-cmt">// Less than 0.003% of the model!</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Norm tensors are the smallest weights in the file but deleting any one of them would make the model produce gibberish. They're the "guardrails" that keep the residual stream numerically stable across all 32 layers.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">functions</span></div>
+        <div><div class="cc-title">RMSNorm vs. LayerNorm</div><div class="cc-sub">Why modern LLMs dropped the mean subtraction</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Simplification</div>
+            <div class="cc-text"><strong>LayerNorm</strong> (BERT/GPT-2): subtract mean, divide by standard deviation, scale and shift. Requires both a <strong>weight</strong> and a <strong>bias</strong> vector (8,192 params per norm).<br><br><strong>RMSNorm</strong> (Llama/Mistral): divide by root-mean-square only, then scale. No mean subtraction, <strong>no bias</strong> (4,096 params per norm). The RMSNorm paper (Zhang &amp; Sennrich, 2019) showed this achieves equivalent quality with fewer operations. Most modern LLMs use RMSNorm exclusively.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Formula Comparison</div>
+            <div class="cc-code"><span class="hl-cmt">// LayerNorm (legacy):</span>
+<span class="hl-key">y</span> = (x - mean(x)) / std(x) * γ + β
+<span class="hl-cmt">// γ = weight [4096], β = bias [4096]</span>
+<span class="hl-cmt">// 8192 learnable params per norm</span>
+
+<span class="hl-cmt">// RMSNorm (modern):</span>
+<span class="hl-key">y</span> = x / RMS(x) * γ
+<span class="hl-cmt">// γ = weight [4096], no bias</span>
+<span class="hl-cmt">// 4096 learnable params per norm</span>
+<span class="hl-cmt">// ~10-15% faster computation</span></div>
+          </div>
+          <div class="cc-note n-orange"><strong>Why it matters:</strong> If you see a <code>layernorm.bias</code> tensor in a model file, you know it's using the older LayerNorm. Llama-family models only have <code>.weight</code> tensors for norms &mdash; no bias. This is a quick way to identify the normalization scheme.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">pin_drop</span></div>
+        <div><div class="cc-title">Rotary Position Embeddings (RoPE)</div><div class="cc-sub">Position encoding computed on the fly &mdash; usually NOT stored as weights</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How RoPE Works</div>
+            <div class="cc-text">RoPE encodes token position by <strong>rotating the Q and K vectors</strong> in 2D planes within the head_dim space. Each pair of dimensions is rotated by an angle proportional to the position &times; a frequency. This creates a pattern where the dot product Q&middot;K naturally decreases for distant tokens, giving the model a sense of distance. Unlike learned position embeddings, <strong>RoPE is computed at runtime from two config values</strong> and requires no stored tensors.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Config-Driven Position Encoding</div>
+            <div class="cc-code"><span class="hl-cmt">// RoPE is defined by config.json values:</span>
+<span class="hl-key">"rope_theta"</span>: <span class="hl-num">500000.0</span>
+<span class="hl-key">"max_position_embeddings"</span>: <span class="hl-num">131072</span>
+
+<span class="hl-cmt">// At runtime, frequencies are computed:</span>
+<span class="hl-key">freqs</span> = 1.0 / (theta ^ (2i/d))
+<span class="hl-cmt">// i = dimension index, d = head_dim</span>
+<span class="hl-cmt">// Higher theta → slower frequency decay</span>
+<span class="hl-cmt">// → better long-context performance</span>
+
+<span class="hl-cmt">// Some older models store inv_freq tensors</span>
+<span class="hl-cmt">// but modern models compute them on the fly</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> <code>rope_theta</code> controls context length capability. Llama 2 used 10,000 (4K context). Llama 3.1 uses 500,000 (128K context). Higher theta = the rotation frequencies decay more slowly = the model can distinguish positions across longer sequences.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div>
+        <div><div class="cc-title">The Final Norm: model.norm.weight</div><div class="cc-sub">The last normalization before the output head</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Purpose</div>
+            <div class="cc-text">After passing through all 32 transformer layers, the hidden states go through one final RMSNorm: <code>model.norm.weight</code>. This is the same [4096] shape as the per-layer norms, but it sits between the last transformer layer and the <code>lm_head</code> output projection. It ensures the hidden states are properly scaled before being converted into token probabilities. Without it, the lm_head would receive unnormalized inputs, producing skewed probability distributions.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Output Pipeline</div>
+            <div class="cc-code"><span class="hl-cmt">// After the last transformer layer:</span>
+
+<span class="hl-key">hidden</span> = transformer_layers(input)
+  <span class="hl-cmt">// Shape: [seq_len, 4096]</span>
+
+<span class="hl-key">normed</span> = rms_norm(hidden, model.norm.weight)
+  <span class="hl-cmt">// Shape: [seq_len, 4096]</span>
+
+<span class="hl-key">logits</span> = normed @ lm_head.weight.T
+  <span class="hl-cmt">// Shape: [seq_len, 128256]</span>
+
+<span class="hl-key">probs</span> = softmax(logits)
+  <span class="hl-cmt">// Shape: [seq_len, 128256]</span>
+
+<span class="hl-cmt">// model.norm is the ONLY standalone norm</span>
+<span class="hl-cmt">// (not inside a layer)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">output</span></div>
+        <div><div class="cc-title">The Output Head: lm_head.weight</div><div class="cc-sub">Converting hidden states back to vocabulary probabilities</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Inverse Embedding</div>
+            <div class="cc-text"><code>lm_head.weight</code> has shape <strong>[vocab_size, hidden_size]</strong> = [128256, 4096]. It's the <strong>inverse of the embedding</strong>: while embed_tokens converts token IDs to vectors, lm_head converts vectors back to a score for every token. Each row of lm_head represents "how much does this hidden state look like token X?" When the dot product of the hidden state with row 42 is high, token 42 is a likely next token.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">lm_head Details</div>
+            <div class="cc-code"><span class="hl-key">"lm_head.weight"</span>: {
+  <span class="hl-key">"dtype"</span>: <span class="hl-str">"BF16"</span>,
+  <span class="hl-key">"shape"</span>: [<span class="hl-num">128256</span>, <span class="hl-num">4096</span>],
+  <span class="hl-key">"data_offsets"</span>: [...]
+}
+
+<span class="hl-cmt">// 128,256 × 4,096 × 2 = ~1 GB</span>
+<span class="hl-cmt">// Same shape as embed_tokens.weight</span>
+<span class="hl-cmt">// But NOT shared (tie_word_embeddings=false)</span>
+
+<span class="hl-cmt">// If tied: lm_head references embed_tokens</span>
+<span class="hl-cmt">// If untied: separate tensor, separate storage</span></div>
+          </div>
+          <div class="cc-note n-red"><strong>Why it matters:</strong> The lm_head is the last matrix multiply before text generation. Its quality directly affects token prediction. Some quantization schemes keep lm_head at higher precision than the rest of the model to preserve generation quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">hub</span></div>
+        <div><div class="cc-title">MoE-Specific Tensors</div><div class="cc-sub">Mixture of Experts: router weights and per-expert FFN matrices</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How MoE Changes the Tensor Layout</div>
+            <div class="cc-text"><strong>Mixture of Experts</strong> models (like Mixtral 8x7B) replace the single MLP with <strong>N expert MLPs</strong> plus a <strong>router</strong>. Mixtral has 8 copies of gate/up/down projections per layer, plus a small router weight that decides which 2 experts to activate for each token. Total params: 46.7B, but only 13B active per token. The router tensor is tiny &mdash; [num_experts, hidden_size] = [8, 4096] &mdash; but critically determines expert selection.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">MoE Tensor Names</div>
+            <div class="cc-code"><span class="hl-cmt">// Mixtral layer tensors (MoE):</span>
+
+<span class="hl-key">model.layers.{N}.block_sparse_moe.gate.weight</span>
+  <span class="hl-cmt">// Shape: [8, 4096] — the router</span>
+
+<span class="hl-cmt">// 8 expert MLPs per layer:</span>
+<span class="hl-key">...block_sparse_moe.experts.0.w1.weight</span>
+<span class="hl-key">...block_sparse_moe.experts.0.w2.weight</span>
+<span class="hl-key">...block_sparse_moe.experts.0.w3.weight</span>
+<span class="hl-cmt">// ... through experts.7</span>
+
+<span class="hl-cmt">// 8 experts × 3 matrices = 24 MLP tensors</span>
+<span class="hl-cmt">// + 1 router = 25 MoE tensors per layer</span></div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> MoE is why you see models with 47B total parameters but 13B "active" &mdash; only 2 of 8 experts fire per token. The file is 47B params large, but inference only reads 13B params worth of weights per forward pass.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">inventory</span></div>
+        <div><div class="cc-title">Complete Special Tensor Inventory</div><div class="cc-sub">Every tensor that isn't attention, FFN, or embedding</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Full List (Llama 3.1 8B)</div>
+            <div class="cc-code"><span class="hl-cmt">// Standalone special tensors:</span>
+
+<span class="hl-key">model.embed_tokens.weight</span>
+  [<span class="hl-num">128256</span>, <span class="hl-num">4096</span>]  <span class="hl-cmt">// ~1.0 GB</span>
+
+<span class="hl-key">model.norm.weight</span>
+  [<span class="hl-num">4096</span>]           <span class="hl-cmt">// 8 KB</span>
+
+<span class="hl-key">lm_head.weight</span>
+  [<span class="hl-num">128256</span>, <span class="hl-num">4096</span>]  <span class="hl-cmt">// ~1.0 GB</span>
+
+<span class="hl-cmt">// Per-layer norms (×32 layers):</span>
+<span class="hl-key">input_layernorm.weight</span>      [<span class="hl-num">4096</span>]
+<span class="hl-key">post_attention_layernorm.weight</span> [<span class="hl-num">4096</span>]
+
+<span class="hl-cmt">// Not stored as weights:</span>
+<span class="hl-cmt">// - RoPE (computed from rope_theta)</span>
+<span class="hl-cmt">// - KV cache (runtime only)</span>
+<span class="hl-cmt">// - Attention masks (runtime only)</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Size Summary</div>
+            <div class="cc-text"><strong>Embedding:</strong> ~1.0 GB<br>
+              <strong>lm_head:</strong> ~1.0 GB<br>
+              <strong>All 65 norms:</strong> ~520 KB<br>
+              <strong>RoPE:</strong> 0 bytes (computed)<br><br>
+              Total "special" tensors: ~2.0 GB, or about <strong>12.5% of the model</strong>. The remaining 87.5% is attention (28%) + FFN (65%) across the 32 transformer layers.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">lightbulb</span></div>
+        <div><div class="cc-title">Practical Takeaways</div><div class="cc-sub">Debugging, quantization, and context length implications</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Key Decisions These Tensors Encode</div>
+            <div class="cc-text"><strong>rope_theta:</strong> Determines max context length. If a model claims 128K context but rope_theta is 10,000, the quality will degrade past ~4K tokens.<br><br>
+              <strong>tie_word_embeddings:</strong> If true, embed_tokens and lm_head share weights &mdash; saves ~1 GB but limits the model's ability to specialize input vs. output representations.<br><br>
+              <strong>MoE presence:</strong> If you see <code>block_sparse_moe</code> or <code>experts</code> in tensor names, the model is MoE. Total params ≠ active params &mdash; memory estimates must account for loading all experts even if only 2 fire per token.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quick Checks</div>
+            <div class="cc-code"><span class="hl-cmt">// Debugging checklist for special tensors:</span>
+
+<span class="hl-key">✓ model.norm.weight</span> exists?
+  <span class="hl-cmt">// If missing → loading will crash</span>
+
+<span class="hl-key">✓ lm_head.weight</span> shape[0] == vocab_size?
+  <span class="hl-cmt">// Mismatch → wrong tokenizer</span>
+
+<span class="hl-key">✓ rope_theta</span> matches expected context?
+  <span class="hl-cmt">// 10K → 4K ctx, 500K → 128K ctx</span>
+
+<span class="hl-key">✓ Norm count</span> == 2 × num_layers + 1?
+  <span class="hl-cmt">// Missing norm → corrupt download</span>
+
+<span class="hl-key">✓ MoE</span>: experts in names?
+  <span class="hl-cmt">// If yes → check total vs active params</span></div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Special tensors are the "connective tissue" of the model. They're small, but each serves a unique structural role. You now know every tensor type in an LLM file. Next: the tokenizer files that convert text to numbers.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-feed-forward-network.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: Feed-Forward Network</a>
+    <a class="ch-nav-btn next" href="07-tokenizer-files.html">Ch 7: Tokenizer Files <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0],3:[1],4:[3],5:[2],6:[4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>RMSNorm tensors:</strong> 65 tiny [4096] vectors (~520 KB total) that keep values stable across 32 layers. Removing any one causes the model to produce gibberish.',color:'#0d9488'},
+    2:{text:'<strong>RMSNorm vs LayerNorm:</strong> Modern LLMs dropped mean subtraction and bias. RMSNorm: x/RMS(x) × γ — weight only, no bias, ~10-15% faster. Look for missing bias tensors as a clue.',color:'#ea580c'},
+    3:{text:'<strong>RoPE positions:</strong> Computed at runtime from <code>rope_theta</code> in config.json — no stored tensors needed. rope_theta=500000 enables 128K context; theta=10000 gives ~4K context.',color:'#7c3aed'},
+    4:{text:'<strong>Final norm:</strong> <code>model.norm.weight</code> sits between the last transformer layer and lm_head. It ensures hidden states are properly scaled before the vocabulary projection.',color:'#2563eb'},
+    5:{text:'<strong>lm_head:</strong> Shape [128256, 4096] — the inverse embedding. Converts hidden states to logits over every token. ~1 GB in BF16. Some quantization schemes keep it at higher precision.',color:'#dc2626'},
+    6:{text:'<strong>MoE tensors:</strong> Mixtral adds a [8, 4096] router per layer plus 8 copies of the MLP. 47B total params but only 13B active per token — the file is 3.5× larger than inference cost suggests.',color:'#db2777'},
+    7:{text:'<strong>Full inventory:</strong> embed_tokens (~1 GB) + lm_head (~1 GB) + 65 norms (~520 KB) + RoPE (0 bytes, computed). "Special" tensors = ~12.5% of the model. The rest is attention + FFN.',color:'#d97706'},
+    8:{text:'<strong>Takeaway:</strong> Special tensors are small but structurally critical. Check rope_theta for context length, lm_head shape for tokenizer compatibility, and norm count for file integrity.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

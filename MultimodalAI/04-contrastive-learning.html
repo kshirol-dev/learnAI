@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Contrastive Learning &amp; CLIP &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Contrastive Learning &amp; CLIP</h2><span class="tb-sub">How CLIP connects images and text, contrastive loss, LAION-5B, and zero-shot classification</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Image</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Text</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Pair</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Train</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Zero-shot</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Backbone</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">link</span></div>
+        <div><div class="cc-title">The Core Idea</div><div class="cc-sub">Learning to connect images and text in a shared space</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What CLIP Does</div>
+            <div class="cc-text">CLIP (Contrastive Language-Image Pre-training) learns a <strong>shared embedding space</strong> where images and text live together. A photo of a cat and the text &ldquo;a photo of a cat&rdquo; are mapped to <strong>nearby points</strong> in this space. A photo of a dog and &ldquo;a photo of a cat&rdquo; are mapped to <strong>distant points</strong>. This simple idea &mdash; pulling matching pairs together and pushing non-matching pairs apart &mdash; is the foundation of modern multimodal AI.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">How It Trains</div>
+            <div class="cc-text">Given a batch of N image-text pairs:<br>1. Encode all N images with a <strong>vision encoder</strong> (ViT)<br>2. Encode all N texts with a <strong>text encoder</strong> (Transformer)<br>3. Compute cosine similarity between all N&times;N pairs<br>4. <strong>Maximize</strong> similarity for matching pairs (the diagonal)<br>5. <strong>Minimize</strong> similarity for non-matching pairs (off-diagonal)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Contrastive Loss Visualized</div>
+            <div class="cc-code"><span class="hl-cmt">// Batch of N=4 image-text pairs</span>
+<span class="hl-cmt">// Similarity matrix (higher = more similar)</span>
+
+           Text1  Text2  Text3  Text4
+Image1  [ <span class="hl-num">0.95</span>   0.12   0.08   0.15 ]
+Image2  [  0.10  <span class="hl-num">0.91</span>   0.05   0.11 ]
+Image3  [  0.07   0.09  <span class="hl-num">0.93</span>   0.06 ]
+Image4  [  0.13   0.08   0.04  <span class="hl-num">0.89</span> ]
+
+<span class="hl-cmt">// Goal: maximize diagonal (matching pairs)</span>
+<span class="hl-cmt">// minimize everything else (non-matching)</span>
+<span class="hl-cmt">// In practice: batch size = 32,768</span></div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> CLIP doesn&rsquo;t need labeled categories. It learns from raw image-text pairs scraped from the internet. This is why it generalizes so well &mdash; it&rsquo;s seen millions of concepts described in natural language, not a fixed taxonomy of 1,000 ImageNet classes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">search</span></div>
+        <div><div class="cc-title">Zero-Shot Classification</div><div class="cc-sub">Classify images without any task-specific training</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How It Works</div>
+            <div class="cc-text">1. Define categories as text prompts: [&ldquo;a photo of a cat&rdquo;, &ldquo;a photo of a dog&rdquo;, &ldquo;a photo of a car&rdquo;]<br>2. Encode each category with CLIP&rsquo;s text encoder<br>3. Encode the input image with CLIP&rsquo;s image encoder<br>4. Compute cosine similarity between the image and each text embedding<br>5. The text with highest similarity = predicted category<br><br><strong>No fine-tuning, no labeled training data for the specific task.</strong> You can add new categories at any time just by describing them in text.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Performance</div>
+            <div class="cc-text">CLIP achieves <strong>competitive accuracy on ImageNet</strong> (76.2% top-1) without ever seeing ImageNet training data. On some specialized tasks, it matches models trained specifically for that task. This &ldquo;zero-shot&rdquo; capability was unprecedented in 2021.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Prompt Engineering for CLIP</div>
+            <div class="cc-code"><span class="hl-cmt">// Better prompts = better classification</span>
+
+<span class="hl-key">Bad:</span>  "cat"
+<span class="hl-str">Good:</span> "a photo of a cat"
+<span class="hl-str">Best:</span> "a photo of a cat, a type of pet"
+
+<span class="hl-cmt">// Ensemble multiple prompts per class:</span>
+<span class="hl-key">"a photo of a {class}"</span>
+<span class="hl-key">"a blurry photo of a {class}"</span>
+<span class="hl-key">"a drawing of a {class}"</span>
+<span class="hl-cmt">// Average embeddings for robust classification</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Zero-shot classification means you can deploy a classifier for any set of categories without collecting training data. Need to classify 50 new product types? Just describe them in text. This is why CLIP is so versatile in production.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">dataset</span></div>
+        <div><div class="cc-title">LAION-5B &amp; Training Data</div><div class="cc-sub">5.85 billion image-text pairs that democratized multimodal AI</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Dataset</div>
+            <div class="cc-text"><strong>OpenAI&rsquo;s CLIP</strong> was trained on 400 million image-text pairs from a proprietary dataset called WIT (WebImageText). This data was never released.<br><br><strong>LAION-5B</strong> (Large-scale Artificial Intelligence Open Network) is the open-source response: <strong>5.85 billion image-text pairs</strong> scraped from the internet, filtered for quality. It enabled the entire open-source multimodal ecosystem.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Scale Comparison</div>
+            <div class="cc-code"><span class="hl-cmt">// Training data scale</span>
+<span class="hl-key">ImageNet</span>       1.2M images, 1K classes
+<span class="hl-key">CLIP (WIT)</span>     400M image-text pairs
+<span class="hl-key">LAION-400M</span>     400M pairs <span class="hl-str">(open)</span>
+<span class="hl-key">LAION-5B</span>       5.85B pairs <span class="hl-str">(open)</span>
+<span class="hl-key">DataComp</span>       12.8B pairs <span class="hl-str">(filtered)</span>
+
+<span class="hl-cmt">// More data = better generalization</span>
+<span class="hl-cmt">// But also more noise, bias, and risk</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Data Quality Challenges</div>
+            <div class="cc-text">&bull; <strong>Noisy:</strong> Many pairs have weak or incorrect text-image associations<br>&bull; <strong>Biased:</strong> Reflects internet demographics, stereotypes, and content distribution<br>&bull; <strong>NSFW content:</strong> Requires filtering (LAION includes safety scores)<br>&bull; <strong>Copyright:</strong> Contains copyrighted images &mdash; legal battles ongoing<br>&bull; <strong>Privacy:</strong> Contains personal photos scraped without consent</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> LAION-5B <strong>democratized multimodal AI</strong>. Before it, only companies with proprietary web-scale datasets (OpenAI, Google) could train CLIP-like models. After LAION, anyone could train competitive models. Stable Diffusion was trained on LAION data.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">palette</span></div>
+        <div><div class="cc-title">CLIP in Stable Diffusion</div><div class="cc-sub">The text conditioning backbone that makes text-to-image work</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How CLIP Powers Image Generation</div>
+            <div class="cc-text">In Stable Diffusion, CLIP&rsquo;s text encoder converts your prompt into embeddings that <strong>guide the diffusion process</strong>. The diffusion model (U-Net) doesn&rsquo;t understand text directly &mdash; it understands CLIP embeddings. CLIP is the translator between your words and the generated image.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Pipeline</div>
+            <div class="cc-code"><span class="hl-cmt">// Text-to-Image via CLIP + Diffusion</span>
+
+<span class="hl-key">1.</span> User writes: "a sunset over mountains, oil painting"
+<span class="hl-key">2.</span> CLIP text encoder &rarr; text embeddings (77 tokens &times; 768d)
+<span class="hl-key">3.</span> Text embeddings injected via <span class="hl-str">cross-attention</span>
+   into the U-Net at every denoising step
+<span class="hl-key">4.</span> U-Net denoises latent space conditioned on text
+<span class="hl-key">5.</span> VAE decoder &rarr; final 1024&times;1024 image
+
+<span class="hl-cmt">// The text embeddings "steer" the denoising</span>
+<span class="hl-cmt">// toward images matching the description</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why CLIP Quality Matters</div>
+            <div class="cc-text">The quality of CLIP&rsquo;s text understanding <strong>directly affects</strong> image generation quality:<br><br>&bull; If CLIP doesn&rsquo;t understand &ldquo;to the left of&rdquo;, Stable Diffusion can&rsquo;t reliably place objects<br>&bull; If CLIP conflates &ldquo;red car&rdquo; and &ldquo;car red&rdquo;, color assignment becomes unreliable<br>&bull; If CLIP can&rsquo;t count, &ldquo;three apples&rdquo; might generate two or five<br><br>This is why newer models use better text encoders: SDXL uses dual CLIP + OpenCLIP, SD3 and Flux use T5-XXL.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> When your text-to-image prompt doesn&rsquo;t work as expected, the bottleneck is often the text encoder (CLIP), not the image generator (diffusion model). Understanding this helps you debug prompt failures and choose better models.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">CLIP&rsquo;s Limitations</div><div class="cc-sub">Where contrastive learning struggles</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Known Weaknesses</div>
+            <div class="cc-text">&bull; <strong>Spatial relationships:</strong> &ldquo;cat on top of dog&rdquo; vs &ldquo;dog on top of cat&rdquo; &mdash; CLIP treats these as nearly identical because it&rsquo;s a bag-of-concepts model<br>&bull; <strong>Counting:</strong> &ldquo;three apples&rdquo; vs &ldquo;five apples&rdquo; &mdash; CLIP doesn&rsquo;t encode quantity well<br>&bull; <strong>Negation:</strong> &ldquo;no people in the image&rdquo; &mdash; CLIP often ignores &ldquo;no&rdquo;<br>&bull; <strong>Fine-grained attributes:</strong> Specific textures, materials, subtle color differences<br>&bull; <strong>Compositionality:</strong> Complex multi-object scenes with specific arrangements</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Improvements &amp; Successors</div>
+            <div class="cc-text">&bull; <strong>SigLIP (Google):</strong> Replaces softmax with sigmoid loss &mdash; better scaling and performance<br>&bull; <strong>EVA-CLIP:</strong> Larger, better-trained vision encoder with masked image modeling<br>&bull; <strong>OpenCLIP:</strong> Open-source reproductions trained on LAION with improvements<br>&bull; <strong>T5/FLAN text encoders:</strong> Using language models instead of CLIP for richer text understanding (used in SD3, Flux)<br>&bull; <strong>LLM-based encoders:</strong> Using the LLM itself as the text encoder for better compositionality</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> CLIP&rsquo;s limitations explain many of the &ldquo;failures&rdquo; of text-to-image models. When Stable Diffusion generates the wrong number of fingers or puts objects in the wrong position, it&rsquo;s partly because CLIP doesn&rsquo;t encode counting or spatial relationships well.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">hub</span></div>
+        <div><div class="cc-title">CLIP as the Universal Backbone</div><div class="cc-sub">Why CLIP is everywhere in multimodal AI</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Where CLIP Is Used</div>
+            <div class="cc-text">&bull; <strong>Text-to-image:</strong> Stable Diffusion, DALL-E (text conditioning via cross-attention)<br>&bull; <strong>Image search:</strong> Encode query text + database images, find nearest neighbors<br>&bull; <strong>Content moderation:</strong> Classify images by text descriptions at scale<br>&bull; <strong>Multimodal RAG:</strong> Retrieve images relevant to text queries in vector databases<br>&bull; <strong>Zero-shot classification:</strong> Classify without task-specific training data<br>&bull; <strong>Image captioning:</strong> As the vision encoder in vision-language models<br>&bull; <strong>CLIP Score:</strong> Metric for evaluating text-image alignment in generated images</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The CLIP Ecosystem</div>
+            <div class="cc-text">CLIP spawned an entire ecosystem of tools, models, and datasets:<br><br>&bull; <strong>OpenCLIP:</strong> Open-source implementation with multiple model sizes<br>&bull; <strong>LAION:</strong> Open datasets for training (400M, 2B, 5B)<br>&bull; <strong>Hugging Face:</strong> Pre-trained models, fine-tuning recipes, model hub<br>&bull; <strong>CLIP-based metrics:</strong> CLIP Score, CLIP-IQA for quality assessment<br>&bull; <strong>CLIP retrieval:</strong> Billion-scale image search engines</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> CLIP is to multimodal AI what word2vec was to NLP &mdash; a foundational embedding technique that everything else builds on. Understanding CLIP is understanding the backbone of modern multimodal systems. It&rsquo;s the glue between text and images.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">build</span></div>
+        <div><div class="cc-title">Using CLIP in Practice</div><div class="cc-sub">Practical applications and integration patterns</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Common Patterns</div>
+            <div class="cc-code"><span class="hl-cmt">// Pattern 1: Image Search</span>
+<span class="hl-key">index:</span> encode all images &rarr; store in vector DB
+<span class="hl-key">query:</span> encode text query &rarr; nearest neighbor search
+<span class="hl-key">result:</span> top-K most similar images
+
+<span class="hl-cmt">// Pattern 2: Zero-Shot Classification</span>
+<span class="hl-key">classes:</span> encode class descriptions as text
+<span class="hl-key">input:</span>   encode image
+<span class="hl-key">predict:</span> argmax(cosine_similarity)
+
+<span class="hl-cmt">// Pattern 3: Content Filtering</span>
+<span class="hl-key">filter:</span> encode "NSFW content" as text
+<span class="hl-key">score:</span>  similarity(image, filter_text)
+<span class="hl-key">flag:</span>   score &gt; threshold</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Fine-Tuning CLIP</div>
+            <div class="cc-text">Pre-trained CLIP works well for general tasks, but <strong>fine-tuning on domain data</strong> can dramatically improve performance:<br><br>&bull; <strong>Medical imaging:</strong> Fine-tune on radiology reports + X-rays<br>&bull; <strong>E-commerce:</strong> Fine-tune on product descriptions + photos<br>&bull; <strong>Fashion:</strong> Fine-tune on style descriptions + outfit images<br>&bull; <strong>Satellite imagery:</strong> Fine-tune on geographic descriptions + aerial photos<br><br>Even a few thousand domain-specific pairs can significantly boost accuracy.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Pro tip:</strong> When building multimodal search or classification, start with pre-trained CLIP. If accuracy isn&rsquo;t sufficient, fine-tune on your domain data. If you need spatial understanding or counting, consider augmenting CLIP with a VLM like GPT-4V or Gemini.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">Key Takeaways</div><div class="cc-sub">What to remember about contrastive learning and CLIP</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Essential Concepts</div>
+            <div class="cc-text">1. <strong>Contrastive learning:</strong> Pull matching image-text pairs together, push non-matching apart<br><br>2. <strong>Shared embedding space:</strong> Images and text live in the same vector space &mdash; enabling cross-modal operations<br><br>3. <strong>Zero-shot transfer:</strong> Classify by describing categories in text &mdash; no task-specific training needed<br><br>4. <strong>Text conditioning:</strong> CLIP embeddings guide image generation in Stable Diffusion via cross-attention<br><br>5. <strong>Scale matters:</strong> 400M+ image-text pairs needed for good generalization</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Practical Implications</div>
+            <div class="cc-text">&bull; CLIP embeddings are your go-to for <strong>multimodal search and retrieval</strong><br>&bull; Text-to-image quality depends heavily on <strong>text encoder quality</strong><br>&bull; Zero-shot classification is <strong>good enough for many production use cases</strong><br>&bull; Fine-tuning CLIP on domain data can <strong>dramatically improve performance</strong><br>&bull; CLIP&rsquo;s limitations (spatial, counting) explain many <strong>text-to-image failures</strong></div>
+          </div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 5 dives deep into how diffusion models actually work &mdash; the forward noise process, reverse denoising, the U-Net architecture, classifier-free guidance, and the math made intuitive.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-generative-family-tree.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Generative Model Family Tree</a>
+    <a class="ch-nav-btn next" href="05-diffusion-models.html">Ch 5: How Diffusion Models Work <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2],2:[0,1,4],3:[2,3],4:[3,5],5:[4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> CLIP learns a shared embedding space where images and text live together. Matching pairs are pulled close; non-matching pairs are pushed apart.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> Zero-shot classification: describe categories in text, encode them, find the closest match to an image embedding. No task-specific training needed.',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> LAION-5B: 5.85 billion image-text pairs, the largest open dataset. It enabled open-source CLIP variants and Stable Diffusion training.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> CLIP is the text conditioning backbone of Stable Diffusion \u2014 it translates your prompt into embeddings that guide the diffusion process.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Limitations: CLIP struggles with spatial relationships, counting, negation, and compositionality. SigLIP and T5 encoders improve on these.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> CLIP is everywhere: text-to-image, image search, content moderation, multimodal RAG, zero-shot classification, and evaluation metrics.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> In practice: use pre-trained CLIP for search and classification, fine-tune on domain data for specialized tasks, augment with VLMs for complex reasoning.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> CLIP is to multimodal AI what word2vec was to NLP \u2014 a foundational embedding technique that everything else builds on.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Model Registry & Versioning — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Model Registry &amp; Versioning</h2><span class="tb-sub">Model artifacts, versioning strategies, staging/production promotion, and DVC for data</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Code (Git)</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">database</span></div><span class="pipe-label">Data (DVC)</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Model</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">inventory_2</span></div><span class="pipe-label">Registry</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Staging</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Production</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">help</span></div><div><div class="cc-title">The Three Artifacts of ML</div><div class="cc-sub">Code, data, and models &mdash; all must be versioned</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why Version Everything</div><div class="cc-text">In traditional software, you version one thing: <strong>code</strong> (with Git). In ML, you must version <strong>three things</strong>: code, data, and models. A model is a function of its code <em>and</em> its training data. Change either one, and you get a different model. If you can&rsquo;t trace back from a production model to the exact code commit and data version that produced it, you can&rsquo;t debug it, audit it, or reproduce it. This <strong>lineage</strong> &mdash; the chain from data → code → model → deployment &mdash; is the backbone of ML governance.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Three Artifacts</div><div class="cc-code"><span class="hl-cmt">// The three artifacts of ML</span>
+
+<span class="hl-key">1. Code</span> → Git
+   train.py, preprocess.py, config.yaml
+   Version: git commit hash
+
+<span class="hl-key">2. Data</span> → DVC / LakeFS
+   train.csv (100GB), images/ (50GB)
+   Version: content hash (SHA-256)
+   Storage: S3, GCS, Azure Blob
+
+<span class="hl-key">3. Model</span> → Model Registry
+   model.pt, model.onnx, tokenizer/
+   Version: auto-incremented (v1, v2, v3)
+   Metadata: params, metrics, lineage
+
+<span class="hl-cmt">// Lineage chain:</span>
+<span class="hl-cmt">// data v2.3 + code a3f7b2c → model v7</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Git alone is not enough for ML. Git handles code well but cannot handle large binary files (datasets, model weights). You need specialized tools for data (DVC) and models (model registry).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">database</span></div><div><div class="cc-title">DVC: Data Version Control</div><div class="cc-sub">Git for data &mdash; lightweight, open-source, cloud-native</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How DVC Works</div><div class="cc-text"><strong>DVC</strong> (Data Version Control) is an open-source tool that extends Git to handle large files. Instead of storing data in Git, DVC stores a small <strong>metafile</strong> (<code>.dvc</code>) in Git that contains the hash of the actual data. The data itself lives in remote storage (S3, GCS, Azure Blob, or local). When you <code>dvc checkout</code>, DVC fetches the correct data version from storage. This means you can <code>git checkout v2.3</code> and DVC will automatically give you the matching data. DVC also supports <strong>pipelines</strong> (<code>dvc.yaml</code>) that define the DAG of data processing steps, making the entire pipeline reproducible.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">DVC Workflow</div><div class="cc-code"><span class="hl-cmt"># Initialize DVC in a Git repo</span>
+$ dvc init
+$ dvc remote add -d s3 s3://my-bucket/dvc
+
+<span class="hl-cmt"># Track a large dataset</span>
+$ dvc add data/train.csv
+<span class="hl-cmt"># Creates data/train.csv.dvc (small metafile)</span>
+<span class="hl-cmt"># Adds data/train.csv to .gitignore</span>
+
+<span class="hl-cmt"># Commit metafile to Git</span>
+$ git add data/train.csv.dvc .gitignore
+$ git commit -m <span class="hl-str">"data v2.3"</span>
+
+<span class="hl-cmt"># Push data to remote storage</span>
+$ dvc push
+
+<span class="hl-cmt"># Later: get data for a specific version</span>
+$ git checkout v2.3
+$ dvc checkout
+<span class="hl-cmt"># → data/train.csv is now v2.3</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> DVC&rsquo;s metafile approach means your Git history stays small and fast, while your data can be terabytes. The metafile is just a few lines of YAML containing the data&rsquo;s content hash.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">inventory_2</span></div><div><div class="cc-title">The Model Registry</div><div class="cc-sub">A centralized catalog of trained models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Is a Model Registry?</div><div class="cc-text">A <strong>model registry</strong> is a centralized store for trained model artifacts with metadata. Think of it as a &ldquo;package registry&rdquo; (like npm or PyPI) but for ML models. Key capabilities: <strong>versioning</strong> (auto-incrementing version numbers), <strong>metadata</strong> (parameters, metrics, training data version, code commit), <strong>stage management</strong> (None → Staging → Production → Archived), <strong>aliases</strong> (named references like &ldquo;champion&rdquo; or &ldquo;challenger&rdquo;), and <strong>lineage</strong> (which experiment run produced this model). MLflow Model Registry is the most widely used open-source option. Cloud platforms (SageMaker, Vertex AI) have their own built-in registries.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">MLflow Model Registry</div><div class="cc-code"><span class="hl-key">import</span> mlflow
+
+<span class="hl-cmt"># Register a model from an experiment run</span>
+result = mlflow.register_model(
+    model_uri=<span class="hl-str">"runs:/abc123/model"</span>,
+    name=<span class="hl-str">"fraud-detector"</span>
+)
+<span class="hl-cmt"># → Creates fraud-detector version 1</span>
+
+<span class="hl-cmt"># Set alias for deployment</span>
+client = mlflow.MlflowClient()
+client.set_registered_model_alias(
+    name=<span class="hl-str">"fraud-detector"</span>,
+    alias=<span class="hl-str">"champion"</span>,
+    version=<span class="hl-num">3</span>
+)
+
+<span class="hl-cmt"># Load by alias in serving code</span>
+model = mlflow.pyfunc.load_model(
+    <span class="hl-str">"models:/fraud-detector@champion"</span>
+)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Aliases decouple deployment from version numbers. Your serving code always loads <code>@champion</code>. To deploy a new model, you just move the alias &mdash; no code change needed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">swap_horiz</span></div><div><div class="cc-title">Model Promotion Workflow</div><div class="cc-sub">From experiment to staging to production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Promotion Pipeline</div><div class="cc-text">A mature model promotion workflow has clear gates: (1) <strong>Experiment</strong> &mdash; data scientist trains and evaluates, logs to tracker. (2) <strong>Registration</strong> &mdash; best run is registered in the model registry. (3) <strong>Staging</strong> &mdash; model is deployed to a staging environment for integration testing, shadow mode (receives real traffic but predictions are not served), and A/B testing. (4) <strong>Validation gates</strong> &mdash; automated checks: accuracy above threshold, latency within SLA, no regression on critical slices, bias checks pass. (5) <strong>Production</strong> &mdash; model is promoted to production with canary deployment (serve to 5% of traffic first). (6) <strong>Archive</strong> &mdash; old production model is archived but kept for rollback.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Promotion Flow</div><div class="cc-code"><span class="hl-cmt">// Model promotion pipeline</span>
+
+<span class="hl-key">Experiment</span>
+  │  Data scientist trains model
+  │  Logs to MLflow/W&amp;B
+  ▼
+<span class="hl-key">Register</span>
+  │  Best run → model registry v7
+  │  Metadata: params, metrics, lineage
+  ▼
+<span class="hl-key">Staging</span>
+  │  Deploy to staging environment
+  │  Shadow mode: real traffic, no serving
+  │  Integration tests pass?
+  ▼
+<span class="hl-key">Validation Gates</span>
+  │  ✓ Accuracy ≥ 0.92
+  │  ✓ Latency p99 ≤ 50ms
+  │  ✓ No regression on critical slices
+  │  ✓ Bias audit passes
+  ▼
+<span class="hl-key">Production</span>
+  │  Canary: 5% → 25% → 100%
+  │  Alias: @champion → v7
+  ▼
+<span class="hl-key">Archive</span>
+     Old @champion (v6) → archived</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Never promote a model to production without automated validation gates. Human approval is fine as an additional check, but the automated gates catch regressions that humans miss.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">package_2</span></div><div><div class="cc-title">Model Packaging Formats</div><div class="cc-sub">How to package a model for deployment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Packaging Options</div><div class="cc-text">A &ldquo;model&rdquo; in production is more than just weights &mdash; it includes preprocessing logic, tokenizers, configuration, and dependencies. Common packaging formats: <strong>MLflow Model</strong> (framework-agnostic, includes <code>MLmodel</code> descriptor + <code>conda.yaml</code>), <strong>ONNX</strong> (Open Neural Network Exchange &mdash; convert PyTorch/TF models to a portable format for optimized inference), <strong>TorchScript</strong> (serialized PyTorch models that can run without Python), <strong>SavedModel</strong> (TensorFlow&rsquo;s native format), and <strong>Docker containers</strong> (package everything including the runtime). For LLMs, models are typically served via specialized inference servers (vLLM, TGI) rather than generic packaging.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">MLflow Model Format</div><div class="cc-code"><span class="hl-cmt"># MLflow model directory structure</span>
+fraud-detector/
+├── MLmodel          <span class="hl-cmt"># metadata + flavors</span>
+├── conda.yaml       <span class="hl-cmt"># environment</span>
+├── requirements.txt <span class="hl-cmt"># pip deps</span>
+├── python_model.pkl <span class="hl-cmt"># or model.pt</span>
+└── artifacts/
+    └── preprocessor.pkl
+
+<span class="hl-cmt"># MLmodel file:</span>
+<span class="hl-key">artifact_path</span>: model
+<span class="hl-key">flavors</span>:
+  <span class="hl-key">python_function</span>:
+    loader_module: mlflow.pytorch
+    python_version: <span class="hl-str">3.11.0</span>
+  <span class="hl-key">pytorch</span>:
+    model_data: model.pt
+    pytorch_version: <span class="hl-str">2.3.0</span>
+
+<span class="hl-cmt"># Load anywhere:</span>
+<span class="hl-cmt"># mlflow.pyfunc.load_model("path/to/model")</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> MLflow&rsquo;s &ldquo;flavors&rdquo; system lets you save a model in its native format (PyTorch, sklearn, etc.) while also providing a generic <code>pyfunc</code> interface. This means any MLflow model can be loaded and served the same way, regardless of framework.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">alt_route</span></div><div><div class="cc-title">LakeFS: Git for Data Lakes</div><div class="cc-sub">Branch, commit, and merge your data like code</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond DVC</div><div class="cc-text"><strong>LakeFS</strong> is an open-source tool that provides Git-like operations (branch, commit, merge, revert) directly on your data lake (S3, GCS, Azure Blob). Unlike DVC, which tracks individual files, LakeFS operates at the <strong>data lake level</strong> &mdash; you can branch an entire S3 bucket, make changes, test them, and merge back. This is powerful for: <strong>atomic data updates</strong> (either all changes apply or none), <strong>data CI/CD</strong> (test data changes before they reach production), <strong>time travel</strong> (query data as it was at any point in time), and <strong>isolation</strong> (each experiment can work on its own branch of the data without affecting others).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">DVC vs LakeFS</div><div class="cc-code"><span class="hl-cmt">// DVC vs LakeFS</span>
+
+<span class="hl-key">DVC</span>:
+  Tracks individual files/directories
+  Metafiles in Git (.dvc files)
+  Best for: ML projects, small teams
+  Workflow: dvc add → git commit → dvc push
+
+<span class="hl-key">LakeFS</span>:
+  Branches entire data lakes
+  Git-like operations on object storage
+  Best for: data teams, data lakes, CI/CD
+  Workflow: lakefs branch → modify → commit
+
+<span class="hl-cmt"># LakeFS example</span>
+$ lakectl branch create \
+    lakefs://repo/experiment-42
+$ <span class="hl-cmt"># modify data on the branch</span>
+$ lakectl commit lakefs://repo/experiment-42 \
+    -m <span class="hl-str">"add new training samples"</span>
+$ lakectl merge \
+    lakefs://repo/experiment-42 \
+    lakefs://repo/main</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Use DVC for ML-centric workflows where you version specific datasets alongside code. Use LakeFS for data-platform-level versioning where multiple teams need branching and merging on shared data lakes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">description</span></div><div><div class="cc-title">Model Cards</div><div class="cc-sub">Documentation as a first-class artifact</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Is a Model Card?</div><div class="cc-text"><strong>Model cards</strong> (Mitchell et al., Google, 2019) are standardized documentation for ML models. They describe: <strong>model details</strong> (architecture, training data, intended use), <strong>performance metrics</strong> (overall and per-slice &mdash; e.g., accuracy by demographic group), <strong>limitations</strong> (known failure modes, out-of-scope uses), <strong>ethical considerations</strong> (potential biases, fairness analysis), and <strong>deployment context</strong> (intended users, deployment environment). Model cards should be stored alongside the model in the registry. The EU AI Act and other regulations increasingly require this level of documentation for high-risk AI systems.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Model Card Template</div><div class="cc-code"><span class="hl-cmt"># Model Card: fraud-detector v7</span>
+
+<span class="hl-key">Model Details</span>:
+  Type: XGBoost classifier
+  Training data: transactions_v2.3 (10M rows)
+  Features: 47 engineered features
+  Code: git commit a3f7b2c
+
+<span class="hl-key">Performance</span>:
+  Overall accuracy: 0.94
+  Precision: 0.89 | Recall: 0.91
+  By region:
+    US: 0.95 | EU: 0.93 | APAC: 0.88
+
+<span class="hl-key">Limitations</span>:
+  - Lower accuracy on APAC transactions
+  - Not tested on crypto transactions
+  - Requires &lt; 50ms latency for real-time
+
+<span class="hl-key">Ethical Considerations</span>:
+  - Checked for demographic bias: PASS
+  - No PII in features</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Model cards are not just nice-to-have documentation &mdash; they&rsquo;re becoming a regulatory requirement. The EU AI Act mandates detailed documentation for high-risk AI systems, and model cards are the industry-standard format.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Versioning Best Practices</div><div class="cc-sub">Practical guidelines for teams</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Best Practices</div><div class="cc-text"><strong>1. Version all three artifacts together</strong> &mdash; a model version should always link to its code commit and data version. <strong>2. Use semantic versioning for data</strong> &mdash; major (schema change), minor (new rows), patch (corrections). <strong>3. Never overwrite</strong> &mdash; always create a new version; storage is cheap, debugging is expensive. <strong>4. Automate lineage</strong> &mdash; your training pipeline should automatically record which data and code produced each model. <strong>5. Tag production models</strong> &mdash; always know which model version is currently serving in production. <strong>6. Keep rollback models</strong> &mdash; retain at least the last 3 production models for quick rollback.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Versioning Strategy</div><div class="cc-code"><span class="hl-cmt">// Versioning strategy</span>
+
+<span class="hl-key">Code</span>: Git tags (v1.2.3)
+  Major: architecture change
+  Minor: feature/hyperparameter change
+  Patch: bug fix
+
+<span class="hl-key">Data</span>: Semantic versioning
+  Major: schema change (columns added/removed)
+  Minor: new data (more rows)
+  Patch: corrections (fix labels)
+
+<span class="hl-key">Model</span>: Auto-increment + aliases
+  v1, v2, v3, ...
+  @champion = current production
+  @challenger = A/B test candidate
+  @rollback = previous champion
+
+<span class="hl-cmt">// Golden rule: never delete, always version</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The combination of Git (code) + DVC (data) + MLflow Model Registry (models) gives you complete lineage from any production prediction back to the exact code, data, and training run that produced it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-experiment-tracking.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: Experiment Tracking</a>
+    <a class="ch-nav-btn next" href="04-data-pipelines-and-feature-stores.html">Ch 4: Data Pipelines &amp; Feature Stores <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2],2:[1],3:[2,3],4:[3,4,5],5:[2,3],6:[1],7:[2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> ML has three artifacts to version: code (Git), data (DVC), and models (registry). All three must be linked for full lineage.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> DVC extends Git for large files — stores metafiles in Git, actual data in cloud storage. git checkout + dvc checkout = exact data version.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> The model registry is a centralized catalog: versioning, metadata, stage management (staging → production), and aliases (@champion).',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Model promotion: experiment → register → staging → validation gates → canary deployment → production. Never skip the gates.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Model packaging: MLflow Model (framework-agnostic), ONNX (portable), TorchScript (no Python), Docker (everything included).',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> LakeFS provides Git-like branching for entire data lakes — branch, commit, merge on S3/GCS. Great for data CI/CD and isolation.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Model cards document model details, performance per slice, limitations, and ethical considerations. Increasingly required by regulation.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Best practices: version all three artifacts together, use semantic versioning for data, never overwrite, automate lineage, keep rollback models.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

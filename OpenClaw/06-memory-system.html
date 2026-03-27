@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Memory System &mdash; How OpenClaw Remembers</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-next{color:var(--blue);background:var(--blue-light);border:1px solid var(--blue-border)}.tb-nav a.nav-next:hover{background:var(--blue);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--green-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}.zone-a .zone-title{color:var(--green)}
+.zone-b{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-b .zone-title{color:var(--teal)}
+.zone-c{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-c .zone-title{color:var(--blue)}
+.zone-d{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-d .zone-title{color:var(--violet)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-amber .fnode-icon{background:var(--amber-light);color:var(--amber)}.fnode.c-amber .fnode-label{color:var(--amber)}.fnode.c-amber{border-color:var(--amber-border)}.fnode.c-amber.active{box-shadow:0 0 0 3px rgba(217,119,6,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}.farr-label{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:500;color:var(--text-3);white-space:nowrap}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light)}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--green-light);border-color:var(--green-border);color:var(--green)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-green{background:var(--green)}.bg-teal{background:var(--teal)}.bg-blue{background:var(--blue)}.bg-violet{background:var(--violet)}.bg-amber{background:var(--amber)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:700px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{background:#15803d;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Memory System: How OpenClaw Remembers</h2><span class="tb-sub">Three memory layers, Markdown files, hybrid search, and temporal decay</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-next" href="07-skills-clawhub-mcp.html">Ch 7 &rarr;</a></div>
+    <span class="tb-tag">Chapter 6</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: THREE MEMORY LAYERS -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">Three Memory Layers</span><span class="zone-sub">Short-term, medium-term, long-term</span></div>
+    <div class="flow-row">
+      <div class="fnode c-green" data-step="1"><div class="step-badge bg-green">1</div><div class="fnode-icon"><span class="material-symbols-rounded">chat_bubble</span></div><div class="fnode-label">Short-Term</div><div class="fnode-sub">Conversation turns</div></div>
+      <div class="farr" data-step="1"><span class="farr-label">daily</span></div>
+      <div class="fnode c-green" data-step="2"><div class="step-badge bg-green">2</div><div class="fnode-icon"><span class="material-symbols-rounded">today</span></div><div class="fnode-label">Medium-Term</div><div class="fnode-sub">YYYY-MM-DD.md</div></div>
+      <div class="farr" data-step="2"><span class="farr-label">curated</span></div>
+      <div class="fnode c-green" data-step="3"><div class="step-badge bg-green">3</div><div class="fnode-icon"><span class="material-symbols-rounded">auto_stories</span></div><div class="fnode-label">Long-Term</div><div class="fnode-sub">MEMORY.md</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal" data-step="4"><div class="loop-dash"></div><div class="step-badge bg-teal">4</div><div class="loop-pill"><span class="material-symbols-rounded">description</span>Source of truth: plain Markdown files, human-readable, Git-friendly</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: HYBRID SEARCH -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Hybrid Search &amp; Retrieval</span><span class="zone-sub">Vector + BM25 with temporal decay</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="4"><div class="step-badge bg-teal">4</div><div class="fnode-icon"><span class="material-symbols-rounded">search</span></div><div class="fnode-label">Hybrid Search</div><div class="fnode-sub">70% vector + 30% BM25</div></div>
+      <div class="farr" data-step="5"><span class="farr-label">decay</span></div>
+      <div class="fnode c-teal" data-step="5"><div class="step-badge bg-teal">5</div><div class="fnode-icon"><span class="material-symbols-rounded">trending_down</span></div><div class="fnode-label">Temporal Decay</div><div class="fnode-sub">30-day half-life</div></div>
+    </div>
+  </div>
+
+  <!-- ZONE C: MEMORY SKILL INTERNALS -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">Memory Skill Internals</span><span class="zone-sub">capture, recall, consolidate</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="6"><div class="step-badge bg-blue">6</div><div class="fnode-icon"><span class="material-symbols-rounded">psychology</span></div><div class="fnode-label">Memory Skill</div><div class="fnode-sub">capture / recall</div></div>
+    </div>
+  </div>
+
+  <!-- ZONE D: PRIVACY -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Privacy &amp; Session State</span><span class="zone-sub">Who sees what, and how state is tracked</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="7"><div class="step-badge bg-violet">7</div><div class="fnode-icon"><span class="material-symbols-rounded">lock</span></div><div class="fnode-label">Privacy Controls</div><div class="fnode-sub">Private sessions only</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"><div class="dp-head"><div class="dp-step" id="dpStep">1</div><div class="dp-title" id="dpTitle">Title</div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div><div class="dp-body" id="dpBody"></div></div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=4200;
+  const NARRATION={
+    1:{text:'<strong>Short-term memory:</strong> The current conversation. Recent messages from the active session are included directly in the context window. This is the most immediate layer \u2014 the agent remembers what you just said. Older messages are truncated to fit the context window, with the most recent messages always prioritized.',color:'#16a34a'},
+    2:{text:'<strong>Medium-term memory:</strong> Daily log files stored as <code>YYYY-MM-DD.md</code> in <code>~/.openclaw/memory/</code>. The agent writes a summary of each day\\'s interactions, key decisions, tasks completed, and important context. Today\\'s and yesterday\\'s logs are loaded into context automatically. Older logs are searchable via hybrid retrieval.',color:'#16a34a'},
+    3:{text:'<strong>Long-term memory:</strong> <code>MEMORY.md</code> \u2014 a curated Markdown file containing persistent facts about you: preferences, project context, personal info, recurring tasks, and important relationships. This file is always loaded into context. The agent updates it as it learns about you over time.',color:'#16a34a'},
+    4:{text:'<strong>Hybrid search:</strong> When the agent needs to recall something beyond the current context, it uses hybrid retrieval: <strong>70% vector search</strong> (semantic similarity via embeddings) + <strong>30% BM25 keyword search</strong> (exact term matching). Results are combined using a union approach, then re-ranked with MMR (Maximal Marginal Relevance) to reduce redundancy.',color:'#0d9488'},
+    5:{text:'<strong>Temporal decay:</strong> Memories fade over time using exponential decay with a <strong>30-day half-life</strong>. A memory from today has full weight. A memory from 30 days ago has half weight. A memory from 60 days ago has quarter weight. This ensures recent context is prioritized while old memories gradually become less prominent.',color:'#0d9488'},
+    6:{text:'<strong>Memory skill internals:</strong> The memory system is implemented as a skill with three core functions: <code>capture.py</code> (extract and store new memories from conversations), <code>recall.py</code> (search and retrieve relevant memories), and <code>consolidate.py</code> (periodically merge and deduplicate memories to keep MEMORY.md clean and focused).',color:'#2563eb'},
+    7:{text:'<strong>Privacy controls:</strong> <code>MEMORY.md</code> only loads in private (DM) sessions \u2014 never in group chats. This prevents personal information from leaking into shared conversations. <code>SESSION-STATE.md</code> tracks per-session state, and <code>RECENT_CONTEXT.md</code> provides a rolling window of recent interactions for quick context loading.',color:'#7c3aed'},
+  };
+
+  const DETAILS={
+    1:{title:'Short-Term Memory',color:'#16a34a',body:'<div class="dp-label">CONVERSATION CONTEXT</div><div class="dp-code"><span class="hl-cmt">// Short-term memory = conversation history</span>\n\n<span class="hl-key">What it contains:</span>\n  Recent messages from the active session\n  User messages + assistant responses\n  Tool calls and their results\n\n<span class="hl-key">How it works:</span>\n  Loaded directly from JSONL transcript\n  Most recent messages always included\n  Older messages truncated to fit window\n  Typically last 20-50 turns\n\n<span class="hl-key">Context window management:</span>\n  System prompt:    ~2,000 tokens (fixed)\n  MEMORY.md:        ~1,000 tokens (fixed)\n  Daily logs:       ~1,000 tokens (fixed)\n  Tools/skills:     ~2,000 tokens (fixed)\n  Conversation:     remaining tokens\n\n<span class="hl-cmt">// The conversation gets the most space</span>\n<span class="hl-cmt">// but is the first to be truncated</span></div><div class="dp-note n-green"><strong>Short-term memory is ephemeral.</strong> It only lasts for the current session. When you start a new session (<code>/new</code>), the conversation history resets. Important information should be captured in daily logs or MEMORY.md for persistence.</div>'},
+    2:{title:'Medium-Term Memory: Daily Logs',color:'#16a34a',body:'<div class="dp-label">DAILY LOG FILES</div><div class="dp-code"><span class="hl-cmt"># ~/.openclaw/memory/2026-03-15.md</span>\n\n<span class="hl-key">## Summary</span>\nHelped user debug a Python script for\ndata processing. Discussed OpenClaw\nconfiguration for multi-channel setup.\n\n<span class="hl-key">## Key Decisions</span>\n- User prefers Claude Sonnet for coding\n- Set up Telegram + Discord channels\n- Workspace project: ~/projects/data-app\n\n<span class="hl-key">## Tasks Completed</span>\n- Fixed pandas DataFrame merge bug\n- Configured Discord bot token\n- Installed web-search skill\n\n<span class="hl-key">## Open Items</span>\n- User wants to add WhatsApp tomorrow\n- Need to review data-app test suite\n\n<span class="hl-cmt"># Auto-generated at end of day</span>\n<span class="hl-cmt"># Today + yesterday loaded into context</span>\n<span class="hl-cmt"># Older logs searchable via recall</span></div><div class="dp-note n-green"><strong>Daily logs bridge the gap between conversation and long-term memory.</strong> They capture what happened each day without cluttering MEMORY.md. The agent automatically generates these summaries, and you can edit them manually if needed.</div>'},
+    3:{title:'Long-Term Memory: MEMORY.md',color:'#16a34a',body:'<div class="dp-label">THE CURATED KNOWLEDGE BASE</div><div class="dp-code"><span class="hl-cmt"># ~/.openclaw/memory/MEMORY.md</span>\n\n<span class="hl-key">## About the User</span>\n- Name: Alex\n- Location: Berlin, Germany (CET timezone)\n- Occupation: Senior software engineer\n- Languages: English, German\n\n<span class="hl-key">## Preferences</span>\n- Prefers concise, technical responses\n- Uses TypeScript for backend, React for frontend\n- Editor: Cursor with Vim keybindings\n- Preferred LLM: Claude Sonnet for coding\n\n<span class="hl-key">## Active Projects</span>\n- data-app: Python data processing pipeline\n  - Repo: ~/projects/data-app\n  - Stack: Python, pandas, FastAPI\n- personal-site: Next.js portfolio\n  - Repo: ~/projects/personal-site\n\n<span class="hl-key">## Important Contacts</span>\n- Sarah (partner): WhatsApp\n- Team lead (Mike): Slack\n\n<span class="hl-cmt"># Always loaded in private sessions</span>\n<span class="hl-cmt"># Updated by agent as it learns</span>\n<span class="hl-cmt"># Human-editable, Git-friendly</span></div><div class="dp-note n-green"><strong>MEMORY.md is the agent\\'s long-term brain.</strong> It is always loaded into context for private sessions. The agent updates it as it learns about you, but you can also edit it directly \u2014 it is just a Markdown file. This is what makes OpenClaw feel like it truly knows you over time.</div>'},
+    4:{title:'Hybrid Search: Vector + BM25',color:'#0d9488',body:'<div class="dp-label">RETRIEVAL ARCHITECTURE</div><div class="dp-code"><span class="hl-cmt">// Hybrid search for memory recall</span>\n\nQuery: <span class="hl-str">"What was that Python bug I fixed?"</span>\n\n<span class="hl-key">Step 1: Vector Search (70% weight)</span>\n  Embed query into vector space\n  Find semantically similar memories\n  Good at: meaning, paraphrasing\n  Example: finds "pandas merge issue"\n  even if exact words differ\n\n<span class="hl-key">Step 2: BM25 Keyword Search (30% weight)</span>\n  Traditional term-frequency matching\n  Good at: exact names, code snippets\n  Example: finds "DataFrame.merge()"\n  by exact keyword match\n\n<span class="hl-key">Step 3: Union + Re-ranking</span>\n  Combine results from both methods\n  Apply MMR (Maximal Marginal Relevance)\n  Reduce redundancy in results\n  Return top-k most relevant memories\n\n<span class="hl-cmt">// The 70/30 split balances semantic</span>\n<span class="hl-cmt">// understanding with exact matching</span></div><div class="dp-note n-teal"><strong>Why hybrid search?</strong> Vector search alone misses exact terms (like function names or error codes). BM25 alone misses semantic meaning (like paraphrased questions). The combination catches both, making memory recall significantly more accurate.</div>'},
+    5:{title:'Temporal Decay',color:'#0d9488',body:'<div class="dp-label">EXPONENTIAL DECAY WITH 30-DAY HALF-LIFE</div><div class="dp-code"><span class="hl-cmt">// How memories fade over time</span>\n\n<span class="hl-key">Formula:</span>\n  weight = e^(-0.693 * age_days / 30)\n\n<span class="hl-key">Decay curve:</span>\n  Today:       <span class="hl-num">1.000</span> (full weight)\n  7 days ago:  <span class="hl-num">0.851</span>\n  14 days ago: <span class="hl-num">0.724</span>\n  30 days ago: <span class="hl-num">0.500</span> (half-life)\n  60 days ago: <span class="hl-num">0.250</span>\n  90 days ago: <span class="hl-num">0.125</span>\n\n<span class="hl-key">Applied to search results:</span>\n  final_score = relevance * decay_weight\n\n<span class="hl-cmt">// Recent memories naturally surface first</span>\n<span class="hl-cmt">// Old memories still retrievable if</span>\n<span class="hl-cmt">// highly relevant to the query</span>\n<span class="hl-cmt">// MEMORY.md is exempt from decay</span>\n<span class="hl-cmt">// (always loaded at full weight)</span></div><div class="dp-note n-teal"><strong>Temporal decay mimics human memory.</strong> Recent events are vivid and easily recalled. Older events fade unless they are particularly relevant. MEMORY.md is exempt \u2014 curated facts are always at full weight, like core memories that never fade.</div>'},
+    6:{title:'Memory Skill Internals',color:'#2563eb',body:'<div class="dp-label">THE THREE CORE FUNCTIONS</div><div class="dp-code"><span class="hl-cmt">// Memory skill: capture, recall, consolidate</span>\n\n<span class="hl-key">capture.py</span>\n  Triggered: after each conversation\n  Extracts key facts, decisions, tasks\n  Writes to daily log (YYYY-MM-DD.md)\n  Optionally updates MEMORY.md\n\n<span class="hl-key">recall.py</span>\n  Triggered: when agent needs context\n  Runs hybrid search over all memory\n  Returns ranked, deduplicated results\n  Feeds into context assembly\n\n<span class="hl-key">consolidate.py</span>\n  Triggered: periodically (daily/weekly)\n  Merges duplicate memories\n  Removes outdated information\n  Keeps MEMORY.md clean and focused\n  Summarizes old daily logs\n\n<span class="hl-cmt">// The memory skill is a standard</span>\n<span class="hl-cmt">// OpenClaw skill (MCP server)</span>\n<span class="hl-cmt">// Can be customized or replaced</span></div><div class="dp-note n-blue"><strong>Memory management is automated but transparent.</strong> The agent captures memories, recalls them when needed, and consolidates them periodically. Since everything is Markdown files, you can inspect, edit, or version-control the entire memory system.</div>'},
+    7:{title:'Privacy & Session State',color:'#7c3aed',body:'<div class="dp-label">WHO SEES WHAT</div><div class="dp-code"><span class="hl-cmt">// Privacy rules for memory loading</span>\n\n<span class="hl-key">Private sessions (DMs):</span>\n  \u2713 MEMORY.md loaded (personal facts)\n  \u2713 Daily logs loaded\n  \u2713 Full conversation history\n  \u2713 All skills available\n\n<span class="hl-key">Group sessions:</span>\n  \u2717 MEMORY.md NOT loaded\n  \u2717 Personal daily logs NOT loaded\n  \u2713 Group conversation history only\n  \u2713 Skills available (per config)\n\n<span class="hl-cmt">// Session state files</span>\n\n<span class="hl-key">SESSION-STATE.md</span>\n  Per-session state tracking\n  Current task, open items\n  Persists across reconnections\n\n<span class="hl-key">RECENT_CONTEXT.md</span>\n  Rolling window of recent interactions\n  Quick context loading on session start\n  Lighter than full transcript replay</div><div class="dp-note n-violet"><strong>Privacy is enforced by design.</strong> Your personal information in MEMORY.md never leaks into group chats. This is critical for users who share their OpenClaw bot with family, friends, or team members via group channels.</div>'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const els=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+  const dpStep=document.getElementById('dpStep');
+  const dpTitle=document.getElementById('dpTitle');
+  const dpBody=document.getElementById('dpBody');
+  const dpClose=document.getElementById('dpClose');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){els.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}const activeEl=document.querySelector(`[data-step="${step}"]`);if(activeEl)activeEl.scrollIntoView({behavior:'smooth',block:'center'})}
+  function showReset(){els.forEach(el=>el.classList.remove('active','dimmed'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--green)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  function showDetail(step){const d=DETAILS[step];if(!d)return;dpStep.textContent=step;dpStep.style.background=d.color;dpTitle.textContent=d.title;dpBody.innerHTML=d.body;overlay.classList.add('visible');panel.classList.add('visible')}
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  dpClose.addEventListener('click',hideDetail);
+  overlay.addEventListener('click',hideDetail);
+  els.forEach(el=>{el.style.cursor='pointer';el.addEventListener('click',()=>{const s=parseInt(el.dataset.step);if(current===s)showDetail(s);else goTo(s)})});
+  document.addEventListener('keydown',e=>{if(panel.classList.contains('visible')){if(e.key==='Escape')hideDetail();return}if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape'){hideDetail()}});
+  reset();
+})();
+</script>
+</body>
+</html>

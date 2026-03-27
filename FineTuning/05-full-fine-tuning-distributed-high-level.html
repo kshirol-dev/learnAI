@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Full Fine-Tuning &amp; Distributed Training — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--blue-light) 50%,var(--violet-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--blue),var(--violet),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b45309;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Full Fine-Tuning &amp; Distributed Training</h2><span class="tb-sub">When to use full fine-tuning, DeepSpeed ZeRO, FSDP, multi-GPU strategies, and memory optimization</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="05-full-fine-tuning-distributed-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">compare_arrows</span></div><span class="pipe-label">When</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Memory</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">dynamic_form</span></div><span class="pipe-label">DeepSpeed</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">lan</span></div><span class="pipe-label">FSDP</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Optimize</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">savings</span></div><span class="pipe-label">Cost</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Decision</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: When Full Fine-Tuning -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">When Full Fine-Tuning Beats LoRA</div><div class="cc-sub">The cases where updating all parameters is worth the cost</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Full Fine-Tuning Advantages</div><div class="cc-text"><strong>1. Maximum quality:</strong> Updating all parameters gives the model the most capacity to adapt. For complex domain shifts (e.g., English model to Japanese, general model to specialized medical reasoning), full fine-tuning can outperform LoRA by 2-5%.<br><br><strong>2. Large datasets:</strong> With 100K+ high-quality examples, full fine-tuning can leverage the extra capacity. LoRA with rank 16 may bottleneck on very large datasets.<br><br><strong>3. Continued pre-training:</strong> When adapting a model to a new domain by training on raw text (not instruction pairs), full fine-tuning is standard. This is sometimes called "domain-adaptive pre-training."<br><br><strong>4. Creating a new base model:</strong> If you're building a foundation model for others to fine-tune on top of, full fine-tuning produces a cleaner result than a merged LoRA adapter.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When LoRA Is Still Better</div><div class="cc-text"><strong>1. Limited data (&lt;50K examples):</strong> LoRA acts as a regularizer. Full fine-tuning on small datasets overfits more easily.<br><br><strong>2. Limited compute:</strong> Full fine-tuning of 7B needs 4-8 GPUs. LoRA needs 1 GPU.<br><br><strong>3. Multiple tasks:</strong> LoRA adapters can be swapped. Full fine-tuning creates a separate model per task.<br><br><strong>4. Rapid iteration:</strong> LoRA trains 2-5x faster than full fine-tuning. Better for experimentation.</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-amber"><strong>Full Fine-Tuning</strong><br>All params updated<br>Maximum quality<br>4-8+ GPUs needed<br>Hours to days</div>
+            <div class="compare-item ci-teal"><strong>LoRA</strong><br>0.1-1% params<br>Near-full quality<br>1 GPU sufficient<br>Minutes to hours</div>
+          </div>
+          <div class="cc-note n-amber"><strong>The 80/20 rule:</strong> LoRA handles 80% of fine-tuning use cases. Full fine-tuning is for the remaining 20% where you need maximum quality, have abundant data and compute, or are doing continued pre-training. Always try LoRA first.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Memory Requirements -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">Memory Requirements</div><div class="cc-sub">Why full fine-tuning needs so much GPU memory</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Four Memory Components</div><div class="cc-text">For a 7B model in bf16 with AdamW optimizer:<br><br><strong>1. Model weights (bf16):</strong> 7B &times; 2 bytes = <strong>14 GB</strong><br><br><strong>2. Gradients (bf16):</strong> 7B &times; 2 bytes = <strong>14 GB</strong><br><br><strong>3. Optimizer states (fp32):</strong> AdamW stores first moment (m) and second moment (v), both in fp32: 7B &times; 4 &times; 2 = <strong>56 GB</strong><br><br><strong>4. Activations:</strong> Intermediate values saved for backpropagation. Depends on batch size and sequence length: <strong>2-16 GB</strong><br><br><strong>Total: ~86-100 GB</strong> for a 7B model. That's 2-3 A100 40GB GPUs or 1-2 A100 80GB GPUs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scaling to Larger Models</div><div class="cc-text"><strong>Llama 3 8B:</strong> ~90 GB total &rarr; 2&times; A100 80GB<br><strong>Llama 3 70B:</strong> ~800 GB total &rarr; 16&times; A100 80GB (2 nodes)<br><strong>Llama 3 405B:</strong> ~4.6 TB total &rarr; 64+ A100 80GB (8+ nodes)<br><br>This is why distributed training is essential for full fine-tuning. No single GPU can hold a 7B model's full training state.</div></div>
+          <div class="cc-block"><div class="cc-label">Memory Optimization Techniques</div><div class="cc-text"><strong>Gradient checkpointing:</strong> Trade compute for memory. Recompute activations during backward pass instead of storing them. Saves 60-70% of activation memory at ~30% compute overhead.<br><br><strong>Mixed precision (bf16):</strong> Keep weights and gradients in bf16, only optimizer states in fp32. Standard practice on modern GPUs.<br><br><strong>Gradient accumulation:</strong> Process small batches, accumulate gradients, then update. Simulates a larger batch size without the memory cost.</div></div>
+          <div class="cc-note n-pink"><strong>The optimizer states dominate memory.</strong> For a 7B model, weights are 14 GB but optimizer states are 56 GB (4x the weights). This is why DeepSpeed ZeRO and FSDP focus on distributing optimizer states across GPUs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: DeepSpeed ZeRO -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">dynamic_form</span></div><div><div class="cc-title">DeepSpeed ZeRO</div><div class="cc-sub">Zero Redundancy Optimizer: distribute training state across GPUs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem ZeRO Solves</div><div class="cc-text">In standard data parallelism, <strong>every GPU holds a complete copy</strong> of the model, gradients, and optimizer states. With 8 GPUs, you have 8 redundant copies. ZeRO (Rajbhandari et al., 2020, Microsoft) eliminates this redundancy by <strong>partitioning</strong> the training state across GPUs.</div></div>
+          <div class="cc-block"><div class="cc-label">ZeRO Stage 1: Partition Optimizer States</div><div class="cc-text">Each GPU holds only <strong>1/N of the optimizer states</strong> (where N = number of GPUs). For 8 GPUs: each holds 56/8 = 7 GB of optimizer states instead of 56 GB. Weights and gradients are still replicated.<br><br><strong>Memory per GPU (7B, 8 GPUs):</strong> 14 (weights) + 14 (gradients) + 7 (optimizer) = <strong>35 GB</strong></div></div>
+          <div class="cc-block"><div class="cc-label">ZeRO Stage 2: + Partition Gradients</div><div class="cc-text">Also partition gradients across GPUs. Each GPU holds 1/N of gradients.<br><br><strong>Memory per GPU:</strong> 14 (weights) + 1.75 (gradients) + 7 (optimizer) = <strong>~23 GB</strong></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ZeRO Stage 3: + Partition Weights</div><div class="cc-text">Partition everything: weights, gradients, and optimizer states. Each GPU holds only 1/N of each. During forward/backward pass, weights are gathered on-demand (all-gather) and released after use.<br><br><strong>Memory per GPU:</strong> 1.75 (weights) + 1.75 (gradients) + 7 (optimizer) = <strong>~11 GB</strong></div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-blue"><strong>Stage 1</strong><br>Partition: optimizer<br>Memory: ~35 GB/GPU<br>Communication: low<br>Easiest to use</div>
+            <div class="compare-item ci-violet"><strong>Stage 2</strong><br>Partition: opt + grad<br>Memory: ~23 GB/GPU<br>Communication: medium<br>Good default</div>
+            <div class="compare-item ci-pink"><strong>Stage 3</strong><br>Partition: everything<br>Memory: ~11 GB/GPU<br>Communication: high<br>For large models</div>
+            <div class="compare-item ci-amber"><strong>Stage 3 + Offload</strong><br>+ CPU/NVMe offload<br>Memory: minimal<br>Communication: highest<br>Last resort</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Recommendation:</strong> Start with ZeRO Stage 2 (best balance of memory savings and speed). Use Stage 3 only when the model doesn't fit with Stage 2. Avoid CPU offloading unless absolutely necessary (it's 3-10x slower). HuggingFace Accelerate makes DeepSpeed integration easy.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: FSDP -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">lan</span></div><div><div class="cc-title">PyTorch FSDP</div><div class="cc-sub">Fully Sharded Data Parallel: PyTorch-native distributed training</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What FSDP Does</div><div class="cc-text">FSDP (Zhao et al., 2023, Meta) is PyTorch's native equivalent of DeepSpeed ZeRO Stage 3. It shards model parameters, gradients, and optimizer states across GPUs. During computation, parameters are gathered on-demand (all-gather), used, and then released (reduce-scatter).<br><br>FSDP is built into PyTorch (no external library needed) and is the preferred approach for Meta's own LLM training.</div></div>
+          <div class="cc-block"><div class="cc-label">FSDP vs DeepSpeed</div><div class="cc-text"><strong>FSDP advantages:</strong><br>- Native PyTorch (no external dependency)<br>- Better integration with PyTorch ecosystem<br>- Preferred by Meta, used for Llama training<br>- Simpler configuration<br><br><strong>DeepSpeed advantages:</strong><br>- More mature, battle-tested at scale<br>- CPU/NVMe offloading (ZeRO-Infinity)<br>- ZeRO Stage 1 and 2 (less communication overhead)<br>- Better documentation and community support<br><br>Both achieve similar results. Choose based on your ecosystem.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Sharding Strategies</div><div class="cc-text"><strong>FULL_SHARD:</strong> Shard everything (like ZeRO Stage 3). Maximum memory savings, highest communication.<br><br><strong>SHARD_GRAD_OP:</strong> Shard gradients and optimizer states only (like ZeRO Stage 2). Good balance.<br><br><strong>NO_SHARD:</strong> Standard data parallelism. No memory savings but fastest communication.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># FSDP with HuggingFace Accelerate</span>
+<span class="hl-cmt"># accelerate config → select FSDP</span>
+<span class="hl-cmt"># Then launch:</span>
+accelerate launch \
+    --num_processes <span class="hl-num">8</span> \
+    train.py
+
+<span class="hl-cmt"># Or with torchrun:</span>
+torchrun --nproc_per_node <span class="hl-num">8</span> train.py</div>
+          <div class="cc-note n-violet"><strong>For most users:</strong> Use HuggingFace Accelerate with either DeepSpeed or FSDP. Accelerate abstracts the complexity and lets you switch between backends with a config file. Run <code>accelerate config</code> to set up, then <code>accelerate launch train.py</code> to train.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Optimization Techniques -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Training Optimization Techniques</div><div class="cc-sub">Gradient checkpointing, accumulation, and mixed precision</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Gradient Checkpointing</div><div class="cc-text"><strong>Problem:</strong> During backpropagation, all intermediate activations must be stored. For a 7B model with batch_size=4 and seq_len=2048, activations can use 8-16 GB.<br><br><strong>Solution:</strong> Don't store all activations. Instead, save only at "checkpoint" boundaries (typically every transformer layer). During backward pass, recompute the activations between checkpoints.<br><br><strong>Trade-off:</strong> Saves 60-70% of activation memory at the cost of ~30% more compute (each activation is computed twice). Almost always worth it for full fine-tuning.</div></div>
+          <div class="cc-block"><div class="cc-label">Gradient Accumulation</div><div class="cc-text"><strong>Problem:</strong> Large batch sizes improve training stability but don't fit in memory.<br><br><strong>Solution:</strong> Process small micro-batches, accumulate gradients over N steps, then perform one optimizer update. Effective batch size = micro_batch &times; num_GPUs &times; accumulation_steps.<br><br><strong>Example:</strong> micro_batch=2, 4 GPUs, accumulation=4 &rarr; effective batch = 32.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Mixed Precision Training</div><div class="cc-text"><strong>bf16 (bfloat16):</strong> The standard for modern LLM training. Same exponent range as fp32 (no overflow issues) but half the memory. Supported on A100, H100, RTX 30xx+, and Apple M-series.<br><br><strong>fp16:</strong> Older alternative. Requires loss scaling to avoid underflow. Use only if bf16 is not available.<br><br><strong>The mixed precision recipe:</strong> Forward and backward pass in bf16. Optimizer states in fp32. Weight updates in fp32, then cast back to bf16. This is handled automatically by HuggingFace Trainer with <code>bf16=True</code>.</div></div>
+          <div class="cc-block"><div class="cc-label">Flash Attention</div><div class="cc-text"><strong>FlashAttention-2</strong> (Dao, 2023) fuses the attention computation into a single GPU kernel, avoiding the O(n&sup2;) memory cost of materializing the attention matrix. Reduces attention memory from O(n&sup2;) to O(n) and speeds up training by 20-40%. Enabled by default in HuggingFace Transformers for supported models.</div></div>
+          <div class="cc-note n-teal"><strong>Always enable:</strong> gradient_checkpointing=True, bf16=True, and FlashAttention-2. These three optimizations together reduce memory by 50-70% with minimal speed impact. They are the baseline for any full fine-tuning run.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Cost Analysis -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">savings</span></div><div><div class="cc-title">Cost Analysis</div><div class="cc-sub">GPU hours, cloud costs, and cost optimization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">GPU Cost Reference (2024-2025)</div><div class="cc-text"><strong>Cloud GPU hourly rates (approximate):</strong><br>NVIDIA A100 80GB: $1.50-$3.00/hr<br>NVIDIA H100 80GB: $2.50-$4.00/hr<br>NVIDIA A100 40GB: $1.00-$2.00/hr<br>NVIDIA L40S 48GB: $1.00-$1.50/hr<br>NVIDIA RTX 4090 24GB: $0.40-$0.80/hr<br><br><strong>Providers:</strong> Lambda Labs, RunPod, Together AI, Vast.ai, AWS, GCP, Azure. Spot/preemptible instances are 50-70% cheaper.</div></div>
+          <div class="cc-block"><div class="cc-label">Training Time Estimates</div><div class="cc-text"><strong>Llama 3 8B, full fine-tuning:</strong><br>10K examples, 3 epochs: ~4-8 hours on 4&times; A100 80GB<br>Cost: ~$24-$96<br><br><strong>Llama 3 8B, LoRA:</strong><br>10K examples, 3 epochs: ~1-2 hours on 1&times; A100 80GB<br>Cost: ~$3-$6<br><br><strong>Llama 3 70B, full fine-tuning:</strong><br>10K examples, 3 epochs: ~24-48 hours on 8&times; A100 80GB<br>Cost: ~$288-$1,152</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cost Optimization Tips</div><div class="cc-text"><strong>1. Use spot instances:</strong> 50-70% cheaper. Save checkpoints frequently to resume after preemption.<br><br><strong>2. Start with LoRA:</strong> Validate your data and approach with LoRA ($5-$20) before committing to full fine-tuning ($50-$500+).<br><br><strong>3. Use smaller models first:</strong> Prototype on 8B, then scale to 70B only if needed.<br><br><strong>4. Optimize data first:</strong> Better data quality at 5K examples beats mediocre data at 50K. Less data = less training time = less cost.<br><br><strong>5. Early stopping:</strong> Monitor validation loss. Stop training when it plateaus or increases. Don't waste compute on overfitting.</div></div>
+          <div class="cc-note n-green"><strong>The cost-effective path:</strong> (1) Prototype with QLoRA on 8B ($2-$5). (2) If quality is good, train with LoRA on 8B ($5-$20). (3) If you need more quality, try full fine-tuning on 8B ($50-$100). (4) Only scale to 70B if 8B is genuinely insufficient. Most tasks don't need 70B.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Decision Framework -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Decision Framework</div><div class="cc-sub">Choosing the right training strategy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Tree</div><div class="cc-text"><strong>Q: Do you have &lt;50K examples?</strong><br>&rarr; Yes: Use LoRA (less overfitting risk)<br><br><strong>Q: Do you need multi-task/multi-tenant?</strong><br>&rarr; Yes: Use LoRA (swappable adapters)<br><br><strong>Q: Is this continued pre-training on raw text?</strong><br>&rarr; Yes: Use full fine-tuning<br><br><strong>Q: Do you have 4+ A100 GPUs available?</strong><br>&rarr; No: Use LoRA or QLoRA<br>&rarr; Yes: Full fine-tuning is an option<br><br><strong>Q: Is this a major domain shift (e.g., language change)?</strong><br>&rarr; Yes: Full fine-tuning likely needed<br>&rarr; No: LoRA is probably sufficient</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Distributed Training Cheat Sheet</div><div class="cc-text"><strong>1 GPU (24 GB):</strong> QLoRA for 8B-70B, LoRA for 8B<br><strong>1 GPU (80 GB):</strong> LoRA for 8B-70B, full FT for 8B (tight)<br><strong>2-4 GPUs (80 GB each):</strong> Full FT for 8B with DeepSpeed ZeRO-2<br><strong>8 GPUs (80 GB each):</strong> Full FT for 8B-70B with ZeRO-2/3 or FSDP<br><strong>16+ GPUs:</strong> Full FT for 70B+ with ZeRO-3 or FSDP</div></div>
+          <div class="cc-block"><div class="cc-label">Distributed Framework Choice</div><div class="cc-text"><strong>Single node (1-8 GPUs):</strong> DeepSpeed ZeRO-2 or FSDP SHARD_GRAD_OP. Both work well.<br><br><strong>Multi-node (16+ GPUs):</strong> DeepSpeed ZeRO-3 or FSDP FULL_SHARD. DeepSpeed has better multi-node support historically, but FSDP is catching up.<br><br><strong>Wrapper:</strong> Always use HuggingFace Accelerate. It abstracts the complexity and lets you switch backends easily.</div></div>
+          <div class="cc-note n-orange"><strong>The golden rule:</strong> Start simple. Try LoRA first. If quality is insufficient, try LoRA with higher rank or more target modules. Only move to full fine-tuning when you have evidence that LoRA is the bottleneck, not data quality or hyperparameters.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Full fine-tuning vs LoRA:</strong> Full fine-tuning updates all parameters for maximum quality. Use it for: complex domain shifts, continued pre-training, large datasets (100K+), or building new base models. LoRA handles 80% of use cases. Always try LoRA first \u2014 only move to full fine-tuning when you have evidence LoRA is the bottleneck.',color:'#d97706'},
+    2:{text:'<strong>Memory breakdown for 7B (bf16 + AdamW):</strong> Weights: 14 GB. Gradients: 14 GB. Optimizer states (m + v in fp32): 56 GB. Activations: 2-16 GB. Total: ~90 GB. The optimizer states alone are 4x the model weights. This is why distributed training is essential \u2014 no single GPU can hold the full training state.',color:'#dc2626'},
+    3:{text:'<strong>DeepSpeed ZeRO</strong> (Rajbhandari et al., 2020) eliminates redundancy across GPUs. <strong>Stage 1:</strong> Partition optimizer states (35 GB/GPU). <strong>Stage 2:</strong> + partition gradients (23 GB/GPU). <strong>Stage 3:</strong> + partition weights (11 GB/GPU). Start with Stage 2 (best speed/memory balance). Use Stage 3 only when needed.',color:'#2563eb'},
+    4:{text:'<strong>FSDP</strong> (Fully Sharded Data Parallel) is PyTorch\u2019s native ZeRO Stage 3. Shards parameters, gradients, and optimizer states. Used by Meta for Llama training. FSDP vs DeepSpeed: similar results, choose based on ecosystem. Use HuggingFace Accelerate to abstract the complexity \u2014 switch backends with a config file.',color:'#7c3aed'},
+    5:{text:'<strong>Three must-have optimizations:</strong> (1) <strong>Gradient checkpointing</strong> \u2014 saves 60-70% activation memory at 30% compute cost. (2) <strong>bf16 mixed precision</strong> \u2014 half the memory for weights and gradients. (3) <strong>FlashAttention-2</strong> \u2014 O(n) memory instead of O(n\u00b2) for attention. Together they reduce memory by 50-70%.',color:'#0d9488'},
+    6:{text:'<strong>Cost estimates:</strong> 8B full fine-tuning (10K examples, 3 epochs): $24-$96 on 4\u00d7 A100. 8B LoRA: $3-$6 on 1\u00d7 A100. 70B full fine-tuning: $288-$1,152 on 8\u00d7 A100. Cost optimization: use spot instances (50-70% cheaper), start with LoRA, prototype on 8B before scaling, optimize data quality over quantity.',color:'#16a34a'},
+    7:{text:'<strong>Decision framework:</strong> &lt;50K examples or multi-tenant \u2192 LoRA. Continued pre-training or major domain shift \u2192 full fine-tuning. 1 GPU \u2192 QLoRA/LoRA. 2-4 GPUs \u2192 full FT with ZeRO-2. 8+ GPUs \u2192 full FT with ZeRO-3 or FSDP. Always use Accelerate. Start simple, scale up only when needed.',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--amber)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

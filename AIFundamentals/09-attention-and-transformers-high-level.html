@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Attention &amp; Transformers — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}.pipe-arrow.lit{color:var(--red)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Attention &amp; Transformers</h2><span class="tb-sub">&ldquo;Attention Is All You Need&rdquo; &mdash; the architecture that changed everything</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="09-attention-and-transformers-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">center_focus_strong</span></div><span class="pipe-label">Attention</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">key</span></div><span class="pipe-label">Q K V</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">view_comfy</span></div><span class="pipe-label">Multi-Head</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">stacks</span></div><span class="pipe-label">Layers</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">pin_drop</span></div><span class="pipe-label">Position</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Variants</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">center_focus_strong</span></div><div><div class="cc-title">The Attention Mechanism</div><div class="cc-sub">From add-on to the entire architecture</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Core Idea</div><div class="cc-text"><strong>Attention</strong> lets a model look at all positions in a sequence and decide which ones are relevant for the current task. Instead of compressing everything into a single vector (Ch 8&rsquo;s seq2seq bottleneck), attention creates a <strong>weighted combination</strong> of all positions &mdash; different weights for each query.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Attention in one sentence:</span>
+<span class="hl-key">"Given what I'm looking for (query),</span>
+<span class="hl-key"> which parts of the input (keys) match,</span>
+<span class="hl-key"> and what information (values) should I gather?"</span>
+
+<span class="hl-cmt"># Bahdanau (2015): attention on RNN encoder</span>
+<span class="hl-cmt"># Vaswani (2017): attention IS the architecture</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Attention Beats RNNs</div><div class="cc-code"><span class="hl-key">RNN:</span>
+  Word 1 &rarr; Word 2 &rarr; ... &rarr; Word 100
+  <span class="hl-err">100 steps to connect Word 1 to Word 100</span>
+  <span class="hl-err">Sequential: can't parallelize</span>
+
+<span class="hl-key">Attention:</span>
+  Word 1 &harr; Word 100 <span class="hl-ok">directly</span>
+  <span class="hl-ok">1 step to connect any two positions</span>
+  <span class="hl-ok">All positions computed in parallel</span></div></div>
+          <div class="cc-note n-red"><strong>The breakthrough:</strong> Attention reduces the path length between any two positions from O(n) to O(1). This means the model can learn long-range dependencies without information having to pass through many intermediate steps.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">key</span></div><div><div class="cc-title">Query, Key, Value</div><div class="cc-sub">The three projections that make attention work</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The QKV Framework</div><div class="cc-text">Each input token is projected into three vectors: a <strong>Query</strong> (what am I looking for?), a <strong>Key</strong> (what do I contain?), and a <strong>Value</strong> (what information do I carry?). The attention score between two tokens is the dot product of the query of one and the key of the other.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Scaled dot-product attention</span>
+
+<span class="hl-key">Q</span> = X &middot; W_Q    <span class="hl-cmt"># queries</span>
+<span class="hl-key">K</span> = X &middot; W_K    <span class="hl-cmt"># keys</span>
+<span class="hl-key">V</span> = X &middot; W_V    <span class="hl-cmt"># values</span>
+
+<span class="hl-key">Attention(Q,K,V)</span> = softmax(Q&middot;K&sup1;/&radic;d_k) &middot; V
+
+<span class="hl-cmt"># &radic;d_k scaling prevents softmax saturation</span>
+<span class="hl-cmt"># softmax turns scores into probabilities</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Analogy: Library Search</div><div class="cc-text">Think of a library. Your <strong>query</strong> is your search term. Each book has a <strong>key</strong> (its title/tags). The <strong>value</strong> is the book&rsquo;s content. You match your query against all keys, and the most relevant books contribute their values to your answer &mdash; weighted by relevance.</div></div>
+          <div class="cc-note n-orange"><strong>Self-attention:</strong> When Q, K, and V all come from the <em>same</em> sequence, it&rsquo;s called self-attention. Each word attends to every other word in the same sentence. &ldquo;The cat sat on the mat because <strong>it</strong> was tired&rdquo; &mdash; self-attention lets &ldquo;it&rdquo; attend strongly to &ldquo;cat.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">view_comfy</span></div><div><div class="cc-title">Multi-Head Attention</div><div class="cc-sub">Multiple attention patterns in parallel</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Multiple Heads?</div><div class="cc-text">A single attention head can only focus on one type of relationship at a time. <strong>Multi-head attention</strong> runs multiple attention operations in parallel, each with different learned W_Q, W_K, W_V projections. One head might learn syntax, another coreference, another semantic similarity.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Multi-head attention</span>
+
+<span class="hl-key">head\u2081</span> = Attention(X&middot;W\u2081_Q, X&middot;W\u2081_K, X&middot;W\u2081_V)
+<span class="hl-key">head\u2082</span> = Attention(X&middot;W\u2082_Q, X&middot;W\u2082_K, X&middot;W\u2082_V)
+  ...
+<span class="hl-key">head\u2095</span> = Attention(X&middot;W\u2095_Q, X&middot;W\u2095_K, X&middot;W\u2095_V)
+
+<span class="hl-key">MultiHead</span> = Concat(head\u2081,...,head\u2095) &middot; W_O</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Typical Configurations</div><div class="cc-code"><span class="hl-key">Model          d_model  heads  d_k</span>
+BERT-base       768      12     64
+GPT-2           768      12     64
+GPT-3          12288     96    128
+GPT-4 (est.)   ~12K    ~128    ~96
+Llama 3 70B    8192     64    128
+
+<span class="hl-cmt"># d_k = d_model / num_heads</span>
+<span class="hl-cmt"># Each head operates on a slice</span>
+<span class="hl-cmt"># Total compute = same as single large head</span></div></div>
+          <div class="cc-note n-pink"><strong>What heads learn:</strong> Research shows different heads specialize. Some track positional patterns (attend to adjacent tokens), some track syntactic relations (subject-verb), some handle coreference (&ldquo;it&rdquo; &rarr; &ldquo;cat&rdquo;). This emergent specialization is not programmed &mdash; it&rsquo;s learned.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">stacks</span></div><div><div class="cc-title">The Transformer Block</div><div class="cc-sub">Attention + feed-forward + residuals + layer norm</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">One Transformer Layer</div><div class="cc-text">Each transformer layer has two sub-layers: <strong>multi-head self-attention</strong> and a <strong>feed-forward network</strong> (FFN). Both are wrapped with a residual connection and layer normalization. The FFN is applied independently to each position &mdash; it&rsquo;s where the model stores factual knowledge.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># One transformer layer (Pre-LN variant)</span>
+
+<span class="hl-key">1. Self-Attention sub-layer:</span>
+   x = x + MultiHeadAttn(LayerNorm(x))
+
+<span class="hl-key">2. Feed-Forward sub-layer:</span>
+   x = x + FFN(LayerNorm(x))
+
+<span class="hl-key">FFN(x)</span> = GELU(x&middot;W\u2081 + b\u2081) &middot; W\u2082 + b\u2082
+
+<span class="hl-cmt"># FFN hidden dim = 4 &times; d_model (typical)</span>
+<span class="hl-cmt"># e.g., d_model=768 &rarr; FFN hidden=3072</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stacking Layers</div><div class="cc-text">The original transformer used <strong>6 layers</strong>. Modern models stack many more: BERT-large has 24, GPT-3 has 96, GPT-4 is estimated at 120+. Each layer refines the representation &mdash; early layers capture syntax, middle layers capture semantics, late layers prepare for the task.</div></div>
+          <div class="cc-note n-violet"><strong>Residual connections</strong> (x + sublayer(x)) are essential. Without them, gradients vanish in deep transformers just like in deep CNNs. <strong>Layer normalization</strong> stabilizes training by normalizing across the feature dimension. Together, they enable stacking 100+ layers.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">pin_drop</span></div><div><div class="cc-title">Positional Encoding</div><div class="cc-sub">Teaching transformers about word order</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Self-attention is <strong>permutation-invariant</strong> &mdash; it treats &ldquo;cat sat mat&rdquo; the same as &ldquo;mat cat sat.&rdquo; Unlike RNNs, which process tokens sequentially, transformers see all tokens at once. We must explicitly inject position information.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Original: sinusoidal positional encoding</span>
+
+<span class="hl-key">PE(pos, 2i)</span>   = sin(pos / 10000^(2i/d))
+<span class="hl-key">PE(pos, 2i+1)</span> = cos(pos / 10000^(2i/d))
+
+<span class="hl-cmt"># Each position gets a unique pattern</span>
+<span class="hl-cmt"># Different frequencies for different dims</span>
+<span class="hl-cmt"># Can generalize to unseen sequence lengths</span>
+
+<span class="hl-key">input</span> = token_embedding + positional_encoding</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Modern Approaches</div><div class="cc-code"><span class="hl-key">Absolute (original):</span>
+  Fixed sinusoidal or learned embeddings
+  Added to input once
+
+<span class="hl-key">Relative (Shaw 2018, T5):</span>
+  Encode distance between tokens
+  Added to attention scores
+
+<span class="hl-key">RoPE (Su 2021, used in Llama/GPT-4):</span>
+  Rotary Position Embedding
+  Encodes position via rotation matrices
+  Naturally handles relative distances
+  Scales well to long contexts</div></div>
+          <div class="cc-note n-blue"><strong>RoPE</strong> is now the dominant approach. It rotates the query and key vectors by an angle proportional to their position. The dot product between rotated Q and K naturally depends on the relative distance between tokens &mdash; elegant and effective.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Encoder vs. Decoder vs. Encoder-Decoder</div><div class="cc-sub">Three transformer families for different tasks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">Encoder-Only (BERT, 2018):</span>
+  Bidirectional self-attention
+  Each token sees ALL other tokens
+  Task: understanding (classification, NER)
+  Training: masked language modeling (MLM)
+
+<span class="hl-key">Decoder-Only (GPT, 2018):</span>
+  Causal (masked) self-attention
+  Each token sees only PREVIOUS tokens
+  Task: generation (text, code, chat)
+  Training: next-token prediction
+
+<span class="hl-key">Encoder-Decoder (T5, 2019; original):</span>
+  Encoder: bidirectional
+  Decoder: causal + cross-attention to encoder
+  Task: translation, summarization
+  Training: span corruption / denoising</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Causal Mask</div><div class="cc-text">Decoder models use a <strong>causal mask</strong> that prevents each position from attending to future tokens. When generating &ldquo;The cat sat,&rdquo; the model predicting &ldquo;sat&rdquo; can only see &ldquo;The&rdquo; and &ldquo;cat&rdquo; &mdash; not future words. This enables autoregressive generation.</div></div>
+          <div class="cc-note n-teal"><strong>The GPT family won.</strong> Decoder-only models dominate modern AI: GPT-4, Claude, Llama, Gemini, Mistral. The simplicity of next-token prediction + massive scale proved more powerful than the architectural complexity of encoder-decoder models. BERT-style models remain useful for classification and retrieval.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Efficiency &amp; Scaling</div><div class="cc-sub">The O(n&sup2;) problem and how to tame it</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Quadratic Cost</div><div class="cc-text">Self-attention computes scores between <strong>every pair</strong> of tokens: O(n&sup2;) time and memory. For a 2048-token sequence, that&rsquo;s ~4 million attention scores per head. For 128K tokens (GPT-4 Turbo): ~16 billion. This is the transformer&rsquo;s biggest limitation.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Attention cost scaling</span>
+
+<span class="hl-key">Sequence    Pairs       Memory</span>
+512         262K        ~2 MB
+2,048       4.2M        ~32 MB
+8,192       67M         ~512 MB
+32,768      1.07B       ~8 GB
+131,072     17.2B       <span class="hl-err">~128 GB</span>
+
+<span class="hl-cmt"># Per head, per layer, float16</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Efficiency Solutions</div><div class="cc-code"><span class="hl-key">FlashAttention (Dao, 2022):</span>
+  Same math, better memory access
+  Fuses operations, avoids materializing
+  the full n\u00d7n attention matrix
+  <span class="hl-ok">2-4x faster, much less memory</span>
+
+<span class="hl-key">KV Cache (inference):</span>
+  Cache key/value from previous tokens
+  Only compute attention for new token
+  <span class="hl-ok">Avoids recomputing entire sequence</span>
+
+<span class="hl-key">Grouped-Query Attention (GQA):</span>
+  Share K,V heads across query heads
+  Llama 2 70B: 64 Q heads, 8 KV heads
+  <span class="hl-ok">8x less KV cache memory</span></div></div>
+          <div class="cc-note n-orange"><strong>FlashAttention</strong> is now standard in all major frameworks. It doesn&rsquo;t change the math &mdash; it changes the memory access pattern to exploit GPU hardware. The result: longer contexts, faster training, and lower memory usage with mathematically identical results.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">auto_awesome</span></div><div><div class="cc-title">Impact &amp; Key Takeaways</div><div class="cc-sub">Why the transformer is the most important architecture in AI history</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Transformer Revolution</div><div class="cc-text">Published in June 2017 by Vaswani et al. at Google Brain, &ldquo;Attention Is All You Need&rdquo; has become the most cited ML paper in history. The transformer replaced RNNs, CNNs (for NLP), and became the backbone of GPT, BERT, T5, Llama, Gemini, Claude, DALL-E, Stable Diffusion, AlphaFold 2, and virtually every frontier AI system.</div></div>
+          <div class="cc-note n-red"><strong>Beyond NLP:</strong> Transformers now dominate computer vision (ViT), protein folding (AlphaFold), drug discovery, weather forecasting (GraphCast), music generation, robotics, and code generation. The architecture is domain-agnostic &mdash; any data that can be tokenized can be processed by a transformer.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Takeaways</div><div class="cc-text"><strong>1.</strong> Attention connects any two positions in O(1) steps<br><br><strong>2.</strong> Query-Key-Value: Q asks, K matches, V provides content<br><br><strong>3.</strong> Multi-head attention captures diverse relationships<br><br><strong>4.</strong> Transformer block = attention + FFN + residual + LayerNorm<br><br><strong>5.</strong> Positional encoding injects order (RoPE is now standard)<br><br><strong>6.</strong> Decoder-only (GPT-style) dominates modern AI<br><br><strong>7.</strong> O(n&sup2;) cost is the main limitation; FlashAttention + KV cache mitigate it</div></div>
+          <div class="cc-note n-green"><strong>Coming up:</strong> Ch 10 explores how transformers scale into Large Language Models &mdash; pretraining, fine-tuning, RLHF, emergent abilities, and the path from GPT-1 to frontier models.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Attention</strong> lets every position look at every other position directly \u2014 O(1) path length vs RNN\u2019s O(n). Bahdanau (2015) added attention to RNNs. Vaswani (2017) made attention the <em>entire</em> architecture: \u201cAttention Is All You Need.\u201d This single paper launched the modern AI era.',color:'#dc2626'},
+    2:{text:'<strong>Query, Key, Value:</strong> Each token is projected into Q, K, V vectors. Attention(Q,K,V) = softmax(QK\u1d40/\u221ad\u2096)\u00b7V. The dot product Q\u00b7K measures relevance. Softmax normalizes to probabilities. V carries the content. Scaling by \u221ad\u2096 prevents softmax from saturating in high dimensions.',color:'#ea580c'},
+    3:{text:'<strong>Multi-head attention</strong> runs h parallel attention operations with different projections. Each head learns different patterns: syntax, coreference, semantic similarity. Outputs are concatenated and projected. GPT-3 uses 96 heads; total compute equals one large head but with richer representations.',color:'#db2777'},
+    4:{text:'<strong>Transformer block:</strong> Multi-head attention + feed-forward network, each wrapped with residual connection + layer norm. The FFN (two linear layers with GELU) is applied per-position and stores factual knowledge. Stack N blocks: BERT=12, GPT-3=96, GPT-4\u2248120+.',color:'#7c3aed'},
+    5:{text:'<strong>Positional encoding:</strong> Self-attention is permutation-invariant \u2014 it ignores word order. The original transformer used sinusoidal encodings. Modern models use <strong>RoPE</strong> (Rotary Position Embedding) \u2014 it encodes position via rotation, naturally captures relative distances, and scales to long contexts.',color:'#2563eb'},
+    6:{text:'<strong>Three families:</strong> Encoder-only (BERT \u2014 bidirectional, for understanding), decoder-only (GPT \u2014 causal mask, for generation), encoder-decoder (T5 \u2014 for translation). Decoder-only won: GPT-4, Claude, Llama, Gemini all use causal next-token prediction at massive scale.',color:'#0d9488'},
+    7:{text:'<strong>The O(n\u00b2) problem:</strong> Attention computes all-pairs scores. 128K tokens = 16 billion scores per head. Solutions: FlashAttention (fused GPU kernels, 2\u20134x faster), KV cache (avoid recomputation at inference), Grouped-Query Attention (share KV heads, 8x less cache).',color:'#d97706'},
+    8:{text:'<strong>The transformer is the most important architecture in AI.</strong> Published June 2017, it now powers NLP, vision, protein folding, weather, music, code, and robotics. The key insight: replace sequential processing with parallel attention. Everything since \u2014 GPT, BERT, DALL-E, AlphaFold \u2014 is built on this foundation.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

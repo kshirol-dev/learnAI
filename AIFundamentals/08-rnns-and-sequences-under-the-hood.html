@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: RNNs &amp; Sequences — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.c-red.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; RNNs &amp; Sequences</h2><span class="tb-sub">Recurrence math, LSTM gates, GRU, BPTT, and the road to attention</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="08-rnns-and-sequences-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: Vanilla RNN Internals -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">Zone A</span><span class="zone-title">Vanilla RNN &mdash; Forward Pass &amp; BPTT</span><span class="zone-sub">Steps 1&ndash;2</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red" data-step="1" onclick="openDetail(1)"><div class="step-badge bg-red">1</div><div class="fnode-icon"><span class="material-symbols-rounded">functions</span></div><div class="fnode-label">RNN Forward</div><div class="fnode-sub">h\u209c = tanh(W\u2095h + W\u2093x + b)</div></div>
+      <div class="farr" data-step="2"></div>
+      <div class="fnode c-red" data-step="2" onclick="openDetail(2)"><div class="step-badge bg-red">2</div><div class="fnode-icon"><span class="material-symbols-rounded">arrow_back</span></div><div class="fnode-label">BPTT</div><div class="fnode-sub">Gradients through time</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange" data-step="3"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Vanishing gradient &rarr; need gating</div><div class="step-badge bg-orange">3</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: LSTM Internals -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">Zone B</span><span class="zone-title">LSTM &mdash; Gates &amp; Cell State</span><span class="zone-sub">Steps 3&ndash;5</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange" data-step="3" onclick="openDetail(3)"><div class="step-badge bg-orange">3</div><div class="fnode-icon"><span class="material-symbols-rounded">lock_open</span></div><div class="fnode-label">Forget Gate</div><div class="fnode-sub">f = &sigma;(W\u1da0[h,x]+b)</div></div>
+      <div class="farr" data-step="4"></div>
+      <div class="fnode c-orange" data-step="4" onclick="openDetail(4)"><div class="step-badge bg-orange">4</div><div class="fnode-icon"><span class="material-symbols-rounded">add_circle</span></div><div class="fnode-label">Input &amp; Cell</div><div class="fnode-sub">C\u209c = f\u2299C + i\u2299g</div></div>
+      <div class="farr" data-step="5"></div>
+      <div class="fnode c-orange" data-step="5" onclick="openDetail(5)"><div class="step-badge bg-orange">5</div><div class="fnode-icon"><span class="material-symbols-rounded">output</span></div><div class="fnode-label">Output &amp; Gradient</div><div class="fnode-sub">Gradient highway</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet" data-step="6"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Simplify 3 gates &rarr; 2 gates</div><div class="step-badge bg-violet">6</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: GRU Internals -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">Zone C</span><span class="zone-title">GRU &mdash; Simplified Gating</span><span class="zone-sub">Steps 6&ndash;7</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="6" onclick="openDetail(6)"><div class="step-badge bg-violet">6</div><div class="fnode-icon"><span class="material-symbols-rounded">tune</span></div><div class="fnode-label">GRU Equations</div><div class="fnode-sub">Reset + Update gates</div></div>
+      <div class="farr" data-step="7"></div>
+      <div class="fnode c-violet" data-step="7"><div class="step-badge bg-violet">7</div><div class="fnode-icon"><span class="material-symbols-rounded">calculate</span></div><div class="fnode-label">Parameter Count</div><div class="fnode-sub">LSTM vs GRU vs RNN</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue" data-step="8"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Sequence &rarr; sequence translation</div><div class="step-badge bg-blue">8</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: Seq2Seq & Attention -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">Zone D</span><span class="zone-title">Seq2Seq &amp; Bahdanau Attention</span><span class="zone-sub">Steps 8&ndash;9</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="8" onclick="openDetail(8)"><div class="step-badge bg-blue">8</div><div class="fnode-icon"><span class="material-symbols-rounded">compress</span></div><div class="fnode-label">Encoder-Decoder</div><div class="fnode-sub">Context vector bottleneck</div></div>
+      <div class="farr" data-step="9"></div>
+      <div class="fnode c-blue" data-step="9" onclick="openDetail(9)"><div class="step-badge bg-blue">9</div><div class="fnode-icon"><span class="material-symbols-rounded">center_focus_strong</span></div><div class="fnode-label">Attention Scores</div><div class="fnode-sub">Alignment weights</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal" data-step="10"><div class="loop-dash"></div><div class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Practical implementation</div><div class="step-badge bg-teal">10</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: Practical & Modern -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">Zone E</span><span class="zone-title">Practical Considerations &amp; Modern Alternatives</span><span class="zone-sub">Step 10</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="10"><div class="step-badge bg-teal">10</div><div class="fnode-icon"><span class="material-symbols-rounded">speed</span></div><div class="fnode-label">Bidirectional &amp; SSMs</div><div class="fnode-sub">Stacking, Mamba, complexity</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"><div class="dp-head"><div class="dp-step" id="dpStep">1</div><div class="dp-title" id="dpTitle">Title</div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div><div class="dp-body" id="dpBody"></div></div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+const TOTAL=10,STEP_MS=7000;
+const NARRATION={
+  1:{text:'<strong>RNN forward pass:</strong> h\u209c = tanh(W\u2095\u00b7h\u209c\u208b\u2081 + W\u2093\u00b7x\u209c + b). The hidden state h\u209c is a fixed-size vector that compresses the entire sequence history. Same weight matrices W\u2095 and W\u2093 are reused at every time step \u2014 this is weight sharing through time.',color:'#dc2626'},
+  2:{text:'<strong>BPTT:</strong> Unroll the RNN and apply the chain rule. \u2202L/\u2202W\u2095 = \u2211\u209c \u2202L\u209c/\u2202W\u2095, summing gradient contributions from every time step. The gradient at step k involves multiplying (W\u2095\u1d40 \u00b7 diag(tanh\u2032)) repeatedly \u2014 eigenvalues < 1 cause vanishing, > 1 cause exploding.',color:'#dc2626'},
+  3:{text:'<strong>LSTM forget gate:</strong> f\u209c = \u03c3(W\u1da0\u00b7[h\u209c\u208b\u2081, x\u209c] + b\u1da0). Sigmoid outputs 0\u20131 per dimension. f=0 erases that memory cell; f=1 preserves it. The forget gate was actually added later by Gers et al. (2000) \u2014 the original 1997 LSTM had no forget gate.',color:'#ea580c'},
+  4:{text:'<strong>Cell state update:</strong> C\u209c = f\u209c\u2299C\u209c\u208b\u2081 + i\u209c\u2299g\u209c, where i = \u03c3(W\u1d62\u00b7[h,x]+b\u1d62) is the input gate and g = tanh(W\u1d9c\u00b7[h,x]+b\u1d9c) is the candidate. This <em>additive</em> update is the key innovation \u2014 no matrix multiplication on the cell state path.',color:'#ea580c'},
+  5:{text:'<strong>LSTM gradient highway:</strong> \u2202C\u209c/\u2202C\u209c\u208b\u2081 = f\u209c (just element-wise multiply by forget gate). When f\u2248 1, gradients flow unchanged across hundreds of steps. Compare to vanilla RNN: \u2202h\u209c/\u2202h\u209c\u208b\u2081 = W\u2095\u1d40\u00b7diag(tanh\u2032) \u2014 repeated matrix multiplication destroys gradients.',color:'#ea580c'},
+  6:{text:'<strong>GRU equations:</strong> r\u209c = \u03c3(W\u1d63[h,x]), z\u209c = \u03c3(W\u1dbb[h,x]), h\u0303 = tanh(W[r\u2299h, x]), h\u209c = (1\u2212z)\u2299h\u209c\u208b\u2081 + z\u2299h\u0303. The update gate z acts as both forget and input gate. Reset gate r controls how much history influences the candidate.',color:'#7c3aed'},
+  7:{text:'<strong>Parameter comparison:</strong> For input size d and hidden size h: Vanilla RNN = h\u00b2 + hd + h. LSTM = 4(h\u00b2 + hd + h). GRU = 3(h\u00b2 + hd + h). GRU has 75% of LSTM\'s parameters. With h=512, d=256: RNN \u2248 394K, LSTM \u2248 1.57M, GRU \u2248 1.18M.',color:'#7c3aed'},
+  8:{text:'<strong>Seq2Seq:</strong> Encoder LSTM reads input, final hidden state = context vector c. Decoder LSTM: h\u209c = LSTM(h\u209c\u208b\u2081, [y\u209c\u208b\u2081; c]). Sutskever et al. (2014) achieved 34.8 BLEU on WMT\'14 En\u2192Fr. Key trick: reversing input sequence improved results significantly.',color:'#2563eb'},
+  9:{text:'<strong>Bahdanau attention (2015):</strong> e\u1d62\u2c7c = v\u1d40\u00b7tanh(W\u2090s\u1d62 + W\u2095h\u2c7c), \u03b1\u1d62\u2c7c = softmax(e\u1d62\u2c7c), c\u1d62 = \u2211\u2c7c \u03b1\u1d62\u2c7c\u00b7h\u2c7c. Each decoder step i gets its own context vector c\u1d62 by attending to all encoder states h\u2c7c. This eliminated the fixed-vector bottleneck and directly inspired the transformer.',color:'#2563eb'},
+  10:{text:'<strong>Practical:</strong> Bidirectional RNNs concatenate forward and backward passes. Stacked layers add depth. Gradient clipping (max norm 5) prevents explosions. Modern alternatives: Transformers (O(n\u00b2) but parallelizable) and State Space Models like Mamba (O(n), sequential, competitive quality).',color:'#0d9488'},
+};
+const DETAILS={
+  1:{title:'RNN Forward Pass: Worked Example',color:'#dc2626',body:`
+<div class="dp-label">RNN Equations</div>
+<div class="dp-code"><span class="hl-cmt">// At each time step t:</span>
+<span class="hl-key">z\u209c</span> = W\u2095 \u00b7 h\u209c\u208b\u2081 + W\u2093 \u00b7 x\u209c + b
+<span class="hl-key">h\u209c</span> = tanh(z\u209c)
+<span class="hl-key">y\u209c</span> = W\u2099 \u00b7 h\u209c + b\u2099
+
+<span class="hl-cmt">// Dimensions:</span>
+<span class="hl-key">x\u209c</span> \u2208 \u211d\u1d48          <span class="hl-cmt">// input (d = input size)</span>
+<span class="hl-key">h\u209c</span> \u2208 \u211d\u02b0          <span class="hl-cmt">// hidden state (h = hidden size)</span>
+<span class="hl-key">W\u2093</span> \u2208 \u211d\u02b0\u02e3\u1d48       <span class="hl-cmt">// input-to-hidden</span>
+<span class="hl-key">W\u2095</span> \u2208 \u211d\u02b0\u02e3\u02b0       <span class="hl-cmt">// hidden-to-hidden</span>
+<span class="hl-key">W\u2099</span> \u2208 \u211d\u1d5b\u02e3\u02b0       <span class="hl-cmt">// hidden-to-output</span></div>
+<div class="dp-label">Numerical Example (h=2, d=2)</div>
+<div class="dp-code"><span class="hl-key">W\u2093</span> = [[0.5, 0.3],    <span class="hl-key">W\u2095</span> = [[0.2, -0.1],
+       [0.1, 0.7]]           [0.4,  0.3]]
+
+<span class="hl-key">b</span> = [0, 0],  <span class="hl-key">h\u2080</span> = [0, 0]
+
+<span class="hl-cmt">// Step 1: x\u2081 = [1, 0]</span>
+z\u2081 = W\u2095\u00b7[0,0] + W\u2093\u00b7[1,0] + b = [<span class="hl-num">0.5</span>, <span class="hl-num">0.1</span>]
+h\u2081 = tanh([0.5, 0.1]) = [<span class="hl-ok">0.462</span>, <span class="hl-ok">0.100</span>]
+
+<span class="hl-cmt">// Step 2: x\u2082 = [0, 1]</span>
+z\u2082 = W\u2095\u00b7[0.462, 0.100] + W\u2093\u00b7[0, 1] + b
+     = [0.082, 0.215] + [0.3, 0.7]
+     = [<span class="hl-num">0.382</span>, <span class="hl-num">0.915</span>]
+h\u2082 = tanh([0.382, 0.915]) = [<span class="hl-ok">0.364</span>, <span class="hl-ok">0.724</span>]
+
+<span class="hl-cmt">// h\u2082 encodes both x\u2081 and x\u2082</span></div>
+<div class="dp-note n-red"><strong>Weight sharing:</strong> The exact same W\u2093 and W\u2095 are used at every time step. This means an RNN can process sequences of any length with a fixed number of parameters. The hidden state h\u209c is the only thing that changes \u2014 it acts as a compressed summary of the sequence so far.</div>`},
+  2:{title:'Backpropagation Through Time (BPTT)',color:'#dc2626',body:`
+<div class="dp-label">Gradient Derivation</div>
+<div class="dp-code"><span class="hl-cmt">// Total loss over T time steps:</span>
+<span class="hl-key">L</span> = \u2211\u209c L\u209c(y\u209c, target\u209c)
+
+<span class="hl-cmt">// Gradient of W\u2095 (summed over all steps):</span>
+<span class="hl-key">\u2202L/\u2202W\u2095</span> = \u2211\u209c \u2202L\u209c/\u2202W\u2095
+
+<span class="hl-cmt">// For a single step t, chain rule unrolls:</span>
+<span class="hl-key">\u2202L\u209c/\u2202W\u2095</span> = \u2211\u2096\u208c\u2081\u1d57 (\u2202L\u209c/\u2202h\u209c) \u00b7 (\u220f\u2c7c\u208c\u2096\u207a\u00b9\u1d57 \u2202h\u2c7c/\u2202h\u2c7c\u208b\u2081) \u00b7 (\u2202h\u2096/\u2202W\u2095)
+
+<span class="hl-cmt">// The product term is where vanishing happens:</span>
+<span class="hl-key">\u2202h\u2c7c/\u2202h\u2c7c\u208b\u2081</span> = diag(tanh\u2032(z\u2c7c)) \u00b7 W\u2095\u1d40
+
+<span class="hl-cmt">// tanh\u2032 \u2208 (0, 1], max at z=0 is 1.0</span>
+<span class="hl-cmt">// Repeated multiplication shrinks gradients</span></div>
+<div class="dp-label">Vanishing: Numerical Example</div>
+<div class="dp-code"><span class="hl-cmt">// Assume max eigenvalue of W\u2095 = 0.9</span>
+<span class="hl-cmt">// tanh\u2032 max = 1.0 (best case)</span>
+
+<span class="hl-key">After 10 steps:</span>  0.9\u00b9\u2070  = <span class="hl-num">0.349</span>
+<span class="hl-key">After 50 steps:</span>  0.9\u2075\u2070  = <span class="hl-err">0.005</span>
+<span class="hl-key">After 100 steps:</span> 0.9\u00b9\u2070\u2070 = <span class="hl-err">0.0000265</span>
+
+<span class="hl-cmt">// Gradient clipping for exploding gradients:</span>
+<span class="hl-key">if</span> ||g|| > threshold:
+    g = g \u00d7 (threshold / ||g||)
+
+<span class="hl-cmt">// Typical threshold: 1.0 \u2013 5.0</span></div>
+<div class="dp-note n-red"><strong>Truncated BPTT:</strong> In practice, we don\u2019t backpropagate through the entire sequence. We truncate after k steps (e.g., k=35). This limits the longest dependency we can learn but makes training tractable. LSTMs extend this effective range dramatically.</div>`},
+  3:{title:'LSTM Forget Gate: Detailed Mechanics',color:'#ea580c',body:`
+<div class="dp-label">Forget Gate Computation</div>
+<div class="dp-code"><span class="hl-cmt">// Forget gate: decides what to erase from cell state</span>
+<span class="hl-key">f\u209c</span> = \u03c3(W\u1da0 \u00b7 [h\u209c\u208b\u2081, x\u209c] + b\u1da0)
+
+<span class="hl-cmt">// [h\u209c\u208b\u2081, x\u209c] = concatenation of previous hidden</span>
+<span class="hl-cmt">// state and current input</span>
+
+<span class="hl-cmt">// Dimensions (h=256, d=128):</span>
+<span class="hl-key">[h\u209c\u208b\u2081, x\u209c]</span> \u2208 \u211d\u00b3\u2078\u2074     <span class="hl-cmt">// concat: 256+128</span>
+<span class="hl-key">W\u1da0</span>         \u2208 \u211d\u00b2\u2075\u2076\u02e3\u00b3\u2078\u2074  <span class="hl-cmt">// weight matrix</span>
+<span class="hl-key">b\u1da0</span>         \u2208 \u211d\u00b2\u2075\u2076       <span class="hl-cmt">// bias</span>
+<span class="hl-key">f\u209c</span>         \u2208 (0, 1)\u00b2\u2075\u2076  <span class="hl-cmt">// per-element gate</span></div>
+<div class="dp-label">Example: Language Model Processing</div>
+<div class="dp-code"><span class="hl-cmt">// Processing: "The cat, which was very fluffy, sat"</span>
+
+<span class="hl-cmt">// At "which": f \u2248 1 (keep "cat" in memory)</span>
+<span class="hl-cmt">// At "was", "very", "fluffy": f \u2248 1 (preserve)</span>
+<span class="hl-cmt">// At "sat": f \u2248 1 for subject cells</span>
+<span class="hl-cmt">//           f \u2248 0 for adjective cells (erase "fluffy")</span>
+
+<span class="hl-key">Cell dimension 42:</span>  <span class="hl-cmt">// tracks subject</span>
+  f = [1.0, 1.0, 1.0, 1.0, 0.98, 0.99, 0.97, <span class="hl-ok">0.95</span>]
+  <span class="hl-cmt">// "cat" info preserved across 7 tokens</span>
+
+<span class="hl-key">Cell dimension 108:</span> <span class="hl-cmt">// tracks adjective</span>
+  f = [0.1, 0.9, 0.95, 0.92, 0.88, 0.85, <span class="hl-err">0.05</span>, 0.1]
+  <span class="hl-cmt">// "fluffy" erased when no longer needed</span></div>
+<div class="dp-note n-orange"><strong>Bias initialization trick:</strong> Initialize b\u1da0 to +1 or +2 so that f \u2248 1 at the start of training. This ensures the cell state passes through by default, and the network learns <em>what to forget</em> rather than <em>what to remember</em>. This simple trick (Jozefowicz et al., 2015) significantly improves LSTM training.</div>`},
+  4:{title:'LSTM Cell State Update: Full Forward Pass',color:'#ea580c',body:`
+<div class="dp-label">Complete LSTM Equations</div>
+<div class="dp-code"><span class="hl-cmt">// All four components in order:</span>
+
+<span class="hl-key">1. Forget gate:</span>
+   f\u209c = \u03c3(W\u1da0 \u00b7 [h\u209c\u208b\u2081, x\u209c] + b\u1da0)
+
+<span class="hl-key">2. Input gate:</span>
+   i\u209c = \u03c3(W\u1d62 \u00b7 [h\u209c\u208b\u2081, x\u209c] + b\u1d62)
+
+<span class="hl-key">3. Candidate cell state:</span>
+   g\u209c = tanh(W\u1d9c \u00b7 [h\u209c\u208b\u2081, x\u209c] + b\u1d9c)
+
+<span class="hl-key">4. Cell state update (ADDITIVE!):</span>
+   C\u209c = f\u209c \u2299 C\u209c\u208b\u2081 + i\u209c \u2299 g\u209c
+   <span class="hl-str">erase old</span>       <span class="hl-str">write new</span>
+
+<span class="hl-key">5. Output gate:</span>
+   o\u209c = \u03c3(W\u2092 \u00b7 [h\u209c\u208b\u2081, x\u209c] + b\u2092)
+
+<span class="hl-key">6. Hidden state:</span>
+   h\u209c = o\u209c \u2299 tanh(C\u209c)</div>
+<div class="dp-label">Numerical Walkthrough (h=2)</div>
+<div class="dp-code"><span class="hl-cmt">// Given: h\u209c\u208b\u2081=[0.5, -0.3], x\u209c=[1.0, 0.0]</span>
+<span class="hl-cmt">// C\u209c\u208b\u2081 = [0.8, -0.2]</span>
+
+<span class="hl-key">f\u209c</span> = \u03c3([...]) = [<span class="hl-num">0.9</span>, <span class="hl-num">0.1</span>]
+  <span class="hl-cmt">// Keep dim 0, erase dim 1</span>
+
+<span class="hl-key">i\u209c</span> = \u03c3([...]) = [<span class="hl-num">0.2</span>, <span class="hl-num">0.8</span>]
+<span class="hl-key">g\u209c</span> = tanh([...]) = [<span class="hl-num">0.5</span>, <span class="hl-num">0.7</span>]
+
+<span class="hl-key">C\u209c</span> = [0.9\u00d70.8, 0.1\u00d7(-0.2)] + [0.2\u00d70.5, 0.8\u00d70.7]
+     = [0.72, -0.02] + [0.10, 0.56]
+     = [<span class="hl-ok">0.82</span>, <span class="hl-ok">0.54</span>]
+
+<span class="hl-key">o\u209c</span> = \u03c3([...]) = [<span class="hl-num">0.7</span>, <span class="hl-num">0.6</span>]
+<span class="hl-key">h\u209c</span> = [0.7\u00d7tanh(0.82), 0.6\u00d7tanh(0.54)]
+     = [0.7\u00d70.675, 0.6\u00d70.494]
+     = [<span class="hl-ok">0.473</span>, <span class="hl-ok">0.296</span>]</div>
+<div class="dp-note n-orange"><strong>Key insight:</strong> The cell state C\u209c is updated <em>additively</em> (no matrix multiplication). This is fundamentally different from the vanilla RNN where h\u209c = tanh(W\u2095\u00b7h\u209c\u208b\u2081 + ...) involves multiplying by W\u2095 at every step. The additive update is what creates the \u201cgradient highway\u201d that solves vanishing gradients.</div>`},
+  5:{title:'LSTM Gradient Flow Analysis',color:'#ea580c',body:`
+<div class="dp-label">Cell State Gradient</div>
+<div class="dp-code"><span class="hl-cmt">// Gradient of cell state through time:</span>
+<span class="hl-key">\u2202C\u209c/\u2202C\u209c\u208b\u2081</span> = f\u209c  <span class="hl-cmt">(just the forget gate!)</span>
+
+<span class="hl-cmt">// Over T steps:</span>
+<span class="hl-key">\u2202C\u209c/\u2202C\u209c\u208b\u209c</span> = \u220f\u2096\u208c\u209c\u208b\u209c\u207a\u00b9\u1d57 f\u2096
+
+<span class="hl-cmt">// Compare to vanilla RNN:</span>
+<span class="hl-key">RNN:</span>  \u2202h\u209c/\u2202h\u209c\u208b\u2081 = diag(tanh\u2032) \u00b7 W\u2095\u1d40
+  <span class="hl-err">\u2192 eigenvalue decomposition \u2192 exponential decay</span>
+
+<span class="hl-key">LSTM:</span> \u2202C\u209c/\u2202C\u209c\u208b\u2081 = f\u209c
+  <span class="hl-ok">\u2192 element-wise \u2192 each dimension independent</span>
+  <span class="hl-ok">\u2192 when f \u2248 1, gradient = 1 (perfect flow)</span></div>
+<div class="dp-label">Why This Works</div>
+<div class="dp-code"><span class="hl-cmt">// Vanilla RNN gradient after 100 steps:</span>
+<span class="hl-err">\u220f\u00b9\u2070\u2070 (W\u2095\u1d40 \u00b7 diag(tanh\u2032)) \u2248 0</span>
+
+<span class="hl-cmt">// LSTM cell gradient after 100 steps:</span>
+<span class="hl-cmt">// If f \u2248 0.99 on average:</span>
+<span class="hl-ok">\u220f\u00b9\u2070\u2070 f\u2096 = 0.99\u00b9\u2070\u2070 = 0.366</span>  <span class="hl-cmt">// still significant!</span>
+
+<span class="hl-cmt">// If f = 1.0 (perfect memory):</span>
+<span class="hl-ok">\u220f\u00b9\u2070\u2070 f\u2096 = 1.0</span>  <span class="hl-cmt">// gradient preserved exactly</span>
+
+<span class="hl-cmt">// The network LEARNS which f values to use</span>
+<span class="hl-cmt">// Important info: f \u2192 1 (preserve gradient)</span>
+<span class="hl-cmt">// Irrelevant info: f \u2192 0 (allow forgetting)</span></div>
+<div class="dp-note n-orange"><strong>Analogy to ResNets:</strong> LSTM\u2019s C\u209c = f\u2299C\u209c\u208b\u2081 + i\u2299g is structurally similar to ResNet\u2019s y = F(x) + x. Both create a \u201cshortcut\u201d for gradient flow. ResNets add the identity; LSTMs add through a learned gate. This parallel is not a coincidence \u2014 both solve the same fundamental problem of training deep/long computational graphs.</div>`},
+  6:{title:'GRU Equations: Complete Derivation',color:'#7c3aed',body:`
+<div class="dp-label">GRU Gate Equations (Cho et al., 2014)</div>
+<div class="dp-code"><span class="hl-cmt">// Reset gate: how much past to forget</span>
+<span class="hl-key">r\u209c</span> = \u03c3(W\u1d63 \u00b7 x\u209c + U\u1d63 \u00b7 h\u209c\u208b\u2081 + b\u1d63)
+
+<span class="hl-cmt">// Update gate: interpolation factor</span>
+<span class="hl-key">z\u209c</span> = \u03c3(W\u1dbb \u00b7 x\u209c + U\u1dbb \u00b7 h\u209c\u208b\u2081 + b\u1dbb)
+
+<span class="hl-cmt">// Candidate hidden state</span>
+<span class="hl-key">h\u0303\u209c</span> = tanh(W\u2095 \u00b7 x\u209c + U\u2095 \u00b7 (r\u209c \u2299 h\u209c\u208b\u2081) + b\u2095)
+
+<span class="hl-cmt">// Final hidden state (linear interpolation)</span>
+<span class="hl-key">h\u209c</span> = (1 - z\u209c) \u2299 h\u209c\u208b\u2081 + z\u209c \u2299 h\u0303\u209c
+       <span class="hl-str">keep old</span>          <span class="hl-str">use new</span></div>
+<div class="dp-label">GRU vs LSTM: Gate Mapping</div>
+<div class="dp-code"><span class="hl-key">LSTM</span>                    <span class="hl-key">GRU</span>
+\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+Forget gate (f)          Update gate (1-z)
+Input gate (i)           Update gate (z)
+Output gate (o)          <span class="hl-err">(no equivalent)</span>
+Cell state (C)           <span class="hl-err">(merged into h)</span>
+<span class="hl-err">(no equivalent)</span>          Reset gate (r)
+
+<span class="hl-cmt">// GRU merges forget+input into one gate</span>
+<span class="hl-cmt">// z controls the tradeoff: keep vs update</span>
+<span class="hl-cmt">// (1-z) + z = 1 always (convex combination)</span></div>
+<div class="dp-note n-violet"><strong>When z\u209c \u2248 0:</strong> h\u209c \u2248 h\u209c\u208b\u2081 (copy previous state, like LSTM forget gate = 1). <strong>When z\u209c \u2248 1:</strong> h\u209c \u2248 h\u0303\u209c (fully update, like LSTM forget gate = 0 and input gate = 1). The constraint that keep + update = 1 means GRU can\u2019t independently control forgetting and writing \u2014 LSTM can.</div>`},
+  8:{title:'Seq2Seq Encoder-Decoder Architecture',color:'#2563eb',body:`
+<div class="dp-label">Encoder</div>
+<div class="dp-code"><span class="hl-cmt">// Encoder: process input sequence</span>
+<span class="hl-key">for</span> t = 1 to T\u2093:
+    h\u209c = LSTM(h\u209c\u208b\u2081, x\u209c)
+
+<span class="hl-cmt">// Context vector = final hidden state</span>
+<span class="hl-key">c</span> = h\u209c\u2093
+
+<span class="hl-cmt">// Sutskever trick: reverse input sequence</span>
+<span class="hl-cmt">// "the cat sat" \u2192 encode as "sat cat the"</span>
+<span class="hl-cmt">// This puts first words closer to decoder</span>
+<span class="hl-cmt">// Improved BLEU by ~5 points</span></div>
+<div class="dp-label">Decoder</div>
+<div class="dp-code"><span class="hl-cmt">// Decoder: generate output sequence</span>
+<span class="hl-key">s\u2080</span> = c  <span class="hl-cmt">// initialize with context</span>
+
+<span class="hl-key">for</span> t = 1 to T\u2099:
+    s\u209c = LSTM(s\u209c\u208b\u2081, [y\u209c\u208b\u2081; c])
+    p(y\u209c) = softmax(W\u2092 \u00b7 s\u209c)
+    y\u209c = argmax(p)  <span class="hl-cmt">// or beam search</span>
+
+<span class="hl-cmt">// Training: teacher forcing</span>
+<span class="hl-cmt">// Feed ground-truth y\u209c\u208b\u2081 (not predicted)</span>
+<span class="hl-cmt">// Speeds convergence but creates</span>
+<span class="hl-cmt">// exposure bias (train/test mismatch)</span></div>
+<div class="dp-label">The Bottleneck Problem</div>
+<div class="dp-code"><span class="hl-cmt">// "The cat sat on the mat" \u2192 c \u2208 \u211d\u00b9\u2070\u00b2\u2074</span>
+<span class="hl-cmt">// "The quick brown fox jumped over the lazy dog</span>
+<span class="hl-cmt">//  that was sleeping by the fireplace" \u2192 c \u2208 \u211d\u00b9\u2070\u00b2\u2074</span>
+
+<span class="hl-cmt">// Same size vector for both!</span>
+<span class="hl-err">// Information compression \u2192 loss of detail</span>
+<span class="hl-err">// Performance degrades for long sentences</span>
+
+<span class="hl-cmt">// Sutskever (2014): 34.8 BLEU on WMT\u201914 En\u2192Fr</span>
+<span class="hl-cmt">// Bahdanau (2015): attention \u2192 significant improvement</span></div>
+<div class="dp-note n-blue"><strong>Beam search:</strong> Instead of greedily picking the top-1 word at each step, maintain k candidates (beam width, typically 4\u201310). At each step, expand all k candidates, score them, and keep the top k. This finds better overall sequences at the cost of k\u00d7 computation.</div>`},
+  9:{title:'Bahdanau Attention: The Mechanism',color:'#2563eb',body:`
+<div class="dp-label">Attention Computation</div>
+<div class="dp-code"><span class="hl-cmt">// For each decoder step i:</span>
+
+<span class="hl-key">1. Alignment scores:</span>
+   e\u1d62\u2c7c = v\u1d40 \u00b7 tanh(W\u2090 \u00b7 s\u1d62\u208b\u2081 + U\u2090 \u00b7 h\u2c7c)
+   <span class="hl-cmt">// s\u1d62\u208b\u2081 = decoder state</span>
+   <span class="hl-cmt">// h\u2c7c = encoder hidden state at position j</span>
+   <span class="hl-cmt">// Learned: v, W\u2090, U\u2090</span>
+
+<span class="hl-key">2. Attention weights (softmax):</span>
+   \u03b1\u1d62\u2c7c = exp(e\u1d62\u2c7c) / \u2211\u2096 exp(e\u1d62\u2096)
+   <span class="hl-cmt">// \u03b1\u1d62\u2c7c \u2208 [0,1], sums to 1 over j</span>
+
+<span class="hl-key">3. Context vector (weighted sum):</span>
+   c\u1d62 = \u2211\u2c7c \u03b1\u1d62\u2c7c \u00b7 h\u2c7c
+   <span class="hl-cmt">// Different c\u1d62 for each decoder step!</span>
+
+<span class="hl-key">4. Decoder update:</span>
+   s\u1d62 = LSTM(s\u1d62\u208b\u2081, [y\u1d62\u208b\u2081; c\u1d62])</div>
+<div class="dp-label">Example: Translating "the cat sat"</div>
+<div class="dp-code"><span class="hl-cmt">// Encoder states: h\u2081="the", h\u2082="cat", h\u2083="sat"</span>
+
+<span class="hl-key">Decoding "le":</span>
+  \u03b1 = [<span class="hl-ok">0.85</span>, 0.10, 0.05]  <span class="hl-cmt">// attend to "the"</span>
+  c\u2081 = 0.85\u00b7h\u2081 + 0.10\u00b7h\u2082 + 0.05\u00b7h\u2083
+
+<span class="hl-key">Decoding "chat":</span>
+  \u03b1 = [0.05, <span class="hl-ok">0.90</span>, 0.05]  <span class="hl-cmt">// attend to "cat"</span>
+  c\u2082 = 0.05\u00b7h\u2081 + 0.90\u00b7h\u2082 + 0.05\u00b7h\u2083
+
+<span class="hl-key">Decoding "assis":</span>
+  \u03b1 = [0.05, 0.10, <span class="hl-ok">0.85</span>]  <span class="hl-cmt">// attend to "sat"</span>
+  c\u2083 = 0.05\u00b7h\u2081 + 0.10\u00b7h\u2082 + 0.85\u00b7h\u2083</div>
+<div class="dp-note n-blue"><strong>From attention to transformers:</strong> Bahdanau attention uses an additive score (MLP). Luong (2015) simplified to dot-product: e\u1d62\u2c7c = s\u1d62\u1d40\u00b7h\u2c7c. The transformer (2017) generalized this to <em>self-attention</em> \u2014 every position attends to every other position, with no recurrence at all. Attention went from an add-on to the entire architecture.</div>`},
+};
+
+let current=0,playing=false,timer=null;const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const overlay=document.getElementById('detailOverlay');const panel=document.getElementById('detailPanel');const dpStep=document.getElementById('dpStep');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');
+for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');const allSteps=document.querySelectorAll('[data-step]');
+function lightNodes(step){allSteps.forEach(n=>{const s=parseInt(n.dataset.step);if(s<=step){n.classList.add('active');n.classList.remove('dimmed')}else{n.classList.remove('active');n.classList.add('dimmed')}})}
+function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+function showReset(){allSteps.forEach(n=>{n.classList.remove('active','dimmed')});progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin the deep dive...'}
+function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')closeDetail()});
+window.openDetail=function(step){const d=DETAILS[step];if(!d)return;dpStep.textContent=step;dpStep.style.background=d.color;dpTitle.textContent=d.title;dpBody.innerHTML=d.body;overlay.classList.add('visible');panel.classList.add('visible')};function closeDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}dpClose.addEventListener('click',closeDetail);overlay.addEventListener('click',closeDetail);
+reset();
+})();
+</script>
+</body>
+</html>

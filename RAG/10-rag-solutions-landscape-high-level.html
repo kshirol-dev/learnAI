@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: RAG Solutions Landscape — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--violet-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.sol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:8px}
+.sol-card{background:var(--bg-white);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;transition:all .2s}.sol-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.sol-name{font-size:12px;font-weight:700;margin-bottom:3px}.sol-desc{font-size:10px;color:var(--text-2);line-height:1.5}.sol-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.sol-tag{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;border-radius:4px}
+.sol-card.c-teal{border-color:var(--teal-border)}.sol-card.c-teal .sol-name{color:var(--teal)}.sol-card.c-teal .sol-tag{background:var(--teal-light);color:var(--teal)}
+.sol-card.c-blue{border-color:var(--blue-border)}.sol-card.c-blue .sol-name{color:var(--blue)}.sol-card.c-blue .sol-tag{background:var(--blue-light);color:var(--blue)}
+.sol-card.c-violet{border-color:var(--violet-border)}.sol-card.c-violet .sol-name{color:var(--violet)}.sol-card.c-violet .sol-tag{background:var(--violet-light);color:var(--violet)}
+.sol-card.c-pink{border-color:var(--pink-border)}.sol-card.c-pink .sol-name{color:var(--pink)}.sol-card.c-pink .sol-tag{background:var(--pink-light);color:var(--pink)}
+.sol-card.c-amber{border-color:var(--amber-border)}.sol-card.c-amber .sol-name{color:var(--amber)}.sol-card.c-amber .sol-tag{background:var(--amber-light);color:var(--amber)}
+.sol-card.c-green{border-color:var(--green-border)}.sol-card.c-green .sol-name{color:var(--green)}.sol-card.c-green .sol-tag{background:var(--green-light);color:var(--green)}
+.sol-card.c-orange{border-color:var(--orange-border)}.sol-card.c-orange .sol-name{color:var(--orange)}.sol-card.c-orange .sol-tag{background:var(--orange-light);color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{background:#0f766e;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.sol-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; RAG Solutions Landscape</h2><span class="tb-sub">Frameworks, platforms, and managed services for building RAG systems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="10-rag-solutions-landscape-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Frameworks</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">database</span></div><span class="pipe-label">Vector DBs</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Embeddings</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">cloud</span></div><span class="pipe-label">Platforms</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">deployed_code</span></div><span class="pipe-label">Enterprise</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">open_in_new</span></div><span class="pipe-label">Open Source</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Choose</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Orchestration Frameworks -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Orchestration Frameworks</div><div class="cc-sub">Libraries that wire together the RAG pipeline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What They Do</div><div class="cc-text">Orchestration frameworks provide the <strong>glue code</strong> between your LLM, vector store, embedding model, and retrieval logic. They offer pre-built chains, document loaders, text splitters, retrievers, and output parsers so you don't have to build everything from scratch.</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-teal"><div class="sol-name">LangChain</div><div class="sol-desc">The most widely adopted RAG framework. Huge ecosystem of integrations (700+ components). LCEL for composable chains. LangGraph for agentic workflows.</div><div class="sol-tags"><span class="sol-tag">Python</span><span class="sol-tag">TypeScript</span><span class="sol-tag">Open Source</span></div></div>
+            <div class="sol-card c-teal"><div class="sol-name">LlamaIndex</div><div class="sol-desc">Purpose-built for RAG. Stronger data ingestion and indexing primitives. Excellent for structured data, multi-modal, and complex query engines.</div><div class="sol-tags"><span class="sol-tag">Python</span><span class="sol-tag">TypeScript</span><span class="sol-tag">Open Source</span></div></div>
+            <div class="sol-card c-teal"><div class="sol-name">Haystack (deepset)</div><div class="sol-desc">Pipeline-based framework with a visual pipeline editor. Strong focus on production readiness and evaluation. Used by enterprise teams.</div><div class="sol-tags"><span class="sol-tag">Python</span><span class="sol-tag">Open Source</span></div></div>
+            <div class="sol-card c-teal"><div class="sol-name">Semantic Kernel (Microsoft)</div><div class="sol-desc">Microsoft's SDK for AI orchestration. Deep Azure integration. Supports C#, Python, Java. Built-in memory and planner abstractions.</div><div class="sol-tags"><span class="sol-tag">C#</span><span class="sol-tag">Python</span><span class="sol-tag">Java</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use a Framework</div><div class="cc-text"><strong>Use a framework when:</strong> You're building a standard RAG pipeline and want pre-built integrations for your LLM, vector store, and embedding model. Frameworks save weeks of boilerplate code.<br><br><strong>Skip a framework when:</strong> You have a simple use case (single LLM call + one vector store) or need maximum control over every step. A thin wrapper around your LLM API and vector store client may be simpler.</div></div>
+          <div class="cc-note n-teal"><strong>LangChain vs LlamaIndex:</strong> LangChain is broader (agents, chains, tools, memory). LlamaIndex is deeper on data (ingestion, indexing, query engines). Many teams use both: LlamaIndex for data pipelines, LangChain/LangGraph for the application layer. They are complementary, not competing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Vector Databases -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">database</span></div><div><div class="cc-title">Vector Databases &amp; Search</div><div class="cc-sub">Where your embeddings live and get queried</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Managed / Cloud-Native</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-blue"><div class="sol-name">Pinecone</div><div class="sol-desc">Fully managed, serverless vector database. Zero infrastructure to manage. Fast hybrid search (dense + sparse). Widely used in production.</div><div class="sol-tags"><span class="sol-tag">Managed</span><span class="sol-tag">Serverless</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">Weaviate</div><div class="sol-desc">Open-source vector database with a managed cloud option. Built-in vectorization modules. GraphQL API. Hybrid search with BM25.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Cloud</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">Qdrant</div><div class="sol-desc">High-performance open-source vector database written in Rust. Rich filtering, payload indexing, quantization. Qdrant Cloud for managed hosting.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Rust</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">Milvus / Zilliz</div><div class="sol-desc">Open-source vector database for massive scale (billions of vectors). GPU-accelerated indexing. Zilliz Cloud is the managed version.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Cloud</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Embedded / Add-on</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-blue"><div class="sol-name">Chroma</div><div class="sol-desc">Lightweight, in-process vector store. Great for prototyping and small datasets. Python-native. Can run as a server too.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Embedded</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">pgvector (PostgreSQL)</div><div class="sol-desc">Vector search as a PostgreSQL extension. Keep vectors alongside your relational data. No separate infrastructure needed.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">SQL</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">FAISS (Meta)</div><div class="sol-desc">In-memory similarity search library. Extremely fast. No persistence or API built-in. Best for batch processing and research.</div><div class="sol-tags"><span class="sol-tag">Library</span><span class="sol-tag">C++/Python</span></div></div>
+            <div class="sol-card c-blue"><div class="sol-name">LanceDB</div><div class="sol-desc">Serverless, embedded vector database built on Lance columnar format. Multi-modal support. Zero-copy access. Good for local development.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Embedded</span></div></div>
+          </div>
+          <div class="cc-note n-blue"><strong>Decision guide:</strong> Prototyping &rarr; Chroma or LanceDB. Already using PostgreSQL &rarr; pgvector. Production with managed infra &rarr; Pinecone or Qdrant Cloud. Massive scale (1B+ vectors) &rarr; Milvus/Zilliz. Self-hosted control &rarr; Qdrant or Weaviate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Embedding Models & Providers -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Embedding Models &amp; Providers</div><div class="cc-sub">Converting text to vectors for semantic search</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Commercial APIs</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-violet"><div class="sol-name">OpenAI text-embedding-3</div><div class="sol-desc">Two variants: <strong>small</strong> (1536d, cheap) and <strong>large</strong> (3072d, best quality). Matryoshka support for dimension reduction. Most widely used.</div><div class="sol-tags"><span class="sol-tag">API</span><span class="sol-tag">Matryoshka</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">Cohere Embed v3</div><div class="sol-desc">Strong multilingual support (100+ languages). Input type parameter (search_document vs search_query). Compression to int8/binary.</div><div class="sol-tags"><span class="sol-tag">API</span><span class="sol-tag">Multilingual</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">Voyage AI</div><div class="sol-desc">Specialized embedding models for code (voyage-code-3) and legal/finance domains. High MTEB scores. Acquired by Anthropic in 2024.</div><div class="sol-tags"><span class="sol-tag">API</span><span class="sol-tag">Domain-Specific</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">Google Vertex AI</div><div class="sol-desc">text-embedding-005 model. 768 dimensions. Task-type parameter. Integrated with Google Cloud ecosystem and Gemini.</div><div class="sol-tags"><span class="sol-tag">API</span><span class="sol-tag">Google Cloud</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Open-Source / Self-Hosted</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-violet"><div class="sol-name">BGE (BAAI)</div><div class="sol-desc">Beijing Academy of AI. BGE-large-en-v1.5 and BGE-M3 (multilingual, multi-granularity). Top MTEB scores. Apache 2.0 license.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">HuggingFace</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">E5 (Microsoft)</div><div class="sol-desc">E5-mistral-7b-instruct for highest quality. E5-small/base/large for efficiency. Prefix-based query/document asymmetry.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">MIT</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">Nomic Embed</div><div class="sol-desc">nomic-embed-text-v1.5. 768d, Matryoshka support, 8192 token context. Fully open-source (weights + training code + data). Apache 2.0.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Long Context</span></div></div>
+            <div class="sol-card c-violet"><div class="sol-name">Jina Embeddings v3</div><div class="sol-desc">8192 token context. Late chunking support. Task-specific LoRA adapters. Multilingual. Available via API and self-hosted.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">API</span></div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Start with OpenAI text-embedding-3-small for prototyping</strong> (cheap, good quality). Move to open-source (BGE, Nomic) for cost control at scale. Use Cohere for multilingual. Use Voyage for code/legal domains. Always benchmark on your own data before choosing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: End-to-End Platforms -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">cloud</span></div><div><div class="cc-title">End-to-End RAG Platforms</div><div class="cc-sub">Managed services that handle the full pipeline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What They Offer</div><div class="cc-text">End-to-end platforms handle <strong>document ingestion, chunking, embedding, storage, retrieval, and generation</strong> as a managed service. You upload documents and get an API or chat interface. No need to choose individual components or manage infrastructure.</div></div>
+          <div class="sol-grid">
+            <div class="sol-card c-amber"><div class="sol-name">LangSmith (LangChain)</div><div class="sol-desc">Observability, testing, and evaluation platform for LangChain apps. Trace every step, run evaluations, compare prompts. Not a full RAG platform but essential for debugging.</div><div class="sol-tags"><span class="sol-tag">Observability</span><span class="sol-tag">Eval</span></div></div>
+            <div class="sol-card c-amber"><div class="sol-name">LlamaCloud</div><div class="sol-desc">Managed parsing and indexing by LlamaIndex. LlamaParse for document parsing (PDFs, tables, images). Managed retrieval API. Pairs with LlamaIndex framework.</div><div class="sol-tags"><span class="sol-tag">Managed</span><span class="sol-tag">Parsing</span></div></div>
+            <div class="sol-card c-amber"><div class="sol-name">Vectara</div><div class="sol-desc">End-to-end RAG-as-a-service. Upload documents, get an API. Built-in chunking, embedding, hybrid search, reranking, and grounded generation. Hallucination detection included.</div><div class="sol-tags"><span class="sol-tag">RAG-as-a-Service</span></div></div>
+            <div class="sol-card c-amber"><div class="sol-name">Cohere RAG</div><div class="sol-desc">Cohere's Command R+ model with built-in RAG capabilities. Grounded generation with inline citations. Connectors for data sources. Enterprise-focused.</div><div class="sol-tags"><span class="sol-tag">LLM + RAG</span><span class="sol-tag">Citations</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="sol-grid">
+            <div class="sol-card c-amber"><div class="sol-name">Ragas</div><div class="sol-desc">Open-source RAG evaluation framework. Metrics: faithfulness, answer relevancy, context recall, context precision. Works with any RAG pipeline. Essential for measuring quality.</div><div class="sol-tags"><span class="sol-tag">Evaluation</span><span class="sol-tag">Open Source</span></div></div>
+            <div class="sol-card c-amber"><div class="sol-name">Unstructured</div><div class="sol-desc">Document parsing and preprocessing platform. Handles PDFs, images, HTML, DOCX, PPTX. Hosted API or self-hosted. The de facto standard for document ingestion.</div><div class="sol-tags"><span class="sol-tag">Ingestion</span><span class="sol-tag">Open Source</span></div></div>
+          </div>
+          <div class="cc-note n-amber"><strong>Platforms trade flexibility for speed.</strong> Vectara and Cohere RAG get you to production fastest but limit customization. LlamaCloud and LangSmith augment your custom pipeline with managed services for the hardest parts (parsing, observability). For most teams, a framework (LangChain/LlamaIndex) + vector DB + evaluation (Ragas) is the sweet spot.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Enterprise & Cloud Provider Solutions -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">deployed_code</span></div><div><div class="cc-title">Enterprise &amp; Cloud Provider Solutions</div><div class="cc-sub">RAG built into major cloud platforms</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="sol-grid">
+            <div class="sol-card c-pink"><div class="sol-name">Amazon Bedrock Knowledge Bases</div><div class="sol-desc">Fully managed RAG on AWS. Upload to S3, auto-chunking, auto-embedding (Titan or Cohere), stores in OpenSearch or Pinecone. Query via Bedrock API with any Bedrock model.</div><div class="sol-tags"><span class="sol-tag">AWS</span><span class="sol-tag">Managed</span></div></div>
+            <div class="sol-card c-pink"><div class="sol-name">Azure AI Search + OpenAI</div><div class="sol-desc">Azure's cognitive search with vector search capabilities. Integrated with Azure OpenAI. Hybrid search (BM25 + vectors), semantic ranker, built-in chunking. Enterprise-grade.</div><div class="sol-tags"><span class="sol-tag">Azure</span><span class="sol-tag">Enterprise</span></div></div>
+            <div class="sol-card c-pink"><div class="sol-name">Google Vertex AI Search</div><div class="sol-desc">Google's enterprise search with RAG. Grounding with Google Search or your own data. Integrated with Gemini models. Auto-handles chunking, embedding, and retrieval.</div><div class="sol-tags"><span class="sol-tag">GCP</span><span class="sol-tag">Managed</span></div></div>
+            <div class="sol-card c-pink"><div class="sol-name">Databricks + MosaicML</div><div class="sol-desc">Vector search built into Databricks lakehouse. Embed with open-source models on Databricks GPUs. Unified data + AI platform. MLflow for experiment tracking.</div><div class="sol-tags"><span class="sol-tag">Lakehouse</span><span class="sol-tag">Data + AI</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Choose Cloud Providers</div><div class="cc-text"><strong>Already on AWS:</strong> Bedrock Knowledge Bases is the path of least resistance. Tight S3 integration, IAM security, no new vendors.<br><br><strong>Already on Azure:</strong> Azure AI Search + Azure OpenAI. Enterprise compliance (SOC2, HIPAA) built in. Best for regulated industries.<br><br><strong>Already on GCP:</strong> Vertex AI Search with Gemini. Especially strong if you use BigQuery for analytics.<br><br><strong>Data-heavy teams:</strong> Databricks if your data already lives in the lakehouse.</div></div>
+          <div class="cc-note n-pink"><strong>Cloud provider lock-in is real.</strong> These solutions are deeply integrated with their respective clouds. Migrating from Bedrock Knowledge Bases to Azure AI Search is a significant effort. If multi-cloud flexibility matters, use a framework (LangChain) with a standalone vector DB (Pinecone, Qdrant) instead.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Open-Source End-to-End -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">open_in_new</span></div><div><div class="cc-title">Open-Source RAG Applications</div><div class="cc-sub">Full-stack open-source RAG you can self-host</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="sol-grid">
+            <div class="sol-card c-green"><div class="sol-name">RAGFlow</div><div class="sol-desc">Open-source RAG engine with deep document understanding. Template-based chunking for different document types. Built-in UI for document management and chat.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Self-Host</span></div></div>
+            <div class="sol-card c-green"><div class="sol-name">Dify</div><div class="sol-desc">Open-source LLM application platform with visual workflow builder. RAG pipeline included. Supports multiple LLMs and vector stores. No-code/low-code interface.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">No-Code</span></div></div>
+            <div class="sol-card c-green"><div class="sol-name">Anything LLM</div><div class="sol-desc">All-in-one desktop and Docker app for RAG. Chat with documents locally. Supports many LLMs (OpenAI, Ollama, local models) and vector stores.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Desktop</span></div></div>
+            <div class="sol-card c-green"><div class="sol-name">Verba (Weaviate)</div><div class="sol-desc">Open-source RAG chatbot by Weaviate. Built on Weaviate vector store. Simple UI for document upload and chat. Good starting template.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Weaviate</span></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="sol-grid">
+            <div class="sol-card c-green"><div class="sol-name">Quivr</div><div class="sol-desc">Open-source "second brain" powered by RAG. Upload documents, chat with them. Supabase + pgvector backend. Active community.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Supabase</span></div></div>
+            <div class="sol-card c-green"><div class="sol-name">PrivateGPT</div><div class="sol-desc">Fully private RAG. Runs 100% locally with no data leaving your machine. Uses Ollama for local LLMs. Good for sensitive documents.</div><div class="sol-tags"><span class="sol-tag">Open Source</span><span class="sol-tag">Private</span></div></div>
+          </div>
+          <div class="cc-note n-green"><strong>Open-source RAG apps are great for prototyping and internal tools.</strong> They get you a working RAG chatbot in hours, not weeks. But for production, you'll likely outgrow them and need a custom pipeline built with LangChain/LlamaIndex. Use these to validate the use case, then build custom when you need fine-grained control.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Choosing Your Stack -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Choosing Your RAG Stack</div><div class="cc-sub">A practical decision framework</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">By Team &amp; Stage</div><div class="cc-text"><strong>Solo developer / prototype:</strong><br>LangChain or LlamaIndex + Chroma + OpenAI embeddings + GPT-4o. Deploy with FastAPI. Total cost: ~$0 to start.<br><br><strong>Startup / small team:</strong><br>LangChain + Pinecone or Qdrant Cloud + OpenAI embeddings + GPT-4o. LangSmith for observability. Ragas for evaluation.<br><br><strong>Enterprise / regulated:</strong><br>Cloud provider solution (Bedrock/Azure AI Search/Vertex) or LangChain + self-hosted Qdrant/Weaviate + open-source embeddings (BGE). Full audit trail.<br><br><strong>Just want it to work:</strong><br>Vectara or Cohere RAG. Upload docs, get API. Minimal engineering required.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Recommended Stack (2024-2025)</div><div class="cc-text">For most teams building custom RAG:</div></div>
+          <div class="cc-code"><span class="hl-cmt"># The "standard" RAG stack</span>
+
+<span class="hl-key">Orchestration:</span>  LangChain + LangGraph
+<span class="hl-key">Embeddings:</span>    OpenAI text-embedding-3-small
+                 (or BGE/Nomic for self-hosted)
+<span class="hl-key">Vector Store:</span>  Qdrant Cloud or Pinecone
+                 (or pgvector if already on Postgres)
+<span class="hl-key">LLM:</span>           GPT-4o or Claude 3.5 Sonnet
+<span class="hl-key">Reranker:</span>      Cohere Rerank or BGE Reranker
+<span class="hl-key">Observability:</span> LangSmith
+<span class="hl-key">Evaluation:</span>    Ragas
+<span class="hl-key">Ingestion:</span>     Unstructured (complex docs)
+                 or LangChain loaders (simple docs)</div>
+          <div class="cc-note n-orange"><strong>Start simple, add complexity only when needed.</strong> Begin with the basic stack. Measure retrieval quality with Ragas. If retrieval is the bottleneck, add hybrid search and reranking. If document parsing is failing, add Unstructured or LlamaParse. If you need agents, add LangGraph. Every component you add is a component you maintain.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Orchestration frameworks</strong> are the backbone of any RAG system. <strong>LangChain</strong> is the most popular (700+ integrations, LCEL, LangGraph for agents). <strong>LlamaIndex</strong> is purpose-built for RAG with stronger data ingestion. <strong>Haystack</strong> (deepset) focuses on production pipelines. <strong>Semantic Kernel</strong> (Microsoft) targets C#/Java enterprise teams. Most teams start with LangChain or LlamaIndex.',color:'#0d9488'},
+    2:{text:'<strong>Vector databases</strong> store and search your embeddings. Managed options: <strong>Pinecone</strong> (serverless, zero-ops), <strong>Qdrant Cloud</strong> (Rust performance, rich filtering), <strong>Weaviate Cloud</strong> (GraphQL, hybrid search), <strong>Zilliz</strong> (billion-scale). Embedded options: <strong>Chroma</strong> (prototyping), <strong>pgvector</strong> (if you already use PostgreSQL), <strong>FAISS</strong> (batch/research), <strong>LanceDB</strong> (local dev).',color:'#2563eb'},
+    3:{text:'<strong>Embedding models</strong> convert text to vectors. Commercial: <strong>OpenAI text-embedding-3</strong> (most popular, Matryoshka), <strong>Cohere Embed v3</strong> (multilingual), <strong>Voyage AI</strong> (code/legal domains), <strong>Google text-embedding-005</strong>. Open-source: <strong>BGE</strong> (top MTEB), <strong>E5</strong> (Microsoft), <strong>Nomic Embed</strong> (fully open), <strong>Jina v3</strong> (long context, late chunking).',color:'#7c3aed'},
+    4:{text:'<strong>End-to-end platforms</strong> handle the full pipeline. <strong>Vectara</strong> and <strong>Cohere RAG</strong> are true RAG-as-a-service. <strong>LlamaCloud</strong> provides managed parsing (LlamaParse). <strong>LangSmith</strong> adds observability and evaluation. <strong>Ragas</strong> (open-source) measures retrieval and generation quality. <strong>Unstructured</strong> is the standard for document ingestion.',color:'#d97706'},
+    5:{text:'<strong>Cloud providers</strong> offer integrated RAG: <strong>Amazon Bedrock Knowledge Bases</strong> (S3 + auto-chunking + OpenSearch), <strong>Azure AI Search + Azure OpenAI</strong> (enterprise compliance, semantic ranker), <strong>Google Vertex AI Search</strong> (Gemini integration), <strong>Databricks</strong> (lakehouse + vector search). Choose your cloud provider\u2019s solution if you\u2019re already committed to that cloud.',color:'#db2777'},
+    6:{text:'<strong>Open-source RAG apps</strong> give you a working chatbot fast: <strong>RAGFlow</strong> (deep document understanding), <strong>Dify</strong> (visual workflow builder), <strong>AnythingLLM</strong> (desktop app), <strong>PrivateGPT</strong> (fully local, no data leaves your machine), <strong>Quivr</strong> (Supabase-based). Great for prototyping and internal tools. For production, build custom with a framework.',color:'#16a34a'},
+    7:{text:'<strong>The recommended stack for most teams:</strong> LangChain + LangGraph for orchestration, OpenAI or BGE for embeddings, Qdrant or Pinecone for vectors, GPT-4o or Claude for generation, Cohere Rerank for reranking, LangSmith for observability, Ragas for evaluation. Start simple, measure quality, add complexity only when you identify specific failures.',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--teal)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

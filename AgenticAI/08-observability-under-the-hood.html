@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Observability &amp; Debugging — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,0.04);--shadow-md:0 4px 16px rgba(0,0,0,0.06);--shadow-lg:0 8px 32px rgba(0,0,0,0.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);padding:4px 12px;background:var(--bg-muted);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--blue);background:var(--blue-light);border:1px solid var(--blue-border)}.tb-nav a.nav-alt:hover{background:var(--blue);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--violet-light) 20%,var(--blue-light) 40%,var(--teal-light) 60%,var(--amber-light) 80%,var(--green-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{background:linear-gradient(90deg,#fecaca 0%,#e8e4fd 20%,#dbeafe 40%,#ccfbf1 60%,#fef3c7 80%,#dcfce7 100%)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,0.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--violet),var(--blue),var(--teal),var(--amber),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,0.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-b .zone-title{color:var(--violet)}
+.zone-c{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-c .zone-title{color:var(--blue)}
+.zone-d{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-d .zone-title{color:var(--teal)}
+.zone-e{background:linear-gradient(180deg,var(--amber-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-border)}.zone-e .zone-title{color:var(--amber)}
+.zone-f{background:linear-gradient(180deg,var(--green-light) 0%,var(--bg-white) 100%)}.zone-f .zone-tag{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}.zone-f .zone-title{color:var(--green)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,0.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,0.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,0.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,0.15),var(--shadow-md)}
+.fnode.c-amber .fnode-icon{background:var(--amber-light);color:var(--amber)}.fnode.c-amber .fnode-label{color:var(--amber)}.fnode.c-amber{border-color:var(--amber-border)}.fnode.c-amber.active{box-shadow:0 0 0 3px rgba(217,119,6,0.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,0.15),var(--shadow-md)}
+.fnode.c-pink .fnode-icon{background:var(--pink-light);color:var(--pink)}.fnode.c-pink .fnode-label{color:var(--pink)}.fnode.c-pink{border-color:var(--pink-border)}.fnode.c-pink.active{box-shadow:0 0 0 3px rgba(219,39,119,0.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}.farr-label{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.loop-conn.c-amber.active .loop-pill{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber)}
+.loop-conn.c-green.active .loop-pill{background:var(--green-light);border-color:var(--green-border);color:var(--green)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:0.15;filter:grayscale(0.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-amber{background:var(--amber)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);width:640px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-header{padding:16px 24px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.dp-step{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:14px;font-weight:800;flex:1}.dp-close{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--bg-muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}.dp-close:hover{background:var(--red-light);border-color:var(--red-border);color:var(--red)}.dp-close .material-symbols-rounded{font-size:16px}
+.dp-body{padding:20px 24px;font-size:12px;line-height:1.8;color:var(--text-2)}.dp-body p{margin-bottom:12px}.dp-body strong{color:var(--text-1);font-weight:700}.dp-body code{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--bg-muted);padding:2px 6px;border-radius:4px}.dp-body pre{background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;overflow-x:auto;margin:10px 0 14px;color:var(--text-1)}.dp-body ul,.dp-body ol{margin:8px 0 12px 20px}.dp-body li{margin-bottom:4px}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}
+.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(0.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- TITLE BAR -->
+  <div class="title-bar">
+    <div class="tb-nav">
+      <a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px">arrow_back</span> Curriculum</a>
+      <a class="nav-alt" href="08-observability-high-level.html">&larr; High Level</a>
+    </div>
+    <h2>Ch 8 &mdash; Observability &amp; Debugging</h2>
+    <span class="tb-sub">Under the Hood</span>
+    <span class="tb-tag">10 Steps</span>
+  </div>
+
+  <!-- NARRATION -->
+  <div class="narration" id="narration">
+    <div class="nar-step" id="narStep">1</div>
+    <div class="nar-text" id="narText">Click <strong>Next</strong> to dive into the internals of LLM observability — callback handlers, run trees, context propagation, and how every span gets created.</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter">
+    <span class="sc-label">Step</span>
+    <span class="sc-num" id="stepLabel">- / 10</span>
+    <div class="sc-dots" id="stepDots"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE A — BaseCallbackHandler                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-a">
+    <div class="zone-head">
+      <span class="zone-tag">Internals</span>
+      <span class="zone-title">BaseCallbackHandler</span>
+      <span class="zone-sub">The event system that powers all tracing</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-red" data-step="1">
+        <div class="step-badge bg-red">1</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">webhook</span></div>
+        <div class="fnode-label">Callback Events</div>
+        <div class="fnode-sub">on_llm_start, on_chain_start, on_tool_start…</div>
+      </div>
+      <div class="farr" data-step="1"><span class="farr-label">fired by</span></div>
+      <div class="fnode c-red" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">settings</span></div>
+        <div class="fnode-label">CallbackManager</div>
+        <div class="fnode-sub">Dispatches events to all registered handlers</div>
+      </div>
+      <div class="farr" data-step="1"><span class="farr-label">received by</span></div>
+      <div class="fnode c-red" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">hub</span></div>
+        <div class="fnode-label">LangSmith Handler</div>
+        <div class="fnode-sub">Converts events into Run objects → API</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CONNECTOR                                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="loop-conn c-violet" data-step="2">
+    <div class="step-badge bg-violet">2</div>
+    <div class="loop-dash"></div>
+    <div class="loop-pill"><span class="material-symbols-rounded">account_tree</span> CallbackManager.get_child() — how parent→child propagation works</div>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE B — Run ID Propagation                     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-b">
+    <div class="zone-head">
+      <span class="zone-tag">Propagation</span>
+      <span class="zone-title">Run ID &amp; Parent-Child Linking</span>
+      <span class="zone-sub">How the trace tree forms automatically</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">family_restroom</span></div>
+        <div class="fnode-label">ParentRunManager</div>
+        <div class="fnode-sub">Holds run_id + parent_run_id</div>
+      </div>
+      <div class="farr" data-step="2"><span class="farr-label">.get_child()</span></div>
+      <div class="fnode c-violet" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">child_care</span></div>
+        <div class="fnode-label">Child Manager</div>
+        <div class="fnode-sub">New run_id, parent_run_id = parent's id</div>
+      </div>
+      <div class="farr" data-step="2"><span class="farr-label">inherits</span></div>
+      <div class="fnode c-violet" data-step="2">
+        <div class="fnode-icon"><span class="material-symbols-rounded">content_copy</span></div>
+        <div class="fnode-label">Handlers + Tags</div>
+        <div class="fnode-sub">Inheritable handlers propagate down</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE C — Run Data Format                        -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-c">
+    <div class="zone-head">
+      <span class="zone-tag">Data Format</span>
+      <span class="zone-title">Run (Span) Object</span>
+      <span class="zone-sub">The exact fields stored for every operation</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="3">
+        <div class="step-badge bg-blue">3</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">fingerprint</span></div>
+        <div class="fnode-label">Identity</div>
+        <div class="fnode-sub">id, trace_id, parent_run_id, dotted_order</div>
+      </div>
+      <div class="farr" data-step="3"><span class="farr-label">+</span></div>
+      <div class="fnode c-blue" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">data_object</span></div>
+        <div class="fnode-label">Payload</div>
+        <div class="fnode-sub">run_type, inputs, outputs, events, extra</div>
+      </div>
+      <div class="farr" data-step="3"><span class="farr-label">+</span></div>
+      <div class="fnode c-blue" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">timer</span></div>
+        <div class="fnode-label">Metrics</div>
+        <div class="fnode-sub">start/end_time, tokens, cost, status</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CONNECTOR                                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="loop-conn c-teal" data-step="4">
+    <div class="step-badge bg-teal">4</div>
+    <div class="loop-dash"></div>
+    <div class="loop-pill"><span class="material-symbols-rounded">send</span> Async batched POST — how runs reach the LangSmith API</div>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE D — Async Submission                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-d">
+    <div class="zone-head">
+      <span class="zone-tag">Transport</span>
+      <span class="zone-title">Async Run Submission</span>
+      <span class="zone-sub">Non-blocking delivery to the tracing backend</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">queue</span></div>
+        <div class="fnode-label">Background Queue</div>
+        <div class="fnode-sub">Runs buffered in-memory, not blocking .invoke()</div>
+      </div>
+      <div class="farr" data-step="4"><span class="farr-label">batched</span></div>
+      <div class="fnode c-teal" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">cloud_upload</span></div>
+        <div class="fnode-label">POST /runs/batch</div>
+        <div class="fnode-sub">Multipart payload: create + update in one call</div>
+      </div>
+      <div class="farr" data-step="4"><span class="farr-label">stored</span></div>
+      <div class="fnode c-teal" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">storage</span></div>
+        <div class="fnode-label">LangSmith Backend</div>
+        <div class="fnode-sub">Indexed by trace_id, project, tags</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — @traceable Decorator                     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-e">
+    <div class="zone-head">
+      <span class="zone-tag">Decorator</span>
+      <span class="zone-title">@traceable Internals</span>
+      <span class="zone-sub">How non-LangChain code gets traced</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-amber" data-step="5">
+        <div class="step-badge bg-amber">5</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">code</span></div>
+        <div class="fnode-label">@traceable</div>
+        <div class="fnode-sub">Wraps function, creates RunTree on call</div>
+      </div>
+      <div class="farr" data-step="5"><span class="farr-label">uses</span></div>
+      <div class="fnode c-amber" data-step="5">
+        <div class="fnode-icon"><span class="material-symbols-rounded">account_tree</span></div>
+        <div class="fnode-label">RunTree</div>
+        <div class="fnode-sub">Tree node: id, parent, inputs, outputs</div>
+      </div>
+      <div class="farr" data-step="5"><span class="farr-label">context</span></div>
+      <div class="fnode c-amber" data-step="5">
+        <div class="fnode-icon"><span class="material-symbols-rounded">stacks</span></div>
+        <div class="fnode-label">Context Var</div>
+        <div class="fnode-sub">Thread-local stack for auto-nesting</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CONNECTOR                                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="loop-conn c-green" data-step="6">
+    <div class="step-badge bg-green">6</div>
+    <div class="loop-dash"></div>
+    <div class="loop-pill"><span class="material-symbols-rounded">lan</span> Distributed tracing — cross-service context propagation</div>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — Distributed Tracing                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-f">
+    <div class="zone-head">
+      <span class="zone-tag">Distributed</span>
+      <span class="zone-title">Cross-Service Tracing</span>
+      <span class="zone-sub">Linking spans across microservices</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-green" data-step="6">
+        <div class="fnode-icon"><span class="material-symbols-rounded">output</span></div>
+        <div class="fnode-label">run_tree.to_headers()</div>
+        <div class="fnode-sub">Serializes trace context into HTTP headers</div>
+      </div>
+      <div class="farr" data-step="6"><span class="farr-label">HTTP</span></div>
+      <div class="fnode c-green" data-step="6">
+        <div class="fnode-icon"><span class="material-symbols-rounded">dns</span></div>
+        <div class="fnode-label">Remote Service</div>
+        <div class="fnode-sub">Receives langsmith-trace + baggage headers</div>
+      </div>
+      <div class="farr" data-step="6"><span class="farr-label">restores</span></div>
+      <div class="fnode c-green" data-step="6">
+        <div class="fnode-icon"><span class="material-symbols-rounded">input</span></div>
+        <div class="fnode-label">tracing_context(parent=headers)</div>
+        <div class="fnode-sub">Reconstructs parent link on server side</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — Langfuse @observe Internals              -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-b">
+    <div class="zone-head">
+      <span class="zone-tag">Langfuse</span>
+      <span class="zone-title">@observe() Decorator Internals</span>
+      <span class="zone-sub">How Langfuse builds the observation tree</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="7">
+        <div class="step-badge bg-violet">7</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">code</span></div>
+        <div class="fnode-label">@observe()</div>
+        <div class="fnode-sub">Wraps function, pushes onto observation stack</div>
+      </div>
+      <div class="farr" data-step="7"><span class="farr-label">manages</span></div>
+      <div class="fnode c-violet" data-step="7">
+        <div class="fnode-icon"><span class="material-symbols-rounded">stacks</span></div>
+        <div class="fnode-label">OTEL Context</div>
+        <div class="fnode-sub">start_as_current_observation() sets active span</div>
+      </div>
+      <div class="farr" data-step="7"><span class="farr-label">creates</span></div>
+      <div class="fnode c-violet" data-step="7">
+        <div class="fnode-icon"><span class="material-symbols-rounded">layers</span></div>
+        <div class="fnode-label">Trace / Span / Gen</div>
+        <div class="fnode-sub">Outermost = Trace, nested = Span or Generation</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CONNECTOR                                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="loop-conn c-blue" data-step="8">
+    <div class="step-badge bg-blue">8</div>
+    <div class="loop-dash"></div>
+    <div class="loop-pill"><span class="material-symbols-rounded">payments</span> Cost calculation internals — model registry → token pricing</div>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — Cost Calculation Internals               -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-c">
+    <div class="zone-head">
+      <span class="zone-tag">Cost Engine</span>
+      <span class="zone-title">Token Counting &amp; Cost Calculation</span>
+      <span class="zone-sub">How platforms compute cost per run</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="8">
+        <div class="fnode-icon"><span class="material-symbols-rounded">token</span></div>
+        <div class="fnode-label">Usage from API</div>
+        <div class="fnode-sub">prompt_tokens, completion_tokens from LLM response</div>
+      </div>
+      <div class="farr" data-step="8"><span class="farr-label">×</span></div>
+      <div class="fnode c-blue" data-step="8">
+        <div class="fnode-icon"><span class="material-symbols-rounded">menu_book</span></div>
+        <div class="fnode-label">Model Registry</div>
+        <div class="fnode-sub">Maps model name → $/input_token, $/output_token</div>
+      </div>
+      <div class="farr" data-step="8"><span class="farr-label">=</span></div>
+      <div class="fnode c-blue" data-step="8">
+        <div class="fnode-icon"><span class="material-symbols-rounded">calculate</span></div>
+        <div class="fnode-label">Run Cost</div>
+        <div class="fnode-sub">prompt_cost + completion_cost = total_cost</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — Evaluation Internals                     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-e">
+    <div class="zone-head">
+      <span class="zone-tag">Evals</span>
+      <span class="zone-title">Evaluation Pipeline Internals</span>
+      <span class="zone-sub">How experiments and evaluators execute</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-amber" data-step="9">
+        <div class="step-badge bg-amber">9</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">dataset</span></div>
+        <div class="fnode-label">Dataset Examples</div>
+        <div class="fnode-sub">List of {input, reference_output} dicts</div>
+      </div>
+      <div class="farr" data-step="9"><span class="farr-label">map()</span></div>
+      <div class="fnode c-amber" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">play_arrow</span></div>
+        <div class="fnode-label">Target Function</div>
+        <div class="fnode-sub">Your agent/chain — called per example</div>
+      </div>
+      <div class="farr" data-step="9"><span class="farr-label">scored</span></div>
+      <div class="fnode c-amber" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">functions</span></div>
+        <div class="fnode-label">Evaluator Fn</div>
+        <div class="fnode-sub">(run, example) → {key, score, comment}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ZONE — Full Trace Walkthrough                   -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="zone zone-a">
+    <div class="zone-head">
+      <span class="zone-tag">Walkthrough</span>
+      <span class="zone-title">Full Trace: End-to-End Event Flow</span>
+      <span class="zone-sub">Every callback event for one agent.invoke()</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-red" data-step="10">
+        <div class="step-badge bg-red">10</div>
+        <div class="fnode-icon"><span class="material-symbols-rounded">play_circle</span></div>
+        <div class="fnode-label">on_chain_start</div>
+        <div class="fnode-sub">Root chain begins — trace_id assigned</div>
+      </div>
+      <div class="farr" data-step="10"><span class="farr-label">→</span></div>
+      <div class="fnode c-red" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">psychology</span></div>
+        <div class="fnode-label">on_llm_start/end</div>
+        <div class="fnode-sub">LLM call — tokens, latency captured</div>
+      </div>
+      <div class="farr" data-step="10"><span class="farr-label">→</span></div>
+      <div class="fnode c-red" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">build</span></div>
+        <div class="fnode-label">on_tool_start/end</div>
+        <div class="fnode-sub">Tool execution — input/output captured</div>
+      </div>
+      <div class="farr" data-step="10"><span class="farr-label">→</span></div>
+      <div class="fnode c-red" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">stop_circle</span></div>
+        <div class="fnode-label">on_chain_end</div>
+        <div class="fnode-sub">Root chain ends — trace complete</div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<!-- DETAIL OVERLAY + PANEL -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-header">
+    <div class="dp-step bg-red" id="dpStep">1</div>
+    <div class="dp-title" id="dpTitle">Detail</div>
+    <div class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></div>
+  </div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<script>
+(function(){
+  const TOTAL=10,STEP_MS=4000,PAUSE_MS=4000;
+  const NARRATION={
+    1:{text:'<strong>BaseCallbackHandler:</strong> LangChain\'s entire tracing system is built on <strong>callbacks</strong>. Every Runnable fires events like <code>on_llm_start()</code>, <code>on_chain_end()</code>, <code>on_tool_error()</code>. LangSmith registers a handler that converts these events into Run objects.',color:'#dc2626'},
+    2:{text:'<strong>Parent-Child Linking:</strong> When a chain calls an LLM, the chain\'s <code>CallbackManager</code> calls <code>.get_child()</code> to create a child manager. The child inherits the parent\'s <code>run_id</code> as its <code>parent_run_id</code> — this is how the trace tree forms.',color:'#7c3aed'},
+    3:{text:'<strong>Run Data Format:</strong> Every span is stored as a Run object with a precise schema — <code>id</code>, <code>trace_id</code>, <code>parent_run_id</code>, <code>run_type</code>, <code>inputs</code>, <code>outputs</code>, <code>start_time</code>, <code>end_time</code>, token counts, and cost fields.',color:'#2563eb'},
+    4:{text:'<strong>Async Submission:</strong> Runs are <strong>never sent synchronously</strong>. The LangSmith SDK buffers them in a background queue and batch-POSTs to <code>/runs/batch</code>. This adds <strong>zero latency</strong> to your agent\'s execution.',color:'#0d9488'},
+    5:{text:'<strong>@traceable Internals:</strong> For non-LangChain code, the <code>@traceable</code> decorator wraps your function. On each call, it creates a <code>RunTree</code> node, pushes it onto a <strong>context variable stack</strong>, and auto-links nested <code>@traceable</code> calls as children.',color:'#d97706'},
+    6:{text:'<strong>Distributed Tracing:</strong> When your agent calls a remote service, use <code>run_tree.to_headers()</code> to serialize the trace context into HTTP headers (<code>langsmith-trace</code>, <code>baggage</code>). The server reconstructs the parent link with <code>tracing_context(parent=headers)</code>.',color:'#16a34a'},
+    7:{text:'<strong>Langfuse @observe():</strong> The decorator uses <code>start_as_current_observation()</code> to push onto an <strong>OpenTelemetry context stack</strong>. The outermost call creates a <strong>Trace</strong>, nested calls create <strong>Spans</strong>, and <code>as_type=\"generation\"</code> creates a <strong>Generation</strong> with model/token metadata.',color:'#7c3aed'},
+    8:{text:'<strong>Cost Calculation:</strong> The LLM API response includes <code>usage.prompt_tokens</code> and <code>usage.completion_tokens</code>. The platform multiplies these by the model\'s per-token price from an internal <strong>model registry</strong>. Costs roll up from child runs to parent runs.',color:'#2563eb'},
+    9:{text:'<strong>Evaluation Internals:</strong> <code>evaluate()</code> iterates over dataset examples, calls your target function for each, then passes the <code>(run, example)</code> pair to evaluator functions that return <code>{key, score, comment}</code>. Results are stored as feedback on the run.',color:'#d97706'},
+    10:{text:'<strong>Full Trace Walkthrough:</strong> Let\'s follow every callback event for a single <code>agent.invoke(\"What\'s the weather in Tokyo?\")</code> — from <code>on_chain_start</code> through LLM reasoning, tool execution, second LLM call, to <code>on_chain_end</code>.',color:'#dc2626'}
+  };
+  const DETAILS={
+    1:{title:'Step 1 Detail',body:'<p><strong>BaseCallbackHandler</strong> is an abstract class with event methods for every operation type:</p><pre>class BaseCallbackHandler:\n    def on_llm_start(serialized, prompts, run_id, parent_run_id, **kw)\n    def on_llm_end(response, run_id, parent_run_id, **kw)\n    def on_llm_error(error, run_id, parent_run_id, **kw)\n\n    def on_chain_start(serialized, inputs, run_id, parent_run_id, **kw)\n    def on_chain_end(outputs, run_id, parent_run_id, **kw)\n    def on_chain_error(error, run_id, parent_run_id, **kw)\n\n    def on_tool_start(serialized, input_str, run_id, parent_run_id, **kw)\n    def on_tool_end(output, run_id, parent_run_id, **kw)\n    def on_tool_error(error, run_id, parent_run_id, **kw)\n\n    def on_retriever_start(serialized, query, run_id, parent_run_id, **kw)\n    def on_retriever_end(documents, run_id, parent_run_id, **kw)</pre><p>Each <code>*_start</code> event receives a <code>run_id</code> (UUID) and <code>parent_run_id</code> (UUID or None). The corresponding <code>*_end</code> or <code>*_error</code> event uses the same <code>run_id</code>.</p><p><strong>LangSmith\'s handler</strong> (automatically registered when <code>LANGSMITH_TRACING=true</code>) implements all these methods. On each <code>*_start</code>, it creates a new Run object. On each <code>*_end</code>, it patches the Run with outputs, tokens, and timing. These Runs are then queued for async submission.</p><p><strong>Ignore flags</strong> let you filter: <code>ignore_llm</code>, <code>ignore_chain</code>, <code>ignore_tool</code>, <code>ignore_retriever</code> — set these to skip tracing specific operation types.</p>'},
+    2:{title:'Step 2 Detail',body:'<p><strong>The propagation mechanism step by step:</strong></p><pre>1. chain.invoke(input, config)\n   └─ CallbackManager created with run_id = UUID(\"aaa...\")\n   └─ fires on_chain_start(run_id=\"aaa\")\n\n2. Inside chain, LLM is invoked:\n   └─ run_manager.get_child(\"llm\")\n       → creates child CallbackManager\n       → child.run_id = UUID(\"bbb...\")  (new)\n       → child.parent_run_id = UUID(\"aaa...\")  (parent\'s)\n   └─ fires on_llm_start(run_id=\"bbb\", parent_run_id=\"aaa\")\n\n3. Inside LLM response, tool call detected:\n   └─ child_manager.get_child(\"tool\")\n       → grandchild.run_id = UUID(\"ccc...\")\n       → grandchild.parent_run_id = UUID(\"bbb...\")\n   └─ fires on_tool_start(run_id=\"ccc\", parent_run_id=\"bbb\")</pre><p><strong>Inheritable vs non-inheritable:</strong> The <code>CallbackManager</code> distinguishes between <code>inheritable_handlers</code> (propagated to children) and regular <code>handlers</code> (local only). LangSmith\'s handler is always inheritable — that\'s why tracing works through the entire chain without you passing it manually.</p><p><strong>The config pattern:</strong> When you pass callbacks at runtime via <code>.invoke(input, config={\"callbacks\": [...]})</code>, they\'re added as inheritable handlers. This is why runtime callbacks propagate but constructor callbacks may not reach child components.</p>'},
+    3:{title:'Step 3 Detail',body:'<p><strong>Complete Run object schema:</strong></p><pre>{\n  // Identity\n  \"id\":            \"550e8400-e29b-41d4-a716-446655440000\",\n  \"trace_id\":      \"661f9511-b29c-52e5-b827-557766551111\",\n  \"parent_run_id\": \"661f9511-b29c-52e5-b827-557766551111\",\n  \"dotted_order\":  \"20240315T120000Z661f95.20240315T120001Z550e84\",\n  \"name\":          \"ChatOpenAI\",\n  \"run_type\":      \"llm\",       // llm | chain | tool | retriever\n\n  // Payload\n  \"inputs\":  { \"messages\": [[{\"role\":\"user\",\"content\":\"...\"}]] },\n  \"outputs\": { \"generations\": [[{\"text\":\"...\",\"message\":{...}}]] },\n  \"events\":  [{\"name\":\"start\",\"time\":\"...\"}, {\"name\":\"stream\",...}],\n  \"extra\":   { \"invocation_params\": {\"model\":\"gpt-4o\",\"temperature\":0} },\n\n  // Metadata\n  \"tags\":     [\"production\", \"v2\"],\n  \"metadata\": { \"user_id\": \"u_123\", \"session_id\": \"s_456\" },\n  \"session_id\": \"project-abc\",\n\n  // Timing\n  \"start_time\":      \"2024-03-15T12:00:01.234Z\",\n  \"end_time\":        \"2024-03-15T12:00:02.567Z\",\n  \"first_token_time\": \"2024-03-15T12:00:01.456Z\",\n\n  // Tokens & Cost\n  \"prompt_tokens\":     340,\n  \"completion_tokens\": 52,\n  \"total_tokens\":      392,\n  \"prompt_cost\":       0.00017,\n  \"completion_cost\":   0.00016,\n  \"total_cost\":        0.00033,\n\n  // Status\n  \"status\": \"success\",   // success | error | pending\n  \"error\":  null\n}</pre><p><strong>dotted_order:</strong> A hierarchical ordering string that encodes the trace tree structure. It\'s a concatenation of <code>timestamp + run_id</code> segments separated by dots, enabling efficient sorting and tree reconstruction without recursive queries.</p><p><strong>child_run_ids / direct_child_run_ids:</strong> Arrays populated server-side after all runs are ingested, enabling the UI to render the tree.</p>'},
+    4:{title:'Step 4 Detail',body:'<p><strong>The submission pipeline:</strong></p><pre>Your code: chain.invoke(\"hello\")\n    │\n    ├─ on_chain_start fires → Run object created\n    │   └─ Run pushed to background queue (in-memory deque)\n    │\n    ├─ on_llm_start fires → Run created → queued\n    ├─ on_llm_end fires → Run patched with outputs → queued\n    │\n    ├─ on_chain_end fires → Run patched → queued\n    │\n    └─ .invoke() returns immediately\n\nBackground thread (separate from your code):\n    │\n    ├─ Polls queue every ~100ms\n    ├─ Batches multiple Runs into one HTTP request\n    └─ POST /runs/batch\n        Body: {\n          \"post\": [...runs to create...],\n          \"patch\": [...runs to update with outputs...]\n        }</pre><p><strong>Key design decisions:</strong></p><ul><li><strong>Non-blocking:</strong> The queue is an in-memory deque. Pushing to it is O(1) and never waits for network.</li><li><strong>Batching:</strong> Multiple runs are combined into a single HTTP request, reducing overhead.</li><li><strong>Create + Update split:</strong> A run is first POSTed (on <code>*_start</code>) with inputs, then PATCHed (on <code>*_end</code>) with outputs. The batch endpoint handles both in one call.</li><li><strong>Retry with backoff:</strong> If the API is unreachable, the SDK retries with exponential backoff. Failed runs are dropped after max retries — tracing failures never crash your agent.</li><li><strong>Graceful shutdown:</strong> On process exit, the SDK flushes remaining queued runs before terminating.</li></ul>'},
+    5:{title:'Step 5 Detail',body:'<p><strong>How @traceable works internally:</strong></p><pre>from langsmith import traceable\n\n@traceable(run_type=\"chain\", name=\"my_agent\")\ndef my_agent(query: str):\n    result = my_tool(query)   # also @traceable\n    return result\n\n@traceable(run_type=\"tool\")\ndef my_tool(query: str):\n    return search(query)</pre><p><strong>Step-by-step execution:</strong></p><ol><li><code>my_agent(\"hello\")</code> is called</li><li>The decorator wrapper runs:<ul><li>Creates a new <code>RunTree(name=\"my_agent\", run_type=\"chain\", inputs={\"query\":\"hello\"})</code></li><li>Checks the <strong>context variable</strong> for a current parent RunTree — finds none → this is the root trace</li><li>Pushes this RunTree onto the context var stack</li><li>Calls the original <code>my_agent</code> function</li></ul></li><li>Inside <code>my_agent</code>, <code>my_tool(\"hello\")</code> is called:<ul><li>Its decorator creates a new RunTree</li><li>Checks context var → finds <code>my_agent</code>\'s RunTree → sets <code>parent_run_id</code></li><li>Pushes onto stack, executes, pops on return</li></ul></li><li>Back in <code>my_agent</code>, the function returns</li><li>The decorator patches the RunTree with outputs, pops from stack, queues for submission</li></ol><p><strong>RunTree</strong> is the core data structure — it mirrors the Run schema but lives in-process. It has methods like <code>.post()</code> (submit to API), <code>.patch()</code> (update with outputs), and <code>.to_headers()</code> (for distributed tracing).</p><p><strong>Supported function types:</strong> sync, async, generators, async generators — the decorator detects the type and wraps accordingly.</p>'},
+    6:{title:'Step 6 Detail',body:'<p><strong>The distributed tracing flow:</strong></p><pre># ─── Client Service ───\nfrom langsmith import traceable\nimport httpx\n\n@traceable\ndef call_remote(query: str, run_tree=None):\n    headers = run_tree.to_headers()  # serialize context\n    resp = httpx.post(\n        \"https://api.myservice.com/process\",\n        json={\"query\": query},\n        headers=headers\n    )\n    return resp.json()\n\n# ─── Remote Service ───\nfrom langsmith.run_helpers import tracing_context\nfrom fastapi import Request\n\n@app.post(\"/process\")\nasync def process(request: Request):\n    with tracing_context(parent=dict(request.headers)):\n        # all @traceable calls here become children\n        # of the client\'s trace\n        result = do_work(request.json()[\"query\"])\n    return result</pre><p><strong>What\'s in the headers:</strong></p><pre>langsmith-trace: {\"trace_id\": \"aaa...\", \"dotted_order\": \"...\", \"id\": \"bbb...\"}\nbaggage: project=my-project,tags=prod</pre><p><strong>How it links:</strong></p><ol><li>Client\'s <code>run_tree.to_headers()</code> serializes the current RunTree\'s <code>trace_id</code>, <code>id</code> (as parent), and <code>dotted_order</code></li><li>Server\'s <code>tracing_context(parent=headers)</code> parses these and sets them as the parent context</li><li>Any <code>@traceable</code> calls inside the context block create RunTrees with <code>parent_run_id</code> pointing to the client\'s run</li><li>Both services submit runs to the same LangSmith project → the UI shows one unified trace tree spanning both services</li></ol>'},
+    7:{title:'Step 7 Detail',body:'<p><strong>How @observe() builds the observation tree:</strong></p><pre>from langfuse.decorators import observe\n\n@observe()                        # ← outermost = Trace\ndef my_agent(query: str):\n    context = retrieve(query)     # ← nested = Span\n    answer = generate(context)    # ← nested = Generation\n    return answer\n\n@observe()                        # auto-detected as Span\ndef retrieve(query: str):\n    return vector_store.search(query)\n\n@observe(as_type=\"generation\")    # explicitly a Generation\ndef generate(context: str):\n    return llm.invoke(context)</pre><p><strong>Internal mechanics:</strong></p><ol><li><code>my_agent(\"hello\")</code> is called</li><li>The <code>@observe</code> wrapper calls <code>start_as_current_observation()</code>:<ul><li>Checks the OTEL context stack — empty → creates a <strong>Trace</strong></li><li>Pushes the Trace onto the context stack</li></ul></li><li><code>retrieve()</code> is called inside:<ul><li><code>start_as_current_observation()</code> finds the Trace on the stack → creates a <strong>Span</strong> as its child</li><li>Pushes Span onto stack</li><li>On return: captures output, pops Span from stack</li></ul></li><li><code>generate()</code> is called:<ul><li>Same mechanism, but <code>as_type=\"generation\"</code> creates a <strong>Generation</strong> object</li><li>Generations have extra fields: <code>model</code>, <code>model_parameters</code>, <code>usage</code> (tokens), <code>cost</code></li></ul></li><li><code>my_agent</code> returns → Trace is finalized, popped from stack, flushed to Langfuse API</li></ol><p><strong>Async support:</strong> The SDK wraps async generators specially — it saves and restores the observation stack around each <code>yield</code> to prevent context loss during async iteration.</p><p><strong>Attribute propagation:</strong> Use <code>with_attributes(user_id=\"u_123\", session_id=\"s_456\")</code> context manager to propagate metadata to all child observations automatically.</p>'},
+    8:{title:'Step 8 Detail',body:'<p><strong>The cost calculation pipeline:</strong></p><pre>Step 1: LLM API Response\n─────────────────────────\n{\n  \"usage\": {\n    \"prompt_tokens\": 340,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 392\n  },\n  \"model\": \"gpt-4o\"\n}\n\nStep 2: Model Registry Lookup\n─────────────────────────────\nmodel_prices = {\n  \"gpt-4o\":           {\"input\": 2.50/1M, \"output\": 10.00/1M},\n  \"gpt-4o-mini\":      {\"input\": 0.15/1M, \"output\": 0.60/1M},\n  \"claude-3.5-sonnet\": {\"input\": 3.00/1M, \"output\": 15.00/1M},\n  ...\n}\n\nStep 3: Calculate\n─────────────────\nprompt_cost     = 340 × (2.50 / 1,000,000) = $0.00085\ncompletion_cost = 52  × (10.00 / 1,000,000) = $0.00052\ntotal_cost      = $0.00137</pre><p><strong>Aggregation:</strong></p><pre>Trace (total_cost: $0.0041)\n├── LLM Run 1 (total_cost: $0.00137)\n├── Tool Run   (total_cost: $0.00)     ← tools have no token cost\n├── LLM Run 2 (total_cost: $0.00273)\n└── Sum of children = trace total</pre><p><strong>Edge cases handled:</strong></p><ul><li><strong>Cached tokens:</strong> Some APIs report <code>cache_read_input_tokens</code> at reduced price — platforms factor this in</li><li><strong>Streaming:</strong> Token counts arrive in the final chunk\'s <code>usage</code> field (or aggregated from <code>stream_options={\"include_usage\": True}</code>)</li><li><strong>Custom models:</strong> For models not in the registry, you can manually set <code>total_cost</code> on the run</li><li><strong>Image tokens:</strong> Vision models report separate image token counts — priced differently</li></ul>'},
+    9:{title:'Step 9 Detail',body:'<p><strong>The evaluate() function internals:</strong></p><pre>from langsmith import evaluate\n\ndef my_evaluator(run, example):\n    \"\"\"Custom evaluator function.\"\"\"\n    predicted = run.outputs[\"answer\"]\n    expected  = example.outputs[\"answer\"]\n    score = 1.0 if predicted.strip() == expected.strip() else 0.0\n    return {\"key\": \"exact_match\", \"score\": score}\n\nresults = evaluate(\n    target=my_agent,           # your agent function\n    data=\"my-dataset\",         # dataset name or ID\n    evaluators=[my_evaluator], # list of evaluator functions\n    experiment_prefix=\"v2\"     # groups results\n)</pre><p><strong>What happens inside evaluate():</strong></p><ol><li><strong>Load dataset:</strong> Fetches all examples from the dataset (each has <code>inputs</code> and optionally <code>outputs</code> as reference)</li><li><strong>Run target:</strong> For each example, calls <code>target(example.inputs)</code>. Each call is traced as a separate run, linked to the experiment.</li><li><strong>Score:</strong> For each (run, example) pair, calls every evaluator function. Each returns <code>{\"key\": str, \"score\": float, \"comment\": str}</code>.</li><li><strong>Store feedback:</strong> Scores are stored as <strong>Feedback</strong> objects attached to the run — visible in the UI.</li><li><strong>Aggregate:</strong> Results are aggregated into experiment-level metrics (mean score, pass rate, etc.).</li></ol><p><strong>LLM-as-Judge evaluator example:</strong></p><pre>from langsmith.evaluation import LangChainStringEvaluator\n\nqa_evaluator = LangChainStringEvaluator(\n    \"qa\",\n    config={\"llm\": ChatOpenAI(model=\"gpt-4o\", temperature=0)},\n    prepare_data=lambda run, example: {\n        \"prediction\": run.outputs[\"answer\"],\n        \"reference\": example.outputs[\"answer\"],\n        \"input\": example.inputs[\"question\"],\n    }\n)</pre><p>This sends the prediction + reference to GPT-4o with a grading prompt, and the LLM returns a score. Powerful but adds cost per evaluation.</p>'},
+    10:{title:'Step 10 Detail',body:'<p><strong>Complete event sequence for a ReAct agent with one tool call:</strong></p><pre>Event #   Callback              run_id   parent   run_type\n───────   ────────────────────  ───────  ───────  ────────\n  1       on_chain_start        aaa      null     chain\n          → inputs: {\"messages\": [{\"role\":\"user\",\"content\":\"weather Tokyo?\"}]}\n          → This is the ROOT run. trace_id = aaa.\n\n  2       on_llm_start          bbb      aaa      llm\n          → prompts: system + user + tool definitions\n          → model: gpt-4o, temperature: 0\n\n  3       on_llm_end            bbb      aaa      llm\n          → AIMessage with tool_calls: [{name:\"get_weather\", args:{\"city\":\"Tokyo\"}}]\n          → prompt_tokens: 340, completion_tokens: 28\n          → latency: 1.2s\n\n  4       on_tool_start         ccc      aaa      tool\n          → tool: \"get_weather\", input: {\"city\": \"Tokyo\"}\n\n  5       on_tool_end           ccc      aaa      tool\n          → output: \"Tokyo: 25°C, sunny, humidity 60%\"\n          → latency: 0.8s\n\n  6       on_llm_start          ddd      aaa      llm\n          → prompts: system + user + AI(tool_call) + ToolMessage\n          → The LLM now sees the tool result\n\n  7       on_llm_end            ddd      aaa      llm\n          → AIMessage: \"The weather in Tokyo is 25°C and sunny...\"\n          → prompt_tokens: 520, completion_tokens: 45\n          → latency: 1.1s\n\n  8       on_chain_end          aaa      null     chain\n          → outputs: {\"messages\": [..., AIMessage(\"The weather...\")]}\n          → total_tokens: 933, total_cost: $0.0037\n          → total_latency: 3.1s</pre><p><strong>What the trace tree looks like in the UI:</strong></p><pre>▼ agent (chain) — 3.1s — $0.0037\n  ├── ChatOpenAI (llm) — 1.2s — 368 tokens — $0.0012\n  ├── get_weather (tool) — 0.8s\n  └── ChatOpenAI (llm) — 1.1s — 565 tokens — $0.0025</pre><p>Every field on every run was captured automatically — no <code>print()</code> statements, no manual logging. This is the power of callback-based observability.</p>'}
+  };
+  let current=0,playing=false,timer=null;
+  const all=document.querySelectorAll('[data-step]'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),prevBtn=document.getElementById('prevBtn'),nextBtn=document.getElementById('nextBtn'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText'),detailPanel=document.getElementById('detailPanel'),detailOverlay=document.getElementById('detailOverlay'),dpStep=document.getElementById('dpStep'),dpTitle=document.getElementById('dpTitle'),dpBody=document.getElementById('dpBody'),dpClose=document.getElementById('dpClose');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function showDetail(s){const d=DETAILS[s],n=NARRATION[s];if(!d){hideDetail();return}dpStep.textContent=s;dpStep.style.background=n?n.color:'#dc2626';dpTitle.textContent=d.title;dpBody.innerHTML=d.body;detailPanel.classList.add('visible');detailOverlay.classList.add('visible')}
+  function hideDetail(){detailPanel.classList.remove('visible');detailOverlay.classList.remove('visible')}
+  dpClose.addEventListener('click',hideDetail);detailOverlay.addEventListener('click',hideDetail);
+  function activate(step){all.forEach(el=>{const s=parseInt(el.dataset.step);if(s<=step){el.classList.remove('dimmed');el.classList.add('active')}else{el.classList.add('dimmed');el.classList.remove('active')}});progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}if(!playing)showDetail(step);else hideDetail()}
+  function showReset(){all.forEach(el=>{el.classList.add('dimmed');el.classList.remove('active')});progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='#7c3aed';narText.innerHTML='Click play or press Space to begin...';hideDetail()}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){setTimeout(()=>{reset();if(playing)timer=setTimeout(tick,1000)},PAUSE_MS);return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});prevBtn.addEventListener('click',stepPrev);nextBtn.addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideDetail();return}if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  document.getElementById('narration').addEventListener('click',()=>{if(current>0){pause();showDetail(current)}});
+  reset();
+})();
+</script>
+</body>
+</html>

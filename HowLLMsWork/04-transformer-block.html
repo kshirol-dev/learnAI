@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: The Transformer Block — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; The Transformer Block</h2><span class="tb-sub">The repeating unit that powers every LLM &mdash; attention, feed-forward, normalize, repeat</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Architecture</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">view_module</span></div><span class="pipe-label">Overview</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">add_circle</span></div><span class="pipe-label">Residual</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">LayerNorm</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">FFN</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Activations</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">upgrade</span></div><span class="pipe-label">Modern</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Code</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">stacks</span></div><span class="pipe-label">Stacking</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Overview -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">view_module</span></div><div><div class="cc-title">The Transformer Block: One Unit, Repeated</div><div class="cc-sub">Every LLM is just this block stacked dozens or hundreds of times</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Think of an <strong>assembly line</strong> in a factory. Each station does two things: (1) <strong>consult the team</strong> (attention &mdash; look at other tokens for context), then (2) <strong>think independently</strong> (feed-forward network &mdash; process the information). The product (token representation) gets refined at each station. GPT-3 has 96 stations. Llama 3 70B has 80. Each one makes the representation a little richer.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The entire transformer is just this one block repeated N times. There&rsquo;s no special logic between layers &mdash; the same architecture processes tokens at layer 1 and layer 96. The magic comes from stacking: early layers capture syntax and local patterns, middle layers capture semantics, and late layers capture task-specific reasoning.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Block Structure</div>
+            <div class="cc-code"><span class="hl-cmt"># One transformer block (pre-norm style):</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># Input x</span>
+<span class="hl-cmt">#   │</span>
+<span class="hl-cmt">#   ├──→ Norm → Attention ──→ + (residual)</span>
+<span class="hl-cmt">#   │                          │</span>
+<span class="hl-cmt">#   │    ┌─────────────────────┘</span>
+<span class="hl-cmt">#   │    │</span>
+<span class="hl-cmt">#   │    ├──→ Norm → FFN ──→ + (residual)</span>
+<span class="hl-cmt">#   │    │                    │</span>
+<span class="hl-cmt">#   │    │                    ▼</span>
+<span class="hl-cmt">#   │    │                  Output</span>
+<span class="hl-cmt">#</span>
+<span class="hl-cmt"># In equations:</span>
+<span class="hl-cmt"># h = x + Attention(Norm(x))</span>
+<span class="hl-cmt"># y = h + FFN(Norm(h))</span>
+
+<span class="hl-cmt"># Layer counts in real models:</span>
+<span class="hl-cmt"># GPT-2:       12 layers</span>
+<span class="hl-cmt"># GPT-3:       96 layers</span>
+<span class="hl-cmt"># Llama 3 8B:  32 layers</span>
+<span class="hl-cmt"># Llama 3 70B: 80 layers</span>
+<span class="hl-cmt"># GPT-4 (est): ~120 layers</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Residual Connections -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">add_circle</span></div><div><div class="cc-title">Residual Connections: The Gradient Highway</div><div class="cc-sub">Why we add the input back to the output at every layer</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine passing a message through 96 people in a game of telephone. By the end, the message is unrecognizable. <strong>Residual connections</strong> fix this: at each step, you keep a copy of the original message and <em>add</em> the new information to it. So even after 96 steps, the original signal is preserved. Mathematically: output = input + transformation(input). The &ldquo;+&rdquo; is the residual connection.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Without residual connections, training deep networks is nearly impossible. Gradients vanish as they flow backward through dozens of layers (the vanishing gradient problem from MathForAI Ch 5). Residual connections create a &ldquo;gradient highway&rdquo; &mdash; gradients can flow directly from the loss back to early layers without being multiplied by many small numbers. He et al. (2015) introduced this in ResNets for vision; transformers adopted it from day one.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why It Works</div>
+            <div class="cc-code"><span class="hl-cmt"># Without residual connections:</span>
+<span class="hl-cmt"># y = f(x)  →  gradient: df/dx</span>
+<span class="hl-cmt"># After 96 layers: df₉₆/dx = Π(df_i/dx_i)</span>
+<span class="hl-cmt"># If each df/dx ≈ 0.9, after 96 layers:</span>
+<span class="hl-cmt"># 0.9^96 ≈ 0.000045 (vanished!)</span>
+
+<span class="hl-cmt"># With residual connections:</span>
+<span class="hl-cmt"># y = x + f(x)  →  gradient: 1 + df/dx</span>
+<span class="hl-cmt"># The "1" ensures gradient ≥ 1</span>
+<span class="hl-cmt"># Gradient always has a direct path back!</span>
+
+<span class="hl-cmt"># In code:</span>
+<span class="hl-cmt"># x = x + attention(norm(x))   # residual</span>
+<span class="hl-cmt"># x = x + ffn(norm(x))         # residual</span>
+<span class="hl-cmt"># The original x flows through unchanged</span>
+<span class="hl-cmt"># Each layer only ADDS refinements</span></div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box real"><div class="cb-tag">Real World</div><div class="cb-text">Telephone game with a notepad: keep the original message, add corrections at each step</div></div>
+            <div class="compare-box ai"><div class="cb-tag">In LLMs</div><div class="cb-text">y = x + f(x): each layer adds refinements to the original representation</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Layer Normalization -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Normalization: Keeping Numbers Sane</div><div class="cc-sub">LayerNorm and RMSNorm prevent activations from exploding</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine a group project where one person writes in centimeters and another in miles. Before combining their work, you need to <strong>normalize</strong> &mdash; convert everything to the same scale. <strong>Layer normalization</strong> does this for neural network activations: it rescales each token&rsquo;s vector to have zero mean and unit variance. This prevents values from drifting to extreme ranges as they pass through layers.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The original transformer (2017) used <strong>post-norm</strong>: normalize after each sublayer. Modern LLMs use <strong>pre-norm</strong>: normalize before each sublayer. Pre-norm is more stable for training very deep networks because the residual path stays clean. Additionally, Llama and most 2024+ models use <strong>RMSNorm</strong> instead of LayerNorm &mdash; it&rsquo;s simpler (no mean subtraction) and ~10-15% faster.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">LayerNorm vs RMSNorm</div>
+            <div class="cc-code"><span class="hl-cmt"># LayerNorm (GPT-2, GPT-3, BERT):</span>
+<span class="hl-cmt"># 1. Compute mean: μ = mean(x)</span>
+<span class="hl-cmt"># 2. Compute variance: σ² = var(x)</span>
+<span class="hl-cmt"># 3. Normalize: (x - μ) / √(σ² + ε)</span>
+<span class="hl-cmt"># 4. Scale and shift: γ * norm + β</span>
+
+<span class="hl-cmt"># RMSNorm (Llama, Mistral, Qwen):</span>
+<span class="hl-cmt"># 1. Compute RMS: rms = √(mean(x²))</span>
+<span class="hl-cmt"># 2. Normalize: x / (rms + ε)</span>
+<span class="hl-cmt"># 3. Scale only: γ * norm (no shift!)</span>
+<span class="hl-cmt"># → Simpler, faster, works just as well</span>
+
+<span class="hl-key">class</span> RMSNorm(nn.Module):
+    <span class="hl-key">def</span> __init__(self, d, eps=<span class="hl-num">1e-6</span>):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(d))
+        self.eps = eps
+
+    <span class="hl-key">def</span> forward(self, x):
+        rms = torch.sqrt(x.pow(<span class="hl-num">2</span>).mean(-<span class="hl-num">1</span>, keepdim=<span class="hl-num">True</span>) + self.eps)
+        <span class="hl-key">return</span> x / rms * self.weight</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Feed-Forward Network -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">The Feed-Forward Network: Independent Thinking</div><div class="cc-sub">After consulting the team, each token processes information on its own</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">After a team meeting (attention), each person goes back to their desk to <strong>think independently</strong>. The feed-forward network (FFN) is this independent thinking step. It&rsquo;s applied to each token separately &mdash; no communication between tokens. It&rsquo;s a simple two-layer neural network: expand to a larger dimension, apply a nonlinearity, then compress back. This is where the model stores &ldquo;factual knowledge.&rdquo;</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Research suggests that attention handles &ldquo;routing&rdquo; (which tokens to combine) while FFN layers store &ldquo;knowledge&rdquo; (facts, patterns). Geva et al. (2021) showed that FFN layers act as key-value memories: the first layer&rsquo;s rows match patterns, and the second layer&rsquo;s columns store associated information. This is why larger FFN dimensions = more knowledge capacity.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Architecture</div>
+            <div class="cc-code"><span class="hl-cmt"># Classic FFN (GPT-2, GPT-3):</span>
+<span class="hl-cmt"># FFN(x) = W₂ · ReLU(W₁ · x + b₁) + b₂</span>
+<span class="hl-cmt"># W₁: (d_model, d_ff)  — expand</span>
+<span class="hl-cmt"># W₂: (d_ff, d_model)  — compress</span>
+<span class="hl-cmt"># d_ff = 4 × d_model typically</span>
+
+<span class="hl-cmt"># GPT-3: d_model=12288, d_ff=49152</span>
+<span class="hl-cmt"># That's 12288 × 49152 × 2 ≈ 1.2B params</span>
+<span class="hl-cmt"># per FFN layer! (96 layers = 115B just FFN)</span>
+
+<span class="hl-cmt"># Llama 3 8B: d_model=4096, d_ff=14336</span>
+<span class="hl-cmt"># (3.5× expansion, not 4×, due to SwiGLU)</span>
+
+<span class="hl-key">class</span> FFN(nn.Module):
+    <span class="hl-key">def</span> __init__(self, d_model, d_ff):
+        super().__init__()
+        self.w1 = nn.Linear(d_model, d_ff)
+        self.w2 = nn.Linear(d_ff, d_model)
+
+    <span class="hl-key">def</span> forward(self, x):
+        <span class="hl-key">return</span> self.w2(torch.relu(self.w1(x)))</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Activation Functions -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Activation Functions: ReLU, GELU, SwiGLU</div><div class="cc-sub">The nonlinearity that gives neural networks their power</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Without activation functions, a neural network is just matrix multiplication &mdash; which can only learn linear relationships. An activation function is like a <strong>decision gate</strong>: it decides which signals to pass through and which to suppress. <strong>ReLU</strong> is a simple on/off switch (negative = 0, positive = pass). <strong>GELU</strong> and <strong>SwiGLU</strong> are smoother, more nuanced gates.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> SwiGLU (Shazeer, 2020) is now the standard in modern LLMs. It uses a gating mechanism: one linear layer produces the signal, another produces a gate, and they&rsquo;re multiplied together. This gives the model more control over information flow. Llama, Mistral, Qwen, and most 2024+ models use SwiGLU. It achieves the same quality with ~10% fewer training tokens than ReLU.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Evolution of Activations</div>
+            <div class="cc-code"><span class="hl-cmt"># ReLU (2012): max(0, x)</span>
+<span class="hl-cmt"># Simple, fast, but "dead neurons" problem</span>
+<span class="hl-cmt"># Used in: original Transformer, GPT-2</span>
+
+<span class="hl-cmt"># GELU (2016): x · Φ(x)</span>
+<span class="hl-cmt"># Smooth approximation of ReLU</span>
+<span class="hl-cmt"># Used in: GPT-3, BERT, RoBERTa</span>
+
+<span class="hl-cmt"># SwiGLU (2020): SiLU(xW₁) ⊙ (xW₃)</span>
+<span class="hl-cmt"># Gated: signal × gate</span>
+<span class="hl-cmt"># Used in: Llama 2/3, Mistral, Qwen, Gemma</span>
+
+<span class="hl-key">class</span> SwiGLU_FFN(nn.Module):
+    <span class="hl-key">def</span> __init__(self, d_model, d_ff):
+        super().__init__()
+        self.w1 = nn.Linear(d_model, d_ff)  <span class="hl-cmt"># gate</span>
+        self.w3 = nn.Linear(d_model, d_ff)  <span class="hl-cmt"># signal</span>
+        self.w2 = nn.Linear(d_ff, d_model)  <span class="hl-cmt"># down</span>
+
+    <span class="hl-key">def</span> forward(self, x):
+        gate = torch.nn.functional.silu(self.w1(x))
+        signal = self.w3(x)
+        <span class="hl-key">return</span> self.w2(gate * signal)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Modern Upgrades -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">upgrade</span></div><div><div class="cc-title">Modern Upgrades: What Changed Since 2017</div><div class="cc-sub">The original transformer vs. today&rsquo;s LLMs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Original (2017) vs Modern (2024)</div><div class="cc-text">The core idea is the same, but every component has been refined. <strong>Post-norm &rarr; Pre-norm</strong> (more stable training). <strong>LayerNorm &rarr; RMSNorm</strong> (faster, simpler). <strong>ReLU &rarr; SwiGLU</strong> (better quality). <strong>Sinusoidal positions &rarr; RoPE</strong> (better length generalization). <strong>Standard attention &rarr; GQA</strong> (Grouped-Query Attention, more memory efficient).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Llama&rsquo;s success came not from a single breakthrough but from combining the best proven ideas: RMSNorm + SwiGLU + RoPE + GQA + pre-norm. This &ldquo;best practices&rdquo; approach achieved GPT-3 level performance with less than 10% of the parameters. The lesson: architecture matters, but careful engineering matters more.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Side-by-Side</div>
+            <div class="cc-code"><span class="hl-cmt"># Original Transformer (Vaswani, 2017):</span>
+<span class="hl-cmt"># - Post-norm (norm after sublayer)</span>
+<span class="hl-cmt"># - LayerNorm</span>
+<span class="hl-cmt"># - ReLU activation</span>
+<span class="hl-cmt"># - Sinusoidal positional encoding</span>
+<span class="hl-cmt"># - Standard multi-head attention</span>
+<span class="hl-cmt"># - Encoder-decoder architecture</span>
+
+<span class="hl-cmt"># Modern LLM (Llama 3, 2024):</span>
+<span class="hl-cmt"># - Pre-norm (norm before sublayer)</span>
+<span class="hl-cmt"># - RMSNorm (faster, no mean)</span>
+<span class="hl-cmt"># - SwiGLU activation (gated)</span>
+<span class="hl-cmt"># - RoPE positional encoding</span>
+<span class="hl-cmt"># - Grouped-Query Attention (GQA)</span>
+<span class="hl-cmt"># - Decoder-only architecture</span>
+
+<span class="hl-cmt"># GQA: share K,V across head groups</span>
+<span class="hl-cmt"># Llama 3 8B: 32 Q heads, 8 KV heads</span>
+<span class="hl-cmt"># → 4× less KV cache memory</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Complete Code -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">A Complete Transformer Block in PyTorch</div><div class="cc-sub">The modern Llama-style block in ~25 lines</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Implementation</div>
+            <div class="cc-code"><span class="hl-key">class</span> TransformerBlock(nn.Module):
+    <span class="hl-key">def</span> __init__(self, d_model, n_heads, d_ff):
+        super().__init__()
+        <span class="hl-cmt"># Pre-norm with RMSNorm</span>
+        self.norm1 = RMSNorm(d_model)
+        self.norm2 = RMSNorm(d_model)
+
+        <span class="hl-cmt"># Self-attention (from Ch 3)</span>
+        self.attn = CausalSelfAttention(
+            d_model, n_heads
+        )
+
+        <span class="hl-cmt"># Feed-forward with SwiGLU</span>
+        self.ffn = SwiGLU_FFN(d_model, d_ff)
+
+    <span class="hl-key">def</span> forward(self, x):
+        <span class="hl-cmt"># Sublayer 1: attention + residual</span>
+        x = x + self.attn(self.norm1(x))
+
+        <span class="hl-cmt"># Sublayer 2: FFN + residual</span>
+        x = x + self.ffn(self.norm2(x))
+
+        <span class="hl-key">return</span> x</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">That&rsquo;s It. Really.</div><div class="cc-text">The entire transformer block is: normalize &rarr; attend &rarr; add residual &rarr; normalize &rarr; feed-forward &rarr; add residual. Two sublayers, two residual connections, two normalizations. Stack this 32-120 times and you have a modern LLM. The simplicity is the beauty &mdash; and why it scales so well.</div></div>
+          <div class="cc-block"><div class="cc-label">Parameter Count</div>
+            <div class="cc-code"><span class="hl-cmt"># Params per block (Llama 3 8B):</span>
+<span class="hl-cmt"># d_model=4096, n_heads=32, d_ff=14336</span>
+
+<span class="hl-cmt"># Attention: W_Q + W_K + W_V + W_O</span>
+<span class="hl-cmt"># = 4 × (4096 × 4096) = 67M params</span>
+
+<span class="hl-cmt"># FFN (SwiGLU): W₁ + W₃ + W₂</span>
+<span class="hl-cmt"># = 2×(4096×14336) + (14336×4096)</span>
+<span class="hl-cmt"># = 176M params</span>
+
+<span class="hl-cmt"># Norms: 2 × 4096 = 8K (negligible)</span>
+
+<span class="hl-cmt"># Total per block: ~243M params</span>
+<span class="hl-cmt"># × 32 layers = ~7.8B params</span>
+<span class="hl-cmt"># + embeddings ≈ 8B total ✓</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Stacking -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">stacks</span></div><div><div class="cc-title">Stacking Blocks: From Shallow to Deep</div><div class="cc-sub">What happens as tokens flow through 32, 80, or 120 layers</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Each Layer Does</div><div class="cc-text">Research (Tenney et al., 2019; Elhage et al., 2022) reveals a progression: <strong>Early layers (1-10):</strong> Learn syntax, part-of-speech, simple patterns. <strong>Middle layers (10-60):</strong> Learn semantics, entity relationships, factual knowledge. <strong>Late layers (60+):</strong> Learn task-specific reasoning, output formatting, next-token prediction. The representation gets progressively more abstract and task-relevant.</div></div>
+          <div class="cc-note n-green"><strong>The complete picture:</strong> A transformer is: embeddings &rarr; N &times; (norm &rarr; attention &rarr; residual &rarr; norm &rarr; FFN &rarr; residual) &rarr; final norm &rarr; output projection. That&rsquo;s the entire architecture. The original 2017 design was elegant; modern refinements (RMSNorm, SwiGLU, RoPE, GQA) made it practical at scale. Every LLM you use &mdash; GPT-4, Claude, Llama, Gemini &mdash; is this block, repeated.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Full Model</div>
+            <div class="cc-code"><span class="hl-key">class</span> LLM(nn.Module):
+    <span class="hl-key">def</span> __init__(self, vocab, d, n_heads, d_ff, n_layers):
+        super().__init__()
+        self.embed = nn.Embedding(vocab, d)
+        self.blocks = nn.ModuleList([
+            TransformerBlock(d, n_heads, d_ff)
+            <span class="hl-key">for</span> _ <span class="hl-key">in</span> range(n_layers)
+        ])
+        self.norm = RMSNorm(d)
+        self.head = nn.Linear(d, vocab)
+
+    <span class="hl-key">def</span> forward(self, token_ids):
+        x = self.embed(token_ids)
+        <span class="hl-key">for</span> block <span class="hl-key">in</span> self.blocks:
+            x = block(x)
+        x = self.norm(x)
+        logits = self.head(x)
+        <span class="hl-key">return</span> logits
+
+<span class="hl-cmt"># Llama 3 8B:</span>
+model = LLM(
+    vocab=<span class="hl-num">128256</span>, d=<span class="hl-num">4096</span>,
+    n_heads=<span class="hl-num">32</span>, d_ff=<span class="hl-num">14336</span>,
+    n_layers=<span class="hl-num">32</span>
+)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-attention.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Attention</a>
+    <a class="ch-nav-btn next" href="05-scaling-up.html">Ch 5: Scaling Up <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Every LLM is one transformer block repeated N times. Each block: attend to other tokens (team meeting), then process independently (desk work). GPT-3: 96 blocks. Llama 3 70B: 80 blocks.',color:'#7c3aed'},
+    2:{text:'<strong>Step 2:</strong> Residual connections: y = x + f(x). The original signal flows through unchanged; each layer only ADDS refinements. Without this, gradients vanish through 96 layers. He et al. (2015).',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Normalization keeps activations in a stable range. Modern LLMs use pre-norm (normalize before sublayer) with RMSNorm (simpler than LayerNorm, ~15% faster). Standard since Llama.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> The FFN is a two-layer network applied to each token independently. It expands to 4× the dimension, applies nonlinearity, then compresses back. Research suggests FFN layers store factual knowledge.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Activation functions evolved: ReLU (2012) → GELU (2016) → SwiGLU (2020). SwiGLU uses gating (signal × gate) and is now standard in Llama, Mistral, Qwen. ~10% more efficient than ReLU.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Modern upgrades since 2017: pre-norm, RMSNorm, SwiGLU, RoPE, GQA. Llama combined all proven ideas to match GPT-3 with <10% of parameters. Careful engineering > novel architecture.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> The complete block in ~25 lines: norm → attention → residual → norm → FFN → residual. Llama 3 8B: ~243M params per block × 32 layers ≈ 8B total. Elegant simplicity.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Early layers learn syntax, middle layers learn semantics and facts, late layers learn task-specific reasoning. The full model: embeddings → N blocks → norm → output projection. That\'s every LLM.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

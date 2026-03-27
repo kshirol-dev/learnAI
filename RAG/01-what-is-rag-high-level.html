@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: What Is RAG & Why It Matters — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+
+/* CANVAS */
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+
+/* TITLE BAR */
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+
+/* PIPELINE — the persistent factory line */
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+
+/* NARRATION */
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--pink-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+
+/* PROGRESS */
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+
+/* STEP COUNTER */
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+
+/* CONTENT AREA — the "zoom in" for each step */
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}
+.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}
+.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+
+/* COMPARE BOXES */
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+
+/* CONTROLS */
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b45309;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 1 &mdash; What Is RAG &amp; Why It Matters</h2><span class="tb-sub">The retrieve-then-generate pattern that grounds LLMs in real data</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="01-what-is-rag-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">description</span></div><span class="pipe-label">Documents</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Chunk</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Embed</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">database</span></div><span class="pipe-label">Store</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Retrieve</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Generate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Answer</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- CONTENT CARDS -->
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: The Problem -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Problem: LLMs Don't Know Your Data</div><div class="cc-sub">Knowledge cutoffs, hallucination, and the limits of training data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Knowledge Cutoff</div><div class="cc-text">Every LLM has a <strong>training cutoff date</strong>. GPT-4o's training data ends in late 2023. Claude's in early 2025. Anything after that date — your company's latest docs, today's stock prices, last week's incident report — the model simply doesn't know.</div></div>
+          <div class="cc-block"><div class="cc-label">Hallucination</div><div class="cc-text">When an LLM doesn't know something, it doesn't say "I don't know." It <strong>generates plausible-sounding text</strong> that may be completely wrong. It invents citations, fabricates statistics, and confidently states falsehoods. This is hallucination — the core problem RAG solves.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Without RAG</div><div class="cb-text">"What's our refund policy?"<br><br>LLM: "Your refund policy allows returns within 30 days..." <strong>(made up — your actual policy is 14 days)</strong></div></div>
+            <div class="compare-box good"><div class="cb-tag">With RAG</div><div class="cb-text">"What's our refund policy?"<br><br>LLM retrieves your policy doc, then: "According to your policy document, refunds are available within 14 days of purchase." <strong>(grounded in real data)</strong></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: What RAG Is -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">RAG: Retrieve, Then Generate</div><div class="cc-sub">The core idea in one sentence</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Pattern</div><div class="cc-text"><strong>Retrieval-Augmented Generation</strong> means: before the LLM generates an answer, first <strong>retrieve relevant documents</strong> from your own data, then include those documents in the prompt so the LLM can base its answer on real information.</div></div>
+          <div class="cc-block"><div class="cc-label">The Name</div><div class="cc-text">The term comes from the 2020 paper <strong>"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"</strong> by Patrick Lewis et al. at Meta AI. The paper showed that combining a retriever (DPR) with a generator (BART) outperformed pure generation on knowledge-intensive tasks like open-domain QA.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># RAG in pseudocode — it's this simple</span>
+
+<span class="hl-key">def</span> rag(question):
+    <span class="hl-cmt"># Step 1: Retrieve</span>
+    docs = vector_store.search(question, top_k=<span class="hl-num">5</span>)
+
+    <span class="hl-cmt"># Step 2: Augment the prompt</span>
+    prompt = f<span class="hl-str">"""Answer based on these docs:
+{docs}
+
+Question: {question}"""</span>
+
+    <span class="hl-cmt"># Step 3: Generate</span>
+    answer = llm.generate(prompt)
+    <span class="hl-key">return</span> answer</div>
+          <div class="cc-note n-amber"><strong>That's it.</strong> RAG is fundamentally just "search your docs, paste them into the prompt, ask the LLM." Everything else — chunking, embeddings, reranking — is about making that search better.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: The Pipeline Overview -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">The RAG Pipeline: Two Phases</div><div class="cc-sub">Indexing (offline) and Querying (online)</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Phase 1: Indexing (Offline)</div><div class="cc-text">Done once (or periodically) before any user asks a question:<br><br><strong>1. Load</strong> — Read documents from files, databases, APIs<br><strong>2. Chunk</strong> — Split documents into smaller passages<br><strong>3. Embed</strong> — Convert each chunk into a vector (array of numbers)<br><strong>4. Store</strong> — Save vectors in a vector database with metadata</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Phase 2: Querying (Online)</div><div class="cc-text">Happens in real-time when a user asks a question:<br><br><strong>5. Embed the query</strong> — Convert the question into a vector<br><strong>6. Retrieve</strong> — Find the most similar chunks in the vector store<br><strong>7. Augment</strong> — Insert retrieved chunks into the LLM prompt<br><strong>8. Generate</strong> — LLM produces an answer grounded in the retrieved context</div></div>
+          <div class="cc-note n-blue"><strong>The pipeline in the header</strong> shows this flow. Chapters 2–8 of this learning path go deep on each stage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Why Not Just Fine-Tune? -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">RAG vs Fine-Tuning vs Long Context</div><div class="cc-sub">Three approaches to giving LLMs new knowledge</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fine-Tuning</div><div class="cc-text"><strong>Bakes knowledge into model weights.</strong> Expensive to train, hard to update, can cause catastrophic forgetting. Best for teaching the model a new <em>style</em> or <em>behavior</em>, not for injecting facts. A fine-tuned model still hallucinates — it just hallucinates in your company's voice.</div></div>
+          <div class="cc-block"><div class="cc-label">Long Context Windows</div><div class="cc-text"><strong>Paste everything into the prompt.</strong> Gemini 1.5 Pro supports 1M tokens. But: cost scales linearly with context size, latency increases, and models struggle with information in the middle of very long contexts (the "lost-in-the-middle" effect, Liu et al. 2023).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RAG</div><div class="cc-text"><strong>Retrieves only what's relevant.</strong> No retraining needed. Data can be updated instantly (just re-index). Cost is predictable — you only pay for the retrieved chunks, not the entire corpus. The model sees exactly the context it needs, nothing more.</div></div>
+          <div class="cc-note n-pink"><strong>They're not mutually exclusive.</strong> In practice, teams combine approaches: RAG for factual grounding, fine-tuning for tone/format, and long context for complex multi-document reasoning. But RAG is the default starting point for most knowledge-intensive applications.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: What Makes RAG Work -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">The Key Insight: Semantic Search</div><div class="cc-sub">Finding relevant documents by meaning, not keywords</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Beyond Keyword Search</div><div class="cc-text">Traditional search (like Elasticsearch with BM25) matches <strong>keywords</strong>. If you search "how to cancel my subscription" but the doc says "steps to terminate your account," keyword search might miss it. <strong>Semantic search</strong> understands that "cancel subscription" and "terminate account" mean the same thing.</div></div>
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">An <strong>embedding model</strong> (like OpenAI's text-embedding-3-small or the open-source BGE-large) converts text into a vector — an array of numbers that captures meaning. Similar meanings produce similar vectors. You find relevant documents by finding the <strong>nearest vectors</strong> to your query.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Semantic similarity in action</span>
+
+embed(<span class="hl-str">"cancel my subscription"</span>)
+  → [<span class="hl-num">0.23</span>, <span class="hl-num">-0.41</span>, <span class="hl-num">0.87</span>, ...]
+
+embed(<span class="hl-str">"terminate your account"</span>)
+  → [<span class="hl-num">0.21</span>, <span class="hl-num">-0.39</span>, <span class="hl-num">0.85</span>, ...]
+
+cosine_similarity = <span class="hl-num">0.94</span>  <span class="hl-cmt"># very similar!</span>
+
+embed(<span class="hl-str">"today's weather forecast"</span>)
+  → [<span class="hl-num">-0.65</span>, <span class="hl-num">0.12</span>, <span class="hl-num">-0.33</span>, ...]
+
+cosine_similarity = <span class="hl-num">0.11</span>  <span class="hl-cmt"># not similar</span></div>
+          <div class="cc-note n-teal"><strong>This is the magic of RAG.</strong> Embedding models compress the meaning of text into vectors, and vector databases find the nearest neighbors in milliseconds — even across millions of documents.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Naive RAG vs Advanced RAG -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">Naive RAG vs Advanced RAG</div><div class="cc-sub">The spectrum of sophistication</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Naive RAG</div><div class="cc-text">The simplest implementation: chunk documents, embed them, retrieve top-K, stuff them into the prompt. <strong>Works surprisingly well</strong> for many use cases. This is where you should start — don't over-engineer before you have a baseline.</div></div>
+          <div class="cc-block"><div class="cc-label">Where Naive RAG Fails</div><div class="cc-text"><strong>Poor chunking</strong> — splits mid-sentence, loses context<br><strong>Irrelevant retrieval</strong> — top-K results aren't always the best<br><strong>No query understanding</strong> — ambiguous queries get bad results<br><strong>Lost in the middle</strong> — LLM ignores context in the middle of the prompt<br><strong>No verification</strong> — answer might not actually use the retrieved docs</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Advanced RAG</div><div class="cc-text">Adds techniques at every stage to improve quality:<br><br><strong>Pre-retrieval:</strong> Query rewriting, HyDE, multi-query expansion<br><strong>Retrieval:</strong> Hybrid search, reranking, MMR for diversity<br><strong>Post-retrieval:</strong> Context compression, reordering, citation<br><strong>Generation:</strong> Self-RAG (self-reflection), CRAG (corrective retrieval)</div></div>
+          <div class="cc-note n-violet"><strong>This learning path covers the full spectrum.</strong> Chapters 2–8 build up the pipeline stage by stage. Chapter 9 covers the advanced patterns (GraphRAG, Self-RAG, CRAG). Start naive, measure, then add complexity where it helps.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Real-World Use Cases -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">cases</span></div><div><div class="cc-title">Where RAG Shines</div><div class="cc-sub">Real-world applications across industries</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Use Cases</div><div class="cc-text"><strong>Customer support bots</strong> — Answer questions from help docs, knowledge bases, and past tickets<br><br><strong>Internal knowledge search</strong> — "What's our policy on X?" across thousands of company documents<br><br><strong>Code assistants</strong> — Retrieve relevant code, docs, and examples from your codebase (this is how Cursor works)<br><br><strong>Legal/medical research</strong> — Search case law, clinical guidelines, or regulatory documents with natural language</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What They All Share</div><div class="cc-text">Every RAG application has the same core need: <strong>a large corpus of domain-specific knowledge</strong> that the LLM wasn't trained on, and <strong>users who ask natural language questions</strong> about that knowledge. The RAG pipeline is the bridge.</div></div>
+          <div class="cc-note n-green"><strong>RAG is the most deployed LLM pattern in production today.</strong> It's simpler than fine-tuning, cheaper than retraining, and gives the LLM access to up-to-date, domain-specific knowledge. If you're building an AI application that needs to answer questions about specific data, RAG is almost certainly your starting point.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: What's Next -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--amber),var(--pink))"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">The Journey Ahead</div><div class="cc-sub">What you'll learn in this deep dive</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Pipeline, Stage by Stage</div><div class="cc-text"><strong>Ch 2: Document Loading</strong> — Getting data in (PDFs, web, DBs)<br><strong>Ch 3: Chunking</strong> — Breaking docs into retrieval units<br><strong>Ch 4: Embeddings</strong> — Text to vectors (models, math, benchmarks)<br><strong>Ch 5: Vector Stores</strong> — Where vectors live (HNSW, FAISS, Pinecone)<br><strong>Ch 6: Retrieval</strong> — Finding the right chunks (dense, sparse, hybrid)<br><strong>Ch 7: Query Transformation</strong> — Making queries smarter<br><strong>Ch 8: Generation</strong> — Synthesizing grounded answers</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Beyond the Pipeline</div><div class="cc-text"><strong>Ch 9: Advanced Patterns</strong> — GraphRAG, Self-RAG, CRAG, agentic RAG<br><strong>Ch 10: Solutions Landscape</strong> — LlamaIndex, LangChain, Haystack, Vectara, and more<br><strong>Ch 11: Production &amp; Eval</strong> — RAGAS metrics, caching, monitoring, A/B testing</div></div>
+          <div class="cc-note n-amber"><strong>Each chapter has two views.</strong> The <em>High Level</em> (like this page) gives you the visual journey — watch the pipeline build up. The <em>Under the Hood</em> goes deep on the technical details, algorithms, and code. Start with high level, then dive under the hood when you're ready.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=6000;
+  const PIPE_MAP={1:-1, 2:-1, 3:-1, 4:3, 5:4, 6:5, 7:6, 8:6};
+  const NARRATION={
+    1:{text:'Every LLM has a <strong>knowledge cutoff</strong>. It doesn\'t know your company docs, your latest data, or anything after its training date. When it doesn\'t know, it <strong>hallucinates</strong> — confidently generating plausible-sounding nonsense. This is the core problem RAG solves.',color:'#dc2626'},
+    2:{text:'<strong>Retrieval-Augmented Generation</strong> is simple: before the LLM answers, <strong>search your documents</strong> for relevant context, paste it into the prompt, and let the LLM generate an answer grounded in real data. The term comes from a 2020 Meta AI paper by Lewis et al.',color:'#d97706'},
+    3:{text:'The RAG pipeline has <strong>two phases</strong>. <em>Indexing</em> (offline): load documents, chunk them, embed them, store the vectors. <em>Querying</em> (online): embed the question, retrieve similar chunks, augment the prompt, generate an answer. The pipeline above shows the full flow.',color:'#2563eb'},
+    4:{text:'<strong>Why not fine-tune?</strong> Fine-tuning bakes knowledge into weights — expensive, hard to update, still hallucinates. Long context windows? Cost scales linearly, and models lose information in the middle. RAG retrieves <strong>only what\'s relevant</strong>, updates instantly, and costs are predictable.',color:'#db2777'},
+    5:{text:'The key insight: <strong>semantic search</strong>. Embedding models convert text into vectors that capture meaning. "Cancel subscription" and "terminate account" produce similar vectors. Vector databases find nearest neighbors in milliseconds across millions of documents.',color:'#0d9488'},
+    6:{text:'<strong>Naive RAG</strong> (chunk → embed → retrieve → generate) works surprisingly well as a starting point. <strong>Advanced RAG</strong> adds query rewriting, hybrid search, reranking, and self-reflection. Start simple, measure, then add complexity where the metrics tell you to.',color:'#7c3aed'},
+    7:{text:'RAG is the <strong>most deployed LLM pattern in production</strong>. Customer support bots, internal knowledge search, code assistants, legal research — any application where an LLM needs domain-specific knowledge it wasn\'t trained on.',color:'#16a34a'},
+    8:{text:'This learning path covers the <strong>full RAG pipeline</strong> from raw documents to grounded answers, plus advanced patterns, the solutions landscape, and production evaluation. Each chapter: a visual journey + a technical deep dive.',color:'#d97706'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{
+      s.classList.remove('lit','done');
+      if(i<litIdx)s.classList.add('done');
+      else if(i===litIdx)s.classList.add('lit');
+    });
+    arrows.forEach((a,i)=>{
+      a.classList.remove('lit','done');
+      if(i<litIdx)a.classList.add('done');
+      else if(i===litIdx)a.classList.add('lit');
+    });
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';
+    stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--amber)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));
+    arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

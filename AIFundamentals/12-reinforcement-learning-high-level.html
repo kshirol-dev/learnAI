@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Reinforcement Learning — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}.pipe-arrow.lit{color:var(--red)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Reinforcement Learning</h2><span class="tb-sub">Learning from rewards &mdash; from Q-tables to AlphaGo to RLHF</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="12-reinforcement-learning-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">sports_esports</span></div><span class="pipe-label">Agent</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_on</span></div><span class="pipe-label">Q-Learn</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Deep RL</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Policy</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">emoji_events</span></div><span class="pipe-label">AlphaGo</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">RLHF</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">sports_esports</span></div><div><div class="cc-title">The RL Framework</div><div class="cc-sub">Agent, environment, state, action, reward</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How RL Differs</div><div class="cc-text">Unlike supervised learning (labeled data) or unsupervised learning (find patterns), RL learns from <strong>interaction</strong>. An agent takes actions in an environment, receives rewards, and learns a <strong>policy</strong> &mdash; a strategy that maximizes cumulative reward over time. No teacher provides correct answers; the agent discovers them through trial and error.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># The RL loop</span>
+
+<span class="hl-key">Agent</span> observes <span class="hl-str">state s</span>
+Agent chooses <span class="hl-str">action a</span> based on policy &pi;
+Environment returns <span class="hl-str">reward r</span> and <span class="hl-str">next state s&prime;</span>
+Agent updates policy to maximize total reward
+Repeat forever
+
+<span class="hl-key">Goal:</span> maximize E[&sum; &gamma;<sup>t</sup> r<sub>t</sub>]
+<span class="hl-cmt"># &gamma; = discount factor (0.99 typical)</span>
+<span class="hl-cmt"># Future rewards worth less than immediate</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Challenges</div><div class="cc-code"><span class="hl-key">Exploration vs Exploitation:</span>
+  Try new actions (explore) or stick
+  with what works (exploit)?
+
+<span class="hl-key">Credit Assignment:</span>
+  Which past action caused the reward?
+  Goal scored 100 moves later &mdash; which
+  move was the good one?
+
+<span class="hl-key">Sparse Rewards:</span>
+  Chess: reward only at game end
+  Thousands of moves, one reward signal
+
+<span class="hl-key">Sample Efficiency:</span>
+  RL needs millions of interactions
+  Much less efficient than supervised learning</div></div>
+          <div class="cc-note n-red"><strong>RL is the third paradigm</strong> of machine learning (alongside supervised and unsupervised). It&rsquo;s how AlphaGo learned to beat world champions, how robots learn to walk, and how ChatGPT was aligned with human preferences via RLHF.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">grid_on</span></div><div><div class="cc-title">Q-Learning &amp; Value Functions</div><div class="cc-sub">Learning the value of state-action pairs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Value-Based RL</div><div class="cc-text">The <strong>Q-function</strong> Q(s,a) estimates the total future reward of taking action a in state s, then following the optimal policy. Q-learning updates this estimate after each experience using the <strong>Bellman equation</strong>. Once Q is learned, the optimal policy is simply: pick the action with the highest Q-value.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Q-learning update rule</span>
+
+<span class="hl-key">Q(s,a)</span> &larr; Q(s,a) + &alpha; &middot; [r + &gamma; &middot; max Q(s&prime;,a&prime;) - Q(s,a)]
+                         <span class="hl-str">TD target</span>        <span class="hl-str">current</span>
+
+<span class="hl-cmt"># &alpha; = learning rate</span>
+<span class="hl-cmt"># &gamma; = discount factor</span>
+<span class="hl-cmt"># r = immediate reward</span>
+<span class="hl-cmt"># max Q(s&prime;,a&prime;) = best future value</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">&epsilon;-Greedy Exploration</div><div class="cc-text">With probability &epsilon;, take a <strong>random</strong> action (explore). With probability 1&minus;&epsilon;, take the <strong>best known</strong> action (exploit). Start with high &epsilon; (lots of exploration), gradually decrease it as the agent learns. This balances discovering new strategies with using proven ones.</div></div>
+          <div class="cc-note n-orange"><strong>Q-table limitation:</strong> Q-learning stores a value for every (state, action) pair. For Atari games with 210&times;160 pixel screens, the state space is astronomical. Solution: <strong>Deep Q-Networks</strong> &mdash; replace the Q-table with a neural network that generalizes across similar states.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Deep Q-Networks (DQN)</div><div class="cc-sub">Mnih et al. (2013/2015) &mdash; human-level Atari from pixels</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Breakthrough</div><div class="cc-text">DeepMind&rsquo;s DQN used a CNN to approximate Q(s,a) directly from raw game pixels. Two key innovations made it stable: <strong>experience replay</strong> (store transitions in a buffer, sample randomly to break correlations) and a <strong>target network</strong> (frozen copy of Q, updated periodically, to stabilize the moving target).</div></div>
+          <div class="cc-code"><span class="hl-cmt"># DQN architecture</span>
+
+<span class="hl-key">Input:</span>  4 stacked frames (84&times;84&times;4)
+<span class="hl-key">Conv1:</span>  32 filters, 8&times;8, stride 4
+<span class="hl-key">Conv2:</span>  64 filters, 4&times;4, stride 2
+<span class="hl-key">Conv3:</span>  64 filters, 3&times;3, stride 1
+<span class="hl-key">FC:</span>    512 units
+<span class="hl-key">Output:</span> Q-value for each action (e.g., 18)
+
+<span class="hl-cmt"># Achieved superhuman on 29/49 Atari games</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">DQN Limitations</div><div class="cc-text"><strong>Discrete actions only:</strong> DQN outputs Q-values for each possible action. Works for Atari (18 actions) but not for robotics (continuous joint angles).<br><br><strong>Overestimation:</strong> max operator biases Q-values upward. Double DQN fixes this.<br><br><strong>Sample inefficiency:</strong> Needs millions of frames to learn. Humans learn Atari in minutes.</div></div>
+          <div class="cc-note n-pink"><strong>DQN was a watershed moment</strong> (2013): the first time a single algorithm learned multiple tasks from raw sensory input at human level. It proved deep learning + RL could solve complex sequential decision problems, launching the deep RL revolution.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Policy Gradient &amp; Actor-Critic</div><div class="cc-sub">Directly optimizing the policy &mdash; PPO and continuous control</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Policy Gradient Methods</div><div class="cc-text">Instead of learning Q-values, <strong>directly optimize the policy</strong> &pi;(a|s). The policy is a neural network that outputs action probabilities. Gradient: increase probability of actions that led to high rewards, decrease probability of actions that led to low rewards.</div></div>
+          <div class="cc-code"><span class="hl-key">REINFORCE (Williams, 1992):</span>
+  &nabla;J = E[&sum; &nabla;log &pi;(a|s) &middot; G<sub>t</sub>]
+  <span class="hl-cmt"># G<sub>t</sub> = total return from time t</span>
+  <span class="hl-err"># High variance, slow convergence</span>
+
+<span class="hl-key">Actor-Critic:</span>
+  Actor: policy &pi;(a|s) &mdash; chooses actions
+  Critic: V(s) &mdash; estimates state value
+  Advantage: A = r + &gamma;V(s&prime;) - V(s)
+  <span class="hl-ok"># Lower variance, faster learning</span>
+
+<span class="hl-key">PPO (Schulman, 2017):</span>
+  Clips policy updates to stay close
+  Stable, simple, works everywhere
+  <span class="hl-ok"># Default algorithm for most RL tasks</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Value-Based (DQN)</div><div class="cb-text">Learns Q(s,a), derives policy. <strong>Discrete actions only.</strong> Stable but limited. Good for games.</div></div>
+            <div class="compare-box good"><div class="cb-tag">Policy Gradient (PPO)</div><div class="cb-text">Learns &pi;(a|s) directly. <strong>Continuous actions.</strong> Robotics, locomotion, LLM alignment (RLHF).</div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>PPO is everywhere:</strong> OpenAI Dota 2 (PPO), ChatGPT alignment (PPO), robotic manipulation (PPO), game AI (PPO). Its simplicity and stability made it the default RL algorithm. The key idea: limit how much the policy can change per update to prevent catastrophic performance drops.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">emoji_events</span></div><div><div class="cc-title">AlphaGo &amp; AlphaZero</div><div class="cc-sub">Self-play + MCTS + deep RL = superhuman game AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">AlphaGo (2016):</span>
+  Policy network: predict human expert moves
+  Value network: predict win probability
+  MCTS: search guided by both networks
+  Beat Lee Sedol 4-1 in Go
+
+<span class="hl-key">AlphaGo Zero (2017):</span>
+  No human data at all &mdash; pure self-play
+  Single network: policy + value heads
+  Surpassed AlphaGo in 3 days
+  Discovered novel strategies
+
+<span class="hl-key">AlphaZero (2018):</span>
+  Same algorithm for Go, Chess, Shogi
+  Beat Stockfish (chess) after 4 hours
+  No game-specific knowledge
+  Tabula rasa learning</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Self-Play Loop</div><div class="cc-text"><strong>1.</strong> Play games against yourself using MCTS + current network<br><br><strong>2.</strong> Store (state, MCTS policy, outcome) as training data<br><br><strong>3.</strong> Train network to predict MCTS policy and game outcome<br><br><strong>4.</strong> Repeat with improved network<br><br>Each iteration, the agent plays better opponents (itself), creating an ever-improving curriculum.</div></div>
+          <div class="cc-note n-blue"><strong>Beyond games:</strong> The AlphaZero approach has been applied to protein structure (AlphaFold), chip design (AlphaChip), mathematics (AlphaTensor for matrix multiplication), and weather forecasting. Self-play + search + neural networks is a general framework for optimization problems.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">RLHF: RL for LLM Alignment</div><div class="cc-sub">The bridge between RL and language models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How RLHF Works</div><div class="cc-text">RLHF treats the LLM as an RL <strong>agent</strong>, the prompt as the <strong>state</strong>, the generated response as the <strong>action</strong>, and the reward model score as the <strong>reward</strong>. PPO optimizes the LLM to generate responses that score high on the reward model while staying close to the original SFT model (KL penalty).</div></div>
+          <div class="cc-code"><span class="hl-cmt"># RLHF as an RL problem</span>
+
+<span class="hl-key">Agent:</span>       LLM (policy &pi;)
+<span class="hl-key">State:</span>       prompt + tokens generated so far
+<span class="hl-key">Action:</span>      next token to generate
+<span class="hl-key">Reward:</span>      RM(full response) at end of sequence
+<span class="hl-key">Constraint:</span>  KL(&pi; || &pi;_ref) &lt; &delta;
+
+<span class="hl-key">Objective:</span>
+  max E[RM(response)] - &beta; &middot; KL(&pi; || &pi;_ref)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why RLHF Matters</div><div class="cc-text">RLHF is what makes LLMs <strong>useful</strong>. A base model just predicts tokens; RLHF teaches it to be helpful, harmless, and honest. InstructGPT showed a 1.3B RLHF model was preferred over a 175B base model. ChatGPT&rsquo;s success was largely due to RLHF alignment.</div></div>
+          <div class="cc-note n-teal"><strong>DPO and beyond:</strong> DPO (Ch 10) eliminates the RL step entirely by directly optimizing preferences. Newer methods like GRPO (DeepSeek) use group-relative rewards without a separate reward model. The trend: simpler alignment methods that achieve RLHF-level quality with less complexity.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">precision_manufacturing</span></div><div><div class="cc-title">Modern RL Applications</div><div class="cc-sub">Robotics, games, science, and real-world deployment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">Robotics:</span>
+  Dexterous manipulation (OpenAI hand)
+  Locomotion (Boston Dynamics, Agility)
+  Sim-to-real transfer (train in simulation)
+
+<span class="hl-key">Games:</span>
+  OpenAI Five (Dota 2, beat world champs)
+  AlphaStar (StarCraft II, Grandmaster)
+  GT Sophy (Gran Turismo, beat best drivers)
+
+<span class="hl-key">Science:</span>
+  AlphaFold (protein structure)
+  Plasma control (nuclear fusion, DeepMind)
+  Drug discovery (molecular optimization)
+
+<span class="hl-key">Industry:</span>
+  Recommendation systems (YouTube, TikTok)
+  Data center cooling (Google, 40% savings)
+  Autonomous driving (Waymo, Tesla)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Sim-to-Real Transfer</div><div class="cc-text">Training RL in the real world is slow and dangerous. The solution: train in <strong>simulation</strong> (millions of episodes in hours), then transfer the policy to a real robot. Domain randomization (vary physics, textures, lighting in sim) makes policies robust to the reality gap.</div></div>
+          <div class="cc-note n-orange"><strong>The sample efficiency problem:</strong> RL still needs orders of magnitude more experience than humans. A human learns Atari in minutes; DQN needs millions of frames. Model-based RL (learn a world model, plan in imagination) and foundation models for RL are active research areas addressing this gap.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">Key Takeaways</div><div class="cc-sub">The RL paradigm and where it&rsquo;s heading</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Summary</div><div class="cc-text"><strong>1.</strong> RL learns from rewards through trial and error, not labeled data<br><br><strong>2.</strong> Q-learning estimates state-action values; DQN scales it with neural networks<br><br><strong>3.</strong> Policy gradient methods (PPO) directly optimize the policy for continuous control<br><br><strong>4.</strong> AlphaZero: self-play + MCTS + neural network = superhuman game AI<br><br><strong>5.</strong> RLHF uses RL to align LLMs with human preferences<br><br><strong>6.</strong> DPO simplifies alignment by removing the RL step<br><br><strong>7.</strong> Sim-to-real transfer enables robotic RL training</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Future of RL</div><div class="cc-text"><strong>Foundation models for RL:</strong> Pretrain on diverse environments, fine-tune for specific tasks (like LLMs for language).<br><br><strong>World models:</strong> Learn environment dynamics, plan in imagination (Dreamer, IRIS).<br><br><strong>RL + LLMs:</strong> Use LLMs as planners, reward models, or world simulators for RL agents.</div></div>
+          <div class="cc-note n-green"><strong>Coming up:</strong> Ch 13 covers Ethics &amp; Bias in AI &mdash; fairness, accountability, transparency, and the societal implications of the systems we&rsquo;ve studied throughout this course.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Reinforcement learning:</strong> An agent interacts with an environment, receives rewards, and learns a policy to maximize cumulative reward. The three challenges: exploration vs exploitation, credit assignment (which action caused the reward?), and sparse rewards. RL is the third ML paradigm alongside supervised and unsupervised.',color:'#dc2626'},
+    2:{text:'<strong>Q-learning:</strong> Learn Q(s,a) = expected future reward for action a in state s. Update rule: Q(s,a) \u2190 Q(s,a) + \u03b1[r + \u03b3\u00b7max Q(s\u2032,a\u2032) \u2212 Q(s,a)]. \u03b5-greedy balances exploration and exploitation. Works for small state spaces, but Q-tables can\u2019t handle complex environments like video games.',color:'#ea580c'},
+    3:{text:'<strong>DQN (2013):</strong> Replace Q-table with a CNN. Raw pixels \u2192 Q-values for each action. Two innovations: experience replay (random sampling from buffer) and target network (frozen Q copy). Achieved superhuman on 29/49 Atari games. The first deep RL breakthrough \u2014 proved neural networks + RL works.',color:'#db2777'},
+    4:{text:'<strong>Policy gradient:</strong> Directly optimize \u03c0(a|s) instead of learning Q-values. Actor-critic: actor chooses actions, critic estimates value, advantage = actual \u2212 expected. <strong>PPO</strong> (2017) clips updates for stability \u2014 the default RL algorithm. Handles continuous actions (robotics, RLHF).',color:'#7c3aed'},
+    5:{text:'<strong>AlphaGo \u2192 AlphaZero:</strong> Policy + value network + MCTS + self-play. AlphaGo beat Lee Sedol (2016). AlphaZero learned Go, Chess, and Shogi from scratch via pure self-play \u2014 no human data. Beat Stockfish in chess after 4 hours. The self-play loop creates an ever-improving curriculum.',color:'#2563eb'},
+    6:{text:'<strong>RLHF:</strong> Treat the LLM as an RL agent. State = prompt, action = next token, reward = RM score. PPO optimizes for high reward with KL penalty to stay near the SFT model. This is what made ChatGPT useful. DPO and GRPO simplify alignment by removing the explicit RL step.',color:'#0d9488'},
+    7:{text:'<strong>Modern RL:</strong> Robotics (sim-to-real transfer), games (Dota 2, StarCraft), science (AlphaFold, fusion plasma control), industry (recommendations, data centers, autonomous driving). The sample efficiency problem remains \u2014 RL needs millions of interactions. World models and foundation models for RL are active frontiers.',color:'#d97706'},
+    8:{text:'<strong>RL is the paradigm for sequential decision-making.</strong> From Q-tables to DQN to PPO to AlphaZero to RLHF \u2014 the core idea is the same: learn from rewards. The biggest impact today: aligning LLMs with human preferences. The future: foundation models for RL, world models, and RL + LLM agents.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 17: AI Product Operations — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 17 &mdash; AI Product Operations</h2><span class="tb-sub">The ongoing work of keeping an AI product healthy: data pipelines, model updates, cost optimization, and incident response.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">sync</span></div><span class="pipe-label">Lifecycle</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">storage</span></div><span class="pipe-label">Data Ops</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Model Ops</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">savings</span></div><span class="pipe-label">Cost Ops</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">emergency</span></div><span class="pipe-label">Incidents</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">trending_up</span></div><span class="pipe-label">Maturity</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">sync</span></div><div><div class="cc-title">The Operational Reality</div><div class="cc-sub">AI products are never &ldquo;done&rdquo; &mdash; they require continuous operational investment</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Operations Matter More for AI</div><div class="cc-text">Traditional software can be &ldquo;shipped and maintained&rdquo; with periodic updates. AI products require <strong>continuous operational investment</strong> because they degrade without it:<br><br>&bull; <strong>Data staleness:</strong> Knowledge bases become outdated. Training data stops reflecting current reality.<br>&bull; <strong>Model drift:</strong> Provider model updates change behavior. User patterns evolve. The world changes.<br>&bull; <strong>Cost creep:</strong> Usage patterns shift. Token consumption grows. New features add cost layers.<br>&bull; <strong>Quality erosion:</strong> Edge cases accumulate. New failure modes emerge. User expectations increase.<br><br>An AI product that isn&rsquo;t actively operated is an AI product that&rsquo;s actively degrading. The operational investment is not a cost center &mdash; it&rsquo;s the cost of maintaining the product&rsquo;s value.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Operations Budget</div><div class="cc-text">Plan for ongoing operations from the start. A common mistake is budgeting for development but not for operations:<br><br><strong>Typical allocation (post-launch):</strong><br>&bull; <strong>40% &mdash; Improvement:</strong> Fixing failure modes, expanding capabilities, improving quality<br>&bull; <strong>25% &mdash; Data operations:</strong> Knowledge base updates, data pipeline maintenance, quality audits<br>&bull; <strong>20% &mdash; Infrastructure:</strong> Monitoring, cost optimization, scaling, reliability<br>&bull; <strong>15% &mdash; Incident response:</strong> On-call, bug fixes, safety issues, provider outages<br><br>This means roughly <strong>60% of post-launch effort goes to operations</strong>, not new features. Teams that don&rsquo;t plan for this end up choosing between quality degradation and feature velocity.</div></div>
+          <div class="cc-note n-violet"><strong>The PM&rsquo;s operations role:</strong> The PM doesn&rsquo;t run the data pipelines or fix the infrastructure. But the PM <em>owns the quality bar</em>, <em>prioritizes operational work vs. features</em>, and <em>communicates the operational investment to leadership</em>. If leadership doesn&rsquo;t understand why 60% of effort goes to operations, they&rsquo;ll cut it &mdash; and quality will collapse.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">storage</span></div><div><div class="cc-title">Data Operations</div><div class="cc-sub">Keeping the knowledge base fresh, accurate, and complete</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Data Pipeline</div><div class="cc-text"><strong>Ingestion:</strong><br>New documents, updated policies, fresh content must flow into the knowledge base continuously. Automated pipelines detect changes in source systems (CMS, wikis, databases) and trigger re-indexing.<br><br><strong>Processing:</strong><br>Raw documents are cleaned, chunked, embedded, and stored. Schema validation ensures data quality. Duplicate detection prevents contradictory entries.<br><br><strong>Deprecation:</strong><br>Outdated documents must be removed or marked as superseded. A stale document that contradicts current policy is worse than no document at all.<br><br><strong>Monitoring:</strong><br>Track pipeline health: ingestion latency (how quickly new content becomes searchable), processing errors, index freshness, and coverage gaps.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Data Operations Cadence</div><div class="cc-text"><strong>Continuous (automated):</strong><br>Incremental ingestion of new/updated documents. Schema validation. Duplicate detection. Pipeline health monitoring.<br><br><strong>Weekly (PM + data team):</strong><br>Review coverage gaps (queries with no relevant documents). Check for stale content. Review data quality metrics. Prioritize content creation for uncovered topics.<br><br><strong>Monthly (broader team):</strong><br>Full knowledge base audit. Verify accuracy of high-traffic content. Update taxonomy and metadata. Review data source health.<br><br><strong>Quarterly (strategic):</strong><br>Evaluate new data sources. Assess whether the knowledge base scope matches product scope. Plan major content initiatives.</div></div>
+          <div class="cc-note n-blue"><strong>The content owner model:</strong> Assign ownership of knowledge base sections to specific people or teams. The billing team owns billing content. The product team owns product documentation. Owners are responsible for accuracy, freshness, and completeness of their sections. Without clear ownership, content rots.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Model Operations</div><div class="cc-sub">Managing model updates, prompt iterations, and the improvement cycle</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Provider Model Updates</div><div class="cc-text">When you use third-party models (OpenAI, Anthropic, Google), the provider periodically updates the model. These updates can change behavior in ways that affect your product:<br><br>&bull; Prompts that worked perfectly may produce different outputs<br>&bull; Safety boundaries may shift (more or less restrictive)<br>&bull; Performance characteristics (latency, cost) may change<br>&bull; New capabilities may become available<br><br><strong>The response protocol:</strong><br>1. Pin to a specific model version when possible<br>2. When a new version is released, run your full evaluation suite against it<br>3. Compare quality, cost, and latency to the current version<br>4. If the new version is better or equivalent, migrate through the standard canary process<br>5. If it&rsquo;s worse, stay on the current version and file issues with the provider</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Improvement Cycle</div><div class="cc-text"><strong>The weekly improvement sprint:</strong><br><br>1. <strong>Review failures</strong> (Monday): Analyze the top 20 worst-performing queries from the past week. Categorize by root cause.<br><br>2. <strong>Prioritize fixes</strong> (Monday): Rank by frequency &times; severity. Pick the top 3&ndash;5 for this sprint.<br><br>3. <strong>Implement</strong> (Tue&ndash;Thu): Prompt adjustments, knowledge base updates, retrieval tuning, or guardrail additions.<br><br>4. <strong>Evaluate</strong> (Thursday): Run changes through the eval suite. Verify improvements without regressions.<br><br>5. <strong>Deploy</strong> (Friday): Canary deployment of improvements. Monitor over the weekend.<br><br>This cadence produces <strong>measurable quality improvement every week</strong>. Over 3&ndash;6 months, the cumulative effect is dramatic &mdash; the product gets noticeably better every month.</div></div>
+          <div class="cc-note n-teal"><strong>The improvement velocity metric:</strong> Track &ldquo;failure modes resolved per week.&rdquo; A healthy AI product resolves 3&ndash;5 failure modes per week in the first 3 months, declining to 1&ndash;2 per week as the product matures. If you&rsquo;re not resolving any, you&rsquo;re not improving. If you&rsquo;re resolving 10+, you probably launched too early.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">savings</span></div><div><div class="cc-title">Cost Optimization</div><div class="cc-sub">Reducing AI costs by 30&ndash;50% without sacrificing quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Optimization Levers</div><div class="cc-text"><strong>1. Model routing:</strong><br>Not every query needs the most expensive model. Route simple queries (FAQs, greetings, basic lookups) to a smaller, cheaper model (GPT-4o-mini, Claude Haiku). Reserve the premium model for complex queries. This alone can reduce costs 30&ndash;40%.<br><br><strong>2. Semantic caching:</strong><br>If the same question (or a semantically similar one) was asked recently, serve the cached response instead of calling the model again. Effective for products with repetitive query patterns (customer support, FAQ bots).<br><br><strong>3. Prompt optimization:</strong><br>Shorter prompts cost less. Remove redundant instructions. Use concise language. Compress few-shot examples. A 30% reduction in prompt length = 30% reduction in input token cost.<br><br><strong>4. Batch processing:</strong><br>For non-real-time workloads (document analysis, report generation), batch requests for lower per-token pricing. Many providers offer 50% discounts for batch API calls.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">More Optimization Levers</div><div class="cc-text"><strong>5. Context window management:</strong><br>Don&rsquo;t stuff the full context window. Retrieve fewer, more relevant chunks. Trim conversation history to the most recent N turns. Every unnecessary token costs money.<br><br><strong>6. Output length control:</strong><br>Set maximum output lengths appropriate to the task. A billing question doesn&rsquo;t need a 500-word essay. Shorter outputs = lower output token costs (which are typically 3&ndash;4x more expensive than input tokens).<br><br><strong>7. Provider negotiation:</strong><br>At scale (&gt;$10K/month), negotiate volume discounts with providers. Consider committed-use pricing. Evaluate open-source alternatives for high-volume, lower-complexity tasks.</div></div>
+          <div class="cc-block"><div class="cc-label">The Cost Review</div><div class="cc-text"><strong>Weekly:</strong> Review cost per query trends. Identify anomalies.<br><strong>Monthly:</strong> Full cost analysis by feature, model, and user segment. Identify top optimization opportunities.<br><strong>Quarterly:</strong> Evaluate model pricing changes. Reassess build vs. buy. Consider model migration for cost savings.</div></div>
+          <div class="cc-note n-green"><strong>The optimization sequence:</strong> Start with model routing (biggest impact, lowest effort). Then semantic caching (high impact for repetitive workloads). Then prompt optimization (moderate impact, requires careful testing). Then batch processing (if applicable). Each lever compounds: routing saves 30%, caching saves another 20% of the remainder, prompt optimization saves another 15%. Combined: 40&ndash;50% total reduction.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">emergency</span></div><div><div class="cc-title">Incident Management</div><div class="cc-sub">When things go wrong &mdash; and they will &mdash; how to respond systematically</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">AI-Specific Incident Types</div><div class="cc-text"><strong>Quality incidents:</strong><br>The AI starts producing wrong, harmful, or low-quality outputs. May be caused by model updates, data issues, prompt regressions, or adversarial attacks.<br><br><strong>Provider outages:</strong><br>The model provider (OpenAI, Anthropic, Google) experiences downtime or degraded performance. Your product is down through no fault of your own.<br><br><strong>Cost incidents:</strong><br>Unexpected cost spikes from traffic surges, prompt bugs (infinite loops), or provider pricing changes.<br><br><strong>Safety incidents:</strong><br>The AI produces harmful, biased, or legally risky content that reaches users. The highest-severity incident type.<br><br><strong>Data incidents:</strong><br>Knowledge base corruption, stale data serving, or data pipeline failures causing incorrect or missing information.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Incident Response Framework</div><div class="cc-text"><strong>1. Detect</strong> (automated):<br>Monitoring alerts trigger based on predefined thresholds. Target: &lt;5 minutes from incident start to alert.<br><br><strong>2. Triage</strong> (on-call):<br>Assess severity. Is this a P0 (safety, system down) or P2 (quality degradation)? Severity determines response speed and escalation.<br><br><strong>3. Mitigate</strong> (immediate):<br>Stop the bleeding. Activate kill switch, roll back to previous version, enable fallback mode, or rate-limit traffic. Don&rsquo;t try to fix the root cause yet &mdash; just stop the damage.<br><br><strong>4. Investigate</strong> (hours):<br>Find the root cause. Use traces, logs, and metrics to identify what changed. Was it a model update? Data issue? Prompt regression?<br><br><strong>5. Fix</strong> (hours&ndash;days):<br>Implement the permanent fix. Test through the standard evaluation and deployment process.<br><br><strong>6. Retrospective</strong> (within 1 week):<br>What happened? Why? How do we prevent it? What monitoring would have caught it earlier? Add new regression tests and monitoring.</div></div>
+          <div class="cc-note n-red"><strong>The provider fallback:</strong> Never depend on a single model provider. Have a fallback model from a different provider configured and tested. When Provider A goes down, automatically route to Provider B. The quality may differ, but degraded service is better than no service. Test the fallback monthly to ensure it still works.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">scale</span></div><div><div class="cc-title">Scaling Operations</div><div class="cc-sub">What changes when you go from 1K to 100K to 1M queries per day</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scale Thresholds</div><div class="cc-text"><strong>1K queries/day (early stage):</strong><br>Manual review is feasible. One person can read a meaningful sample of outputs daily. Cost is negligible. Incidents are rare. Operations are lightweight.<br><br><strong>10K queries/day (growth stage):</strong><br>Manual review becomes sampling. Automated quality monitoring is essential. Cost becomes a line item. You need dedicated on-call. Data pipeline reliability matters.<br><br><strong>100K queries/day (scale stage):</strong><br>Full automation required. Sophisticated model routing for cost management. Multiple model providers for reliability. Dedicated operations team (or significant allocation). Cost optimization is a strategic priority.<br><br><strong>1M+ queries/day (enterprise stage):</strong><br>Custom infrastructure. Negotiated provider contracts. Multi-region deployment. Compliance and audit requirements. AI operations is a full team, not a part-time responsibility.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Automate at Each Stage</div><div class="cc-text"><strong>Early (manual is fine):</strong><br>&bull; Quality review (read outputs yourself)<br>&bull; Knowledge base updates (manual edits)<br>&bull; Cost tracking (check the dashboard)<br><br><strong>Growth (automate the basics):</strong><br>&bull; Quality monitoring (automated sampling and scoring)<br>&bull; Data pipeline (automated ingestion and indexing)<br>&bull; Alerting (automated detection and notification)<br>&bull; Regression testing (automated on every change)<br><br><strong>Scale (automate everything):</strong><br>&bull; Model routing (automated based on query complexity)<br>&bull; Cost optimization (automated caching, batching)<br>&bull; Incident detection and initial mitigation (automated rollback)<br>&bull; Capacity planning (automated scaling based on demand)<br><br><strong>Enterprise (optimize and govern):</strong><br>&bull; Compliance reporting (automated audit trails)<br>&bull; Multi-model orchestration (automated provider selection)<br>&bull; Feedback-driven improvement (automated retraining triggers)</div></div>
+          <div class="cc-note n-amber"><strong>The scaling rule:</strong> Automate before you need to. If you wait until 100K queries/day to build automated quality monitoring, you&rsquo;ll have months of undetected quality issues. Build the automation at 10K and it&rsquo;s ready when you need it. The cost of building too early is small; the cost of building too late is large.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">admin_panel_settings</span></div><div><div class="cc-title">Governance &amp; Compliance</div><div class="cc-sub">Audit trails, access control, and regulatory requirements for AI in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Governance Matters</div><div class="cc-text">As AI products handle more sensitive decisions and data, governance becomes non-negotiable:<br><br>&bull; <strong>Regulatory requirements:</strong> EU AI Act, GDPR, HIPAA, SOC 2, and industry-specific regulations increasingly require documentation of AI decision-making processes<br>&bull; <strong>Audit trails:</strong> For regulated industries, every AI decision must be traceable: what model, what prompt, what data, what output, and why<br>&bull; <strong>Access control:</strong> Who can modify prompts? Who can update the knowledge base? Who can deploy model changes? Unauthorized changes are a top risk<br>&bull; <strong>Data handling:</strong> User inputs may contain PII. Model outputs may inadvertently include sensitive information. Data retention and deletion policies must be enforced</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Governance in Practice</div><div class="cc-text"><strong>Model cards:</strong><br>Document each model&rsquo;s capabilities, limitations, training data characteristics, known biases, and intended use cases. Update when models change.<br><br><strong>Change approval workflows:</strong><br>Prompt changes, model updates, and data modifications require review and approval. For high-risk products, require sign-off from technical, product, and legal stakeholders.<br><br><strong>Audit logging:</strong><br>Log every model interaction with sufficient detail for retrospective analysis. Include: timestamp, user ID (anonymized), input, output, model version, prompt version, retrieval results.<br><br><strong>Data retention policies:</strong><br>Define how long interaction data is retained. Implement automated deletion. Ensure compliance with privacy regulations. Allow users to request data deletion.<br><br><strong>Model decommissioning:</strong><br>When retiring a model or AI feature, follow a structured process: notify users, migrate to alternatives, archive data, and document the decision.</div></div>
+          <div class="cc-note n-pink"><strong>The governance investment:</strong> Governance feels like overhead until the first audit, the first regulatory inquiry, or the first incident where you can&rsquo;t explain what the AI did and why. Build governance incrementally: start with audit logging and change approval, then add model cards and compliance reporting as the product matures.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">The Operations Maturity Model</div><div class="cc-sub">Where you are today and where you need to be</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Four Maturity Levels</div><div class="cc-text"><strong>Level 1: Reactive</strong><br>No automated monitoring. Quality issues discovered by users. Manual data updates. No incident process. Ad-hoc cost tracking. Most teams start here.<br><br><strong>Level 2: Monitored</strong><br>Basic monitoring and alerting. Automated evaluation on changes. Weekly quality reviews. Defined incident response. Cost dashboards. Target: reach within 30 days of launch.<br><br><strong>Level 3: Proactive</strong><br>Drift detection catches issues before users notice. Automated improvement pipelines. Model routing for cost optimization. Structured governance. Continuous testing. Target: reach within 6 months.<br><br><strong>Level 4: Optimized</strong><br>Feedback-driven automated improvement. Multi-provider orchestration. Predictive scaling. Full compliance automation. AI operations is a competitive advantage, not just a cost center. Target: 12+ months for mature products.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Assessing Your Level</div><div class="cc-text"><strong>Ask these questions:</strong><br><br>&bull; How quickly do you detect quality degradation? (Hours = L2, minutes = L3, predicted = L4)<br>&bull; How do you handle model provider updates? (Manually = L1, evaluated = L2, auto-migrated = L3+)<br>&bull; What&rsquo;s your cost optimization strategy? (None = L1, dashboards = L2, automated routing = L3+)<br>&bull; How do you improve quality? (Ad-hoc = L1, weekly sprints = L2, automated pipelines = L3+)<br>&bull; What&rsquo;s your governance posture? (None = L1, audit logs = L2, full compliance = L3+)</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> AI product operations is where the long-term value is created or destroyed. Development gets the product to launch. Operations determines whether it thrives or decays. The PM who invests in operations &mdash; data pipelines, improvement cycles, cost optimization, incident response, and governance &mdash; builds a product that gets better every week. The PM who neglects operations builds a product that slowly becomes unreliable, expensive, and untrustworthy. Plan for 60% operational investment from day one.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="16-monitoring-observability-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 16: Monitoring &amp; Observability</a>
+    <a class="ch-nav-btn next" href="18-measuring-ai-success-high-level.html">Ch 18: Measuring AI Product Success <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[0,1,2,3],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>The operational reality.</strong> AI products degrade without continuous investment: data staleness, model drift, cost creep, quality erosion. Plan for 60% of post-launch effort going to operations, not new features. The PM owns the quality bar, prioritizes ops vs. features, and communicates the operational investment to leadership.',color:'#7c3aed'},
+    2:{text:'<strong>Data operations.</strong> Automated ingestion pipelines, schema validation, duplicate detection, deprecation workflows. Weekly: review coverage gaps and stale content. Monthly: full knowledge base audit. Quarterly: evaluate new data sources. Assign content ownership &mdash; without clear owners, content rots.',color:'#2563eb'},
+    3:{text:'<strong>Model operations.</strong> Pin to specific model versions. When providers update, run your full eval suite before migrating. The weekly improvement sprint: review failures (Monday), prioritize fixes, implement (Tue&ndash;Thu), evaluate (Thursday), deploy (Friday). Track &ldquo;failure modes resolved per week&rdquo; &mdash; target 3&ndash;5 in early months.',color:'#0d9488'},
+    4:{text:'<strong>Cost optimization.</strong> Seven levers: model routing (30&ndash;40% savings), semantic caching, prompt optimization, batch processing, context window management, output length control, provider negotiation. Combined: 40&ndash;50% total reduction. Start with routing (biggest impact, lowest effort), then layer additional optimizations.',color:'#16a34a'},
+    5:{text:'<strong>Incident management.</strong> Five AI-specific incident types: quality, provider outages, cost spikes, safety, data. Six-step response: detect (&lt;5 min), triage (severity), mitigate (stop the bleeding), investigate (root cause), fix (permanent), retrospective (prevent recurrence). Never depend on a single model provider &mdash; have a tested fallback.',color:'#dc2626'},
+    6:{text:'<strong>Scaling operations.</strong> 1K queries/day: manual review feasible. 10K: automated monitoring essential. 100K: full automation, model routing, dedicated ops. 1M+: custom infrastructure, multi-region, full ops team. Automate before you need to &mdash; the cost of building too early is small; the cost of building too late is large.',color:'#d97706'},
+    7:{text:'<strong>Governance &amp; compliance.</strong> Model cards, change approval workflows, audit logging, data retention policies, model decommissioning. Regulatory requirements (EU AI Act, GDPR, HIPAA) increasingly mandate AI decision traceability. Build governance incrementally: start with audit logs and change approval, then expand.',color:'#db2777'},
+    8:{text:'<strong>Operations maturity model.</strong> Level 1 (Reactive): issues found by users. Level 2 (Monitored): basic alerts, weekly reviews &mdash; target within 30 days. Level 3 (Proactive): drift detection, automated optimization &mdash; target within 6 months. Level 4 (Optimized): feedback-driven improvement, full compliance &mdash; 12+ months. Operations determines whether your product thrives or decays.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

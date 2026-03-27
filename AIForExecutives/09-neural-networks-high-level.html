@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Neural Networks — The Architecture Behind Modern AI — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--orange)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Neural Networks: The Architecture Behind Modern AI</h2><span class="tb-sub">From a single artificial neuron to networks with 1.8 trillion parameters &mdash; and why depth changes everything</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">circle</span></div><span class="pipe-label">Neuron</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">stacks</span></div><span class="pipe-label">Layers</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Learn</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Deep</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">architecture</span></div><span class="pipe-label">Architect</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Scale</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">circle</span></div><div><div class="cc-title">The Artificial Neuron</div><div class="cc-sub">The simplest building block of modern AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What It Does</div><div class="cc-text">An artificial neuron is a simple mathematical function. It takes <strong>multiple inputs</strong>, assigns a <strong>weight</strong> (importance) to each one, adds them up, and passes the result through an <strong>activation function</strong> that decides whether to &ldquo;fire&rdquo; &mdash; to produce an output signal or stay silent. That&rsquo;s it. The entire power of modern AI emerges from connecting billions of these simple units together.</div></div>
+          <div class="cc-block"><div class="cc-label">The Biological Inspiration</div><div class="cc-text">The concept is loosely inspired by biological neurons in the brain. A biological neuron receives signals from other neurons, and if the combined signal exceeds a threshold, it fires and sends a signal onward. Frank Rosenblatt built the first artificial neuron &mdash; the <strong>Perceptron</strong> &mdash; in 1957. It could learn to classify simple patterns, but only linearly separable ones (it couldn&rsquo;t learn XOR, a basic logic operation). This limitation nearly killed the field.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Executive Mental Model</div><div class="cc-text">Think of a single neuron as a <strong>junior analyst who can only answer one yes/no question</strong>. Give them a few data points, they weigh the evidence, and they make a call. One analyst is limited. But organize thousands of analysts into teams, with each team&rsquo;s output feeding into the next team&rsquo;s input, and the collective can tackle problems of extraordinary complexity. That organizational structure is a neural network.</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The individual neuron is trivially simple. The power comes entirely from <strong>scale and organization</strong> &mdash; how many neurons, how they&rsquo;re connected, and how they&rsquo;re arranged in layers. This is why the history of neural networks is a story of scale: more neurons, more layers, more data, more compute.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">stacks</span></div><div><div class="cc-title">Layers: Where Complexity Emerges</div><div class="cc-sub">Input, hidden, output &mdash; the three-part structure</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three Layer Types</div><div class="cc-text"><strong>Input layer</strong> &mdash; Receives the raw data. For an image, each pixel becomes an input. For a loan application, each field (income, credit score, employment) becomes an input.<br><br><strong>Hidden layers</strong> &mdash; Where the actual learning happens. Each layer transforms the data, extracting increasingly abstract features. The first hidden layer might detect edges in an image; the next detects shapes; the next detects objects.<br><br><strong>Output layer</strong> &mdash; Produces the final prediction. For classification: a probability for each category. For regression: a numerical value.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Layers Matter</div><div class="cc-text">Each layer builds on the previous one, creating a <strong>hierarchy of representations</strong>. In image recognition:<br><br><strong>Layer 1:</strong> Detects edges and gradients<br><strong>Layer 2:</strong> Combines edges into textures and simple shapes<br><strong>Layer 3:</strong> Combines shapes into parts (eyes, wheels, handles)<br><strong>Layer 4:</strong> Combines parts into objects (faces, cars, cups)<br><br>No single layer &ldquo;understands&rdquo; the image. The understanding emerges from the <strong>progressive abstraction</strong> across layers. This is the fundamental insight of deep learning.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The &ldquo;deep&rdquo; in deep learning refers to the number of hidden layers. A network with 2&ndash;3 hidden layers is &ldquo;shallow.&rdquo; Modern networks have dozens to hundreds of layers. More depth allows the network to learn more complex, abstract representations &mdash; which is why deep networks can handle tasks that shallow ones cannot.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">replay</span></div><div><div class="cc-title">How Neural Networks Learn</div><div class="cc-sub">Backpropagation: the algorithm that made it all possible</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Learning Process</div><div class="cc-text">A neural network learns through a cycle of <strong>predict, measure error, adjust</strong>:<br><br><strong>1. Forward pass</strong> &mdash; Data flows through the network, layer by layer, producing a prediction.<br><strong>2. Loss calculation</strong> &mdash; The prediction is compared to the correct answer, and the error (loss) is measured.<br><strong>3. Backward pass</strong> &mdash; The error is propagated backward through the network, and each weight is adjusted proportionally to how much it contributed to the error.<br><strong>4. Repeat</strong> &mdash; This cycle runs millions of times across the training data until the weights converge on values that minimize error.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Backpropagation</div><div class="cc-text"><strong>Backpropagation</strong> (1986, popularized by Rumelhart, Hinton, and Williams) is the algorithm that makes step 3 efficient. It calculates exactly how much each weight in every layer contributed to the final error, allowing precise adjustments. Without it, training multi-layer networks was impractical. With it, networks of arbitrary depth became trainable. This single algorithm is arguably the most important technical breakthrough in AI history.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Training a neural network is an optimization problem: find the set of weights (often billions of them) that minimizes prediction error across the training data. The network doesn&rsquo;t &ldquo;understand&rdquo; anything &mdash; it finds numerical patterns that happen to produce correct outputs. This is why neural networks can be spectacularly accurate and spectacularly wrong in ways that seem inexplicable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Deep Learning: Why Depth Changes Everything</div><div class="cc-sub">The breakthrough that unlocked image recognition, speech, and language</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Changed</div><div class="cc-text">Neural networks existed for decades but remained a niche technique until three things converged around 2012:<br><br><strong>1. Data</strong> &mdash; The internet produced massive labeled datasets (ImageNet: 14 million labeled images).<br><strong>2. Compute</strong> &mdash; GPUs, originally designed for video games, turned out to be perfectly suited for the parallel math neural networks require.<br><strong>3. Algorithmic improvements</strong> &mdash; Better activation functions (ReLU), regularization techniques (dropout), and initialization methods solved problems that had made deep networks untrainable.</div></div>
+          <div class="cc-block"><div class="cc-label">The AlexNet Moment</div><div class="cc-text">In 2012, <strong>AlexNet</strong> &mdash; a deep neural network with 8 layers and 60 million parameters &mdash; won the ImageNet competition by a massive margin, cutting the error rate nearly in half compared to traditional methods. This was the &ldquo;Sputnik moment&rdquo; for deep learning. Within two years, every major tech company had pivoted to deep learning for image recognition, speech recognition, and natural language processing.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Automatic Feature Extraction</div><div class="cc-text">The most transformative capability of deep learning is <strong>automatic feature extraction</strong>. Traditional ML (Chapter 5) requires humans to manually engineer features &mdash; deciding which variables matter and how to represent them. Deep learning learns the features directly from raw data. Feed it raw pixels and it learns to detect edges, textures, shapes, and objects on its own. Feed it raw text and it learns grammar, semantics, and context.</div></div>
+          <div class="cc-note n-blue"><strong>Why it matters:</strong> Automatic feature extraction is why deep learning dominates <strong>unstructured data</strong> &mdash; images, audio, text, video. For structured/tabular data (spreadsheets, databases), traditional ML (XGBoost, Random Forest) still often wins because the features are already well-defined. Knowing which tool fits which data type is a critical strategic decision.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">architecture</span></div><div><div class="cc-title">Key Architectures</div><div class="cc-sub">Different structures for different problems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CNNs &mdash; Convolutional Neural Networks</div><div class="cc-text">Designed for <strong>spatial data</strong> &mdash; images, video, medical scans. CNNs use sliding filters that scan across an image, detecting features regardless of where they appear. A cat in the top-left corner is detected by the same filter as a cat in the bottom-right. Yann LeCun&rsquo;s LeNet-5 (1998) pioneered this for handwriting recognition. Today, CNNs power everything from facial recognition to autonomous vehicle perception. We&rsquo;ll explore these in depth in Chapter 10.</div></div>
+          <div class="cc-block"><div class="cc-label">RNNs &amp; LSTMs &mdash; Sequential Data</div><div class="cc-text">Designed for <strong>sequential data</strong> &mdash; text, speech, time series. RNNs (Recurrent Neural Networks) process data one step at a time, maintaining a &ldquo;memory&rdquo; of previous steps. LSTMs (Long Short-Term Memory) improved on RNNs by learning which information to remember and which to forget over long sequences. These dominated NLP and speech recognition until Transformers replaced them around 2018&ndash;2019.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Transformers &mdash; The Current Paradigm</div><div class="cc-text">Introduced in 2017, Transformers process <strong>all elements of a sequence simultaneously</strong> rather than one at a time. Their &ldquo;attention mechanism&rdquo; allows each element to consider every other element, capturing long-range relationships that RNNs struggled with. Transformers are the architecture behind GPT, BERT, Claude, Gemini, and virtually every modern language model. We&rsquo;ll dedicate Chapter 13 entirely to this breakthrough.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> You don&rsquo;t need to understand the math behind these architectures. What matters is the <strong>matching</strong>: CNNs for images and spatial data, RNNs/LSTMs for sequential data (now largely superseded), and Transformers for language and increasingly everything else. When evaluating AI solutions, understanding which architecture fits the problem tells you whether the approach is sound.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">data_usage</span></div><div><div class="cc-title">The Scale Revolution</div><div class="cc-sub">From 60 million to 1.8 trillion parameters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Exponential Growth</div><div class="cc-text">The scale of neural networks has grown at a staggering pace:<br><br><strong>AlexNet (2012)</strong> &mdash; 60 million parameters<br><strong>GPT-2 (2019)</strong> &mdash; 1.5 billion parameters<br><strong>GPT-3 (2020)</strong> &mdash; 175 billion parameters<br><strong>GPT-4 (2023)</strong> &mdash; Estimated 1.8 trillion parameters<br><br>That&rsquo;s a <strong>30,000&times; increase</strong> in just over a decade. Each jump in scale brought qualitative improvements in capability &mdash; not just doing the same things better, but doing entirely new things that smaller models couldn&rsquo;t do at all.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Parameters Are</div><div class="cc-text">A <strong>parameter</strong> is a single adjustable weight in the network. GPT-4&rsquo;s 1.8 trillion parameters means there are 1.8 trillion numerical dials that were tuned during training to minimize prediction error. More parameters means more capacity to capture patterns &mdash; but also more data needed to train, more compute required, and higher costs to run.</div></div>
+          <div class="cc-block"><div class="cc-label">The Scaling Slowdown</div><div class="cc-text">The era of purely scaling up is evolving. Growth has slowed from ~10&times; annually (2019&ndash;2023) to 2&ndash;4&times; annually (2024&ndash;2026). The industry is shifting focus toward <strong>data quality over quantity</strong>, more efficient architectures, and inference-time compute (making models think harder at prediction time rather than just making them bigger). Bigger isn&rsquo;t always better &mdash; smarter is the new frontier.</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Enterprise AI spending surged from $1.7 billion in 2023 to $37 billion in 2025 &mdash; a 22&times; increase. This isn&rsquo;t hype; it reflects real deployment. 75% of surveyed workers report AI improved their output speed or quality, with heavy users saving 10+ hours weekly. The scale revolution has translated into measurable business impact.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">Deep Learning vs. Traditional ML</div><div class="cc-sub">When to use which &mdash; the strategic decision</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Choose Traditional ML When</div><div class="cc-text"><strong>Structured, tabular data</strong> &mdash; Spreadsheets, databases, transaction logs. XGBoost and Random Forest typically outperform neural networks here.<br><strong>Small to medium datasets</strong> &mdash; Deep learning is data-hungry; traditional ML works with thousands of examples.<br><strong>Interpretability required</strong> &mdash; Regulated industries, high-stakes decisions where you must explain the reasoning.<br><strong>Limited compute</strong> &mdash; Runs on standard CPUs, no GPU infrastructure needed.<br><strong>Fast iteration</strong> &mdash; Quicker to train, easier to debug, faster to deploy.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Choose Deep Learning When</div><div class="cc-text"><strong>Unstructured data</strong> &mdash; Images, audio, video, natural language text. Deep learning is the clear winner here.<br><strong>Large datasets available</strong> &mdash; Millions of examples to learn from.<br><strong>Maximum accuracy is the priority</strong> &mdash; When the performance difference justifies the complexity and cost.<br><strong>GPU/TPU infrastructure accessible</strong> &mdash; Cloud or on-premises high-performance compute.<br><strong>Complex patterns</strong> &mdash; Autonomous vehicles, medical imaging, language understanding, generative AI.</div></div>
+          <div class="cc-note n-green"><strong>The strategic takeaway:</strong> Most enterprises need both. Traditional ML for the structured data that runs daily operations (forecasting, scoring, routing). Deep learning for the unstructured data that creates new capabilities (document understanding, image analysis, conversational AI). The mistake is applying deep learning where traditional ML suffices &mdash; it&rsquo;s slower, more expensive, and harder to maintain.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--orange),var(--amber))"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">The Neural Network Mental Model</div><div class="cc-sub">What every executive needs to remember</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Core Concepts</div><div class="cc-text"><strong>1. Simple units, complex behavior</strong> &mdash; Individual neurons are trivial. Organized into layers, they solve problems no single unit could approach.<br><br><strong>2. Depth creates abstraction</strong> &mdash; Each layer builds on the previous one, creating progressively higher-level representations. This is why deep networks handle complex tasks that shallow ones cannot.<br><br><strong>3. Learning is optimization</strong> &mdash; The network finds numerical patterns that produce correct outputs. It doesn&rsquo;t &ldquo;understand&rdquo; in a human sense &mdash; which is why it can be brilliantly right and bizarrely wrong.<br><br><strong>4. Scale matters, but it&rsquo;s not everything</strong> &mdash; Bigger models are more capable, but the industry is shifting from &ldquo;make it bigger&rdquo; to &ldquo;make it smarter.&rdquo;</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Comes Next</div><div class="cc-text">Neural networks are the foundation. The next four chapters explore the specialized architectures built on top of them:<br><br><strong>Chapter 10:</strong> Computer Vision &mdash; How CNNs see and interpret images.<br><strong>Chapter 11:</strong> NLP &mdash; How networks understand language.<br><strong>Chapter 12:</strong> The GPU Revolution &mdash; The infrastructure that made it all possible.<br><strong>Chapter 13:</strong> The Transformer &mdash; The architecture that changed everything.</div></div>
+          <div class="cc-note n-amber"><strong>The bottom line:</strong> Neural networks are not magic. They are pattern-matching systems of extraordinary scale. Their power comes from three things: the depth of their architecture, the volume of data they train on, and the compute that makes training possible. Understanding this triad &mdash; architecture, data, compute &mdash; is the key to evaluating any AI initiative.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-ml-business-cases-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 8: ML Business Cases</a>
+    <a class="ch-nav-btn next" href="10-computer-vision-high-level.html">Ch 10: Computer Vision <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=6000;
+
+  const PIPE_MAP={
+    1:[0],
+    2:[0,1],
+    3:[0,1,2],
+    4:[1,2,3],
+    5:[3,4],
+    6:[4,5],
+    7:[0,1,2,3,4],
+    8:[0,1,2,3,4,5]
+  };
+
+  const NARRATION={
+    1:{text:'<strong>The artificial neuron:</strong> takes inputs, assigns weights, fires or stays silent. Trivially simple alone. But organize billions of them into layers, and the collective can tackle problems of extraordinary complexity. The power comes from scale and organization.',color:'#ea580c'},
+    2:{text:'<strong>Layers create abstraction.</strong> Layer 1 detects edges. Layer 2 detects shapes. Layer 3 detects parts. Layer 4 detects objects. No single layer &ldquo;understands&rdquo; &mdash; understanding emerges from progressive abstraction. The &ldquo;deep&rdquo; in deep learning refers to the number of these hidden layers.',color:'#7c3aed'},
+    3:{text:'<strong>Backpropagation:</strong> predict, measure error, adjust weights, repeat millions of times. This 1986 algorithm made multi-layer networks trainable and is arguably the most important technical breakthrough in AI history. The network doesn&rsquo;t &ldquo;understand&rdquo; &mdash; it optimizes.',color:'#d97706'},
+    4:{text:'<strong>Deep learning&rsquo;s breakthrough:</strong> data (ImageNet), compute (GPUs), and better algorithms converged around 2012. AlexNet cut image recognition errors in half. The key capability: <strong>automatic feature extraction</strong> &mdash; learning directly from raw data instead of hand-crafted features.',color:'#2563eb'},
+    5:{text:'<strong>Architecture matters:</strong> CNNs for images, RNNs/LSTMs for sequences (now largely superseded), Transformers for language and increasingly everything else. Knowing which architecture fits which problem tells you whether an AI approach is sound.',color:'#0d9488'},
+    6:{text:'<strong>The scale revolution:</strong> AlexNet had 60M parameters. GPT-4 has an estimated 1.8 trillion &mdash; a 30,000&times; increase. Enterprise AI spending surged from $1.7B to $37B (2023&ndash;2025). But the industry is shifting from &ldquo;bigger&rdquo; to &ldquo;smarter.&rdquo;',color:'#db2777'},
+    7:{text:'<strong>Traditional ML for structured data; deep learning for unstructured data.</strong> Most enterprises need both. The mistake is applying deep learning where XGBoost suffices &mdash; it&rsquo;s slower, more expensive, and harder to maintain.',color:'#16a34a'},
+    8:{text:'<strong>Neural networks are not magic.</strong> They are pattern-matching systems of extraordinary scale. Their power comes from three things: the depth of architecture, the volume of data, and the compute that makes training possible. Architecture + Data + Compute = AI capability.',color:'#d97706'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--orange)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Fine-Tuning & Instruction Following — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Fine-Tuning &amp; Instruction Following</h2><span class="tb-sub">Turning a text-completion engine into a helpful assistant &mdash; SFT, LoRA, and chat templates</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Training</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology_alt</span></div><span class="pipe-label">Problem</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">SFT</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">dataset</span></div><span class="pipe-label">Data</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">Templates</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">LoRA</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">QLoRA</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Practice</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Base vs Chat</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology_alt</span></div><div><div class="cc-title">The Problem: Base Models Don&rsquo;t Follow Instructions</div><div class="cc-sub">Why a pretrained model is brilliant but unhelpful</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">A pretrained LLM is like a <strong>brilliant scholar who only knows how to finish sentences</strong>. Ask &ldquo;What is the capital of France?&rdquo; and it might continue with &ldquo;What is the capital of Germany? What is the capital of Italy?&rdquo; &mdash; because in its training data, questions are often followed by more questions (like a quiz). It has all the knowledge but doesn&rsquo;t know it should <em>answer</em> the question. Fine-tuning teaches it the <strong>format</strong> of being helpful.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Fine-tuning doesn&rsquo;t add new knowledge &mdash; it unlocks existing knowledge by teaching the model <em>how</em> to respond. InstructGPT (Ouyang et al., 2022) showed that a 1.3B fine-tuned model was preferred by humans over a 175B base model. The knowledge was already there; it just needed to be formatted as helpful responses rather than text completions.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Base Model vs Fine-Tuned</div>
+            <div class="compare-row">
+              <div class="compare-box bad"><div class="cb-tag">Base Model (Llama 3 8B)</div><div class="cb-text"><strong>User:</strong> What is photosynthesis?<br><strong>Model:</strong> What is cellular respiration? What is the difference between aerobic and anaerobic respiration? What are the stages of...<br><em>(Continues generating quiz questions)</em></div></div>
+              <div class="compare-box good"><div class="cb-tag">Fine-Tuned (Llama 3 8B Instruct)</div><div class="cb-text"><strong>User:</strong> What is photosynthesis?<br><strong>Model:</strong> Photosynthesis is the process by which plants convert sunlight, water, and CO&sub2; into glucose and oxygen. It occurs in chloroplasts...<br><em>(Helpful, structured answer)</em></div></div>
+            </div>
+          </div>
+          <div class="cc-note n-amber"><strong>The training pipeline:</strong> Pretraining (Ch 6) &rarr; <strong>SFT</strong> (this chapter) &rarr; RLHF/DPO (Ch 8). Pretraining gives knowledge. SFT teaches format. RLHF teaches quality and safety. Each stage uses less data but has outsized impact on behavior.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">Supervised Fine-Tuning (SFT)</div><div class="cc-sub">Teaching the model to respond like a helpful assistant</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">SFT is like <strong>on-the-job training</strong>. A new employee (base model) has a degree (pretraining knowledge) but doesn&rsquo;t know company procedures. You show them examples: &ldquo;When a customer asks X, respond with Y.&rdquo; After seeing thousands of examples, they learn the pattern. SFT shows the model thousands of (instruction, response) pairs and trains it to produce the response given the instruction.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> SFT uses the same cross-entropy loss as pretraining (Ch 6), but with a crucial difference: <strong>loss is computed only on the assistant&rsquo;s response tokens</strong>, not on the user&rsquo;s input. This &ldquo;loss masking&rdquo; ensures the model learns to generate good responses without trying to memorize user questions. Typical SFT uses 10K-1M examples &mdash; tiny compared to pretraining&rsquo;s trillions of tokens.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">SFT Training</div>
+            <div class="cc-code"><span class="hl-cmt"># SFT training example:</span>
+<span class="hl-cmt"># Input: "[INST] Explain gravity [/INST]"</span>
+<span class="hl-cmt"># Target: "Gravity is a fundamental force..."</span>
+
+<span class="hl-cmt"># Loss masking (critical!):</span>
+<span class="hl-cmt"># [INST] Explain gravity [/INST] Gravity is...</span>
+<span class="hl-cmt"># ───── no loss ──────────── ── loss here ──</span>
+<span class="hl-cmt"># Only train on the response, not the prompt</span>
+
+<span class="hl-cmt"># SFT hyperparameters (typical):</span>
+<span class="hl-cmt"># Learning rate: 2e-5 (10× lower than pretrain)</span>
+<span class="hl-cmt"># Epochs: 2-3 (don't overtrain!)</span>
+<span class="hl-cmt"># Dataset: 10K-1M examples</span>
+<span class="hl-cmt"># Batch size: 128</span>
+<span class="hl-cmt"># Duration: hours, not months</span>
+
+<span class="hl-cmt"># Compare to pretraining:</span>
+<span class="hl-cmt"># Pretraining: 15T tokens, months, $60M+</span>
+<span class="hl-cmt"># SFT: ~100M tokens, hours, ~$100-1000</span>
+<span class="hl-cmt"># Impact on behavior: enormous</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">dataset</span></div><div><div class="cc-title">SFT Datasets: Where Examples Come From</div><div class="cc-sub">Human-written, model-generated, and synthetic data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Sources</div><div class="cc-text">Early SFT datasets were <strong>human-written</strong>: OpenAI hired contractors to write ideal responses (InstructGPT used ~13K examples). This is expensive but high quality. Modern approaches use <strong>synthetic data</strong>: a strong model (GPT-4, Claude) generates training examples for a weaker model. <strong>Self-Instruct</strong> (Wang et al., 2023) showed models can even generate their own training data. The quality of SFT data matters far more than quantity.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> LIMA (Zhou et al., 2023) demonstrated that just <strong>1,000 carefully curated examples</strong> can produce a remarkably good chat model. They called this the &ldquo;Superficial Alignment Hypothesis&rdquo;: a model&rsquo;s knowledge comes from pretraining, and alignment is just a thin veneer that teaches format and style. Quality over quantity is the dominant lesson.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Notable Datasets</div>
+            <div class="cc-code"><span class="hl-cmt"># Key SFT datasets:</span>
+
+<span class="hl-cmt"># Human-written:</span>
+<span class="hl-cmt"># InstructGPT: ~13K examples (OpenAI, 2022)</span>
+<span class="hl-cmt"># LIMA: 1,000 examples (Meta, 2023)</span>
+<span class="hl-cmt"># Dolly: 15K examples (Databricks, 2023)</span>
+<span class="hl-cmt"># OpenAssistant: 161K messages (community)</span>
+
+<span class="hl-cmt"># Synthetic / distilled:</span>
+<span class="hl-cmt"># Alpaca: 52K (GPT-3.5 generated, Stanford)</span>
+<span class="hl-cmt"># Magpie: 300K (Llama 3.1 generated)</span>
+<span class="hl-cmt"># UltraChat: 1.5M (GPT-3.5 conversations)</span>
+
+<span class="hl-cmt"># Multi-task:</span>
+<span class="hl-cmt"># FLAN v2: 15M+ (1,800+ tasks, Google)</span>
+<span class="hl-cmt"># T0/P3: 12M (prompted datasets)</span>
+
+<span class="hl-cmt"># Example format (JSON):</span>
+{
+  <span class="hl-str">"instruction"</span>: <span class="hl-str">"Explain quantum entanglement"</span>,
+  <span class="hl-str">"input"</span>: <span class="hl-str">""</span>,
+  <span class="hl-str">"output"</span>: <span class="hl-str">"Quantum entanglement is..."</span>
+}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">chat</span></div><div><div class="cc-title">Chat Templates: Structuring Conversations</div><div class="cc-sub">How models know who&rsquo;s speaking and when to respond</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">A chat template is like a <strong>screenplay format</strong>. In a movie script, you know who&rsquo;s speaking because of formatting: &ldquo;JOHN: Hello.&rdquo; &ldquo;MARY: Hi there.&rdquo; Chat templates use special tokens to mark roles: system (instructions), user (questions), and assistant (responses). The model learns that after a user message, it should generate an assistant response. Different models use different templates &mdash; mixing them up causes garbled output.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The <strong>system prompt</strong> is where you define the model&rsquo;s personality and constraints. &ldquo;You are a helpful coding assistant. Always provide code examples.&rdquo; The model sees this at the start of every conversation. System prompts are powerful because they leverage the model&rsquo;s instruction-following ability to customize behavior without any additional training.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Template Formats</div>
+            <div class="cc-code"><span class="hl-cmt"># Llama 3 chat template:</span>
+&lt;|begin_of_text|&gt;
+&lt;|start_header_id|&gt;system&lt;|end_header_id|&gt;
+You are a helpful assistant.&lt;|eot_id|&gt;
+&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;
+What is gravity?&lt;|eot_id|&gt;
+&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;
+Gravity is a fundamental force...&lt;|eot_id|&gt;
+
+<span class="hl-cmt"># ChatML (OpenAI, widely adopted):</span>
+&lt;|im_start|&gt;system
+You are a helpful assistant.&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+What is gravity?&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+Gravity is a fundamental force...&lt;|im_end|&gt;
+
+<span class="hl-cmt"># Loss masking in chat:</span>
+<span class="hl-cmt"># system message → no loss</span>
+<span class="hl-cmt"># user message   → no loss</span>
+<span class="hl-cmt"># assistant msg  → COMPUTE LOSS</span>
+<span class="hl-cmt"># Only train on what the model should say</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">LoRA: Fine-Tuning on a Budget</div><div class="cc-sub">Updating 0.1% of parameters to get 99% of the benefit</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine remodeling a house. <strong>Full fine-tuning</strong> is tearing down every wall and rebuilding. <strong>LoRA</strong> (Low-Rank Adaptation) is adding small, targeted modifications &mdash; a new shelf here, a fresh coat of paint there. The key insight: when fine-tuning, the weight changes have <strong>low rank</strong> &mdash; they can be represented by two small matrices multiplied together, instead of one huge matrix. This reduces trainable parameters from billions to millions.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> LoRA (Hu et al., 2021) decomposes the weight update &Delta;W into two small matrices: &Delta;W = A &times; B, where A is (d &times; r) and B is (r &times; d), with rank r typically 8-64. For a 4096&times;4096 weight matrix, full fine-tuning needs 16.7M parameters. LoRA with r=16 needs only 2 &times; 4096 &times; 16 = 131K &mdash; a <strong>128&times; reduction</strong>. The adapter weights are tiny and can be swapped in/out at inference time.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How LoRA Works</div>
+            <div class="cc-code"><span class="hl-cmt"># Original weight: W (d × d)</span>
+<span class="hl-cmt"># Full fine-tune: W' = W + ΔW</span>
+<span class="hl-cmt"># ΔW has d×d = 16.7M params (for d=4096)</span>
+
+<span class="hl-cmt"># LoRA: ΔW = A × B</span>
+<span class="hl-cmt"># A: (d × r), B: (r × d), r << d</span>
+<span class="hl-cmt"># Params: 2 × d × r = 2 × 4096 × 16 = 131K</span>
+
+<span class="hl-key">class</span> LoRALinear(nn.Module):
+    <span class="hl-key">def</span> __init__(self, base_layer, r=<span class="hl-num">16</span>, alpha=<span class="hl-num">32</span>):
+        super().__init__()
+        self.base = base_layer  <span class="hl-cmt"># frozen!</span>
+        d_in = base_layer.in_features
+        d_out = base_layer.out_features
+        self.A = nn.Linear(d_in, r, bias=<span class="hl-num">False</span>)
+        self.B = nn.Linear(r, d_out, bias=<span class="hl-num">False</span>)
+        self.scale = alpha / r
+
+    <span class="hl-key">def</span> forward(self, x):
+        base_out = self.base(x)       <span class="hl-cmt"># frozen</span>
+        lora_out = self.B(self.A(x))   <span class="hl-cmt"># tiny</span>
+        <span class="hl-key">return</span> base_out + self.scale * lora_out
+
+<span class="hl-cmt"># Llama 3 8B with LoRA (r=16):</span>
+<span class="hl-cmt"># Base: 8B params (frozen)</span>
+<span class="hl-cmt"># LoRA: ~20M params (trainable)</span>
+<span class="hl-cmt"># = 0.25% of total parameters</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">QLoRA: Fine-Tuning a 70B Model on One GPU</div><div class="cc-sub">Quantize the base model, train LoRA adapters in full precision</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">QLoRA is like storing a massive reference library in <strong>compressed format</strong> (4-bit quantization) while keeping your personal notes in <strong>full detail</strong> (16-bit LoRA adapters). The library takes up 4&times; less shelf space, but your notes are precise. During fine-tuning, you only write new notes (train LoRA) while referencing the compressed library (quantized base model). This lets you fine-tune a 70B model on a single 48GB GPU.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> QLoRA (Dettmers et al., 2023) introduced <strong>NF4</strong> (Normal Float 4-bit) quantization, which is information-theoretically optimal for normally distributed weights. A 70B model at 4-bit needs only 35 GB &mdash; fits on one A100. The LoRA adapters train in BF16 for full precision. QLoRA matches full fine-tuning quality while using ~75% less memory. It democratized LLM fine-tuning.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Comparison</div>
+            <div class="cc-code"><span class="hl-cmt"># Fine-tuning Llama 3 70B — memory needed:</span>
+
+<span class="hl-cmt"># Full fine-tuning (BF16):</span>
+<span class="hl-cmt"># Weights: 140 GB (70B × 2 bytes)</span>
+<span class="hl-cmt"># Gradients: 140 GB</span>
+<span class="hl-cmt"># Optimizer: 560 GB (Adam: 4 states × FP32)</span>
+<span class="hl-cmt"># Total: ~840 GB → needs 12+ GPUs</span>
+
+<span class="hl-cmt"># LoRA (BF16 base):</span>
+<span class="hl-cmt"># Weights: 140 GB (frozen)</span>
+<span class="hl-cmt"># LoRA params: ~100M (tiny)</span>
+<span class="hl-cmt"># Optimizer: ~1 GB (only for LoRA)</span>
+<span class="hl-cmt"># Total: ~145 GB → needs 2-3 GPUs</span>
+
+<span class="hl-cmt"># QLoRA (4-bit base + BF16 LoRA):</span>
+<span class="hl-cmt"># Weights: 35 GB (4-bit quantized)</span>
+<span class="hl-cmt"># LoRA params: ~100M (BF16)</span>
+<span class="hl-cmt"># Optimizer: ~1 GB</span>
+<span class="hl-cmt"># Total: ~40 GB → fits on 1 GPU! ✓</span>
+
+<span class="hl-cmt"># Cost comparison:</span>
+<span class="hl-cmt"># Full FT: $1000s, multi-GPU cluster</span>
+<span class="hl-cmt"># QLoRA: $10-50, single GPU rental</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Fine-Tuning in Practice</div><div class="cc-sub">Real code to fine-tune Llama with QLoRA</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Using HuggingFace + PEFT</div>
+            <div class="cc-code"><span class="hl-key">from</span> transformers <span class="hl-key">import</span> AutoModelForCausalLM
+<span class="hl-key">from</span> peft <span class="hl-key">import</span> LoraConfig, get_peft_model
+<span class="hl-key">from</span> trl <span class="hl-key">import</span> SFTTrainer
+
+<span class="hl-cmt"># Load model in 4-bit (QLoRA)</span>
+model = AutoModelForCausalLM.from_pretrained(
+    <span class="hl-str">"meta-llama/Llama-3.1-8B"</span>,
+    load_in_4bit=<span class="hl-num">True</span>,
+    bnb_4bit_quant_type=<span class="hl-str">"nf4"</span>,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+
+<span class="hl-cmt"># Configure LoRA</span>
+lora_config = LoraConfig(
+    r=<span class="hl-num">16</span>,                  <span class="hl-cmt"># rank</span>
+    lora_alpha=<span class="hl-num">32</span>,          <span class="hl-cmt"># scaling</span>
+    target_modules=[<span class="hl-str">"q_proj"</span>, <span class="hl-str">"k_proj"</span>,
+                    <span class="hl-str">"v_proj"</span>, <span class="hl-str">"o_proj"</span>],
+    lora_dropout=<span class="hl-num">0.05</span>,
+    task_type=<span class="hl-str">"CAUSAL_LM"</span>,
+)
+model = get_peft_model(model, lora_config)
+
+<span class="hl-cmt"># Train with SFTTrainer</span>
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=dataset,
+    max_seq_length=<span class="hl-num">2048</span>,
+    args=TrainingArguments(
+        learning_rate=<span class="hl-num">2e-4</span>,
+        num_train_epochs=<span class="hl-num">3</span>,
+        per_device_train_batch_size=<span class="hl-num">4</span>,
+    ),
+)
+trainer.train()</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Gets Fine-Tuned</div><div class="cc-text">In practice, LoRA adapters are applied to the <strong>attention projection matrices</strong> (Q, K, V, O) and sometimes the FFN layers. The rank r=16 is a common default; higher ranks (32, 64) give marginal improvements. The <strong>alpha/r ratio</strong> controls the learning rate scaling for LoRA weights. After training, adapters can be <strong>merged</strong> into the base weights for zero-overhead inference, or kept separate for easy swapping between tasks.</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The ecosystem for fine-tuning has matured rapidly. Tools like <strong>Unsloth</strong> (2&times; faster LoRA), <strong>Axolotl</strong> (config-driven training), and <strong>LLaMA-Factory</strong> (GUI-based) make it possible to fine-tune an 8B model in under an hour on a single GPU. Fine-tuning has been democratized &mdash; anyone with a $10 GPU rental can customize an LLM.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Base vs Instruct: The Full Picture</div><div class="cc-sub">Understanding the complete model pipeline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Pipeline</div><div class="cc-text">Every chat model you use went through this pipeline: <strong>Base model</strong> (pretrained on raw text, completes sentences) &rarr; <strong>SFT model</strong> (fine-tuned on instruction-response pairs, follows instructions) &rarr; <strong>RLHF/DPO model</strong> (aligned with human preferences, Ch 8). Meta releases both: &ldquo;Llama-3.1-8B&rdquo; (base) and &ldquo;Llama-3.1-8B-Instruct&rdquo; (SFT + RLHF). The base model is for researchers; the Instruct model is for users.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Fine-tuning is where the &ldquo;personality&rdquo; of an AI assistant is shaped. The same base model can become a coding assistant, a medical advisor, a creative writer, or a customer service bot &mdash; depending on the SFT data. This is why fine-tuning is so commercially valuable: it lets companies customize a general-purpose model for their specific use case at a fraction of the pretraining cost.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Pipeline Summary</div>
+            <div class="cc-code"><span class="hl-cmt"># The LLM training pipeline:</span>
+
+<span class="hl-cmt"># Stage 1: Pretraining (Ch 6)</span>
+<span class="hl-cmt"># Data: 15T tokens of raw text</span>
+<span class="hl-cmt"># Cost: $60M+, months</span>
+<span class="hl-cmt"># Result: "Llama-3.1-8B" (base)</span>
+<span class="hl-cmt"># Ability: text completion</span>
+
+<span class="hl-cmt"># Stage 2: SFT (this chapter)</span>
+<span class="hl-cmt"># Data: ~100K instruction-response pairs</span>
+<span class="hl-cmt"># Cost: $100-1000, hours</span>
+<span class="hl-cmt"># Result: follows instructions</span>
+<span class="hl-cmt"># Ability: helpful responses</span>
+
+<span class="hl-cmt"># Stage 3: RLHF / DPO (Ch 8)</span>
+<span class="hl-cmt"># Data: ~50K preference comparisons</span>
+<span class="hl-cmt"># Cost: $1000-10000, hours-days</span>
+<span class="hl-cmt"># Result: "Llama-3.1-8B-Instruct"</span>
+<span class="hl-cmt"># Ability: high-quality, safe, aligned</span>
+
+<span class="hl-cmt"># Each stage: less data, more impact</span>
+<span class="hl-cmt"># Pretraining = knowledge</span>
+<span class="hl-cmt"># SFT = format</span>
+<span class="hl-cmt"># RLHF = quality + safety</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-training-recipe.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: The Training Recipe</a>
+    <a class="ch-nav-btn next" href="08-rlhf-alignment.html">Ch 8: RLHF &amp; Alignment <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Base models complete text but don\'t follow instructions. Ask a question, get more questions. Fine-tuning teaches format: InstructGPT showed a 1.3B fine-tuned model beats a 175B base model.',color:'#7c3aed'},
+    2:{text:'<strong>Step 2:</strong> SFT: train on (instruction, response) pairs with loss only on the response. 10K-1M examples, hours to train, ~$100-1000. Same loss function as pretraining, but with loss masking.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> SFT data: human-written (expensive, high quality) or synthetic (GPT-4 generated). LIMA showed 1,000 curated examples can produce a great chat model. Quality >> quantity.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Chat templates structure conversations with special tokens for system/user/assistant roles. Llama 3 uses header tokens; ChatML uses im_start/im_end. System prompts customize behavior.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> LoRA: decompose weight updates into two small matrices (rank r=16). Updates 0.25% of parameters, gets 99% of full fine-tuning quality. Adapters can be swapped at inference time.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> QLoRA: 4-bit quantized base + BF16 LoRA adapters. Fine-tune 70B on one 48GB GPU (40 GB total). NF4 quantization is information-theoretically optimal. Democratized LLM fine-tuning.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> In practice: HuggingFace PEFT + SFTTrainer. Load in 4-bit, configure LoRA (r=16, alpha=32), train for 3 epochs. Tools like Unsloth make it 2× faster. Under an hour on one GPU.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The pipeline: Pretraining (knowledge, $60M) → SFT (format, $100) → RLHF (quality, $1000). Each stage uses less data but has outsized impact. Same base model → different personalities.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

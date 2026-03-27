@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Chain-of-Thought Prompting — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Chain-of-Thought Prompting</h2><span class="tb-sub">&ldquo;Think step by step&rdquo; and why it works &mdash; the difference between wrong and right on hard problems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Reasoning</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Why CoT</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Direct Fail</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">route</span></div><span class="pipe-label">Step-by-Step</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Zero-Shot CoT</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Few-Shot CoT</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Debug Domain</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">how_to_vote</span></div><span class="pipe-label">Self-Consistency</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">When to Use</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why CoT works -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why &ldquo;Think Step by Step&rdquo; Actually Works</div><div class="cc-sub">Each generated token is a computation step &mdash; more reasoning tokens = more compute = better answers</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Core Idea</div><div class="cc-text">An LLM gets a <strong>fixed amount of computation per token</strong> it generates. When you ask for a direct answer, the model has to compress all its reasoning into a single token (the answer). When you ask it to &ldquo;think step by step,&rdquo; each reasoning token becomes an intermediate computation that feeds into the next. <strong>More tokens = more compute = better answers on hard problems.</strong><br><br>This was formalized in the 2022 paper <em>&ldquo;Chain-of-Thought Prompting Elicits Reasoning in Large Language Models&rdquo;</em> by Wei et al. at Google Brain. They showed that simply adding &ldquo;Let&rsquo;s think step by step&rdquo; improved accuracy on math word problems from 17.7% to 78.7% on GSM8K (a grade-school math benchmark).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine someone asks you: &ldquo;What&rsquo;s 17 &times; 24?&rdquo; If you have to answer <em>instantly</em> (one shot), you&rsquo;ll probably guess wrong. But if you&rsquo;re allowed to write on a scratch pad &mdash; 17 &times; 20 = 340, 17 &times; 4 = 68, 340 + 68 = 408 &mdash; you get it right every time. <strong>Chain-of-thought prompting gives the model a scratch pad.</strong> The intermediate text it generates is its working memory.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> CoT doesn&rsquo;t make the model &ldquo;smarter&rdquo; &mdash; it gives the model more room to think. The knowledge was already there; the bottleneck was forcing a complex answer into a single step. This connects directly to the &ldquo;fixed compute per token&rdquo; concept from <em>How LLMs Work</em> (Ch 13).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Direct answer failure -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">The Direct-Answer Trap</div><div class="cc-sub">When you ask for just the answer, the model skips steps and gets it wrong</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Math Problem</div><div class="cc-code"><span class="hl-key">Prompt:</span>
+A store has 15 apples. They sell 40% of them
+in the morning and receive a shipment of 20
+more in the afternoon. How many apples do
+they have at the end of the day?
+
+<span class="hl-key">Just give me the number.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Model Output (Direct)</div><div class="cc-code"><span class="hl-num">27</span></div></div>
+          <div class="cc-block"><div class="cc-label">Why It&rsquo;s Wrong</div><div class="cc-text">The model jumped to an answer without working through the steps. The correct calculation: 40% of 15 = <strong>6 apples sold</strong>, 15 &minus; 6 = <strong>9 remaining</strong>, 9 + 20 = <strong>29 apples</strong>. The model likely did something like 15 &minus; 8 + 20 = 27 (rounding 40% of 15 to 8 instead of 6). With no scratch pad, small errors compound.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Logic Problem</div><div class="cc-code"><span class="hl-key">Prompt:</span>
+A farmer has 3 fields. Field A produces
+twice as much as Field B. Field C produces
+30 bushels more than Field A. Together they
+produce 390 bushels. How much does each
+field produce?
+
+<span class="hl-key">Answer directly.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Model Output (Direct)</div><div class="cc-code">Field A: <span class="hl-num">120</span> bushels
+Field B: <span class="hl-num">60</span> bushels
+Field C: <span class="hl-num">150</span> bushels</div></div>
+          <div class="cc-block"><div class="cc-label">Check</div><div class="cc-text">120 + 60 + 150 = 330 ≠ 390. <strong>Wrong.</strong> The correct answer: B = 72, A = 144, C = 174 (total: 390). The model&rsquo;s numbers look plausible but don&rsquo;t add up because it never verified the sum.</div></div>
+          <div class="cc-note n-red"><strong>The pattern:</strong> Direct-answer prompts fail on multi-step problems because the model has to do all computation &ldquo;in its head&rdquo; (in a single forward pass). The more steps, the more likely an error. This is the exact problem CoT solves.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Step-by-step fix -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">The Fix: &ldquo;Think Through This Step by Step&rdquo;</div><div class="cc-sub">Same problems, one line added &mdash; the model shows its work and gets it right</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Math Problem with CoT</div><div class="cc-code"><span class="hl-key">Prompt:</span>
+A store has 15 apples. They sell 40% of them
+in the morning and receive a shipment of 20
+more in the afternoon. How many apples do
+they have at the end of the day?
+
+<span class="hl-key">Think through this step by step before
+giving the final answer.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Model Output (with CoT)</div><div class="cc-code"><span class="hl-cmt">Step 1: Calculate apples sold in the morning</span>
+40% of 15 = 0.40 × 15 = <span class="hl-num">6</span> apples sold
+
+<span class="hl-cmt">Step 2: Calculate remaining after morning</span>
+15 - 6 = <span class="hl-num">9</span> apples remaining
+
+<span class="hl-cmt">Step 3: Add afternoon shipment</span>
+9 + 20 = <span class="hl-num">29</span> apples
+
+<span class="hl-key">Final answer: 29 apples</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Logic Problem with CoT</div><div class="cc-code"><span class="hl-key">Prompt:</span>
+A farmer has 3 fields. Field A produces
+twice as much as Field B. Field C produces
+30 bushels more than Field A. Together they
+produce 390 bushels. How much does each
+field produce?
+
+<span class="hl-key">Work through the algebra step by step.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Model Output (with CoT)</div><div class="cc-code"><span class="hl-cmt">Let B = x (Field B's production)</span>
+Field A = 2x (twice Field B)
+Field C = 2x + 30 (30 more than A)
+
+<span class="hl-cmt">Total equation:</span>
+x + 2x + (2x + 30) = 390
+5x + 30 = 390
+5x = 360
+x = <span class="hl-num">72</span>
+
+<span class="hl-key">Field B: 72 bushels</span>
+<span class="hl-key">Field A: 144 bushels</span>
+<span class="hl-key">Field C: 174 bushels</span>
+
+<span class="hl-cmt">Verification: 72 + 144 + 174 = 390 ✓</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Notice the model even <em>verified</em> its answer. When you give it room to reason, it naturally adopts good problem-solving habits like checking its work. The &ldquo;think step by step&rdquo; instruction doesn&rsquo;t just improve accuracy &mdash; it makes the model&rsquo;s reasoning transparent and auditable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Zero-shot CoT -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Zero-Shot CoT: The Magic Phrase</div><div class="cc-sub">Just append &ldquo;Let&rsquo;s think step by step&rdquo; &mdash; no examples needed</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is Zero-Shot CoT?</div><div class="cc-text">Zero-shot CoT is the simplest form: you add a trigger phrase to the end of your prompt and the model starts reasoning. No examples, no special formatting. The original paper by Kojima et al. (2022) tested various phrases and found <strong>&ldquo;Let&rsquo;s think step by step&rdquo;</strong> was the most effective trigger.</div></div>
+          <div class="cc-block"><div class="cc-label">Effective Trigger Phrases</div><div class="cc-code"><span class="hl-cmt"># Most effective (original research)</span>
+<span class="hl-str">"Let's think step by step."</span>
+
+<span class="hl-cmt"># Good alternatives</span>
+<span class="hl-str">"Think through this step by step before
+answering."</span>
+
+<span class="hl-str">"Break this down into steps."</span>
+
+<span class="hl-str">"Work through the reasoning first, then
+give your final answer."</span>
+
+<span class="hl-cmt"># For specific domains</span>
+<span class="hl-str">"Walk through the debugging process
+step by step."</span>
+
+<span class="hl-str">"Analyze this systematically, considering
+each factor."</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When Zero-Shot CoT Is Enough</div><div class="cc-text"><strong>Use zero-shot CoT when:</strong><br>• The problem has a clear logical structure (math, logic puzzles)<br>• You want the model to show its work for transparency<br>• The reasoning steps are straightforward (not domain-specific)<br>• You&rsquo;re prototyping and want a quick accuracy boost</div></div>
+          <div class="cc-block"><div class="cc-label">Cost Consideration</div><div class="cc-text">Zero-shot CoT typically generates <strong>3&ndash;5x more output tokens</strong> than a direct answer. For the apple problem: direct answer = ~2 tokens, CoT answer = ~60 tokens. At GPT-4 output pricing (~$30/M tokens), that&rsquo;s the difference between $0.00006 and $0.0018 per call. Negligible for most use cases, but worth noting for high-volume pipelines.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Zero-shot CoT is the lowest-effort, highest-impact prompting technique. One sentence added to your prompt can turn a wrong answer into a right one. If you learn only one technique from this entire course, make it this one.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Few-shot CoT -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">Few-Shot CoT: Show the Reasoning Pattern</div><div class="cc-sub">When you need the model to reason in a specific way, show it an example with reasoning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Few-Shot CoT?</div><div class="cc-text">Zero-shot CoT lets the model reason however it wants. Sometimes you need it to reason in a <strong>specific way</strong> &mdash; following your debugging methodology, your analysis framework, or your decision criteria. Few-shot CoT combines the power of examples (Ch 3) with chain-of-thought reasoning.</div></div>
+          <div class="cc-block"><div class="cc-label">Example: Pricing Decision Analysis</div><div class="cc-code"><span class="hl-key">Analyze pricing decisions using this
+framework: Market → Costs → Competitors →
+Recommendation.</span>
+
+<span class="hl-key">Example:</span>
+Q: Should we raise the price of our Basic
+plan from $9/mo to $12/mo?
+
+A: Let me analyze this systematically.
+
+<span class="hl-cmt">Market:</span> Our Basic plan has 12,000 users
+with 2.1% monthly churn. The segment is
+price-sensitive freelancers.
+
+<span class="hl-cmt">Costs:</span> Current margin is 34%. At $12,
+margin would be 48%. Infrastructure costs
+are fixed up to 20K users.
+
+<span class="hl-cmt">Competitors:</span> Notion charges $10, Coda $10,
+Monday $9. A $12 price puts us above all
+three in the basic tier.
+
+<span class="hl-cmt">Recommendation:</span> Don't raise to $12. The
+3% margin gain doesn't offset the churn risk
+in a price-sensitive segment where we'd be
+the most expensive option. Consider $10
+instead — matches competitors, improves
+margin to 40%.
+
+<span class="hl-key">Now analyze:</span>
+Q: Should we add a $29/mo Pro tier between
+Basic ($9) and Enterprise ($99)?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What the Example Teaches</div><div class="cc-text">The example doesn&rsquo;t just say &ldquo;think step by step&rdquo; &mdash; it shows the <em>exact framework</em> to follow:<br><br><strong>1. Structure:</strong> Market → Costs → Competitors → Recommendation<br><strong>2. Depth:</strong> Include specific numbers, not vague statements<br><strong>3. Reasoning style:</strong> Weigh trade-offs, consider risks<br><strong>4. Conclusion format:</strong> Clear yes/no with justification<br><br>The model will now analyze the new question using the same four-step framework with the same level of specificity.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Zero-Shot CoT</div><div class="cb-text">&ldquo;Should we add a $29 Pro tier? Let&rsquo;s think step by step.&rdquo;<br><br>Model reasons freely &mdash; might focus on features, might focus on pricing psychology, might miss competitor analysis entirely. Unpredictable structure.</div></div>
+            <div class="compare-box good"><div class="cb-tag">Few-Shot CoT</div><div class="cb-text">Model follows the Market → Costs → Competitors → Recommendation framework exactly, includes specific numbers, weighs trade-offs, and gives a clear recommendation with justification.</div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Zero-shot CoT says &ldquo;think.&rdquo; Few-shot CoT says &ldquo;think <em>like this</em>.&rdquo; Use zero-shot when any reasoning helps. Use few-shot when you need reasoning to follow a specific methodology.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Domain example — debugging -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">Domain Example: Debugging an API Error</div><div class="cc-sub">Direct prompt gives generic advice &mdash; CoT prompt gives systematic diagnosis</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Scenario</div><div class="cc-text">Your Flask API returns <strong>500 Internal Server Error</strong> on <code>POST /api/users</code> but <code>GET /api/users</code> works fine. You have the error log and the route handler code.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Direct Prompt (Superficial)</div><div class="cb-text"><strong>Prompt:</strong> &ldquo;My Flask API returns 500 on POST /api/users but GET works fine. What&rsquo;s wrong?&rdquo;<br><br><strong>Output:</strong><br>Here are some common causes of 500 errors on POST routes:<br>1. Missing request body parsing<br>2. Database connection issues<br>3. Validation errors<br>4. CORS configuration<br>5. Missing required fields<br><br>Try checking your error logs for more details.<br><br><em>Generic checklist. Doesn&rsquo;t look at your actual code.</em></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CoT Prompt (Deliberate)</div><div class="cc-code"><span class="hl-key">Debug this systematically. For each step,
+state what you're checking and why.</span>
+
+My Flask API returns 500 on POST /api/users
+but GET /api/users works fine.
+
+Error log:
+<span class="hl-str">sqlalchemy.exc.IntegrityError:
+(psycopg2.errors.NotNullViolation)
+null value in column "created_at"</span>
+
+Route handler:
+<span class="hl-str">@app.route('/api/users', methods=['POST'])
+def create_user():
+    data = request.get_json()
+    user = User(
+        name=data['name'],
+        email=data['email']
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201</span>
+
+<span class="hl-key">Walk through the debugging process step
+by step.</span></div></div>
+          <div class="cc-block"><div class="cc-label">Model Output (CoT)</div><div class="cc-code"><span class="hl-cmt">Step 1: Read the error message</span>
+The error is NotNullViolation on "created_at".
+This means the database requires created_at
+but it's not being set.
+
+<span class="hl-cmt">Step 2: Check the route handler</span>
+The User() constructor sets name and email
+but NOT created_at. The column likely has
+nullable=False in the model definition.
+
+<span class="hl-cmt">Step 3: Why GET works but POST doesn't</span>
+GET reads existing rows (which have
+created_at). POST creates new rows without
+setting it → DB constraint violation.
+
+<span class="hl-cmt">Step 4: The fix</span>
+<span class="hl-key">Option A:</span> Add a default in the model:
+  created_at = db.Column(db.DateTime,
+    default=datetime.utcnow)
+
+<span class="hl-key">Option B:</span> Set it in the route:
+  user = User(name=data['name'],
+    email=data['email'],
+    created_at=datetime.utcnow())</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The CoT prompt didn&rsquo;t just say &ldquo;think step by step&rdquo; &mdash; it said &ldquo;debug <em>systematically</em>, state what you&rsquo;re checking and why.&rdquo; This guided the model to follow a real debugging methodology: read the error, trace the code, explain the asymmetry, propose a fix. Domain-specific CoT triggers produce domain-specific reasoning.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Self-consistency -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">how_to_vote</span></div><div><div class="cc-title">Self-Consistency: Ask 5 Times, Take the Majority Vote</div><div class="cc-sub">When one CoT path might be wrong, sample multiple paths and let them vote</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem CoT Doesn&rsquo;t Fully Solve</div><div class="cc-text">CoT dramatically improves accuracy, but it&rsquo;s not perfect. The model might take a wrong turn in its reasoning and confidently arrive at a wrong answer. Since each CoT path is generated with some randomness (temperature &gt; 0), <strong>different runs can produce different reasoning chains with different answers</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">The Self-Consistency Technique</div><div class="cc-text">Proposed by Wang et al. (2022), self-consistency works like this:<br><br><strong>1.</strong> Send the same CoT prompt <strong>5&ndash;20 times</strong> with temperature &gt; 0 (e.g., 0.7)<br><strong>2.</strong> Each run produces a different reasoning chain<br><strong>3.</strong> Extract the final answer from each chain<br><strong>4.</strong> <strong>Take the majority vote</strong><br><br>If 4 out of 5 runs say &ldquo;29 apples&rdquo; and 1 says &ldquo;27 apples,&rdquo; the answer is 29. The wrong reasoning path gets outvoted.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Implementation Pattern</div><div class="cc-code"><span class="hl-key">import</span> openai
+<span class="hl-key">from</span> collections <span class="hl-key">import</span> Counter
+
+<span class="hl-key">def</span> self_consistent_answer(prompt, n=<span class="hl-num">5</span>):
+    answers = []
+    <span class="hl-key">for</span> _ <span class="hl-key">in</span> range(n):
+        resp = openai.chat.completions.create(
+            model=<span class="hl-str">"gpt-4"</span>,
+            messages=[{<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+                       <span class="hl-str">"content"</span>: prompt}],
+            temperature=<span class="hl-num">0.7</span>
+        )
+        text = resp.choices[<span class="hl-num">0</span>].message.content
+        answer = extract_final_answer(text)
+        answers.append(answer)
+
+    <span class="hl-cmt"># Majority vote</span>
+    vote = Counter(answers).most_common(<span class="hl-num">1</span>)
+    <span class="hl-key">return</span> vote[<span class="hl-num">0</span>][<span class="hl-num">0</span>], answers</div></div>
+          <div class="cc-block"><div class="cc-label">Cost vs Accuracy Trade-off</div><div class="cc-text"><strong>5 samples:</strong> 5x cost, significant accuracy boost<br><strong>10 samples:</strong> 10x cost, diminishing returns<br><strong>20 samples:</strong> 20x cost, marginal improvement<br><br>For most tasks, <strong>5 samples is the sweet spot</strong>. Use self-consistency for high-stakes decisions where being wrong is expensive (medical triage, financial analysis, legal review).</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Self-consistency treats the model&rsquo;s randomness as a feature, not a bug. Different reasoning paths explore different solution strategies. The majority vote filters out the occasional wrong path. It&rsquo;s like asking 5 experts instead of 1 &mdash; the group is more reliable than any individual.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: When to use CoT -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">When to Use (and Not Use) Chain-of-Thought</div><div class="cc-sub">CoT is powerful but not always necessary &mdash; here&rsquo;s the decision framework</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Use CoT When</div><div class="cc-text"><strong>Multi-step reasoning:</strong> Math, logic, planning, scheduling<br><br><strong>Debugging:</strong> Tracing errors through code, logs, or configurations<br><br><strong>Analysis:</strong> Comparing options, weighing trade-offs, making recommendations<br><br><strong>Complex classification:</strong> When the category depends on multiple factors<br><br><strong>Transparency matters:</strong> When you need to audit <em>why</em> the model chose an answer, not just <em>what</em> it chose</div></div>
+          <div class="cc-block"><div class="cc-label">Skip CoT When</div><div class="cc-text"><strong>Simple retrieval:</strong> &ldquo;What&rsquo;s the capital of France?&rdquo; &mdash; CoT adds tokens without improving accuracy<br><br><strong>Format conversion:</strong> &ldquo;Convert this JSON to YAML&rdquo; &mdash; mechanical task, no reasoning needed<br><br><strong>Creative writing:</strong> &ldquo;Write a poem about autumn&rdquo; &mdash; CoT can make creative output feel formulaic<br><br><strong>High-volume, low-stakes:</strong> When 3&ndash;5x token cost matters and errors are cheap to fix</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The CoT Decision Tree</div><div class="cc-code"><span class="hl-cmt"># Does the task require multiple steps?</span>
+<span class="hl-key">NO</span>  → Skip CoT (direct answer is fine)
+<span class="hl-key">YES</span> → Use CoT
+
+  <span class="hl-cmt"># Do you need specific reasoning style?</span>
+  <span class="hl-key">NO</span>  → Zero-shot CoT
+          ("Let's think step by step")
+  <span class="hl-key">YES</span> → Few-shot CoT
+          (show example with reasoning)
+
+    <span class="hl-cmt"># Is the answer high-stakes?</span>
+    <span class="hl-key">NO</span>  → Single CoT call is enough
+    <span class="hl-key">YES</span> → Self-consistency
+            (5 calls, majority vote)</div></div>
+          <div class="cc-block"><div class="cc-label">Combining with Previous Techniques</div><div class="cc-text">CoT stacks with everything you&rsquo;ve learned:<br><br><strong>Ch 2 + CoT:</strong> Role + Context + Task + &ldquo;Think step by step&rdquo;<br><strong>Ch 3 + CoT:</strong> Few-shot examples that include reasoning chains<br><br>These techniques are composable. The best prompts combine clear structure (Ch 2), good examples (Ch 3), and explicit reasoning (Ch 4).</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Chain-of-thought is the single most impactful technique for hard problems. It costs more tokens but dramatically reduces errors. Think of it as buying compute with tokens &mdash; you&rsquo;re trading output length for output quality. For anything that requires reasoning, always default to CoT.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-zero-shot-few-shot.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Zero-Shot vs Few-Shot</a>
+    <a class="ch-nav-btn next" href="05-advanced-reasoning.html">Ch 5: Advanced Reasoning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Why CoT works: each token the model generates is a computation step. "Think step by step" gives it a scratch pad. More reasoning tokens = more compute = better answers on hard problems.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> The direct-answer trap: "Just give me the number" forces the model to compress multi-step reasoning into one shot. It skips steps and gets 27 instead of 29.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> One line fixes it: "Think through this step by step." The model shows its work — 40% of 15 = 6, 15 - 6 = 9, 9 + 20 = 29. Correct, transparent, auditable.',color:'#0d9488'},
+    4:{text:'<strong>Step 4:</strong> Zero-shot CoT: just append "Let\'s think step by step." No examples needed. The original research showed accuracy jumping from 17.7% to 78.7% on math problems.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Few-shot CoT: when you need specific reasoning style, show an example with the reasoning chain. Zero-shot says "think." Few-shot says "think like this."',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Real debugging: direct prompt gives a generic checklist. CoT prompt with "debug systematically" traces the error to a missing created_at default. Specific diagnosis, specific fix.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Self-consistency: ask 5 times with temperature > 0, take the majority vote. Different reasoning paths explore different solutions. The group outvotes the occasional wrong path.',color:'#d97706'},
+    8:{text:'<strong>Step 8:</strong> Decision tree: multi-step problem? Use CoT. Need specific reasoning style? Few-shot CoT. High stakes? Self-consistency. CoT stacks with everything from Ch 2 and Ch 3.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

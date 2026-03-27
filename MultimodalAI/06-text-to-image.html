@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Text-to-Image Generation &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Text-to-Image Generation</h2><span class="tb-sub">Stable Diffusion, DALL-E 3, Midjourney, Flux &mdash; ControlNet, inpainting, and the creative workflow</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Prompt</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Encode</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">blur_on</span></div><span class="pipe-label">Diffuse</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Control</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Output</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">palette</span></div><span class="pipe-label">Create</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1: The Landscape -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">landscape</span></div>
+        <div><div class="cc-title">The Text-to-Image Landscape</div><div class="cc-sub">Major models and their architectures</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Model Comparison</div>
+            <div class="cc-code"><span class="hl-cmt">// Major text-to-image models (2025)</span>
+
+<span class="hl-key">Stable Diffusion XL</span>  Open-source, U-Net
+  Text: dual CLIP + OpenCLIP
+  Res: 1024&times;1024, community ecosystem
+
+<span class="hl-key">Flux (Black Forest)</span>  Open-weight, DiT
+  Text: T5-XXL + CLIP, Flow Matching
+  Res: up to 2048&times;2048, state-of-art open
+
+<span class="hl-key">DALL-E 3 (OpenAI)</span>   Closed, proprietary
+  Text: GPT-4 rewrites prompts internally
+  Res: 1024&times;1024, strong text rendering
+
+<span class="hl-key">Midjourney v6</span>       Closed, proprietary
+  Aesthetic focus, Discord-based
+  Res: up to 2048&times;2048, best aesthetics
+
+<span class="hl-key">Imagen 3 (Google)</span>   Closed, proprietary
+  Text: T5-XXL encoder
+  Res: 1024&times;1024, strong photorealism</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Open vs Closed</div>
+            <div class="cc-text">&bull; <strong>Open-source (SD, Flux):</strong> Run locally, full control, fine-tunable, community LoRAs and extensions, no content restrictions, no API costs<br>&bull; <strong>Closed (DALL-E, Midjourney):</strong> Higher quality out-of-box, no GPU needed, content safety filters, pay-per-image, no customization<br><br>The gap is closing rapidly. Flux rivals DALL-E 3 quality while being open-weight.</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The text-to-image landscape is bifurcating: closed models optimize for safety and ease-of-use (DALL-E, Midjourney), while open models optimize for control and customization (SD, Flux). Choose based on your needs: creative freedom vs convenience.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Stable Diffusion Architecture -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">architecture</span></div>
+        <div><div class="cc-title">Stable Diffusion Architecture</div><div class="cc-sub">The open-source model that democratized image generation</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Three Components</div>
+            <div class="cc-text">1. <strong>Text Encoder (CLIP/T5):</strong> Converts your prompt into a sequence of embedding vectors. SDXL uses dual encoders (CLIP ViT-L + OpenCLIP ViT-bigG) for richer text understanding.<br><br>2. <strong>U-Net / DiT (Denoiser):</strong> The core diffusion model. Takes noisy latents + text embeddings, predicts the noise to remove. Cross-attention layers connect text to image generation.<br><br>3. <strong>VAE (Decoder):</strong> Converts the denoised latent representation back into a full-resolution pixel image. Pre-trained and frozen during diffusion training.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Generation Pipeline</div>
+            <div class="cc-code"><span class="hl-cmt">// Stable Diffusion XL generation</span>
+
+<span class="hl-key">Input:</span>  "a cyberpunk city at night, neon lights"
+<span class="hl-key">Seed:</span>   42 <span class="hl-str">(for reproducibility)</span>
+
+<span class="hl-key">1.</span> CLIP encodes prompt &rarr; 77&times;2048 embeddings
+<span class="hl-key">2.</span> Sample random noise in latent space (128&times;128)
+<span class="hl-key">3.</span> Denoise for 30 steps (DPM-Solver++)
+   - Each step: U-Net predicts noise
+   - Cross-attention reads text embeddings
+   - CFG scale 7.5 amplifies text influence
+<span class="hl-key">4.</span> VAE decodes latent &rarr; 1024&times;1024 image
+
+<span class="hl-key">Time:</span>  ~3 seconds on RTX 4090
+<span class="hl-key">VRAM:</span>  ~6 GB (fp16)</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The seed controls the initial random noise. Same prompt + same seed = same image. This is crucial for reproducibility, iteration, and controlled experiments. Change the seed to explore variations; keep it fixed to refine a specific composition.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: ControlNet -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tune</span></div>
+        <div><div class="cc-title">ControlNet &amp; Conditioning</div><div class="cc-sub">Adding spatial control beyond text prompts</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Problem</div>
+            <div class="cc-text">Text prompts alone can&rsquo;t precisely control <strong>spatial layout</strong>. &ldquo;A person standing on the left with a dog on the right&rdquo; is ambiguous. ControlNet adds <strong>structural conditioning</strong> &mdash; you provide a reference image (edges, pose, depth) that guides the spatial arrangement.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">ControlNet Types</div>
+            <div class="cc-text">&bull; <strong>Canny Edge:</strong> Preserves the edge structure of a reference image<br>&bull; <strong>OpenPose:</strong> Matches human body poses from a skeleton<br>&bull; <strong>Depth:</strong> Maintains the 3D depth layout of a scene<br>&bull; <strong>Scribble:</strong> Follows rough hand-drawn sketches<br>&bull; <strong>Segmentation:</strong> Fills in a semantic segmentation map<br>&bull; <strong>Normal Map:</strong> Preserves surface orientation for 3D-like control</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How ControlNet Works</div>
+            <div class="cc-text">ControlNet creates a <strong>trainable copy</strong> of the U-Net&rsquo;s encoder blocks. The control image (edges, pose, etc.) is processed by this copy, and its outputs are added to the original U-Net&rsquo;s skip connections. This injects spatial information without modifying the base model.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">IP-Adapter: Style Transfer</div>
+            <div class="cc-text"><strong>IP-Adapter</strong> is like ControlNet for style: provide a reference image and the model generates new images in that visual style. It works by injecting image embeddings (from CLIP&rsquo;s image encoder) into the cross-attention layers alongside text embeddings.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> ControlNet transformed text-to-image from a &ldquo;prompt lottery&rdquo; into a precision tool. Professional workflows now combine text prompts for content with ControlNet for layout, enabling consistent, controllable generation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Inpainting & img2img -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">edit</span></div>
+        <div><div class="cc-title">Inpainting, img2img &amp; Outpainting</div><div class="cc-sub">Editing existing images with diffusion</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">img2img: Image-to-Image</div>
+            <div class="cc-text">Instead of starting from pure noise, start from a <strong>partially noised version of an existing image</strong>. The &ldquo;denoising strength&rdquo; (0.0&ndash;1.0) controls how much the original is preserved:<br><br>&bull; <strong>0.2:</strong> Subtle changes &mdash; color correction, minor style shift<br>&bull; <strong>0.5:</strong> Moderate changes &mdash; new elements while keeping composition<br>&bull; <strong>0.8:</strong> Major changes &mdash; mostly new image inspired by original<br>&bull; <strong>1.0:</strong> Complete regeneration (same as txt2img)</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Inpainting</div>
+            <div class="cc-text"><strong>Inpainting</strong> regenerates only a <strong>masked region</strong> of an image while keeping the rest intact. Use cases: remove objects, replace backgrounds, fix artifacts, add elements. The model sees the unmasked context and generates content that blends seamlessly.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Outpainting</div>
+            <div class="cc-text"><strong>Outpainting</strong> extends an image beyond its original borders. The model sees the existing image as context and generates new content that continues the scene naturally. Used to change aspect ratios, expand compositions, or create panoramic views.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">DALL-E 3&rsquo;s Approach</div>
+            <div class="cc-text">DALL-E 3 takes a unique approach: it uses <strong>GPT-4 to rewrite your prompt</strong> before generating. Your short prompt becomes a detailed, optimized description. This dramatically improves output quality but reduces user control over exact wording.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The real power of text-to-image isn&rsquo;t single-shot generation &mdash; it&rsquo;s the <strong>iterative workflow</strong>: generate &rarr; select &rarr; inpaint &rarr; refine &rarr; upscale. Professional users rarely accept the first output; they iterate using these tools.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Prompt Engineering -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">edit_note</span></div>
+        <div><div class="cc-title">Prompt Engineering for Images</div><div class="cc-sub">Writing prompts that produce what you want</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Prompt Structure</div>
+            <div class="cc-code"><span class="hl-cmt">// Effective prompt formula</span>
+
+<span class="hl-key">[Subject]</span> + <span class="hl-key">[Action/Pose]</span> + <span class="hl-key">[Setting]</span>
++ <span class="hl-key">[Style]</span> + <span class="hl-key">[Lighting]</span> + <span class="hl-key">[Quality]</span>
+
+<span class="hl-cmt">// Example:</span>
+<span class="hl-str">"A samurai warrior standing on a cliff</span>
+<span class="hl-str"> overlooking a misty valley at dawn,</span>
+<span class="hl-str"> cinematic lighting, volumetric fog,</span>
+<span class="hl-str"> 8K, highly detailed, artstation"</span>
+
+<span class="hl-cmt">// Negative prompt (what to avoid):</span>
+<span class="hl-str">"blurry, low quality, deformed hands,</span>
+<span class="hl-str"> extra fingers, watermark, text"</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Key Techniques</div>
+            <div class="cc-text">&bull; <strong>Be specific:</strong> &ldquo;golden retriever puppy&rdquo; not &ldquo;dog&rdquo;<br>&bull; <strong>Describe style:</strong> &ldquo;oil painting&rdquo;, &ldquo;photograph&rdquo;, &ldquo;watercolor&rdquo;, &ldquo;3D render&rdquo;<br>&bull; <strong>Specify lighting:</strong> &ldquo;dramatic side lighting&rdquo;, &ldquo;soft diffused light&rdquo;, &ldquo;golden hour&rdquo;<br>&bull; <strong>Add quality tokens:</strong> &ldquo;masterpiece&rdquo;, &ldquo;highly detailed&rdquo;, &ldquo;8K&rdquo; (model-dependent)<br>&bull; <strong>Use negative prompts:</strong> Exclude unwanted elements explicitly<br>&bull; <strong>Weight tokens:</strong> (important concept:1.5) increases emphasis in SD</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Prompt engineering for images is different from text LLMs. Image models respond to <strong>descriptive keywords</strong> more than instructions. &ldquo;A photo of a cat&rdquo; works better than &ldquo;Generate me a picture of a cat please.&rdquo; Think art direction, not conversation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6: LoRA & Fine-Tuning -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">model_training</span></div>
+        <div><div class="cc-title">LoRA &amp; Fine-Tuning</div><div class="cc-sub">Customizing models for specific styles, characters, and concepts</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Is LoRA?</div>
+            <div class="cc-text"><strong>Low-Rank Adaptation (LoRA)</strong> adds small trainable matrices to the model&rsquo;s attention layers. Instead of fine-tuning all 3.5B parameters of SDXL, you train ~10&ndash;100M additional parameters. The LoRA file is tiny (10&ndash;200MB) and can be loaded/unloaded at inference time.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Common LoRA Use Cases</div>
+            <div class="cc-text">&bull; <strong>Character consistency:</strong> Train on 20&ndash;50 images of a character to generate them in any pose/setting<br>&bull; <strong>Art style:</strong> Train on an artist&rsquo;s work to replicate their style<br>&bull; <strong>Product photography:</strong> Train on product images for consistent branding<br>&bull; <strong>Concept injection:</strong> Teach the model new concepts it wasn&rsquo;t trained on</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Training a LoRA</div>
+            <div class="cc-code"><span class="hl-cmt">// Typical LoRA training setup</span>
+
+<span class="hl-key">Images:</span>     20-50 high-quality images
+<span class="hl-key">Captions:</span>   Auto-generated or manual
+<span class="hl-key">Steps:</span>      1,000-3,000 training steps
+<span class="hl-key">Time:</span>       15-60 minutes on consumer GPU
+<span class="hl-key">Output:</span>     10-200 MB LoRA file
+<span class="hl-key">Trigger:</span>    "sks style" or custom token
+
+<span class="hl-cmt">// Can combine multiple LoRAs at inference</span>
+<span class="hl-cmt">// e.g., character LoRA + style LoRA</span></div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> LoRAs are the &ldquo;plugins&rdquo; of the image generation ecosystem. CivitAI hosts 100,000+ community LoRAs. They enable personalization without retraining the base model &mdash; and multiple LoRAs can be combined at inference time for layered customization.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7: The Creative Workflow -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">palette</span></div>
+        <div><div class="cc-title">The Professional Creative Workflow</div><div class="cc-sub">How professionals actually use text-to-image tools</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Iterative Loop</div>
+            <div class="cc-code"><span class="hl-cmt">// Professional workflow (not one-shot!)</span>
+
+<span class="hl-key">1. Explore</span>
+   Generate 4-8 variations with different seeds
+   Identify promising compositions
+
+<span class="hl-key">2. Refine</span>
+   img2img on best candidate (strength 0.3-0.5)
+   Adjust prompt, add/remove details
+
+<span class="hl-key">3. Fix</span>
+   Inpaint problem areas (hands, faces, text)
+   Use ControlNet for precise corrections
+
+<span class="hl-key">4. Upscale</span>
+   4x upscale with Real-ESRGAN or tiled diffusion
+   Add fine detail at higher resolution
+
+<span class="hl-key">5. Post-process</span>
+   Color correction, compositing in Photoshop
+   Final touches for production use</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Production Applications</div>
+            <div class="cc-text">&bull; <strong>Concept art:</strong> Game and film studios use AI for rapid ideation (10x faster than manual)<br>&bull; <strong>Marketing:</strong> A/B test ad creatives at scale &mdash; generate 100 variations in minutes<br>&bull; <strong>E-commerce:</strong> Product photography without physical shoots<br>&bull; <strong>Architecture:</strong> Visualize building designs from floor plans<br>&bull; <strong>Fashion:</strong> Virtual try-on and collection visualization<br>&bull; <strong>Publishing:</strong> Book covers, article illustrations, social media content</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Text-to-image AI doesn&rsquo;t replace artists &mdash; it changes their workflow. The most effective users are those who combine AI generation with traditional skills: composition, color theory, and iterative refinement. AI is a power tool, not an autopilot.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8: Key Takeaways -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">Key Takeaways</div><div class="cc-sub">What to remember about text-to-image generation</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Essential Concepts</div>
+            <div class="cc-text">1. <strong>Architecture:</strong> Text encoder (CLIP/T5) + Denoiser (U-Net/DiT) + VAE decoder<br><br>2. <strong>Open vs Closed:</strong> SD/Flux for control and customization; DALL-E/Midjourney for convenience<br><br>3. <strong>ControlNet:</strong> Adds spatial control via edges, poses, depth maps &mdash; transforms generation into a precision tool<br><br>4. <strong>Inpainting/img2img:</strong> Edit existing images; the real workflow is iterative, not one-shot<br><br>5. <strong>LoRA:</strong> Lightweight fine-tuning for custom styles, characters, and concepts (10&ndash;200MB files)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Choosing a Model</div>
+            <div class="cc-text">&bull; <strong>Need customization?</strong> &rarr; Stable Diffusion / Flux (open, LoRA ecosystem)<br>&bull; <strong>Need text in images?</strong> &rarr; DALL-E 3 or Flux (best text rendering)<br>&bull; <strong>Need aesthetics?</strong> &rarr; Midjourney (best artistic quality)<br>&bull; <strong>Need speed?</strong> &rarr; SDXL Turbo / LCM (real-time)<br>&bull; <strong>Need safety?</strong> &rarr; DALL-E 3 (built-in content filters)</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 7 extends generation to the temporal dimension &mdash; text-to-video with Sora&rsquo;s Diffusion Transformer, spacetime patches, temporal coherence, and the hard limits of current video generation.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-diffusion-models.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: How Diffusion Models Work</a>
+    <a class="ch-nav-btn next" href="07-text-to-video.html">Ch 7: Text-to-Video &amp; Motion <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,4],2:[0,1,2,4],3:[0,2,3],4:[2,3,4],5:[0,1],6:[2,3],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The text-to-image landscape: Stable Diffusion and Flux (open), DALL-E 3 and Midjourney (closed). The gap between open and closed is closing fast.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> Stable Diffusion\u2019s architecture: CLIP text encoder + U-Net denoiser + VAE decoder. Same prompt + same seed = same image (reproducible).',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> ControlNet adds spatial control: edges, poses, depth maps. It transforms text-to-image from a \u201cprompt lottery\u201d into a precision tool.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Inpainting, img2img, and outpainting enable iterative editing. The real workflow is generate \u2192 select \u2192 refine \u2192 fix \u2192 upscale.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Prompt engineering for images: be specific, describe style and lighting, use negative prompts, weight important concepts.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> LoRA enables lightweight fine-tuning: 20-50 images, 15-60 minutes, 10-200MB file. CivitAI hosts 100,000+ community LoRAs.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Professional workflow is iterative: explore variations, refine with img2img, fix with inpainting, upscale, post-process. AI is a power tool, not autopilot.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Choose your model based on needs: customization (SD/Flux), text rendering (DALL-E 3/Flux), aesthetics (Midjourney), speed (Turbo/LCM).',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

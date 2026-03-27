@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Multimodal LLMs — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Multimodal LLMs</h2><span class="tb-sub">When LLMs learn to see, hear, and generate images &mdash; vision encoders, CLIP, and native multimodality</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Frontier</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Vision</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">CLIP</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">settings_input_component</span></div><span class="pipe-label">Adapter</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">diamond</span></div><span class="pipe-label">Native</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">mic</span></div><span class="pipe-label">Audio</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">brush</span></div><span class="pipe-label">Generate</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">landscape</span></div><span class="pipe-label">Future</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+    <div class="content-card" data-card="1"><div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">image</span></div><div><div class="cc-title">Teaching LLMs to See: Vision Encoders</div><div class="cc-sub">Converting images into token-like representations</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">An LLM only understands tokens (numbers). To &ldquo;see&rdquo; an image, you need a <strong>translator</strong> that converts pixels into the same kind of vectors the LLM already understands. A <strong>Vision Transformer (ViT)</strong> does this: it splits an image into patches (like tokens), processes them through transformer layers, and outputs a sequence of visual embeddings. These visual tokens are then fed into the LLM alongside text tokens.</div></div><div class="cc-note n-violet"><strong>Key insight:</strong> A typical image becomes 256-576 visual tokens. Each token is a d_model-dimensional vector, just like a text token embedding. The LLM&rsquo;s attention mechanism (Ch 3) can then attend to visual tokens exactly like text tokens. This is why the transformer architecture is so powerful &mdash; it&rsquo;s modality-agnostic. Anything that can be represented as a sequence of vectors can be processed.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Vision Transformer</div><div class="cc-code"><span class="hl-cmt"># ViT: Vision Transformer</span>
+<span class="hl-cmt"># 1. Split image into patches</span>
+<span class="hl-cmt">#    224×224 image → 14×14 grid of 16×16 patches</span>
+<span class="hl-cmt">#    = 196 patches (visual tokens)</span>
+
+<span class="hl-cmt"># 2. Linear projection: patch → vector</span>
+<span class="hl-cmt">#    Each 16×16×3 patch → 1024-dim vector</span>
+
+<span class="hl-cmt"># 3. Transformer layers (same as LLM!)</span>
+<span class="hl-cmt">#    Self-attention between all patches</span>
+<span class="hl-cmt">#    Output: 196 visual embedding vectors</span>
+
+<span class="hl-cmt"># Popular vision encoders:</span>
+<span class="hl-cmt"># CLIP ViT-L/14: 304M params, 256 tokens</span>
+<span class="hl-cmt"># SigLIP: improved CLIP training</span>
+<span class="hl-cmt"># InternViT: 6B params (largest)</span>
+<span class="hl-cmt"># DINOv2: self-supervised, no text</span>
+
+<span class="hl-cmt"># Higher resolution → more tokens:</span>
+<span class="hl-cmt"># 224×224: 196 tokens</span>
+<span class="hl-cmt"># 336×336: 576 tokens</span>
+<span class="hl-cmt"># 672×672: 2304 tokens</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="2"><div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">link</span></div><div><div class="cc-title">CLIP: Connecting Vision and Language</div><div class="cc-sub">The model that taught AI to understand images through text</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">CLIP (Contrastive Language-Image Pre-training, OpenAI 2021) is like a <strong>bilingual translator</strong> who learned both &ldquo;image language&rdquo; and &ldquo;text language&rdquo; by seeing 400 million image-caption pairs from the internet. It maps images and text into the <strong>same embedding space</strong>: a photo of a dog and the text &ldquo;a photo of a dog&rdquo; end up as nearby vectors. This shared space is what makes multimodal LLMs possible.</div></div><div class="cc-note n-violet"><strong>Key insight:</strong> CLIP&rsquo;s training is elegant: given a batch of (image, caption) pairs, maximize the similarity between matching pairs and minimize it for non-matching pairs (contrastive learning). The result: a vision encoder whose output vectors are already semantically meaningful in a way that aligns with language. Most multimodal LLMs (LLaVA, GPT-4V) use CLIP or its successors as the vision backbone.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">CLIP Architecture</div><div class="cc-code"><span class="hl-cmt"># CLIP training (simplified):</span>
+<span class="hl-cmt"># Image encoder: ViT → image embedding</span>
+<span class="hl-cmt"># Text encoder: Transformer → text embedding</span>
+<span class="hl-cmt"># Loss: maximize cosine(img, matching_text)</span>
+<span class="hl-cmt">#        minimize cosine(img, wrong_text)</span>
+
+<span class="hl-cmt"># Trained on 400M image-text pairs</span>
+<span class="hl-cmt"># from the internet (WebImageText)</span>
+
+<span class="hl-cmt"># Result: shared embedding space</span>
+<span class="hl-cmt"># "dog" text vector ≈ dog photo vector</span>
+<span class="hl-cmt"># "sunset" text ≈ sunset photo</span>
+
+<span class="hl-cmt"># Zero-shot classification:</span>
+<span class="hl-cmt"># Embed image + embed all class names</span>
+<span class="hl-cmt"># Pick class with highest cosine similarity</span>
+<span class="hl-cmt"># No task-specific training needed!</span>
+
+<span class="hl-cmt"># Successors:</span>
+<span class="hl-cmt"># SigLIP (Google): sigmoid loss, better</span>
+<span class="hl-cmt"># EVA-CLIP: scaled up, stronger</span>
+<span class="hl-cmt"># MetaCLIP: curated training data</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="3"><div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">settings_input_component</span></div><div><div class="cc-title">The Adapter Approach: Bolting Vision onto LLMs</div><div class="cc-sub">LLaVA, GPT-4V, and the &ldquo;vision encoder + projection + LLM&rdquo; pattern</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">The most common approach is like adding a <strong>camera to a brain</strong>: take a pre-trained vision encoder (CLIP), a pre-trained LLM (Llama), and connect them with a small <strong>projection layer</strong> (adapter). The adapter translates visual tokens into the LLM&rsquo;s embedding space. Train only the adapter (and maybe fine-tune the LLM) on image-text data. This is how LLaVA, Llama 3.2 Vision, and likely GPT-4V work.</div></div><div class="cc-note n-blue"><strong>Key insight:</strong> LLaVA (Liu et al., 2023) showed this works remarkably well with just a 2-layer MLP as the adapter. The training is two-stage: (1) pre-train the adapter on image-caption pairs (align visual and text spaces), (2) fine-tune on visual instruction data (teach the model to answer questions about images). The entire process takes hours, not months.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-code"><span class="hl-cmt"># Adapter approach (LLaVA-style):</span>
+
+<span class="hl-cmt"># Image → [CLIP ViT] → visual tokens</span>
+<span class="hl-cmt">#                         ↓</span>
+<span class="hl-cmt">#                    [Projection MLP]</span>
+<span class="hl-cmt">#                         ↓</span>
+<span class="hl-cmt"># Text tokens → [  LLM (Llama)  ] → output</span>
+<span class="hl-cmt">#               (visual + text tokens)</span>
+
+<span class="hl-cmt"># Projection: maps CLIP dim → LLM dim</span>
+<span class="hl-cmt"># e.g., 1024 (CLIP) → 4096 (Llama)</span>
+<span class="hl-cmt"># Just a 2-layer MLP!</span>
+
+<span class="hl-cmt"># Models using this approach:</span>
+<span class="hl-cmt"># LLaVA 1.5/1.6: CLIP + Vicuna/Llama</span>
+<span class="hl-cmt"># Llama 3.2 Vision: CLIP + Llama 3.2</span>
+<span class="hl-cmt"># GPT-4V (likely): ViT + GPT-4</span>
+<span class="hl-cmt"># Qwen-VL: ViT + Qwen</span>
+<span class="hl-cmt"># InternVL: InternViT + InternLM</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="4"><div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">diamond</span></div><div><div class="cc-title">Native Multimodal: Gemini&rsquo;s Approach</div><div class="cc-sub">Training on all modalities from the start</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">The adapter approach is like a person who learned English first, then learned to interpret sign language through a translator. <strong>Native multimodal</strong> (Gemini) is like a person who grew up bilingual &mdash; both languages are deeply integrated from birth. Gemini was trained from scratch on interleaved text, images, audio, and video as a single token stream. No separate vision encoder bolted on afterward.</div></div><div class="cc-note n-blue"><strong>Key insight:</strong> Gemini&rsquo;s native approach means visual and textual understanding are deeply intertwined. It can reason about spatial relationships, read text in images, understand charts, and process video natively. Gemini 1.5 Pro processes up to 1 million tokens of mixed modality input &mdash; equivalent to a 1-hour video or 700,000 words. The MoE architecture (Ch 5) helps manage the compute cost of processing multiple modalities.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Comparison</div><div class="cc-code"><span class="hl-cmt"># Adapter approach (GPT-4V, LLaVA):</span>
+<span class="hl-cmt"># ✓ Reuse existing LLM + vision encoder</span>
+<span class="hl-cmt"># ✓ Cheaper to train</span>
+<span class="hl-cmt"># ✗ Vision and language somewhat separate</span>
+<span class="hl-cmt"># ✗ Limited cross-modal reasoning</span>
+
+<span class="hl-cmt"># Native multimodal (Gemini):</span>
+<span class="hl-cmt"># ✓ Deep integration of all modalities</span>
+<span class="hl-cmt"># ✓ Better cross-modal reasoning</span>
+<span class="hl-cmt"># ✓ Handles video/audio natively</span>
+<span class="hl-cmt"># ✗ Must train from scratch (expensive)</span>
+<span class="hl-cmt"># ✗ Can't easily swap components</span>
+
+<span class="hl-cmt"># Modalities supported (Gemini 1.5):</span>
+<span class="hl-cmt"># Text: standard token stream</span>
+<span class="hl-cmt"># Images: patch tokens (like ViT)</span>
+<span class="hl-cmt"># Audio: spectrogram tokens</span>
+<span class="hl-cmt"># Video: frame tokens (sampled)</span>
+<span class="hl-cmt"># All interleaved in one sequence</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="5"><div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">mic</span></div><div><div class="cc-title">Audio &amp; Speech: Voice-Native LLMs</div><div class="cc-sub">From speech-to-text pipelines to end-to-end voice models</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Evolution</div><div class="cc-text">Early voice assistants used a pipeline: speech-to-text (Whisper) &rarr; LLM &rarr; text-to-speech. Modern models process audio directly. <strong>GPT-4o</strong> handles voice natively with ~200ms latency &mdash; fast enough for natural conversation. It can detect emotion, handle interruptions, and even sing. The audio is tokenized (like text) using a codec model that compresses waveforms into discrete tokens.</div></div><div class="cc-note n-teal"><strong>Key insight:</strong> Audio tokenization uses neural codecs like EnCodec (Meta) or SoundStream (Google) that compress audio into discrete tokens at ~50 tokens/second. A 10-second audio clip becomes ~500 tokens &mdash; the same format as text. This means the same transformer architecture processes speech, music, and sound effects. The unification of all modalities into tokens is the key architectural insight.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Audio Processing</div><div class="cc-code"><span class="hl-cmt"># Pipeline approach (old):</span>
+<span class="hl-cmt"># Audio → [Whisper] → text → [LLM] → text</span>
+<span class="hl-cmt">#                                → [TTS] → audio</span>
+<span class="hl-cmt"># Latency: ~2-5 seconds (too slow)</span>
+
+<span class="hl-cmt"># Native approach (GPT-4o):</span>
+<span class="hl-cmt"># Audio → [Codec] → audio tokens</span>
+<span class="hl-cmt">#                      ↓</span>
+<span class="hl-cmt"># Text tokens → [Multimodal LLM] → output</span>
+<span class="hl-cmt"># Latency: ~200ms (conversational)</span>
+
+<span class="hl-cmt"># Audio codecs:</span>
+<span class="hl-cmt"># EnCodec (Meta): 50 tokens/sec</span>
+<span class="hl-cmt"># SoundStream (Google): 50 tokens/sec</span>
+<span class="hl-cmt"># Whisper (for ASR): 25 tokens/sec</span>
+
+<span class="hl-cmt"># Voice-native models:</span>
+<span class="hl-cmt"># GPT-4o: text + vision + audio</span>
+<span class="hl-cmt"># Gemini 2.0: all modalities</span>
+<span class="hl-cmt"># Moshi (Kyutai): open-source voice LLM</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="6"><div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">brush</span></div><div><div class="cc-title">Image Generation: From Understanding to Creating</div><div class="cc-sub">Diffusion models, DALL-E, and unified generation</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Landscape</div><div class="cc-text">Image generation uses a different architecture: <strong>diffusion models</strong> (DALL-E 3, Midjourney, Stable Diffusion) that start with noise and gradually denoise into an image, guided by text embeddings. The latest frontier is <strong>unified models</strong> that both understand and generate images in one model. Gemini 2.0 and GPT-4o can generate images natively. This unification means one model can see an image, reason about it, and create a modified version.</div></div><div class="cc-note n-teal"><strong>Key insight:</strong> The trend is toward <strong>any-to-any</strong> models: text&rarr;text, text&rarr;image, image&rarr;text, audio&rarr;text, text&rarr;audio, and every combination. A single model that handles all modalities as input and output. This is the vision behind GPT-4o (&ldquo;o&rdquo; for omni) and Gemini. We&rsquo;re moving from specialized models to unified multimodal systems.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Generation Approaches</div><div class="cc-code"><span class="hl-cmt"># Image generation methods:</span>
+
+<span class="hl-cmt"># 1. Diffusion (DALL-E 3, SD, Midjourney)</span>
+<span class="hl-cmt"># Start with noise → iteratively denoise</span>
+<span class="hl-cmt"># Guided by CLIP text embeddings</span>
+<span class="hl-cmt"># ~50 denoising steps per image</span>
+<span class="hl-cmt"># Separate from the LLM</span>
+
+<span class="hl-cmt"># 2. Autoregressive (Parti, Chameleon)</span>
+<span class="hl-cmt"># Tokenize images into discrete tokens</span>
+<span class="hl-cmt"># Generate image tokens like text tokens</span>
+<span class="hl-cmt"># Same architecture as LLM</span>
+
+<span class="hl-cmt"># 3. Unified (Gemini 2.0, GPT-4o)</span>
+<span class="hl-cmt"># One model: understand + generate</span>
+<span class="hl-cmt"># Input: any modality</span>
+<span class="hl-cmt"># Output: any modality</span>
+<span class="hl-cmt"># The holy grail of multimodal AI</span>
+
+<span class="hl-cmt"># Modality matrix (GPT-4o):</span>
+<span class="hl-cmt"># Text → Text ✓  (chat)</span>
+<span class="hl-cmt"># Image → Text ✓  (describe)</span>
+<span class="hl-cmt"># Text → Image ✓  (generate)</span>
+<span class="hl-cmt"># Audio → Text ✓  (transcribe)</span>
+<span class="hl-cmt"># Text → Audio ✓  (speak)</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="7"><div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">landscape</span></div><div><div class="cc-title">The Multimodal Future</div><div class="cc-sub">Where multimodal AI is heading</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">What&rsquo;s Next</div><div class="cc-text">The trajectory is clear: <strong>everything becomes tokens</strong>. Text, images, audio, video, 3D objects, actions, sensor data &mdash; all tokenized and processed by the same transformer architecture. Future models will seamlessly switch between modalities: see a diagram, explain it verbally, generate an improved version, and write code to implement it. The transformer&rsquo;s modality-agnostic attention mechanism makes this possible.</div></div><div class="cc-note n-green"><strong>Key insight:</strong> The unifying principle across all 12 chapters so far: <strong>everything is a sequence of vectors processed by attention</strong>. Text tokens, image patches, audio frames, video frames &mdash; they all become vectors in the same high-dimensional space. The transformer doesn&rsquo;t care what the vectors represent. This architectural universality is why the same basic design (Ch 4) powers text, vision, audio, code, and multimodal AI.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">The Unifying Principle</div><div class="cc-code"><span class="hl-cmt"># Everything is tokens:</span>
+
+<span class="hl-cmt"># Text:  "Hello" → [9906] → embed → vector</span>
+<span class="hl-cmt"># Image: 16×16 patch → linear → vector</span>
+<span class="hl-cmt"># Audio: 20ms frame → codec → vector</span>
+<span class="hl-cmt"># Video: frame → ViT → vectors</span>
+<span class="hl-cmt"># Code:  "def f" → [755, 282] → vectors</span>
+
+<span class="hl-cmt"># All fed into the same transformer:</span>
+<span class="hl-cmt"># [text, image, audio, text, image, ...]</span>
+<span class="hl-cmt"># Attention connects everything</span>
+<span class="hl-cmt"># The model learns cross-modal relationships</span>
+
+<span class="hl-cmt"># Future capabilities:</span>
+<span class="hl-cmt"># - Real-time video understanding</span>
+<span class="hl-cmt"># - Robotic action generation</span>
+<span class="hl-cmt"># - 3D scene understanding</span>
+<span class="hl-cmt"># - Scientific data (proteins, molecules)</span>
+<span class="hl-cmt"># - Any modality that can be tokenized</span></div></div></div></div></div>
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-making-llms-fast.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: Making LLMs Fast</a>
+    <a class="ch-nav-btn next" href="13-emergent-abilities-limitations.html">Ch 13: Emergent Abilities <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){const TOTAL=7,STEP_MS=5000;const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6]};const NARRATION={1:{text:'<strong>Step 1:</strong> Vision Transformers split images into patches (visual tokens). A 224×224 image → 196 patches. Each patch becomes a vector, just like a text token. The LLM processes visual and text tokens identically.',color:'#7c3aed'},2:{text:'<strong>Step 2:</strong> CLIP maps images and text into the same embedding space. Trained on 400M image-caption pairs. A dog photo and "a dog" text become nearby vectors. The foundation of multimodal LLMs.',color:'#7c3aed'},3:{text:'<strong>Step 3:</strong> Adapter approach: CLIP encoder + projection MLP + LLM. LLaVA showed a 2-layer MLP is enough. Train in hours, not months. Used by LLaVA, Llama 3.2 Vision, likely GPT-4V.',color:'#2563eb'},4:{text:'<strong>Step 4:</strong> Native multimodal (Gemini): trained from scratch on interleaved text, images, audio, video. Deeper integration than adapter approach. Gemini 1.5 Pro: 1M token context across modalities.',color:'#2563eb'},5:{text:'<strong>Step 5:</strong> Audio: neural codecs (EnCodec) compress audio to ~50 tokens/sec. GPT-4o processes voice natively at 200ms latency. Same transformer processes speech, music, and sound effects.',color:'#0d9488'},6:{text:'<strong>Step 6:</strong> Image generation: diffusion (DALL-E 3), autoregressive (Parti), or unified (Gemini 2.0). The frontier: one model that understands AND generates all modalities. Any-to-any.',color:'#0d9488'},7:{text:'<strong>Step 7:</strong> The unifying principle: everything is tokens. Text, images, audio, video — all become vectors processed by attention. The transformer is modality-agnostic. That\'s its superpower.',color:'#16a34a'}};let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset()})();
+</script>
+</body>
+</html>

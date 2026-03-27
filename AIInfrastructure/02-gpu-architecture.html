@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Inside a GPU — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Inside a GPU: Architecture That Powers AI</h2><span class="tb-sub">Streaming Multiprocessors, CUDA cores, Tensor Cores, and the memory hierarchy</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Foundation</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">view_module</span></div><span class="pipe-label">SMs</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_4x4</span></div><span class="pipe-label">CUDA Cores</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">apps</span></div><span class="pipe-label">Tensor Cores</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">group_work</span></div><span class="pipe-label">Warps</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Memory</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Precision</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">route</span></div><span class="pipe-label">Data Flow</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">timeline</span></div><span class="pipe-label">Evolution</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">view_module</span></div><div><div class="cc-title">Streaming Multiprocessors: The Building Blocks</div><div class="cc-sub">A GPU is a city of identical factories, each one an SM</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Factory Floor Analogy</div><div class="cc-text">Think of a GPU as a <strong>massive industrial park</strong> with dozens of identical factories. Each factory is a <strong>Streaming Multiprocessor (SM)</strong> &mdash; a self-contained processing unit with its own workers, tools, and local storage.<br><br>The NVIDIA A100 has <strong>108 SMs</strong>. The H100 has <strong>132 SMs</strong>. The B200 has <strong>160 SMs</strong>. Each SM operates independently, running its own set of threads on its own data.<br><br>Inside each SM, you&rsquo;ll find:<br>&bull; <strong>CUDA cores</strong> (the general workers)<br>&bull; <strong>Tensor Cores</strong> (the specialized matrix machines)<br>&bull; <strong>Warp schedulers</strong> (the foremen who assign work)<br>&bull; <strong>Register file + shared memory</strong> (the local stockroom)<br><br>The GPU&rsquo;s job is to keep all these factories running at full capacity simultaneously.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">SM Count Across Generations</div><div class="cc-code"><span class="hl-key">Architecture    GPU        SMs</span>
+
+Ampere (2020)   A100       <span class="hl-num">108</span>
+Hopper (2022)   H100       <span class="hl-num">132</span>
+Hopper (2023)   H200       <span class="hl-num">132</span>
+Blackwell(2024) B200       <span class="hl-num">160</span>
+
+<span class="hl-key">Inside each Hopper SM:</span>
+  CUDA Cores:    <span class="hl-num">128</span>
+  Tensor Cores:  <span class="hl-num">4</span>
+  Warp Schedulers: <span class="hl-num">4</span>
+  Register File: <span class="hl-num">256</span> KB
+  Shared Memory: <span class="hl-num">228</span> KB (configurable)
+
+<span class="hl-key">H100 total:</span>
+  132 SMs × 128 = <span class="hl-num">16,896</span> CUDA cores
+  132 SMs × 4   = <span class="hl-num">528</span> Tensor Cores</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The SM is the fundamental unit of GPU compute. When NVIDIA says &ldquo;more SMs,&rdquo; they mean more parallel factories. When they say &ldquo;bigger SMs,&rdquo; they mean more workers per factory. Both increase total throughput, but in different ways.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">grid_4x4</span></div><div><div class="cc-title">CUDA Cores: The General Workers</div><div class="cc-sub">Simple, fast, and there are thousands of them</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Screwdriver Analogy</div><div class="cc-text">A CUDA core is like a worker with a <strong>single screwdriver</strong>. They can do exactly one thing per clock cycle: take two numbers, multiply them (or add them), and produce a result.<br><br>No branch prediction. No speculative execution. No out-of-order logic. Just: <strong>multiply, add, done. Next.</strong><br><br>This simplicity is the point. Because each core is so simple, you can fit <strong>thousands</strong> of them on a single chip. The H100 has 16,896 CUDA cores, each running at ~1.98 GHz.<br><br>Each CUDA core handles either a <strong>floating-point</strong> (FP32, FP64) or <strong>integer</strong> (INT32) operation. Modern architectures can execute FP32 and INT32 operations simultaneously on separate datapaths within the same SM, effectively doubling throughput for mixed workloads.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CUDA Core Math</div><div class="cc-code"><span class="hl-key">H100 CUDA Core throughput:</span>
+
+Cores:          <span class="hl-num">16,896</span>
+Clock:          <span class="hl-num">1.98</span> GHz (boost)
+Ops per core:   <span class="hl-num">2</span> (FMA = multiply + add)
+
+FP32 TFLOPS:
+  16,896 × 1.98 GHz × 2
+  = <span class="hl-num">66.9</span> TFLOPS
+
+<span class="hl-key">For comparison:</span>
+  A100: <span class="hl-num">19.5</span> TFLOPS FP32
+  H100: <span class="hl-num">66.9</span> TFLOPS FP32
+  B200: <span class="hl-num">~90</span>  TFLOPS FP32
+
+<span class="hl-cmt">FMA = Fused Multiply-Add
+One instruction does: a × b + c
+This is exactly what matrix
+multiplication needs.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> CUDA cores handle general-purpose parallel compute. They&rsquo;re the workhorses for operations like element-wise addition, activation functions (ReLU, GELU), and normalization layers. But for the heavy matrix multiplications that dominate AI, Tensor Cores are the real stars.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">Tensor Cores: The Matrix Machines</div><div class="cc-sub">One instruction does what takes CUDA cores hundreds of cycles</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Power Drill Analogy</div><div class="cc-text">If a CUDA core is a worker with a screwdriver (one screw at a time), a Tensor Core is a worker with a <strong>power drill that drives 64 screws simultaneously</strong>.<br><br>A Tensor Core performs an entire <strong>4&times;4 matrix multiply-and-accumulate</strong> in a single instruction. That&rsquo;s 64 multiply-add operations at once &mdash; roughly <strong>8x the throughput</strong> of CUDA cores for matrix work.<br><br>Introduced in NVIDIA&rsquo;s Volta architecture (2017), Tensor Cores have evolved dramatically:<br><br>&bull; <strong>Volta (2017):</strong> FP16 input, FP32 accumulate<br>&bull; <strong>Ampere (2020):</strong> Added BF16, TF32, INT8, INT4<br>&bull; <strong>Hopper (2022):</strong> Added FP8, larger matrix sizes<br>&bull; <strong>Blackwell (2024):</strong> Added FP4, 2nd-gen Transformer Engine</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Tensor Core Performance</div><div class="cc-code"><span class="hl-key">H100 Tensor Core TFLOPS:</span>
+
+FP64 Tensor:    <span class="hl-num">67</span>   TFLOPS
+FP32 (TF32):    <span class="hl-num">495</span>  TFLOPS
+FP16 / BF16:    <span class="hl-num">990</span>  TFLOPS
+FP8:            <span class="hl-num">1,979</span> TFLOPS
+
+<span class="hl-key">B200 Tensor Core TFLOPS:</span>
+
+FP64 Tensor:    <span class="hl-num">90</span>    TFLOPS
+FP32 (TF32):    <span class="hl-num">~1,100</span> TFLOPS
+FP16 / BF16:    <span class="hl-num">~2,250</span> TFLOPS
+FP8:            <span class="hl-num">~4,500</span> TFLOPS
+FP4:            <span class="hl-num">~9,000</span> TFLOPS
+
+<span class="hl-cmt">Notice the pattern: halving
+precision roughly doubles TFLOPS.
+FP4 on B200 is 100x the FP32
+CUDA core performance.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Tensor Cores are why NVIDIA dominates AI. They&rsquo;re purpose-built silicon for the exact operation neural networks need most: matrix multiply-accumulate. Every generation makes them faster and supports more precision formats. The jump from FP16 to FP8 to FP4 doubles throughput each time with minimal quality loss for inference.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">group_work</span></div><div><div class="cc-title">Warps and Thread Scheduling</div><div class="cc-sub">How the GPU keeps thousands of cores busy without wasting cycles</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Assembly Line Analogy</div><div class="cc-text">Imagine a factory where workers operate in <strong>teams of 32</strong>. Every team member does the exact same task, but on different pieces of material. If one team member needs to wait for a delivery (memory fetch), the foreman instantly switches to a different team that&rsquo;s ready to work. No idle time.<br><br>This is how GPU <strong>warps</strong> work. A warp is a group of <strong>32 threads</strong> that execute the same instruction simultaneously (SIMT model). Each SM has <strong>4 warp schedulers</strong> that can issue instructions to different warps every cycle.<br><br>The magic trick: when a warp stalls waiting for memory (which takes 200&ndash;400 cycles), the scheduler instantly switches to another ready warp. With enough warps in flight, the GPU <strong>hides memory latency entirely</strong> &mdash; there&rsquo;s always a ready warp to execute.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Warp Scheduling in Numbers</div><div class="cc-code"><span class="hl-key">H100 SM warp capacity:</span>
+
+Warp schedulers per SM:  <span class="hl-num">4</span>
+Max warps per SM:        <span class="hl-num">64</span>
+Threads per warp:        <span class="hl-num">32</span>
+Max threads per SM:      <span class="hl-num">2,048</span>
+
+<span class="hl-key">Latency hiding example:</span>
+
+Memory fetch latency:    ~<span class="hl-num">300</span> cycles
+Instructions per warp
+  before stall:          ~<span class="hl-num">20</span>
+Warps needed to hide
+  latency:               300/20 = <span class="hl-num">15</span>
+
+With 64 warps available,
+the SM has <span class="hl-num">4x</span> the warps needed
+to completely hide memory latency.
+
+<span class="hl-cmt">This is zero-overhead context
+switching — no saving/restoring
+state. All warps' registers
+live on-chip simultaneously.</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> CPUs hide latency with complex hardware (branch prediction, speculative execution, deep caches). GPUs hide latency with <strong>massive parallelism</strong> &mdash; just switch to another group of threads. This is simpler, cheaper in silicon, and scales better. It&rsquo;s why GPUs can dedicate more transistors to compute instead of control logic.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">The Memory Hierarchy</div><div class="cc-sub">Registers &rarr; Shared Memory &rarr; L2 Cache &rarr; HBM &mdash; each level trades speed for size</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Storage Analogy</div><div class="cc-text">Think of GPU memory like a series of storage locations, each farther from the worker but larger:<br><br><strong>Registers (your pockets):</strong> Fastest access, ~0 cycles. Each thread has its own registers. The H100 has 256 KB of register file per SM &mdash; that&rsquo;s 33 MB total across all SMs.<br><br><strong>Shared Memory (your desk):</strong> ~20 cycles. Shared among all threads in a block. 228 KB per SM on H100. Used for data that multiple threads need to access.<br><br><strong>L2 Cache (the filing cabinet):</strong> ~200 cycles. 50 MB on H100. Shared across all SMs. Caches frequently accessed data from HBM.<br><br><strong>HBM (the warehouse):</strong> ~300&ndash;400 cycles. 80 GB on H100. This is where model weights and activations live. High capacity but relatively slow to access.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Hierarchy Numbers</div><div class="cc-code"><span class="hl-key">H100 Memory Hierarchy:</span>
+
+<span class="hl-str">Registers (per SM):</span>
+  Size:     <span class="hl-num">256</span> KB
+  Latency:  ~<span class="hl-num">0</span> cycles
+  BW:       ~<span class="hl-num">20</span> TB/s (aggregate)
+
+<span class="hl-str">Shared Memory (per SM):</span>
+  Size:     <span class="hl-num">228</span> KB
+  Latency:  ~<span class="hl-num">20</span> cycles
+  BW:       ~<span class="hl-num">15</span> TB/s (aggregate)
+
+<span class="hl-str">L2 Cache (shared):</span>
+  Size:     <span class="hl-num">50</span> MB
+  Latency:  ~<span class="hl-num">200</span> cycles
+  BW:       ~<span class="hl-num">12</span> TB/s
+
+<span class="hl-str">HBM3 (global):</span>
+  Size:     <span class="hl-num">80</span> GB
+  Latency:  ~<span class="hl-num">300-400</span> cycles
+  BW:       <span class="hl-num">3,350</span> GB/s
+
+<span class="hl-cmt">80 GB sounds like a lot, but
+a 70B FP16 model needs 140 GB.
+That's why multi-GPU is needed.</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The art of GPU programming is keeping data as close to the cores as possible. A well-optimized kernel loads data from HBM once into shared memory, then reuses it many times. This is why libraries like cuBLAS and FlashAttention are so important &mdash; they maximize data reuse at every level of the hierarchy.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Precision Formats: Trading Accuracy for Speed</div><div class="cc-sub">FP32, FP16, BF16, TF32, FP8, INT8, FP4 &mdash; each halving doubles throughput</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Resolution Analogy</div><div class="cc-text">Precision formats are like <strong>photo resolution</strong>. A 4K photo (FP32) captures every detail but takes lots of storage and bandwidth. A 1080p photo (FP16) looks almost identical to the human eye but uses half the space. A thumbnail (FP8) is fine for previewing but you wouldn&rsquo;t print it.<br><br><strong>FP32 (32 bits):</strong> Full precision. 1 sign + 8 exponent + 23 mantissa bits. The gold standard, but slow and memory-hungry.<br><br><strong>BF16 (16 bits):</strong> Google&rsquo;s brain float. Same exponent range as FP32 (so same number range) but fewer mantissa bits. Ideal for training &mdash; maintains dynamic range while halving memory.<br><br><strong>FP16 (16 bits):</strong> IEEE half-precision. Smaller range than BF16 but more mantissa precision. Good for inference.<br><br><strong>FP8 (8 bits):</strong> Introduced with Hopper. Two variants: E4M3 (more precision) and E5M2 (more range). Doubles throughput again with minimal quality loss for inference.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Precision Format Comparison</div><div class="cc-code"><span class="hl-key">Format   Bits  H100 TFLOPS  Use Case</span>
+
+FP64     64    <span class="hl-num">34</span>          Scientific
+FP32     32    <span class="hl-num">67</span>          Legacy training
+TF32     19    <span class="hl-num">495</span>         Training (default)
+BF16     16    <span class="hl-num">990</span>         Training
+FP16     16    <span class="hl-num">990</span>         Inference
+FP8      8     <span class="hl-num">1,979</span>       Inference
+INT8     8     <span class="hl-num">1,979</span>       Quantized inference
+
+<span class="hl-key">Memory per parameter:</span>
+  FP32:  <span class="hl-num">4</span> bytes → 70B = <span class="hl-num">280</span> GB
+  FP16:  <span class="hl-num">2</span> bytes → 70B = <span class="hl-num">140</span> GB
+  FP8:   <span class="hl-num">1</span> byte  → 70B = <span class="hl-num">70</span> GB
+  INT4:  <span class="hl-num">0.5</span> byte → 70B = <span class="hl-num">35</span> GB
+
+<span class="hl-cmt">Lower precision = less memory +
+more TFLOPS + faster inference.
+The trick is doing it without
+losing too much quality.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The shift from FP32 to lower precision formats is one of the most impactful trends in AI infrastructure. Training in BF16 (instead of FP32) halves memory usage and doubles throughput with negligible quality loss. Inference in FP8 or INT4 makes models 4&ndash;8x more efficient. This is why quantization (covered in the Small Models course) is so powerful.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">How a Matrix Multiply Flows Through the GPU</div><div class="cc-sub">From HBM to Tensor Core and back &mdash; the journey of one operation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Full Data Flow</div><div class="cc-text">Let&rsquo;s trace a single matrix multiplication (the core of every attention layer) through the GPU:<br><br><strong>1. Load from HBM:</strong> Weight matrix tiles and input activations are loaded from HBM3 into L2 cache, then into shared memory. This is the slowest step (~300 cycles).<br><br><strong>2. Tile into shared memory:</strong> The matrices are split into small tiles (e.g., 128&times;128) that fit in shared memory. Each SM works on one tile.<br><br><strong>3. Feed Tensor Cores:</strong> Data moves from shared memory into registers, then into Tensor Cores. Each Tensor Core computes a 4&times;4 (or larger) matrix multiply-accumulate.<br><br><strong>4. Accumulate results:</strong> Partial results are accumulated in registers (FP32 precision for accuracy, even if inputs are FP16).<br><br><strong>5. Write back:</strong> Final results go from registers &rarr; shared memory &rarr; L2 &rarr; HBM for the next layer to consume.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Tiling Strategy</div><div class="cc-code"><span class="hl-key">Matrix multiply: A[M×K] × B[K×N]</span>
+
+<span class="hl-str">Step 1: Tile the matrices</span>
+  Split A into M/128 row tiles
+  Split B into N/128 col tiles
+  Each SM gets one output tile
+
+<span class="hl-str">Step 2: Load tiles to shared mem</span>
+  Load A_tile[128×K] from HBM
+  Load B_tile[K×128] from HBM
+  ~300 cycles per load
+
+<span class="hl-str">Step 3: Compute in Tensor Cores</span>
+  Sub-tile into 4×4 blocks
+  Tensor Core: C += A_sub × B_sub
+  ~1 cycle per 4×4 multiply
+
+<span class="hl-str">Step 4: Reuse data</span>
+  Each loaded tile is reused
+  128 times (once per column/row)
+  This is the key to efficiency
+
+<span class="hl-cmt">The ratio of compute to memory
+access (arithmetic intensity)
+determines whether you're
+compute-bound or memory-bound.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The reason libraries like cuBLAS and FlashAttention are so critical is that they optimize this tiling strategy. FlashAttention, for example, fuses the entire attention computation into a single kernel that keeps data in shared memory, avoiding expensive HBM round-trips. This can speed up attention by 2&ndash;4x.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">GPU Architecture Evolution: Volta to Blackwell</div><div class="cc-sub">Each generation brings more SMs, faster Tensor Cores, and more memory bandwidth</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Generational Leap</div><div class="cc-text">NVIDIA releases a new GPU architecture roughly every two years. Each generation brings major improvements:<br><br><strong>Volta (2017, V100):</strong> Introduced Tensor Cores. The GPU that made modern deep learning training practical. 125 TFLOPS FP16.<br><br><strong>Ampere (2020, A100):</strong> Added BF16 and TF32 support. Structural sparsity for 2x inference boost. 312 TFLOPS FP16. The workhorse of the GPT-3 era.<br><br><strong>Hopper (2022, H100):</strong> Added FP8 and the Transformer Engine that automatically manages precision. 990 TFLOPS FP16. The GPU that trained GPT-4 and Llama 3.<br><br><strong>Blackwell (2024, B200):</strong> Dual-die chiplet design with 208 billion transistors. Added FP4. 2nd-gen Transformer Engine. ~2,250 TFLOPS FP16. The current flagship.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Generation Comparison</div><div class="cc-code"><span class="hl-key">         V100   A100   H100   B200</span>
+Year:    2017   2020   2022   2024
+SMs:     <span class="hl-num">80</span>     <span class="hl-num">108</span>    <span class="hl-num">132</span>    <span class="hl-num">160</span>
+CUDA:    <span class="hl-num">5120</span>   <span class="hl-num">6912</span>   <span class="hl-num">16896</span>  <span class="hl-num">~20K</span>
+Tensor:  <span class="hl-num">640</span>    <span class="hl-num">432</span>    <span class="hl-num">528</span>    <span class="hl-num">~640</span>
+HBM:     <span class="hl-num">16</span>GB   <span class="hl-num">80</span>GB   <span class="hl-num">80</span>GB   <span class="hl-num">192</span>GB
+BW:      <span class="hl-num">900</span>    <span class="hl-num">2039</span>   <span class="hl-num">3350</span>   <span class="hl-num">8000</span>
+FP16 TF: <span class="hl-num">125</span>    <span class="hl-num">312</span>    <span class="hl-num">990</span>    <span class="hl-num">~2250</span>
+TDP:     <span class="hl-num">300W</span>   <span class="hl-num">400W</span>   <span class="hl-num">700W</span>   <span class="hl-num">1000W</span>
+
+<span class="hl-key">7-year improvement (V100→B200):</span>
+  FP16 TFLOPS: <span class="hl-num">18x</span>
+  Memory:      <span class="hl-num">12x</span>
+  Bandwidth:   <span class="hl-num">9x</span>
+  Power:       <span class="hl-num">3.3x</span>
+
+<span class="hl-cmt">Performance grows much faster
+than power — efficiency improves
+~5x per generation.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Each GPU generation roughly doubles AI performance while power grows more slowly. This means each generation is significantly more energy-efficient. But the absolute power numbers (1,000W for B200) are driving the entire data center industry toward liquid cooling &mdash; a topic we&rsquo;ll cover in Chapter 11.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-why-cpus-arent-enough.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: Why CPUs Aren&rsquo;t Enough</a>
+    <a class="ch-nav-btn next" href="03-accelerator-landscape.html">Ch 3: The Accelerator Zoo <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> A GPU is built from Streaming Multiprocessors (SMs) — self-contained factories. H100 has 132 SMs, each with 128 CUDA cores and 4 Tensor Cores.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> CUDA cores are simple arithmetic units — one multiply-add per cycle. 16,896 of them running in parallel gives the H100 67 TFLOPS at FP32.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Tensor Cores are the game-changer — purpose-built for matrix multiply. A single Tensor Core does a 4×4 matrix multiply in one instruction. H100: 990 TFLOPS FP16.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Warps (groups of 32 threads) hide memory latency through instant context switching. With 64 warps per SM, the GPU never idles waiting for data.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> GPU memory hierarchy: Registers (~0 cycles) → Shared Memory (~20) → L2 Cache (~200) → HBM (~300-400). Keeping data close to cores is everything.',color:'#dc2626'},
+    6:{text:'<strong>Step 6:</strong> Lower precision = more speed. FP32→BF16 doubles throughput. BF16→FP8 doubles again. B200 FP4: ~9,000 TFLOPS — 134x its own FP32 CUDA core rate.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> Matrix multiply flows: HBM → L2 → Shared Memory → Tensor Cores → back. Tiling and data reuse (FlashAttention) are key to hitting peak performance.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> V100 to B200 in 7 years: 18x FP16 TFLOPS, 12x memory, 9x bandwidth, but only 3.3x power. Each generation is dramatically more efficient.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

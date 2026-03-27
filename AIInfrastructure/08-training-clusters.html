@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Training Clusters — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Training Clusters: Anatomy of an AI Factory</h2><span class="tb-sub">DGX SuperPOD, GB200 NVL72, failure recovery, checkpointing, and real costs</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">factory</span></div><span class="pipe-label">AI Factory</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">dns</span></div><span class="pipe-label">DGX H100</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">developer_board</span></div><span class="pipe-label">GB200 NVL72</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Failures</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">save</span></div><span class="pipe-label">Checkpoints</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">schedule</span></div><span class="pipe-label">Scheduling</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">payments</span></div><span class="pipe-label">Cost Math</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">trending_up</span></div><span class="pipe-label">Scaling</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">factory</span></div><div><div class="cc-title">The AI Factory Concept</div><div class="cc-sub">A training cluster is a factory that converts electricity and data into intelligence</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is an AI Factory?</div><div class="cc-text">NVIDIA CEO Jensen Huang coined the term &ldquo;AI Factory&rdquo; to describe modern training clusters. The analogy is apt:<br><br><strong>Raw materials:</strong> Training data (trillions of tokens), electricity (megawatts), cooling (water/air)<br><br><strong>Machinery:</strong> Thousands of GPUs, networking fabric, storage systems<br><br><strong>Product:</strong> Trained model weights &mdash; the &ldquo;intelligence&rdquo; that powers AI applications<br><br><strong>Quality control:</strong> Evaluation benchmarks, loss curves, human evaluation<br><br>Just like a physical factory, an AI factory requires careful engineering of every component. The GPUs are the machines, the network is the conveyor belt, the storage is the warehouse, and the power/cooling systems are the utilities. A bottleneck in any one component slows the entire factory.<br><br>The largest AI factories today cost <strong>$1&ndash;10 billion</strong> to build and consume <strong>50&ndash;500 MW</strong> of power &mdash; equivalent to a small city.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Major AI Factories (2024&ndash;2026)</div><div class="cc-code"><span class="hl-key">Meta (Llama 3 cluster):</span>
+  GPUs:    <span class="hl-num">16,384</span> H100
+  Network: InfiniBand NDR
+  Power:   ~<span class="hl-num">100</span> MW
+  Cost:    ~$<span class="hl-num">2-3B</span> (estimated)
+
+<span class="hl-key">xAI (Colossus, Memphis):</span>
+  GPUs:    <span class="hl-num">100,000</span> H100
+  Network: InfiniBand
+  Power:   ~<span class="hl-num">150</span> MW
+  Built in: <span class="hl-num">122</span> days
+
+<span class="hl-key">Microsoft (Azure AI):</span>
+  GPUs:    <span class="hl-num">~100K+</span> H100/A100
+  Network: InfiniBand + Ethernet
+  Multiple data centers
+
+<span class="hl-key">AWS (Project Rainier):</span>
+  Chips:   <span class="hl-num">~500K</span> Trainium2
+  Facility: <span class="hl-num">1,200</span> acres
+  For Anthropic training
+
+<span class="hl-key">Google (TPU pods):</span>
+  Chips:   <span class="hl-num">100K+</span> TPU v5/v6
+  Network: Jupiter (13 Pb/s)
+  For Gemini training</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The AI industry is in an unprecedented infrastructure buildout. Over $600 billion in capex is planned for AI infrastructure in 2025&ndash;2026. The companies building the largest AI factories today will have a structural advantage in training the next generation of models &mdash; because training compute is the primary bottleneck.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">dns</span></div><div><div class="cc-title">DGX H100: The Building Block</div><div class="cc-sub">8 GPUs, NVSwitch, InfiniBand &mdash; the standard unit of AI compute</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Inside a DGX H100</div><div class="cc-text">The NVIDIA DGX H100 is the standard building block for AI clusters. Each system contains:<br><br><strong>8&times; H100 SXM GPUs:</strong> 640 GB total HBM3. Connected by NVSwitch for 900 GB/s per GPU all-to-all bandwidth.<br><br><strong>2&times; Intel Xeon CPUs:</strong> For orchestration, data preprocessing, and system management.<br><br><strong>8&times; ConnectX-7 NICs:</strong> 400G InfiniBand per NIC. One NIC per GPU for rail-optimized networking. 3.2 Tb/s total network bandwidth.<br><br><strong>2 TB system RAM:</strong> For data staging and preprocessing.<br><br><strong>8&times; NVMe SSDs:</strong> 30 TB total local storage for checkpoints and data caching.<br><br><strong>Power:</strong> ~10.2 kW per system. Air-cooled.<br><br><strong>Price:</strong> ~$300,000&ndash;$400,000 per system ($37,500&ndash;$50,000 per GPU).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">DGX H100 Specs</div><div class="cc-code"><span class="hl-key">DGX H100 System:</span>
+
+GPUs:         <span class="hl-num">8</span>× H100 SXM 80GB
+GPU Memory:   <span class="hl-num">640</span> GB HBM3 total
+NVLink:       <span class="hl-num">900</span> GB/s per GPU
+NVSwitch:     <span class="hl-num">4</span> chips (full mesh)
+FP8 Total:    <span class="hl-num">15.8</span> PFLOPS
+
+CPUs:         2× Intel Xeon 8480+
+System RAM:   <span class="hl-num">2</span> TB DDR5
+Storage:      <span class="hl-num">30</span> TB NVMe SSD
+Network:      8× 400G InfiniBand
+Power:        <span class="hl-num">10.2</span> kW
+Cooling:      Air
+Weight:       <span class="hl-num">~120</span> kg
+Price:        ~$<span class="hl-num">300-400K</span>
+
+<span class="hl-key">Scalable Unit (32 DGX):</span>
+  GPUs:       <span class="hl-num">256</span>
+  Memory:     <span class="hl-num">20</span> TB HBM3
+  FP8:        <span class="hl-num">506</span> PFLOPS
+  Power:      <span class="hl-num">~330</span> kW
+  Price:      ~$<span class="hl-num">10-13M</span>
+
+<span class="hl-cmt">A single DGX H100 has more
+compute than the world's fastest
+supercomputer from 2010.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The DGX H100 is designed as a &ldquo;unit of compute&rdquo; &mdash; everything inside is balanced. The NVLink bandwidth matches GPU compute needs, the InfiniBand bandwidth matches cross-node communication needs, and the local storage handles checkpoint I/O. This balance is what makes it effective as a building block for larger clusters.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">developer_board</span></div><div><div class="cc-title">GB200 NVL72: The Next Generation</div><div class="cc-sub">72 GPUs in one rack with 130 TB/s NVLink &mdash; a fundamentally different architecture</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Rack-Scale Computing</div><div class="cc-text">The GB200 NVL72 represents a paradigm shift from server-scale to <strong>rack-scale</strong> computing:<br><br><strong>72 Blackwell GPUs + 36 Grace CPUs</strong> in a single liquid-cooled rack. All 72 GPUs are connected by 5th-gen NVLink through 9 NVSwitch trays, creating one massive NVLink domain.<br><br><strong>Key difference from DGX H100:</strong> In DGX H100, the NVLink domain is 8 GPUs (one server). Cross-server communication uses InfiniBand. In GB200 NVL72, the NVLink domain is <strong>72 GPUs (one rack)</strong>. This means tensor parallelism can span the entire rack at NVLink speeds.<br><br><strong>Unified memory:</strong> 72 &times; 192 GB = 13.8 TB of GPU memory accessible at NVLink bandwidth. A 405B model in FP16 (810 GB) fits entirely within one rack&rsquo;s NVLink domain &mdash; no InfiniBand needed for model weights.<br><br><strong>Performance:</strong> 30x faster real-time inference than H100 for LLMs. 4x faster training per GPU.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">GB200 NVL72 Specs</div><div class="cc-code"><span class="hl-key">GB200 NVL72 Rack:</span>
+
+GPUs:         <span class="hl-num">72</span>× B200
+CPUs:         <span class="hl-num">36</span>× Grace (ARM)
+GPU Memory:   <span class="hl-num">13.8</span> TB HBM3e
+NVLink BW:    <span class="hl-num">130</span> TB/s total
+FP4 Total:    <span class="hl-num">~720</span> PFLOPS
+Cooling:      Liquid (required)
+Power:        <span class="hl-num">~120</span> kW per rack
+Weight:       <span class="hl-num">~1,400</span> kg
+
+<span class="hl-key">DGX H100 vs GB200 NVL72:</span>
+
+              DGX H100   NVL72
+GPUs/unit:    <span class="hl-num">8</span>          <span class="hl-num">72</span>
+NVLink domain:<span class="hl-num">8</span>          <span class="hl-num">72</span>
+GPU memory:   <span class="hl-num">640</span> GB     <span class="hl-num">13.8</span> TB
+NVLink BW:    <span class="hl-num">7.2</span> TB/s   <span class="hl-num">130</span> TB/s
+Cooling:      Air        Liquid
+Power:        <span class="hl-num">10.2</span> kW    <span class="hl-num">~120</span> kW
+
+<span class="hl-cmt">The NVLink domain going from
+8 to 72 GPUs is the biggest
+architectural change. It
+eliminates the InfiniBand
+bottleneck for most models.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The GB200 NVL72 changes the economics of large model training. By putting 72 GPUs in one NVLink domain, it eliminates the InfiniBand bottleneck for models up to ~7 trillion parameters. This means simpler parallelism strategies, fewer networking costs, and higher GPU utilization. The trade-off: liquid cooling is mandatory, and the rack costs $2&ndash;3 million.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Failure Is the Norm, Not the Exception</div><div class="cc-sub">Meta&rsquo;s Llama 3: 419 failures in 54 days &mdash; one every 3 hours</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Reality of Large-Scale Training</div><div class="cc-text">When you run 16,384 GPUs for 54 days straight, things break. Constantly. Meta&rsquo;s published data on Llama 3 405B training reveals the brutal reality:<br><br><strong>419 unexpected interruptions</strong> over 54 days. That&rsquo;s <strong>one failure every 3 hours</strong>.<br><br><strong>Failure breakdown:</strong><br>&bull; <strong>GPU failures:</strong> 148 events (30.1%) &mdash; the #1 cause<br>&bull; <strong>HBM3 memory:</strong> 72 events (17.2%) &mdash; memory dies fail<br>&bull; <strong>GPU SRAM/processor:</strong> 36 events (8.6%)<br>&bull; <strong>Network switches/cables:</strong> 35 events (8.4%)<br>&bull; <strong>Software/other:</strong> remaining events<br>&bull; <strong>CPU failures:</strong> only 2 events (CPUs are reliable)<br><br>Despite this, Meta achieved <strong>&gt;90% effective training time</strong> through automated recovery. Only 3 events required manual intervention in 54 days.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Failure Statistics</div><div class="cc-code"><span class="hl-key">Llama 3 405B training failures:</span>
+
+Duration:        <span class="hl-num">54</span> days
+GPUs:            <span class="hl-num">16,384</span> H100
+Total failures:  <span class="hl-num">419</span>
+Failures/day:    <span class="hl-num">7.76</span>
+MTBF (cluster):  <span class="hl-num">~3</span> hours
+
+<span class="hl-key">Failure causes:</span>
+  GPU hardware:   <span class="hl-num">30.1%</span> (148)
+  HBM3 memory:    <span class="hl-num">17.2%</span> (72)
+  GPU SRAM:       <span class="hl-num">5.5%</span> (23)
+  GPU SXM:        <span class="hl-num">3.1%</span> (13)
+  Network:        <span class="hl-num">8.4%</span> (35)
+  Host/software:  <span class="hl-num">17.8%</span> (74)
+  CPU:            <span class="hl-num">0.5%</span> (2)
+  Other:          <span class="hl-num">17.4%</span> (72)
+
+<span class="hl-key">Recovery:</span>
+  Automated:      <span class="hl-num">416</span> events
+  Manual:         <span class="hl-num">3</span> events
+  Effective time: <span class="hl-num">&gt;90%</span>
+
+<span class="hl-cmt">Environmental note: daily temp
+changes caused 1-2% throughput
+fluctuation across the cluster.</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> At 16K GPU scale, hardware failure is a statistical certainty, not a rare event. The key to successful training isn&rsquo;t preventing failures (impossible) but recovering from them quickly. Meta&rsquo;s automated recovery system handled 99.3% of failures without human intervention. Building this resilience infrastructure is as important as buying the GPUs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">save</span></div><div><div class="cc-title">Checkpoint Strategies: Your Insurance Policy</div><div class="cc-sub">Saving model state frequently enough to minimize lost work on failure</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Save Game Analogy</div><div class="cc-text">Checkpointing is like <strong>saving your game</strong>. If the game crashes, you lose everything since your last save. Save too rarely and you lose hours of progress. Save too often and you spend all your time saving instead of playing.<br><br><strong>What gets saved:</strong> Model weights, optimizer states, learning rate schedule, data loader position, random number generator states. For a 70B model, a full checkpoint is ~1.5 TB.<br><br><strong>Multi-tier checkpointing:</strong><br>&bull; <strong>Tier 1 &mdash; Local NVMe (fast):</strong> Save to local SSDs every 5&ndash;10 minutes. Fast write (~10 GB/s), but lost if the server fails.<br>&bull; <strong>Tier 2 &mdash; Parallel filesystem (medium):</strong> Save to Lustre/GPFS every 30&ndash;60 minutes. Survives server failure but slower write.<br>&bull; <strong>Tier 3 &mdash; Cloud/tape (slow):</strong> Save to S3/GCS every few hours. Survives data center failure. Slowest but most durable.<br><br>On failure: try Tier 1 first (fastest recovery). If corrupted, fall back to Tier 2, then Tier 3.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Checkpoint Math</div><div class="cc-code"><span class="hl-key">70B model checkpoint size:</span>
+  Weights (FP16):    <span class="hl-num">140</span> GB
+  Optimizer (FP32):  <span class="hl-num">560</span> GB
+  Other state:       <span class="hl-num">~50</span> GB
+  Total:             <span class="hl-num">~750</span> GB per replica
+
+<span class="hl-key">405B model checkpoint:</span>
+  Total:             <span class="hl-num">~4.5</span> TB per replica
+
+<span class="hl-key">Checkpoint frequency trade-off:</span>
+
+Every <span class="hl-num">5</span> min (aggressive):
+  Lost work on failure: <span class="hl-num">5</span> min max
+  Write overhead: <span class="hl-num">~8-15%</span> of time
+  Storage: <span class="hl-num">~100</span> TB/day
+
+Every <span class="hl-num">30</span> min (balanced):
+  Lost work on failure: <span class="hl-num">30</span> min max
+  Write overhead: <span class="hl-num">~2-4%</span> of time
+  Storage: <span class="hl-num">~20</span> TB/day
+
+Every <span class="hl-num">2</span> hours (conservative):
+  Lost work on failure: <span class="hl-num">2</span> hrs max
+  Write overhead: <span class="hl-num">&lt;1%</span> of time
+  Storage: <span class="hl-num">~5</span> TB/day
+
+<span class="hl-cmt">With failures every 3 hours,
+30-minute checkpoints lose
+~15 min of work on average.
+At $50K/hr for 16K GPUs,
+that's $12,500 per failure.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Checkpoint frequency is an economic optimization. More frequent checkpoints cost storage and write overhead but save compute on recovery. With failures every 3 hours and GPU costs of $50K/hr, the optimal checkpoint interval is typically 10&ndash;30 minutes. Async checkpointing (writing while training continues) can reduce overhead to near zero.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">schedule</span></div><div><div class="cc-title">Job Scheduling and Resource Management</div><div class="cc-sub">Keeping thousands of GPUs busy 24/7 is an operations challenge</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scheduling Challenges</div><div class="cc-text">A 16K-GPU cluster is shared by multiple teams running different jobs. The scheduler must:<br><br><strong>1. Maximize utilization:</strong> Idle GPUs cost $3&ndash;4/hr each. 1,000 idle GPUs = $3,000&ndash;4,000/hr wasted. Target: &gt;90% utilization.<br><br><strong>2. Handle priorities:</strong> A critical training run for the next product launch takes priority over experimental fine-tuning jobs.<br><br><strong>3. Gang scheduling:</strong> A 1,024-GPU training job needs all 1,024 GPUs to start simultaneously. You can&rsquo;t start with 900 and add 124 later.<br><br><strong>4. Preemption:</strong> When a high-priority job arrives, lower-priority jobs must checkpoint and yield their GPUs. This requires reliable checkpointing.<br><br><strong>5. Topology awareness:</strong> A 64-GPU job should be scheduled on GPUs that are close together in the network topology (same rack, same rail) to minimize communication latency.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scheduling Tools</div><div class="cc-code"><span class="hl-key">Common schedulers:</span>
+
+<span class="hl-str">Slurm (HPC heritage):</span>
+  Most common for GPU clusters
+  Gang scheduling built-in
+  Topology-aware placement
+  Preemption support
+  Used by: Meta, most HPC labs
+
+<span class="hl-str">Kubernetes + GPU plugin:</span>
+  Cloud-native approach
+  Better for mixed workloads
+  GPU device plugin for allocation
+  Less mature for large training
+  Used by: Cloud providers
+
+<span class="hl-str">Ray (distributed framework):</span>
+  Python-native scheduling
+  Good for ML pipelines
+  Autoscaling support
+  Used by: Anyscale, OpenAI
+
+<span class="hl-key">Utilization targets:</span>
+  Training clusters:  <span class="hl-num">&gt;85%</span>
+  Inference clusters: <span class="hl-num">&gt;60%</span>
+  Mixed clusters:     <span class="hl-num">&gt;70%</span>
+
+<span class="hl-cmt">Average GPU utilization across
+the industry is only 30-50%.
+Better scheduling can save
+millions per year.</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> GPU utilization is the single biggest lever for cost optimization. Industry average is 30&ndash;50%, but well-managed clusters achieve 85&ndash;95%. The difference between 50% and 90% utilization on a 1,000-GPU cluster is $13M/year in wasted compute. Scheduling and operations matter as much as hardware selection.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">payments</span></div><div><div class="cc-title">The Real Cost of a Training Run</div><div class="cc-sub">GPUs are just the start &mdash; networking, storage, power, and people add up fast</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cost Breakdown</div><div class="cc-text">The headline GPU cost is just part of the total. A complete training run includes:<br><br><strong>GPU compute:</strong> The largest cost. 16,384 H100s at $3/GPU-hr for 54 days = ~$63M. This is the cloud cost; on-prem amortized cost is lower but requires upfront capital.<br><br><strong>Networking:</strong> InfiniBand switches, cables, optics. 15&ndash;25% of cluster cost. For a 16K-GPU cluster: $30&ndash;60M in networking hardware.<br><br><strong>Storage:</strong> Parallel filesystem for checkpoints and training data. 5&ndash;10% of cluster cost. Petabytes of high-performance storage.<br><br><strong>Power and cooling:</strong> ~10 kW per DGX &times; 2,048 DGX systems = 20 MW. At $0.10/kWh = $1.2M/month in electricity alone.<br><br><strong>People:</strong> ML engineers, infrastructure engineers, SREs. A team of 20&ndash;50 people supporting a large training run. $5&ndash;15M/year in salaries.<br><br><strong>Wasted compute:</strong> Failures, restarts, debugging, hyperparameter search. Typically 20&ndash;40% of total compute is &ldquo;wasted.&rdquo;</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Llama 3 405B Cost Estimate</div><div class="cc-code"><span class="hl-key">Llama 3 405B training cost:</span>
+
+<span class="hl-str">GPU compute (cloud equivalent):</span>
+  16,384 GPUs × $3/hr × 54 days
+  = ~$<span class="hl-num">63M</span>
+
+<span class="hl-str">Including wasted compute (~30%):</span>
+  = ~$<span class="hl-num">82M</span>
+
+<span class="hl-str">Networking (amortized):</span>
+  = ~$<span class="hl-num">5-10M</span>
+
+<span class="hl-str">Storage (amortized):</span>
+  = ~$<span class="hl-num">2-5M</span>
+
+<span class="hl-str">Power/cooling:</span>
+  = ~$<span class="hl-num">2-3M</span>
+
+<span class="hl-str">People (training period):</span>
+  = ~$<span class="hl-num">2-4M</span>
+
+<span class="hl-key">Total estimated cost:</span>
+  ~$<span class="hl-num">95-105M</span>
+
+<span class="hl-key">For comparison:</span>
+  GPT-4:    ~$<span class="hl-num">100-200M</span> (estimated)
+  Gemini:   ~$<span class="hl-num">100-300M</span> (estimated)
+  Claude 3: ~$<span class="hl-num">50-100M</span> (estimated)
+
+<span class="hl-cmt">These costs are why only a
+handful of organizations can
+train frontier models.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The $100M+ cost of training a frontier model creates a massive barrier to entry. But the cost per FLOP is dropping ~2x every 2 years as hardware improves. What costs $100M today will cost $25M in 4 years. The question isn&rsquo;t whether training costs will decrease, but whether model sizes will grow faster than costs decrease.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">Scaling: From 8 GPUs to 100,000</div><div class="cc-sub">The challenges multiply at every order of magnitude</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scaling Challenges by Size</div><div class="cc-code"><span class="hl-key">8 GPUs (1 server):</span>
+  Challenges: None significant
+  Parallelism: DDP or FSDP
+  Network: NVLink only
+  Failures: Rare
+  Cost: ~$<span class="hl-num">25/hr</span>
+
+<span class="hl-key">64 GPUs (8 servers):</span>
+  Challenges: Network config
+  Parallelism: FSDP + TP
+  Network: NVLink + InfiniBand
+  Failures: Weekly
+  Cost: ~$<span class="hl-num">200/hr</span>
+
+<span class="hl-key">1,024 GPUs (128 servers):</span>
+  Challenges: Scheduling, monitoring
+  Parallelism: 3D parallel
+  Network: Rail-optimized
+  Failures: Daily
+  Cost: ~$<span class="hl-num">3,000/hr</span>
+
+<span class="hl-key">16,384 GPUs (2,048 servers):</span>
+  Challenges: Everything
+  Parallelism: Full 3D + custom
+  Network: SuperPOD
+  Failures: Every 3 hours
+  Cost: ~$<span class="hl-num">50,000/hr</span>
+
+<span class="hl-key">100,000 GPUs:</span>
+  Challenges: Physics limits
+  Power: ~<span class="hl-num">100+</span> MW
+  Cooling: Liquid required
+  Cost: ~$<span class="hl-num">300,000/hr</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Changes at Each Scale</div><div class="cc-text"><strong>8 &rarr; 64 GPUs:</strong> You need InfiniBand or fast Ethernet. Network configuration becomes important. NCCL tuning starts to matter.<br><br><strong>64 &rarr; 1,024 GPUs:</strong> You need a real scheduler (Slurm). Monitoring becomes essential. Failures happen often enough to need automated recovery. Checkpoint strategy matters.<br><br><strong>1,024 &rarr; 16K GPUs:</strong> You need a dedicated infrastructure team. Custom diagnostics tools. Topology-aware scheduling. Multi-tier checkpointing. Environmental monitoring (temperature affects throughput).<br><br><strong>16K &rarr; 100K GPUs:</strong> You&rsquo;re building a data center, not renting one. Power procurement (100+ MW) takes years. Liquid cooling is mandatory. You need custom networking fabric. The operational complexity rivals running a power plant.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Scaling AI training is not linear. Every 10x increase in GPU count brings qualitatively new challenges. The jump from 1,000 to 10,000 GPUs isn&rsquo;t just &ldquo;10x more of the same&rdquo; &mdash; it requires fundamentally different infrastructure, operations, and engineering. This is why experience at scale is one of the most valuable assets in AI.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-distributed-training.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: Distributed Training</a>
+    <a class="ch-nav-btn next" href="09-inference-infrastructure.html">Ch 9: Inference Infrastructure <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> An AI factory converts electricity and data into intelligence. The largest cost $1-10B, consume 50-500 MW. Over $600B in AI infra capex planned for 2025-2026.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> DGX H100: 8 GPUs, NVSwitch, 8× 400G InfiniBand. 10.2 kW, ~$300-400K. The standard building block — balanced compute, memory, network, and storage.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> GB200 NVL72: 72 GPUs in one NVLink domain (130 TB/s). 13.8 TB unified memory. A 405B model fits in one rack. Requires liquid cooling at 120 kW.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Meta\'s Llama 3: 419 failures in 54 days on 16K GPUs. One every 3 hours. GPU failures: 30.1%, HBM3: 17.2%, network: 8.4%. Automated recovery handled 99.3%.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> Multi-tier checkpointing: local NVMe (5-10 min), parallel FS (30-60 min), cloud (hours). With failures every 3 hours, 30-min checkpoints lose ~$12,500 per failure.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> GPU utilization industry average: 30-50%. Well-managed clusters: 85-95%. The difference on 1,000 GPUs: $13M/year. Scheduling matters as much as hardware.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Llama 3 405B total cost: ~$95-105M including compute, networking, storage, power, and people. GPU compute is ~65% of total. Frontier models cost $100M+.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Every 10x GPU increase brings qualitatively new challenges. 8→64: need network. 64→1K: need scheduler. 1K→16K: need infra team. 16K→100K: building a data center.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

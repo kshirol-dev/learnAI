@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Context Compression — Context Engineering</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Context Compression</h2><span class="tb-sub">Shrinking accumulated history while preserving the information the model needs</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">expand</span></div><span class="pipe-label">Bloat</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">content_cut</span></div><span class="pipe-label">Truncate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Summarize</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">view_timeline</span></div><span class="pipe-label">Sliding</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">storage</span></div><span class="pipe-label">Memory</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Result</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">expand</span></div>
+        <div><div class="cc-title">The Context Bloat Problem</div><div class="cc-sub">How agent loops fill the context window</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The ReAct Accumulation Loop</div>
+            <div class="cc-text">Every tool call in a ReAct agent adds to the context: the model&rsquo;s reasoning, the action taken, and the tool&rsquo;s result. Each tool result can be <strong>hundreds or thousands of tokens</strong> &mdash; API responses, file contents, search results, error traces. A 10-step agent task can easily consume 30,000&ndash;50,000 tokens of accumulated action history alone.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Gets Pushed Out</div>
+            <div class="cc-text">Without intervention, the accumulated history fills the context window and <strong>pushes out the system instructions, tool definitions, and early task context</strong> that the model actually needs to reason well. The model loses access to its own instructions while drowning in the history of its own actions.</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical in AI:</strong> This is not a theoretical problem. Long-running agent tasks routinely fail not because the model can&rsquo;t solve the problem, but because critical context has been displaced by accumulated history from earlier steps.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">content_cut</span></div>
+        <div><div class="cc-title">Naive Approaches</div><div class="cc-sub">Simple truncation and its limitations</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Keep Top N Turns</div>
+            <div class="cc-text">The simplest approach: <strong>keep only the most recent N turns</strong> of interaction and discard the rest. Fast and predictable, but brutal &mdash; critical early decisions, error patterns, and task context are permanently lost. The model has no memory of what it already tried.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Head/Tail Truncation</div>
+            <div class="cc-text">Keep the first few turns (task setup) and the last few turns (recent context), discard the middle. Better than pure recency, but still <strong>loses the narrative thread</strong> of how the agent arrived at its current state.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Simple Truncation Fails</div>
+            <div class="compare-row">
+              <div class="compare-box bad">
+                <div class="cb-tag">Truncation</div>
+                <div class="cb-text">Binary: information is either fully present or completely gone. No middle ground. Loses error traces, successful patterns, and decision rationale. Model repeats mistakes it already made.</div>
+              </div>
+              <div class="compare-box good">
+                <div class="cb-tag">Compression</div>
+                <div class="cb-text">Graduated: preserves the gist of older context while keeping recent turns in full detail. Retains error patterns and key decisions. Model builds on prior work instead of repeating it.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">compress</span></div>
+        <div><div class="cc-title">Sliding Window + Summarization</div><div class="cc-sub">The dominant approach in 2026</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How It Works</div>
+            <div class="cc-text">The field has converged on <strong>sliding window plus summarization hybrids</strong> as the dominant compression approach. The pattern: keep the <strong>most recent N turns in full detail</strong> (the &ldquo;window&rdquo;), and compress older context through <strong>LLM-based summarization</strong>. The summary preserves key decisions, outcomes, and error patterns while dramatically reducing token count.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Compression Flow</div>
+            <div class="cc-code"><span class="hl-cmt">// Sliding window compression</span>
+<span class="hl-key">Context Window Layout:</span>
+  [System Prompt]           <span class="hl-cmt">// Always preserved</span>
+  [Tool Definitions]        <span class="hl-cmt">// Always preserved</span>
+  [Compressed Summary]      <span class="hl-cmt">// Turns 1..N-5</span>
+  [Raw Turn N-4]            <span class="hl-cmt">// Recent window</span>
+  [Raw Turn N-3]            <span class="hl-cmt">// Recent window</span>
+  [Raw Turn N-2]            <span class="hl-cmt">// Recent window</span>
+  [Raw Turn N-1]            <span class="hl-cmt">// Recent window</span>
+  [Raw Turn N]              <span class="hl-cmt">// Current turn</span>
+
+<span class="hl-cmt">// Token reduction: 8K → 2K while</span>
+<span class="hl-cmt">// maintaining coherence</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Compress</div>
+            <div class="cc-text">Compression can be triggered <strong>periodically</strong> (every N turns), <strong>threshold-based</strong> (when context exceeds X% of the window), or <strong>event-based</strong> (after a task phase completes). Periodic compression is simplest; threshold-based is most efficient. Each compression step requires an LLM call, so amortizing the cost by compressing periodically rather than every turn is standard practice.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Conversation summarization can reduce token usage from 8,000 to 2,000 tokens while maintaining coherence. Companies implementing this pattern report 60&ndash;80% cost reduction on long-running agent tasks.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">music_note</span></div>
+        <div><div class="cc-title">Manus&rsquo;s Rhythm Preservation</div><div class="cc-sub">Why raw recent turns matter more than you think</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Rhythm Effect</div>
+            <div class="cc-text">Manus discovered a subtle but important finding: keep the <strong>most recent tool calls in raw format</strong> so the model maintains its &ldquo;rhythm&rdquo; and formatting style. When recent tool interactions are summarized instead of kept raw, the model loses its <strong>formatting consistency</strong> &mdash; it starts producing outputs in slightly different structures, breaking downstream parsers and tool integrations.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Error Trace Rule</div>
+            <div class="cc-text">Manus&rsquo;s second critical finding: <strong>do not compress away error traces</strong>. When a tool call fails, leaving the error and stack trace in context helps the model avoid repeating the same mistake. This technique is well-established &mdash; libraries like <strong>Instructor</strong> use it for structured output retries &mdash; and it applies broadly to any agent that calls tools.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Compression is lossy by definition. The art is knowing what to lose. Manus&rsquo;s rules provide clear guidance: never compress recent tool calls (rhythm), never compress error traces (learning), and always compress older successful interactions first (they&rsquo;re the safest to summarize).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">storage</span></div>
+        <div><div class="cc-title">Long-Term Memory Approach</div><div class="cc-sub">Moving history to durable storage and retrieving on demand</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Architecture</div>
+            <div class="cc-text">Instead of compressing older turns into a summary, the <strong>long-term memory approach</strong> moves them to a durable storage system (typically a vector database) and retrieves only relevant actions on demand. The context window carries only the recent window plus any retrieved historical context that&rsquo;s relevant to the current task.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Three-Tier Memory</div>
+            <div class="cc-text"><strong>Working memory:</strong> Active context window &mdash; immediate reasoning.<br><br><strong>Recall storage:</strong> Searchable database of recent interactions &mdash; retrieved when relevant.<br><br><strong>Archival storage:</strong> Vector-based long-term memory &mdash; accumulated knowledge across all sessions.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Use Each Approach</div>
+            <div class="cc-code"><span class="hl-cmt">// Decision matrix</span>
+
+<span class="hl-key">Short tasks</span> (<span class="hl-num">5-10</span> turns):
+  → <span class="hl-str">No compression needed</span>
+  <span class="hl-cmt">// Context fits comfortably</span>
+
+<span class="hl-key">Medium tasks</span> (<span class="hl-num">10-50</span> turns):
+  → <span class="hl-str">Sliding window + summary</span>
+  <span class="hl-cmt">// Best cost/quality tradeoff</span>
+
+<span class="hl-key">Long tasks</span> (<span class="hl-num">50+</span> turns):
+  → <span class="hl-str">Long-term memory + retrieval</span>
+  <span class="hl-cmt">// Summary alone loses too much</span>
+
+<span class="hl-key">Cross-session</span>:
+  → <span class="hl-str">Archival memory</span>
+  <span class="hl-cmt">// Persistent knowledge store</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">science</span></div>
+        <div><div class="cc-title">Advanced Compression Techniques</div><div class="cc-sub">Beyond basic summarization</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Prompt Caching</div>
+            <div class="cc-text"><strong>Prompt caching</strong> is a server-side feature (available in Anthropic, Groq, and vLLM) that caches the KV states for shared prefixes across requests. If your system prompt and tool definitions are the same across requests, they&rsquo;re computed once and reused. This provides up to <strong>90% cost savings</strong> on repeated content and is the most impactful &ldquo;compression&rdquo; technique for the stable prefix.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Test-Time Training</div>
+            <div class="cc-text">An emerging technique: <strong>test-time training</strong> temporarily fine-tunes the model on the current context, achieving a <strong>35&times; speedup</strong> for 2M-token contexts compared to processing the full context directly. Still experimental, but it points toward a future where compression happens at the model level rather than the prompt level.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Selective Inclusion</div>
+            <div class="cc-text">The most fundamental compression technique is also the simplest: <strong>don&rsquo;t include what you don&rsquo;t need</strong>. Before adding any content to the context, ask: does the model need this for the next step? If not, leave it out. This &ldquo;Select, Don&rsquo;t Dump&rdquo; principle prevents bloat before compression is even needed.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The best compression is prevention. Every token that never enters the context window is a token that never needs to be compressed, cached, or paid for. Selective inclusion is the cheapest and most effective optimization.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">savings</span></div>
+        <div><div class="cc-title">Cost Impact</div><div class="cc-sub">Real-world savings from compression</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Before &amp; After</div>
+            <div class="cc-code"><span class="hl-cmt">// Long-running agent task (50 turns)</span>
+
+<span class="hl-key">Without compression:</span>
+  Avg context size: <span class="hl-num">95,000</span> tokens
+  Cost per request: <span class="hl-str">$0.24</span>
+  Total task cost:  <span class="hl-str">$12.00</span>
+
+<span class="hl-key">With sliding window + summary:</span>
+  Avg context size: <span class="hl-num">25,000</span> tokens
+  Cost per request: <span class="hl-str">$0.06</span>
+  Total task cost:  <span class="hl-str">$3.00</span>
+  <span class="hl-cmt">// + ~$0.50 for compression calls</span>
+
+<span class="hl-key">Net savings:</span> <span class="hl-num">71%</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Enterprise Scale</div>
+            <div class="cc-text">Companies implementing effective context compression report <strong>60&ndash;80% cost reduction</strong> on long-running agent tasks. At enterprise scale (thousands of agent tasks per day), this translates to <strong>hundreds of thousands of dollars in annual savings</strong>. The compression LLM calls add cost, but the net savings are overwhelmingly positive.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Compression improves both cost and quality. Smaller, more focused contexts produce better model outputs (less noise, more signal) while costing less. This is one of the rare optimizations where you get better results for less money.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">balance</span></div>
+        <div><div class="cc-title">Tradeoffs and Open Questions</div><div class="cc-sub">What compression loses and what remains unsolved</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Lossy Nature</div>
+            <div class="cc-text">All compression is <strong>lossy</strong>. Summarization preserves the gist but loses details. The question is always: which details can you afford to lose? Compression works well for long-horizon tasks where early steps are contextual background, but <strong>poorly when critical early details get summarized away</strong> &mdash; like a specific error message or a user&rsquo;s exact phrasing of a requirement.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Compression Quality</div>
+            <div class="cc-text">The quality of the compression depends on the quality of the summarization model. Using a <strong>cheaper, faster model</strong> for compression saves money but may lose important nuance. Using the <strong>same model</strong> for compression and reasoning is more accurate but doubles the cost of each compression step.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Open Questions</div>
+            <div class="cc-text"><strong>When to compress?</strong> Too early loses detail; too late wastes tokens on bloated context.<br><br><strong>What detail level?</strong> Aggressive compression saves more tokens but loses more information.<br><br><strong>How to evaluate?</strong> Measuring whether a summary preserved &ldquo;enough&rdquo; information is itself an unsolved problem. Probe-based evaluation (asking the model questions about compressed content) is the current best practice.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Rule of thumb:</strong> Start with hybrid sliding window (keep the latest 5 turns raw, summarize older ones). Use probe-based evaluation to test whether your summaries preserve what matters. Adjust the window size and summary detail level based on task-specific results.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-progressive-disclosure.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Progressive Disclosure</a>
+    <a class="ch-nav-btn next" href="05-context-routing.html">Ch 5: Context Routing <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2,3],4:[2,3],5:[3,4],6:[2,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Every tool call adds hundreds of tokens. A 10-step agent task can consume 50K tokens of accumulated history, pushing out system instructions.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> Simple truncation is binary \u2014 information is fully present or completely gone. The model repeats mistakes it already made.',color:'#ea580c'},
+    3:{text:'<strong>Step 3:</strong> Sliding window + summarization: keep recent turns raw, compress older ones. Reduces 8K tokens to 2K while maintaining coherence.',color:'#0d9488'},
+    4:{text:'<strong>Step 4:</strong> Manus\u2019s rules: never compress recent tool calls (preserves rhythm), never compress error traces (prevents repeated mistakes).',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> For 50+ turn tasks, move older history to vector storage and retrieve on demand \u2014 three-tier memory: working, recall, archival.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Prompt caching provides 90% savings on repeated content. Test-time training achieves 35\u00d7 speedup for 2M contexts.',color:'#d97706'},
+    7:{text:'<strong>Step 7:</strong> Companies report 60\u201380% cost reduction from compression. Smaller contexts also produce better outputs \u2014 less noise, more signal.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> All compression is lossy. The art is knowing what to lose: compress successful interactions first, preserve errors and recent context.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

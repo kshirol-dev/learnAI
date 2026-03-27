@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anatomy of an LLM — What's Inside the File</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --bg-white: #ffffff;
+    --bg-muted: #f0f2f7;
+    --border: #dfe3ed;
+    --border-light: #eaedf4;
+    --text-1: #1b2035;
+    --text-2: #505872;
+    --text-3: #8892ab;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --blue-border: #bfdbfe;
+    --violet: #7c3aed;
+    --violet-light: #ede9fe;
+    --violet-border: #c4b5fd;
+    --pink: #db2777;
+    --pink-light: #fdf2f8;
+    --pink-border: #f9a8d4;
+    --teal: #0d9488;
+    --teal-light: #f0fdfa;
+    --teal-border: #99f6e4;
+    --amber: #d97706;
+    --amber-light: #fffbeb;
+    --amber-border: #fcd34d;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --green-border: #bbf7d0;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --red-border: #fecaca;
+    --slate: #64748b;
+    --slate-light: #f1f5f9;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text-1);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 20px 60px;
+  }
+
+  .material-symbols-rounded {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+
+  .canvas {
+    width:100%;
+    max-width:1120px;
+    background:var(--bg-white);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg);
+    overflow:hidden;
+  }
+
+  .title-bar {
+    padding:18px 36px;
+    border-bottom:1px solid var(--border-light);
+    display:flex; align-items:center; gap:12px;
+  }
+  .title-bar h2 { font-size:16px; font-weight:800; letter-spacing:-.5px; }
+  .title-bar .tb-sub { font-size:11px; color:var(--text-3); }
+  .title-bar .tb-tag {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; font-weight:600;
+    letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text-3); padding:4px 12px;
+    background:var(--bg-muted); border-radius:6px;
+    margin-left:auto;
+  }
+
+  .narration {
+    padding:12px 36px;
+    background:linear-gradient(90deg, var(--blue-light) 0%, var(--violet-light) 25%, var(--pink-light) 50%, var(--teal-light) 75%, var(--green-light) 100%);
+    border-bottom:1px solid var(--border-light);
+    display:flex; align-items:center; gap:14px;
+    min-height:48px; cursor:pointer;
+    transition:background .3s ease;
+  }
+  .narration:hover {
+    background:linear-gradient(90deg, #dbeafe 0%, #e8e4fd 25%, #fce7f3 50%, #ccfbf1 75%, #dcfce7 100%);
+  }
+  .nar-step {
+    width:28px; height:28px; border-radius:50%;
+    background:var(--violet); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; font-weight:800; flex-shrink:0;
+    transition:background .4s ease;
+  }
+  .nar-text {
+    font-size:12px; font-weight:500; color:var(--text-1); line-height:1.5;
+  }
+  .nar-text strong { font-weight:700; }
+  .nar-text code {
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    background:rgba(0,0,0,0.05); padding:1px 5px; border-radius:3px;
+  }
+
+  .progress-track { height:3px; background:var(--bg-muted); position:relative; }
+  .progress-fill {
+    position:absolute; top:0; left:0; height:100%; width:0%;
+    background:linear-gradient(90deg, var(--blue), var(--violet), var(--pink), var(--teal), var(--green));
+    transition:width .5s ease;
+  }
+
+  .step-counter {
+    padding:8px 36px; display:flex; align-items:center; gap:12px;
+    background:var(--bg-white); border-bottom:1px solid var(--border-light);
+  }
+  .sc-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; font-weight:600; letter-spacing:1px;
+    text-transform:uppercase; color:var(--text-3);
+  }
+  .sc-num {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; font-weight:700; color:var(--violet); min-width:65px;
+  }
+  .sc-dots { display:flex; gap:4px; margin-left:auto; }
+  .sc-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--border); transition:all .3s ease;
+  }
+  .sc-dot.filled { background:var(--violet); box-shadow:0 0 5px rgba(124,58,237,0.3); }
+
+  .zone {
+    padding:22px 32px;
+    border-bottom:1px solid var(--border-light);
+    position:relative;
+  }
+  .zone:last-child { border-bottom:none; }
+
+  .zone-head {
+    display:flex; align-items:center; gap:10px; margin-bottom:16px;
+  }
+  .zone-tag {
+    padding:3px 10px; border-radius:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:700;
+    letter-spacing:1.2px; text-transform:uppercase; flex-shrink:0;
+  }
+  .zone-title { font-size:12px; font-weight:700; }
+  .zone-sub { font-size:10px; color:var(--text-3); margin-left:auto; }
+
+  .zone-file { background:linear-gradient(180deg, var(--blue-light) 0%, var(--bg-white) 100%); }
+  .zone-file .zone-tag { background:var(--blue-light); color:var(--blue); border:1px solid var(--blue-border); }
+  .zone-file .zone-title { color:var(--blue); }
+
+  .zone-meta { background:linear-gradient(180deg, var(--violet-light) 0%, var(--bg-white) 100%); }
+  .zone-meta .zone-tag { background:var(--violet-light); color:var(--violet); border:1px solid var(--violet-border); }
+  .zone-meta .zone-title { color:var(--violet); }
+
+  .zone-token { background:linear-gradient(180deg, var(--pink-light) 0%, var(--bg-white) 100%); }
+  .zone-token .zone-tag { background:var(--pink-light); color:var(--pink); border:1px solid var(--pink-border); }
+  .zone-token .zone-title { color:var(--pink); }
+
+  .zone-weights { background:linear-gradient(180deg, var(--teal-light) 0%, var(--bg-white) 100%); }
+  .zone-weights .zone-tag { background:var(--teal-light); color:var(--teal); border:1px solid var(--teal-border); }
+  .zone-weights .zone-title { color:var(--teal); }
+
+  .zone-quant { background:linear-gradient(180deg, var(--amber-light) 0%, var(--bg-white) 100%); }
+  .zone-quant .zone-tag { background:var(--amber-light); color:var(--amber); border:1px solid var(--amber-border); }
+  .zone-quant .zone-title { color:var(--amber); }
+
+  .zone-summary { background:linear-gradient(180deg, var(--green-light) 0%, var(--bg-white) 100%); }
+  .zone-summary .zone-tag { background:var(--green-light); color:var(--green); border:1px solid var(--green-border); }
+  .zone-summary .zone-title { color:var(--green); }
+
+  .flow-row {
+    display:flex; align-items:center; justify-content:center;
+    gap:0; flex-wrap:wrap;
+  }
+
+  .fnode {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:14px 16px;
+    background:var(--bg-white);
+    border:1.5px solid var(--border);
+    border-radius:var(--radius);
+    min-width:115px; max-width:140px;
+    text-align:center;
+    box-shadow:var(--shadow-sm);
+    transition:all .5s ease;
+    cursor:default; position:relative;
+  }
+  .fnode:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+
+  .fnode-icon {
+    width:36px; height:36px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fnode-icon .material-symbols-rounded { font-size:20px; }
+  .fnode-label { font-size:10px; font-weight:700; letter-spacing:-.1px; }
+  .fnode-sub { font-size:8px; color:var(--text-3); line-height:1.4; }
+
+  .fnode.c-blue .fnode-icon { background:var(--blue-light); color:var(--blue); }
+  .fnode.c-blue .fnode-label { color:var(--blue); }
+  .fnode.c-blue.active { box-shadow:0 0 0 3px rgba(37,99,235,0.15), var(--shadow-md); }
+
+  .fnode.c-violet .fnode-icon { background:var(--violet-light); color:var(--violet); }
+  .fnode.c-violet .fnode-label { color:var(--violet); }
+  .fnode.c-violet { border-color:var(--violet-border); }
+  .fnode.c-violet.active { box-shadow:0 0 0 3px rgba(124,58,237,0.15), var(--shadow-md); }
+
+  .fnode.c-pink .fnode-icon { background:var(--pink-light); color:var(--pink); }
+  .fnode.c-pink .fnode-label { color:var(--pink); }
+  .fnode.c-pink { border-color:var(--pink-border); }
+  .fnode.c-pink.active { box-shadow:0 0 0 3px rgba(219,39,119,0.15), var(--shadow-md); }
+
+  .fnode.c-teal .fnode-icon { background:var(--teal-light); color:var(--teal); }
+  .fnode.c-teal .fnode-label { color:var(--teal); }
+  .fnode.c-teal.active { box-shadow:0 0 0 3px rgba(13,148,136,0.15), var(--shadow-md); }
+
+  .fnode.c-amber .fnode-icon { background:var(--amber-light); color:var(--amber); }
+  .fnode.c-amber .fnode-label { color:var(--amber); }
+  .fnode.c-amber.active { box-shadow:0 0 0 3px rgba(217,119,6,0.15), var(--shadow-md); }
+
+  .fnode.c-green .fnode-icon { background:var(--green-light); color:var(--green); }
+  .fnode.c-green .fnode-label { color:var(--green); }
+  .fnode.c-green.active { box-shadow:0 0 0 3px rgba(22,163,74,0.15), var(--shadow-md); }
+
+  .fnode.c-slate .fnode-icon { background:var(--slate-light); color:var(--slate); }
+  .fnode.c-slate .fnode-label { color:var(--slate); }
+  .fnode.c-slate.active { box-shadow:0 0 0 3px rgba(100,116,139,0.15), var(--shadow-md); }
+
+  .fnode.c-red .fnode-icon { background:var(--red-light); color:var(--red); }
+  .fnode.c-red .fnode-label { color:var(--red); }
+  .fnode.c-red.active { box-shadow:0 0 0 3px rgba(220,38,38,0.15), var(--shadow-md); }
+
+  .fnode.active { transform:translateY(-2px); }
+
+  .farr {
+    display:flex; align-items:center;
+    width:36px; height:2px;
+    position:relative; margin:0 2px; flex-shrink:0;
+    transition:opacity .5s ease;
+  }
+  .farr::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg, var(--border), var(--text-3));
+    border-radius:1px;
+  }
+  .farr::after {
+    content:''; position:absolute; right:-2px; top:50%; transform:translateY(-50%);
+    border:4px solid transparent; border-left:5px solid var(--text-3);
+  }
+  .farr-label {
+    position:absolute; top:-15px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace;
+    font-size:7px; font-weight:500; color:var(--text-3);
+    white-space:nowrap; letter-spacing:.3px;
+  }
+
+  .loop-conn {
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    padding:6px 32px;
+    background:var(--bg-muted);
+    border-bottom:1px solid var(--border-light);
+    transition:opacity .5s ease;
+  }
+  .loop-dash {
+    flex:1; height:1px;
+    background:repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 10px);
+  }
+  .loop-pill {
+    display:flex; align-items:center; gap:6px;
+    padding:4px 14px;
+    background:var(--bg-white); border:1px solid var(--border);
+    border-radius:7px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:500;
+    color:var(--text-3); white-space:nowrap; letter-spacing:.3px;
+    transition:all .5s ease;
+  }
+  .loop-pill .material-symbols-rounded { font-size:13px; }
+  .loop-conn.active .loop-pill {
+    background:var(--violet-light); border-color:var(--violet-border); color:var(--violet);
+  }
+  .loop-conn.c-teal.active .loop-pill {
+    background:var(--teal-light); border-color:var(--teal-border); color:var(--teal);
+  }
+  .loop-conn.c-green.active .loop-pill {
+    background:var(--green-light); border-color:var(--green-border); color:var(--green);
+  }
+  .loop-conn.c-pink.active .loop-pill {
+    background:var(--pink-light); border-color:var(--pink-border); color:var(--pink);
+  }
+  .loop-conn.c-amber.active .loop-pill {
+    background:var(--amber-light); border-color:var(--amber-border); color:var(--amber);
+  }
+  .loop-conn.c-blue.active .loop-pill {
+    background:var(--blue-light); border-color:var(--blue-border); color:var(--blue);
+  }
+
+  .step-badge {
+    position:absolute; top:-8px; right:-8px;
+    width:20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:800; color:#fff;
+    z-index:10; opacity:0; transform:scale(0);
+    transition:all .4s cubic-bezier(.34,1.56,.64,1);
+    pointer-events:none;
+  }
+  .loop-conn .step-badge {
+    position:relative; top:auto; right:auto; transform:none; flex-shrink:0;
+    width:20px; height:20px; font-size:8px;
+  }
+
+  [data-step].dimmed { opacity:0.15; filter:grayscale(0.7); }
+  [data-step].active { opacity:1; filter:none; }
+  [data-step].active .step-badge { opacity:1; transform:scale(1); }
+
+  .bg-blue { background:var(--blue); }
+  .bg-violet { background:var(--violet); }
+  .bg-pink { background:var(--pink); }
+  .bg-teal { background:var(--teal); }
+  .bg-amber { background:var(--amber); }
+  .bg-red { background:var(--red); }
+  .bg-green { background:var(--green); }
+  .bg-slate { background:var(--slate); }
+
+  .detail-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.2);
+    z-index:199; opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .detail-overlay.visible { opacity:1; pointer-events:auto; }
+
+  .detail-panel {
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.95);
+    width:500px; max-width:92vw; max-height:80vh;
+    overflow-y:auto;
+    background:var(--bg-white);
+    border:1.5px solid var(--border);
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.15);
+    z-index:200; opacity:0; pointer-events:none;
+    transition:all .3s cubic-bezier(.4,0,.2,1);
+  }
+  .detail-panel.visible {
+    opacity:1; pointer-events:auto;
+    transform:translate(-50%,-50%) scale(1);
+  }
+  .dp-head {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 20px;
+    border-bottom:1px solid var(--border-light);
+    position:sticky; top:0; background:var(--bg-white);
+    border-radius:16px 16px 0 0; z-index:1;
+  }
+  .dp-step {
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; font-weight:800; color:#fff; flex-shrink:0;
+  }
+  .dp-title { font-size:12px; font-weight:700; }
+  .dp-close {
+    margin-left:auto; width:28px; height:28px;
+    border:none; background:var(--bg-muted); border-radius:50%;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s;
+  }
+  .dp-close:hover { background:var(--border); }
+  .dp-close .material-symbols-rounded { font-size:16px; color:var(--text-3); }
+
+  .dp-body { padding:16px 20px 20px; }
+  .dp-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; font-weight:700;
+    letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--text-3); margin-bottom:6px;
+  }
+  .dp-code {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; line-height:1.7; color:var(--text-1);
+    background:var(--bg-muted); border:1px solid var(--border-light);
+    border-radius:8px; padding:12px 14px; margin-bottom:14px;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .dp-code .hl-key { color:var(--violet); font-weight:600; }
+  .dp-code .hl-str { color:var(--teal); }
+  .dp-code .hl-num { color:var(--amber); }
+  .dp-code .hl-comment { color:var(--text-3); font-style:italic; }
+  .dp-code .hl-cmd { color:var(--pink); font-weight:600; }
+  .dp-code .hl-err { color:var(--red); font-weight:600; }
+  .dp-code .hl-ok { color:var(--green); font-weight:600; }
+  .dp-note {
+    font-size:11px; color:var(--text-2); line-height:1.6;
+    padding:10px 14px; border-radius:8px; margin-bottom:14px;
+  }
+  .dp-note.n-blue { background:var(--blue-light); border:1px solid var(--blue-border); }
+  .dp-note.n-blue strong { color:var(--blue); }
+  .dp-note.n-violet { background:var(--violet-light); border:1px solid var(--violet-border); }
+  .dp-note.n-violet strong { color:var(--violet); }
+  .dp-note.n-teal { background:var(--teal-light); border:1px solid var(--teal-border); }
+  .dp-note.n-teal strong { color:var(--teal); }
+  .dp-note.n-green { background:var(--green-light); border:1px solid var(--green-border); }
+  .dp-note.n-green strong { color:var(--green); }
+  .dp-note.n-amber { background:var(--amber-light); border:1px solid var(--amber-border); }
+  .dp-note.n-amber strong { color:var(--amber); }
+  .dp-note.n-pink { background:var(--pink-light); border:1px solid var(--pink-border); }
+  .dp-note.n-pink strong { color:var(--pink); }
+  .dp-note:last-child, .dp-code:last-child { margin-bottom:0; }
+
+  .controls {
+    position:fixed; bottom:24px; right:24px;
+    display:flex; align-items:center; gap:6px;
+    background:var(--bg-white); border:1.5px solid var(--border);
+    border-radius:28px; padding:5px 6px;
+    box-shadow:var(--shadow-lg); z-index:100;
+  }
+  .ctrl-btn {
+    width:36px; height:36px; border-radius:50%;
+    border:none; background:transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .15s; color:var(--text-2);
+  }
+  .ctrl-btn:hover { background:var(--bg-muted); color:var(--text-1); }
+  .ctrl-btn:active { transform:scale(0.92); }
+  .ctrl-btn .material-symbols-rounded { font-size:20px; }
+  .ctrl-play {
+    width:40px; height:40px;
+    background:var(--violet); color:#fff; border-radius:50%;
+  }
+  .ctrl-play:hover { background:#6d28d9; color:#fff; }
+  .ctrl-play .material-symbols-rounded { font-size:22px; color:#fff; }
+
+  @media (max-width:900px) {
+    body { padding:16px 10px 48px; }
+    .zone { padding:18px 18px; }
+    .narration, .loop-conn { padding:10px 18px; }
+    .title-bar, .step-counter { padding:14px 18px; }
+    .flow-row { gap:4px; }
+    .farr { width:24px; }
+    .fnode { min-width:90px; padding:10px 10px; }
+  }
+
+  @media (max-width:600px) {
+    .flow-row { flex-direction:column; gap:0; }
+    .farr { width:2px; height:20px; margin:0; }
+    .farr::before { background:var(--border); }
+    .farr::after {
+      right:auto; bottom:-2px; top:auto; left:50%; transform:translateX(-50%);
+      border:4px solid transparent; border-top:5px solid var(--text-3);
+    }
+    .title-bar { flex-direction:column; gap:6px; align-items:flex-start; }
+    .title-bar .tb-tag { margin-left:0; }
+    .step-counter { flex-wrap:wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="canvas">
+
+  <!-- TITLE -->
+  <div class="title-bar">
+    <div>
+      <h2>Anatomy of an LLM &mdash; What's Inside the File</h2>
+      <span class="tb-sub">When you download a model like Llama 3 70B, what is actually in that file?</span>
+    </div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <!-- NARRATION -->
+  <div class="narration" id="narration">
+    <div class="nar-step" id="narStep">-</div>
+    <div class="nar-text" id="narText">Waiting to begin...</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter">
+    <span class="sc-label">Step</span>
+    <span class="sc-num" id="stepLabel">- / 10</span>
+    <div class="sc-dots" id="stepDots"></div>
+  </div>
+
+  <!-- ZONE A: THE FILE ON DISK -->
+  <div class="zone zone-file">
+    <div class="zone-head">
+      <span class="zone-tag">A</span>
+      <span class="zone-title">The File on Disk</span>
+      <span class="zone-sub">What you actually download</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="1">
+        <span class="step-badge bg-blue">1</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">folder_zip</span></div>
+        <span class="fnode-label">Model File</span>
+        <span class="fnode-sub">llama-3-70b<br>Q4_K_M.gguf</span>
+      </div>
+      <div class="farr dimmed" data-step="1"><span class="farr-label">contains</span></div>
+      <div class="fnode c-blue dimmed" data-step="1">
+        <div class="fnode-icon"><span class="material-symbols-rounded">description</span></div>
+        <span class="fnode-label">Single Binary</span>
+        <span class="fnode-sub">~40 GB file<br>everything inside</span>
+      </div>
+      <div class="farr dimmed" data-step="2"><span class="farr-label">format</span></div>
+      <div class="fnode c-blue dimmed" data-step="2">
+        <span class="step-badge bg-blue">2</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">data_object</span></div>
+        <span class="fnode-label">File Format</span>
+        <span class="fnode-sub">GGUF, SafeTensors,<br>or PyTorch .bin</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn dimmed" data-step="3">
+    <span class="step-badge bg-violet">3</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      First section: model metadata &amp; config
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE B: METADATA -->
+  <div class="zone zone-meta">
+    <div class="zone-head">
+      <span class="zone-tag">B</span>
+      <span class="zone-title">Model Metadata</span>
+      <span class="zone-sub">Configuration &amp; hyperparameters</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">settings</span></div>
+        <span class="fnode-label">Architecture</span>
+        <span class="fnode-sub">Model type, layer<br>count, dimensions</span>
+      </div>
+      <div class="farr dimmed" data-step="3"><span class="farr-label">defines</span></div>
+      <div class="fnode c-violet dimmed" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">tune</span></div>
+        <span class="fnode-label">Hyperparams</span>
+        <span class="fnode-sub">hidden_dim: 8192<br>num_layers: 80</span>
+      </div>
+      <div class="farr dimmed" data-step="3"><span class="farr-label">+ info</span></div>
+      <div class="fnode c-violet dimmed" data-step="3">
+        <div class="fnode-icon"><span class="material-symbols-rounded">info</span></div>
+        <span class="fnode-label">Provenance</span>
+        <span class="fnode-sub">Author, license,<br>quant type, date</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-pink dimmed" data-step="4">
+    <span class="step-badge bg-pink">4</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      Next: the tokenizer vocabulary
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE C: TOKENIZER -->
+  <div class="zone zone-token">
+    <div class="zone-head">
+      <span class="zone-tag">C</span>
+      <span class="zone-title">Tokenizer</span>
+      <span class="zone-sub">Vocabulary &amp; encoding rules</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-pink dimmed" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">dictionary</span></div>
+        <span class="fnode-label">Vocabulary</span>
+        <span class="fnode-sub">128,256 tokens<br>text &harr; integer IDs</span>
+      </div>
+      <div class="farr dimmed" data-step="4"><span class="farr-label">rules</span></div>
+      <div class="fnode c-pink dimmed" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">merge_type</span></div>
+        <span class="fnode-label">Merge Rules</span>
+        <span class="fnode-sub">BPE merge pairs<br>for subword splits</span>
+      </div>
+      <div class="farr dimmed" data-step="4"><span class="farr-label">special</span></div>
+      <div class="fnode c-pink dimmed" data-step="4">
+        <div class="fnode-icon"><span class="material-symbols-rounded">label_important</span></div>
+        <span class="fnode-label">Special Tokens</span>
+        <span class="fnode-sub">BOS, EOS, PAD<br>control signals</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-teal dimmed" data-step="5">
+    <span class="step-badge bg-teal">5</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      The bulk of the file: weight tensors
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE D: WEIGHT TENSORS -->
+  <div class="zone zone-weights">
+    <div class="zone-head">
+      <span class="zone-tag">D</span>
+      <span class="zone-title">Weight Tensors</span>
+      <span class="zone-sub">The learned parameters &mdash; 99%+ of file size</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="5">
+        <div class="fnode-icon"><span class="material-symbols-rounded">table_chart</span></div>
+        <span class="fnode-label">Embedding</span>
+        <span class="fnode-sub">token_embd.weight<br>[128K &times; 8192]</span>
+      </div>
+      <div class="farr dimmed" data-step="6"><span class="farr-label">&times;80</span></div>
+      <div class="fnode c-teal dimmed" data-step="6">
+        <span class="step-badge bg-teal">6</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">layers</span></div>
+        <span class="fnode-label">Transformer Layers</span>
+        <span class="fnode-sub">Attention + FFN<br>weights per layer</span>
+      </div>
+      <div class="farr dimmed" data-step="7"><span class="farr-label">final</span></div>
+      <div class="fnode c-teal dimmed" data-step="7">
+        <span class="step-badge bg-teal">7</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">output</span></div>
+        <span class="fnode-label">Output Head</span>
+        <span class="fnode-sub">output.weight<br>[8192 &times; 128K]</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-amber dimmed" data-step="8">
+    <span class="step-badge bg-amber">8</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      Weights are compressed via quantization
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE E: QUANTIZATION -->
+  <div class="zone zone-quant">
+    <div class="zone-head">
+      <span class="zone-tag">E</span>
+      <span class="zone-title">Quantization</span>
+      <span class="zone-sub">Compressing weights to fit in memory</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-amber dimmed" data-step="8">
+        <div class="fnode-icon"><span class="material-symbols-rounded">high_quality</span></div>
+        <span class="fnode-label">FP16 Original</span>
+        <span class="fnode-sub">140 GB for 70B<br>16 bits per weight</span>
+      </div>
+      <div class="farr dimmed" data-step="9"><span class="farr-label">compress</span></div>
+      <div class="fnode c-amber dimmed" data-step="9">
+        <span class="step-badge bg-amber">9</span>
+        <div class="fnode-icon"><span class="material-symbols-rounded">compress</span></div>
+        <span class="fnode-label">Q4_K_M</span>
+        <span class="fnode-sub">~40 GB for 70B<br>4.5 bits per weight</span>
+      </div>
+      <div class="farr dimmed" data-step="9"><span class="farr-label">tradeoff</span></div>
+      <div class="fnode c-amber dimmed" data-step="9">
+        <div class="fnode-icon"><span class="material-symbols-rounded">balance</span></div>
+        <span class="fnode-label">Quality vs Size</span>
+        <span class="fnode-sub">~1% perplexity loss<br>3.5&times; smaller file</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="loop-conn c-green dimmed" data-step="10">
+    <span class="step-badge bg-green">10</span>
+    <div class="loop-dash"></div>
+    <span class="loop-pill">
+      <span class="material-symbols-rounded">arrow_downward</span>
+      All sections together = one model file
+    </span>
+    <div class="loop-dash"></div>
+  </div>
+
+  <!-- ZONE F: SUMMARY -->
+  <div class="zone zone-summary">
+    <div class="zone-head">
+      <span class="zone-tag">F</span>
+      <span class="zone-title">The Complete Model File</span>
+      <span class="zone-sub">Everything packed into one binary</span>
+    </div>
+    <div class="flow-row">
+      <div class="fnode c-green dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">inventory_2</span></div>
+        <span class="fnode-label">Header + Meta</span>
+        <span class="fnode-sub">~2 KB<br>config &amp; format info</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">+</span></div>
+      <div class="fnode c-green dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">dictionary</span></div>
+        <span class="fnode-label">Tokenizer</span>
+        <span class="fnode-sub">~2 MB<br>vocab + merges</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">+</span></div>
+      <div class="fnode c-green dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">database</span></div>
+        <span class="fnode-label">Weight Tensors</span>
+        <span class="fnode-sub">~40 GB<br>the actual model</span>
+      </div>
+      <div class="farr dimmed" data-step="10"><span class="farr-label">=</span></div>
+      <div class="fnode c-green dimmed" data-step="10">
+        <div class="fnode-icon"><span class="material-symbols-rounded">deployed_code</span></div>
+        <span class="fnode-label">Ready to Run</span>
+        <span class="fnode-sub">Load into VRAM<br>and start inferencing</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL POPUP -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head">
+    <div class="dp-step" id="dpStep">1</div>
+    <div class="dp-title" id="dpTitle">Detail</div>
+    <button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button>
+  </div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="ctrl-btn" id="prevBtn" title="Previous (Left arrow)">
+    <span class="material-symbols-rounded">chevron_left</span>
+  </button>
+  <button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause (Space)">
+    <span class="material-symbols-rounded" id="playIcon">pause</span>
+  </button>
+  <button class="ctrl-btn" id="nextBtn" title="Next (Right arrow)">
+    <span class="material-symbols-rounded">chevron_right</span>
+  </button>
+</div>
+
+<script>
+(function() {
+  const TOTAL = 10;
+  const STEP_MS = 3200;
+  const PAUSE_MS = 4000;
+
+  const NARRATION = {
+    1:  { text:'You download a file like <code>llama-3-70b-Q4_K_M.gguf</code> — a single <strong>~40 GB binary</strong> containing the entire model', color:'#2563eb' },
+    2:  { text:'The file uses a <strong>serialization format</strong> — GGUF (llama.cpp), SafeTensors (HuggingFace), or PyTorch .bin — each packs the same data differently', color:'#2563eb' },
+    3:  { text:'First section: <strong>metadata</strong> — architecture type, hidden dimensions, layer count, attention heads, vocab size, context length', color:'#7c3aed' },
+    4:  { text:'Next: the <strong>tokenizer</strong> — a 128K-entry vocabulary table mapping text to integer IDs, plus BPE merge rules and special tokens', color:'#db2777' },
+    5:  { text:'The <strong>embedding matrix</strong> — a giant lookup table of shape <code>[128,256 × 8,192]</code> mapping each token ID to a dense vector', color:'#0d9488' },
+    6:  { text:'<strong>80 Transformer layers</strong>, each containing attention weights (Q, K, V, O) + feed-forward weights (gate, up, down) + layer norms', color:'#0d9488' },
+    7:  { text:'The <strong>output head</strong> — projects the final hidden state back to vocabulary size to predict the next token', color:'#0d9488' },
+    8:  { text:'At full precision (FP16), 70B parameters = <strong>140 GB</strong>. Too large for most hardware.', color:'#d97706' },
+    9:  { text:'<strong>Quantization</strong> compresses weights from 16 bits to 4-5 bits per parameter — shrinking 140 GB to ~40 GB with minimal quality loss', color:'#d97706' },
+    10: { text:'<strong>That\'s the whole file</strong>: a header, a tokenizer, and billions of quantized weight values — ready to load into VRAM and generate text', color:'#16a34a' },
+  };
+
+  const DETAILS = {
+    1: {
+      title:'The Model File on Disk',
+      body:'<div class="dp-label">What You Download</div>'+
+        '<div class="dp-code"><span class="hl-comment">// A typical model download from HuggingFace:</span>\n\n<span class="hl-str">llama-3-70b-instruct-Q4_K_M.gguf</span>\n  Size: <span class="hl-num">40.8 GB</span>\n  Format: GGUF v3\n  Parameters: <span class="hl-num">70 billion</span>\n  Quantization: Q4_K_M (4.5 bits/weight)\n\n<span class="hl-comment">// Larger models may be split into shards:</span>\n<span class="hl-str">llama-3-70b-00001-of-00002.safetensors</span>\n<span class="hl-str">llama-3-70b-00002-of-00002.safetensors</span>\n\n<span class="hl-comment">// The filename encodes key info:</span>\n<span class="hl-key">llama-3</span>    → model family\n<span class="hl-key">70b</span>        → 70 billion parameters\n<span class="hl-key">instruct</span>   → fine-tuned for chat\n<span class="hl-key">Q4_K_M</span>     → quantization level\n<span class="hl-key">.gguf</span>      → file format</div>'+
+        '<div class="dp-note n-blue">This single file contains <strong>everything</strong> needed to run the model — no internet connection required after download. The weights, the tokenizer, the config — all packed into one binary. This is what makes local LLM inference possible.</div>'
+    },
+    2: {
+      title:'File Formats Compared',
+      body:'<div class="dp-label">Three Main Formats</div>'+
+        '<div class="dp-code"><span class="hl-key">GGUF</span> (llama.cpp)\n  Self-contained: metadata + tokenizer + weights\n  Designed for CPU/GPU inference\n  Supports quantization natively\n  Single file, memory-mappable\n\n<span class="hl-key">SafeTensors</span> (HuggingFace)\n  Weights only — config in separate JSON files\n  Safe: no arbitrary code execution\n  Fast loading via memory mapping\n  Often sharded into multiple files\n\n<span class="hl-key">PyTorch .bin</span> (Legacy)\n  Uses Python pickle — can execute code!\n  Weights stored as torch tensors\n  Requires PyTorch to load\n  Being replaced by SafeTensors</div>'+
+        '<div class="dp-note n-blue"><strong>GGUF is the most self-contained</strong> — everything in one file. SafeTensors is the safest for sharing. PyTorch .bin is legacy and has security risks because pickle can execute arbitrary Python code during loading.</div>'
+    },
+    3: {
+      title:'Model Metadata',
+      body:'<div class="dp-label">Configuration Stored in the File</div>'+
+        '<div class="dp-code"><span class="hl-comment">// Real metadata from Llama 3 70B GGUF:</span>\n\n<span class="hl-key">general.architecture:</span>     <span class="hl-str">"llama"</span>\n<span class="hl-key">general.name:</span>             <span class="hl-str">"Meta-Llama-3-70B"</span>\n<span class="hl-key">general.file_type:</span>        <span class="hl-num">15</span> <span class="hl-comment">(Q4_K_M)</span>\n\n<span class="hl-key">llama.block_count:</span>        <span class="hl-num">80</span>\n<span class="hl-key">llama.embedding_length:</span>   <span class="hl-num">8192</span>\n<span class="hl-key">llama.context_length:</span>     <span class="hl-num">8192</span>\n<span class="hl-key">llama.feed_forward_length:</span><span class="hl-num">28672</span>\n\n<span class="hl-key">llama.attention.head_count:</span>    <span class="hl-num">64</span>\n<span class="hl-key">llama.attention.head_count_kv:</span> <span class="hl-num">8</span>\n<span class="hl-key">llama.rope.freq_base:</span>    <span class="hl-num">500000.0</span>\n\n<span class="hl-key">llama.vocab_size:</span>         <span class="hl-num">128256</span>\n<span class="hl-key">general.quantization_version:</span> <span class="hl-num">2</span></div>'+
+        '<div class="dp-note n-violet">This metadata tells the inference engine <strong>exactly how to interpret the weight tensors</strong>. Without it, the billions of numbers in the file are meaningless — you wouldn\'t know the shape of any matrix or how many layers to expect.</div>'
+    },
+    4: {
+      title:'Tokenizer — The Model\'s Dictionary',
+      body:'<div class="dp-label">Vocabulary Table (Stored in the File)</div>'+
+        '<div class="dp-code"><span class="hl-comment">// 128,256 entries mapping tokens ↔ IDs:</span>\n\n<span class="hl-key">ID 0:</span>      <span class="hl-str">"&lt;|begin_of_text|&gt;"</span>  <span class="hl-comment">(BOS)</span>\n<span class="hl-key">ID 1:</span>      <span class="hl-str">"&lt;|end_of_text|&gt;"</span>    <span class="hl-comment">(EOS)</span>\n<span class="hl-key">ID 220:</span>    <span class="hl-str">" "</span>                  <span class="hl-comment">(space)</span>\n<span class="hl-key">ID 791:</span>    <span class="hl-str">" the"</span>\n<span class="hl-key">ID 1834:</span>   <span class="hl-str">"Explain"</span>\n<span class="hl-key">ID 48291:</span>  <span class="hl-str">"Grav"</span>\n<span class="hl-key">ID 128000:</span> <span class="hl-str">"&lt;|start_header_id|&gt;"</span>\n...\n\n<span class="hl-comment">// BPE merge rules (ordered by priority):</span>\n<span class="hl-key">Merge 1:</span>   <span class="hl-str">"i"</span> + <span class="hl-str">"n"</span>  → <span class="hl-str">"in"</span>\n<span class="hl-key">Merge 2:</span>   <span class="hl-str">"t"</span> + <span class="hl-str">"h"</span>  → <span class="hl-str">"th"</span>\n<span class="hl-key">Merge 3:</span>   <span class="hl-str">"th"</span> + <span class="hl-str">"e"</span> → <span class="hl-str">"the"</span>\n...\n<span class="hl-key">Merge 128K:</span> <span class="hl-str">"play"</span> + <span class="hl-str">"ground"</span> → <span class="hl-str">"playground"</span></div>'+
+        '<div class="dp-note n-pink">The tokenizer is <strong>inseparable from the model</strong>. The embedding matrix has exactly 128,256 rows — one per token. If you use the wrong tokenizer, token ID 791 might mean "the" in one vocab but "cat" in another, producing garbage output.</div>'
+    },
+    5: {
+      title:'Embedding Matrix',
+      body:'<div class="dp-label">The First Weight Tensor</div>'+
+        '<div class="dp-code"><span class="hl-key">token_embd.weight</span>\n  Shape: [<span class="hl-num">128,256</span> × <span class="hl-num">8,192</span>]\n  Parameters: <span class="hl-num">1,050,673,152</span> (~1 billion)\n\n<span class="hl-comment">// Each row is a learned vector for one token:</span>\n\nRow <span class="hl-num">0</span>   (BOS):     [<span class="hl-num">0.002</span>, <span class="hl-num">-0.041</span>, <span class="hl-num">0.018</span>, ... <span class="hl-num">8192 values</span>]\nRow <span class="hl-num">791</span> (" the"):  [<span class="hl-num">0.123</span>, <span class="hl-num">-0.841</span>, <span class="hl-num">0.392</span>, ... <span class="hl-num">8192 values</span>]\nRow <span class="hl-num">1834</span>("Explain"):[<span class="hl-num">0.044</span>, <span class="hl-num">0.219</span>, <span class="hl-num">-0.671</span>, ... <span class="hl-num">8192 values</span>]\n\n<span class="hl-comment">// Size at different precisions:</span>\n<span class="hl-key">FP32:</span> <span class="hl-num">4.0 GB</span>  (4 bytes × 1.05B params)\n<span class="hl-key">FP16:</span> <span class="hl-num">2.0 GB</span>  (2 bytes × 1.05B params)\n<span class="hl-key">Q4:</span>   <span class="hl-num">~0.5 GB</span> (0.5 bytes × 1.05B params)</div>'+
+        '<div class="dp-note n-teal">This is a <strong>simple lookup table</strong> — not a computation. When the model sees token ID 791, it grabs row 791 from this matrix. These 8,192-dimensional vectors encode the semantic meaning of each token, learned during training.</div>'
+    },
+    6: {
+      title:'Transformer Layer Weights',
+      body:'<div class="dp-label">What\'s Inside Each of the 80 Layers</div>'+
+        '<div class="dp-code"><span class="hl-comment">// Each layer contains 9 weight tensors:</span>\n\n<span class="hl-key">── Attention ──</span>\nblk.N.attn_q.weight      [<span class="hl-num">8192 × 8192</span>]   <span class="hl-comment">Query</span>\nblk.N.attn_k.weight      [<span class="hl-num">1024 × 8192</span>]   <span class="hl-comment">Key (GQA)</span>\nblk.N.attn_v.weight      [<span class="hl-num">1024 × 8192</span>]   <span class="hl-comment">Value (GQA)</span>\nblk.N.attn_output.weight  [<span class="hl-num">8192 × 8192</span>]   <span class="hl-comment">Output proj</span>\nblk.N.attn_norm.weight    [<span class="hl-num">8192</span>]          <span class="hl-comment">RMSNorm</span>\n\n<span class="hl-key">── Feed-Forward (FFN) ──</span>\nblk.N.ffn_gate.weight     [<span class="hl-num">28672 × 8192</span>]  <span class="hl-comment">Gate proj</span>\nblk.N.ffn_up.weight       [<span class="hl-num">28672 × 8192</span>]  <span class="hl-comment">Up proj</span>\nblk.N.ffn_down.weight     [<span class="hl-num">8192 × 28672</span>]  <span class="hl-comment">Down proj</span>\nblk.N.ffn_norm.weight     [<span class="hl-num">8192</span>]          <span class="hl-comment">RMSNorm</span>\n\n<span class="hl-comment">// Per layer: ~838M parameters</span>\n<span class="hl-comment">// × 80 layers = ~67B parameters</span>\n<span class="hl-comment">// (this is where most of the 70B lives)</span></div>'+
+        '<div class="dp-note n-teal"><strong>The Transformer layers are the model\'s brain.</strong> Attention weights learn which tokens to focus on. FFN weights store factual knowledge and perform reasoning. Each layer independently refines the representation — early layers handle syntax, late layers handle abstract reasoning.</div>'
+    },
+    7: {
+      title:'Output Head (LM Head)',
+      body:'<div class="dp-label">The Final Projection</div>'+
+        '<div class="dp-code"><span class="hl-key">output_norm.weight</span>  [<span class="hl-num">8192</span>]\n  Final RMSNorm before projection\n\n<span class="hl-key">output.weight</span>       [<span class="hl-num">128,256 × 8192</span>]\n  Projects hidden state → vocabulary scores\n  Parameters: <span class="hl-num">~1.05 billion</span>\n\n<span class="hl-comment">// This matrix is often TIED to the</span>\n<span class="hl-comment">// embedding matrix (same weights, transposed)</span>\n<span class="hl-comment">// to save ~1B parameters.</span>\n\n<span class="hl-comment">// The output is a logits vector:</span>\n<span class="hl-key">hidden_state</span> [<span class="hl-num">8192</span>] × <span class="hl-key">output.weight</span> [<span class="hl-num">8192 × 128K</span>]\n  → <span class="hl-key">logits</span> [<span class="hl-num">128,256</span>]\n  → one score per possible next token</div>'+
+        '<div class="dp-note n-teal">The output head converts the model\'s internal representation into a <strong>probability distribution over the entire vocabulary</strong>. The token with the highest score (after softmax and sampling) becomes the next generated token.</div>'
+    },
+    8: {
+      title:'Full Precision Size',
+      body:'<div class="dp-label">Why Quantization is Necessary</div>'+
+        '<div class="dp-code"><span class="hl-comment">// 70 billion parameters at full precision:</span>\n\n<span class="hl-key">FP32 (32-bit float):</span>\n  70B × 4 bytes = <span class="hl-num">280 GB</span>\n  <span class="hl-err">No consumer GPU can hold this</span>\n\n<span class="hl-key">FP16 (16-bit float):</span>\n  70B × 2 bytes = <span class="hl-num">140 GB</span>\n  <span class="hl-err">Needs 2× A100 80GB GPUs</span>\n\n<span class="hl-key">BF16 (Brain Float 16):</span>\n  70B × 2 bytes = <span class="hl-num">140 GB</span>\n  Same size, better training stability\n\n<span class="hl-comment">// For reference, consumer GPUs:</span>\n<span class="hl-key">RTX 4090:</span>     <span class="hl-num">24 GB</span> VRAM\n<span class="hl-key">Mac M2 Ultra:</span> <span class="hl-num">192 GB</span> unified memory\n<span class="hl-key">A100:</span>         <span class="hl-num">80 GB</span> VRAM\n\n<span class="hl-comment">// 140 GB doesn\'t fit in any single GPU!</span></div>'+
+        '<div class="dp-note n-amber"><strong>This is the fundamental problem.</strong> The raw model is too large for any single consumer GPU. Quantization is the solution — it compresses the weights so the model fits in available memory while preserving most of the quality.</div>'
+    },
+    9: {
+      title:'Quantization — Compression for Weights',
+      body:'<div class="dp-label">How Quantization Shrinks the File</div>'+
+        '<div class="dp-code"><span class="hl-comment">// Original weight value (FP16):</span>\n<span class="hl-num">0.02734375</span> → stored as 16 bits\n\n<span class="hl-comment">// Quantized to 4 bits (Q4_K_M):</span>\n<span class="hl-comment">// Group 32 weights together, store:</span>\n<span class="hl-key">scale:</span>  <span class="hl-num">0.00421</span>  <span class="hl-comment">(FP16, shared by 32 weights)</span>\n<span class="hl-key">values:</span> [<span class="hl-num">6</span>, <span class="hl-num">3</span>, <span class="hl-num">11</span>, <span class="hl-num">8</span>, ...]  <span class="hl-comment">(4-bit integers, 0-15)</span>\n<span class="hl-key">actual</span> = value × scale\n\n<span class="hl-comment">// Size comparison for 70B model:</span>\n<span class="hl-key">FP16:</span>    <span class="hl-num">140 GB</span>  (16 bits/param)\n<span class="hl-key">Q8_0:</span>    <span class="hl-num">~74 GB</span>  (8.5 bits/param)\n<span class="hl-key">Q6_K:</span>    <span class="hl-num">~57 GB</span>  (6.6 bits/param)\n<span class="hl-key">Q5_K_M:</span>  <span class="hl-num">~48 GB</span>  (5.7 bits/param)\n<span class="hl-key">Q4_K_M:</span>  <span class="hl-num">~40 GB</span>  (4.8 bits/param)  <span class="hl-ok">← sweet spot</span>\n<span class="hl-key">Q3_K_M:</span>  <span class="hl-num">~33 GB</span>  (3.9 bits/param)\n<span class="hl-key">Q2_K:</span>    <span class="hl-num">~26 GB</span>  (3.3 bits/param)  <span class="hl-err">← noticeable loss</span></div>'+
+        '<div class="dp-note n-amber"><strong>Q4_K_M is the community sweet spot</strong> — it reduces file size by 3.5x while losing only ~1% quality (measured by perplexity). The "K" means k-quant (block-wise scaling), and "M" means medium quality within that bit level.</div>'
+    },
+    10: {
+      title:'The Complete Model File — Summary',
+      body:'<div class="dp-label">Everything Inside One File</div>'+
+        '<div class="dp-code"><span class="hl-key">┌─────────────────────────────────────┐</span>\n<span class="hl-key">│</span>  <span class="hl-cmd">GGUF HEADER</span>                        <span class="hl-key">│</span>\n<span class="hl-key">│</span>  Magic: GGUF, Version: 3            <span class="hl-key">│</span>\n<span class="hl-key">│</span>  Tensor count: 723                   <span class="hl-key">│</span>\n<span class="hl-key">│</span>  Metadata KV pairs: 26               <span class="hl-key">│</span>\n<span class="hl-key">├─────────────────────────────────────┤</span>\n<span class="hl-key">│</span>  <span class="hl-cmd">METADATA</span>            ~2 KB           <span class="hl-key">│</span>\n<span class="hl-key">│</span>  Architecture, dims, heads, etc.     <span class="hl-key">│</span>\n<span class="hl-key">├─────────────────────────────────────┤</span>\n<span class="hl-key">│</span>  <span class="hl-cmd">TOKENIZER</span>           ~2 MB           <span class="hl-key">│</span>\n<span class="hl-key">│</span>  128,256 tokens + merge rules        <span class="hl-key">│</span>\n<span class="hl-key">├─────────────────────────────────────┤</span>\n<span class="hl-key">│</span>  <span class="hl-cmd">TENSOR DATA</span>         ~40 GB          <span class="hl-key">│</span>\n<span class="hl-key">│</span>  1 embedding + 80 layers + 1 head   <span class="hl-key">│</span>\n<span class="hl-key">│</span>  = 723 tensors, 70B parameters      <span class="hl-key">│</span>\n<span class="hl-key">│</span>  quantized to Q4_K_M                 <span class="hl-key">│</span>\n<span class="hl-key">└─────────────────────────────────────┘</span>\n\nTotal file size: <span class="hl-num">~40.8 GB</span></div>'+
+        '<div class="dp-note n-green"><strong>That\'s it — that\'s the whole model.</strong> A header describing the format, metadata describing the architecture, a tokenizer for text-to-numbers conversion, and billions of quantized floating-point weights organized into named tensors. When you run inference, the engine reads this file, maps the tensors into GPU memory, and starts generating tokens.</div>'
+    }
+  };
+
+  let current = 0, playing = true, timer = null;
+
+  const all = document.querySelectorAll('[data-step]');
+  const progress = document.getElementById('progressFill');
+  const stepLabel = document.getElementById('stepLabel');
+  const dotsBox = document.getElementById('stepDots');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const narStep = document.getElementById('narStep');
+  const narText = document.getElementById('narText');
+  const detailPanel = document.getElementById('detailPanel');
+  const detailOverlay = document.getElementById('detailOverlay');
+  const dpStep = document.getElementById('dpStep');
+  const dpTitle = document.getElementById('dpTitle');
+  const dpBody = document.getElementById('dpBody');
+  const dpClose = document.getElementById('dpClose');
+
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'sc-dot';
+    dotsBox.appendChild(d);
+  }
+  const dots = dotsBox.querySelectorAll('.sc-dot');
+
+  function showDetail(step) {
+    const d = DETAILS[step], nar = NARRATION[step];
+    if (!d) { hideDetail(); return; }
+    dpStep.textContent = step;
+    dpStep.style.background = nar ? nar.color : '#7c3aed';
+    dpTitle.textContent = d.title;
+    dpBody.innerHTML = d.body;
+    detailPanel.classList.add('visible');
+    detailOverlay.classList.add('visible');
+  }
+  function hideDetail() {
+    detailPanel.classList.remove('visible');
+    detailOverlay.classList.remove('visible');
+  }
+  dpClose.addEventListener('click', hideDetail);
+  detailOverlay.addEventListener('click', hideDetail);
+
+  function activate(step) {
+    all.forEach(el => {
+      const s = parseInt(el.dataset.step);
+      if (s <= step) { el.classList.remove('dimmed'); el.classList.add('active'); }
+      else { el.classList.add('dimmed'); el.classList.remove('active'); }
+    });
+    progress.style.width = ((step / TOTAL) * 100) + '%';
+    stepLabel.textContent = step + ' / ' + TOTAL;
+    dots.forEach((d, i) => d.classList.toggle('filled', i < step));
+    const nar = NARRATION[step];
+    if (nar) {
+      narStep.textContent = step;
+      narStep.style.background = nar.color;
+      narText.innerHTML = nar.text;
+    }
+    if (!playing) showDetail(step); else hideDetail();
+  }
+
+  function showReset() {
+    all.forEach(el => { el.classList.add('dimmed'); el.classList.remove('active'); });
+    progress.style.width = '0%';
+    stepLabel.textContent = '- / ' + TOTAL;
+    dots.forEach(d => d.classList.remove('filled'));
+    narStep.textContent = '-';
+    narStep.style.background = '#7c3aed';
+    narText.innerHTML = 'Waiting to begin...';
+    hideDetail();
+  }
+  function reset() { showReset(); current = 0; }
+
+  function pause() {
+    if (!playing) return;
+    playing = false; clearTimeout(timer); timer = null;
+    playIcon.textContent = 'play_arrow';
+  }
+  function play() {
+    if (playing) return;
+    playing = true; playIcon.textContent = 'pause';
+    if (current >= TOTAL) { reset(); timer = setTimeout(tick, 800); }
+    else { timer = setTimeout(tick, STEP_MS); }
+  }
+  function goTo(step) {
+    pause();
+    current = Math.max(0, Math.min(TOTAL, step));
+    if (current === 0) showReset(); else activate(current);
+  }
+  function stepNext() { if (current < TOTAL) goTo(current + 1); }
+  function stepPrev() { if (current > 0) goTo(current - 1); }
+
+  function tick() {
+    current++;
+    if (current > TOTAL) {
+      setTimeout(() => { reset(); if (playing) timer = setTimeout(tick, 1000); }, PAUSE_MS);
+      return;
+    }
+    activate(current);
+    if (playing) timer = setTimeout(tick, STEP_MS);
+  }
+
+  playBtn.addEventListener('click', () => { if (playing) pause(); else play(); });
+  prevBtn.addEventListener('click', stepPrev);
+  nextBtn.addEventListener('click', stepNext);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hideDetail(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepNext(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stepPrev(); }
+    else if (e.key === ' ') { e.preventDefault(); if (playing) pause(); else play(); }
+  });
+
+  document.getElementById('narration').addEventListener('click', () => {
+    if (current > 0) { pause(); showDetail(current); }
+  });
+
+  reset();
+  timer = setTimeout(tick, 800);
+})();
+</script>
+
+</body>
+</html>

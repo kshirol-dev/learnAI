@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Optimizers & Learning Rates — Deep Learning Fundamentals</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--blue)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Optimizers &amp; Learning Rates</h2><span class="tb-sub">SGD, momentum, RMSProp, Adam, and learning rate schedules</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">trending_down</span></div><span class="pipe-label">SGD</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Momentum</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">auto_graph</span></div><span class="pipe-label">RMSProp</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Adam</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">schedule</span></div><span class="pipe-label">Schedules</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Choosing</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">trending_down</span></div>
+        <div><div class="cc-title">Vanilla SGD &amp; Its Limits</div><div class="cc-sub">The simplest optimizer and why it struggles</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Stochastic Gradient Descent</div>
+            <div class="cc-text"><strong>Stochastic Gradient Descent (SGD)</strong> updates weights using the gradient from a single mini-batch rather than the full dataset. It&rsquo;s fast per step but noisy &mdash; each batch gives a slightly different gradient estimate. This noise can help escape shallow local minima but also causes the loss to oscillate rather than smoothly decrease. SGD treats all parameters equally and has no memory of previous gradients.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Update</div>
+            <div class="cc-code"><span class="hl-cmt">// Vanilla SGD</span>
+w = w - η · ∂L/∂w
+
+<span class="hl-cmt">// Problems:</span>
+<span class="hl-cmt">// 1. Same learning rate for ALL parameters</span>
+<span class="hl-cmt">// 2. Oscillates in steep dimensions</span>
+<span class="hl-cmt">// 3. Slow in flat dimensions</span>
+<span class="hl-cmt">// 4. Gets stuck in saddle points</span></div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> In high-dimensional loss landscapes (millions of parameters), saddle points are far more common than local minima. SGD can stall at saddle points because the gradient is near zero in many directions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">speed</span></div>
+        <div><div class="cc-title">Momentum</div><div class="cc-sub">Adding inertia to gradient descent</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Physics Analogy</div>
+            <div class="cc-text">Momentum (Polyak, 1964) adds a <strong>velocity term</strong> that accumulates past gradients. Think of a ball rolling downhill: it builds speed in consistent directions and dampens oscillations in noisy directions. The momentum coefficient β (typically 0.9) controls how much history to retain. With momentum, SGD accelerates through flat regions and smooths out zigzag paths in narrow valleys.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Update</div>
+            <div class="cc-code"><span class="hl-cmt">// SGD with Momentum</span>
+v = β · v + ∂L/∂w       <span class="hl-cmt">// accumulate velocity</span>
+w = w - η · v            <span class="hl-cmt">// update weights</span>
+
+<span class="hl-cmt">// β = 0.9 means 90% of previous velocity</span>
+<span class="hl-cmt">// is carried forward</span>
+
+<span class="hl-cmt">// Nesterov variant (1983): look ahead first</span>
+v = β · v + ∂L/∂(w - β·v)
+w = w - η · v</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Nesterov momentum (Nesterov, 1983) computes the gradient at the &ldquo;look-ahead&rdquo; position rather than the current position. This gives a corrective signal that reduces overshooting and converges faster in practice.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">auto_graph</span></div>
+        <div><div class="cc-title">Adaptive Learning Rates: AdaGrad &amp; RMSProp</div><div class="cc-sub">Different rates for different parameters</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">AdaGrad (Duchi et al., 2011)</div>
+            <div class="cc-text"><strong>AdaGrad</strong> gives each parameter its own learning rate based on its gradient history. Parameters with large past gradients (frequent features) get smaller steps; parameters with small past gradients (rare features) get larger steps. This is great for sparse data (NLP, recommendations) but has a fatal flaw: the accumulated squared gradients <strong>grow monotonically</strong>, eventually shrinking the learning rate to near zero.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">RMSProp (Hinton, 2012)</div>
+            <div class="cc-text"><strong>RMSProp</strong>, proposed by Geoffrey Hinton in his Coursera lectures (2012, unpublished), fixes AdaGrad by using an <strong>exponential moving average</strong> of squared gradients instead of a cumulative sum. This prevents the learning rate from decaying to zero and adapts to the recent gradient landscape.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Updates</div>
+            <div class="cc-code"><span class="hl-cmt">// RMSProp</span>
+s = ρ · s + (<span class="hl-num">1</span>-ρ) · (∂L/∂w)²  <span class="hl-cmt">// EMA of sq grads</span>
+w = w - η · ∂L/∂w / (√s + ε)   <span class="hl-cmt">// adaptive step</span>
+
+<span class="hl-cmt">// ρ = 0.99, ε = 1e-8 (stability)</span>
+<span class="hl-cmt">// Large recent grads → smaller step</span>
+<span class="hl-cmt">// Small recent grads → larger step</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">star</span></div>
+        <div><div class="cc-title">Adam: The Default Optimizer</div><div class="cc-sub">Combining momentum and adaptive rates</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Kingma & Ba (ICLR 2015)</div>
+            <div class="cc-text"><strong>Adam</strong> (Adaptive Moment Estimation) combines the best of momentum and RMSProp. It maintains two running averages: <strong>m</strong> (first moment &mdash; mean of gradients, like momentum) and <strong>v</strong> (second moment &mdash; mean of squared gradients, like RMSProp). It also includes <strong>bias correction</strong> to account for the fact that m and v are initialized at zero and are biased toward zero in early steps. Adam is the most widely used optimizer in deep learning.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Rule of thumb:</strong> Adam with lr=3e-4 is a strong default for most tasks. It was the default optimizer for training GPT-2, GPT-3, and many other large language models.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Algorithm</div>
+            <div class="cc-code"><span class="hl-cmt">// Adam (Kingma & Ba, 2015)</span>
+m = β₁ · m + (<span class="hl-num">1</span>-β₁) · g        <span class="hl-cmt">// 1st moment</span>
+v = β₂ · v + (<span class="hl-num">1</span>-β₂) · g²       <span class="hl-cmt">// 2nd moment</span>
+m̂ = m / (<span class="hl-num">1</span> - β₁ᵗ)              <span class="hl-cmt">// bias correct</span>
+v̂ = v / (<span class="hl-num">1</span> - β₂ᵗ)              <span class="hl-cmt">// bias correct</span>
+w = w - η · m̂ / (√v̂ + ε)       <span class="hl-cmt">// update</span>
+
+<span class="hl-cmt">// Defaults: β₁=0.9, β₂=0.999, ε=1e-8</span>
+<span class="hl-cmt">// t = timestep (for bias correction)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">build</span></div>
+        <div><div class="cc-title">Adam Variants</div><div class="cc-sub">AdamW, RAdam, and the weight decay fix</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">AdamW (Loshchilov & Hutter, 2019)</div>
+            <div class="cc-text">Original Adam applies L2 regularization by adding the penalty to the gradient, but this interacts poorly with adaptive learning rates. <strong>AdamW</strong> (ICLR 2019) decouples weight decay from the gradient update, applying it directly to the weights. This seemingly small change significantly improves generalization. AdamW is the standard optimizer for training transformers, including BERT, GPT-3, and LLaMA.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Key Variants</div>
+            <div class="cc-code"><span class="hl-cmt">// AdamW: decoupled weight decay</span>
+w = w - η · (m̂/(√v̂ + ε) + λ·w)
+
+<span class="hl-cmt">// vs. Adam with L2 (wrong way)</span>
+g = g + λ·w  <span class="hl-cmt">// decay in gradient</span>
+w = w - η · m̂/(√v̂ + ε)
+
+<span class="hl-cmt">// RAdam (Liu et al., 2020)</span>
+<span class="hl-cmt">// Rectifies variance in early training</span>
+<span class="hl-cmt">// Removes need for warmup heuristic</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The difference between Adam and AdamW looks trivial in code but has a profound effect. AdamW ensures that weight decay penalizes large weights equally regardless of the adaptive learning rate, leading to better-regularized models.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">schedule</span></div>
+        <div><div class="cc-title">Learning Rate Schedules</div><div class="cc-sub">Changing the learning rate during training</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Schedule?</div>
+            <div class="cc-text">A fixed learning rate is rarely optimal. Early in training, you want <strong>large steps</strong> to make fast progress. Later, you want <strong>small steps</strong> to fine-tune. Learning rate schedules systematically reduce η over time. The most common strategies: <strong>step decay</strong> (halve every N epochs), <strong>cosine annealing</strong> (smooth cosine curve from max to min), and <strong>warmup + decay</strong> (start small, ramp up, then decay).</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Common Schedules</div>
+            <div class="cc-code"><span class="hl-cmt">// Step decay</span>
+η = η₀ · <span class="hl-num">0.1</span>^(epoch // <span class="hl-num">30</span>)
+
+<span class="hl-cmt">// Cosine annealing (Loshchilov & Hutter, 2017)</span>
+η = η_min + <span class="hl-num">0.5</span>·(η_max - η_min)·(<span class="hl-num">1</span> + cos(π·t/T))
+
+<span class="hl-cmt">// Linear warmup + cosine decay (standard for LLMs)</span>
+<span class="hl-key">if</span> t < warmup_steps:
+    η = η_max · (t / warmup_steps)
+<span class="hl-key">else</span>:
+    η = cosine_decay(t)</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Warmup is critical for Adam-family optimizers. Liu et al. (2020) showed that Adam has problematically large variance in early training steps. Warmup acts as a variance reduction technique, stabilizing the adaptive learning rate estimates.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Optimizer Comparison</div><div class="cc-sub">When to use which optimizer</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Decision Guide</div>
+            <div class="cc-text"><strong>AdamW</strong> is the default for transformers and most modern architectures. <strong>SGD + momentum</strong> often generalizes better for CNNs (ResNets on ImageNet) but requires more tuning. <strong>Adam</strong> converges faster but can generalize worse than SGD in some settings. For LLM training, <strong>AdamW with linear warmup + cosine decay</strong> is the near-universal standard (used by GPT-3, LLaMA, Gemini).</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box good">
+              <div class="cb-tag">AdamW (Transformers / LLMs)</div>
+              <div class="cb-text">Fast convergence, minimal tuning, decoupled weight decay. Standard for BERT, GPT, LLaMA, and most NLP/LLM work.</div>
+            </div>
+            <div class="compare-box good">
+              <div class="cb-tag">SGD + Momentum (Vision)</div>
+              <div class="cb-text">Often better final accuracy on image tasks. Requires careful LR tuning. Used for ResNet, EfficientNet training.</div>
+            </div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quick Reference</div>
+            <div class="cc-code"><span class="hl-cmt">// PyTorch optimizer setup</span>
+<span class="hl-key">import</span> torch.optim <span class="hl-key">as</span> optim
+
+<span class="hl-cmt">// For transformers / LLMs</span>
+optimizer = optim.AdamW(
+    model.parameters(),
+    lr=<span class="hl-num">3e-4</span>, weight_decay=<span class="hl-num">0.01</span>
+)
+
+<span class="hl-cmt">// For CNNs / vision</span>
+optimizer = optim.SGD(
+    model.parameters(),
+    lr=<span class="hl-num">0.1</span>, momentum=<span class="hl-num">0.9</span>,
+    weight_decay=<span class="hl-num">1e-4</span>
+)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">check_circle</span></div>
+        <div><div class="cc-title">Practical Tips &amp; What&rsquo;s Next</div><div class="cc-sub">Battle-tested advice for choosing and tuning optimizers</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Practical Guidelines</div>
+            <div class="cc-text"><strong>1.</strong> Start with AdamW (lr=3e-4, wd=0.01) as your baseline. <strong>2.</strong> Use linear warmup for the first 5&ndash;10% of training steps. <strong>3.</strong> Use cosine annealing to decay to ~10% of peak LR. <strong>4.</strong> If training is unstable, reduce LR or increase warmup. <strong>5.</strong> For fine-tuning pretrained models, use 10&ndash;100&times; smaller LR than pretraining. <strong>6.</strong> Monitor both training and validation loss &mdash; divergence means overfitting.</div>
+          </div>
+          <div class="cc-note n-green"><strong>The connection:</strong> Optimizers determine how efficiently a network learns. With training mechanics covered (loss, backprop, optimizers), the next chapter shifts to architecture: Convolutional Neural Networks &mdash; the breakthrough that taught machines to see.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Evolution</div>
+            <div class="cc-code"><span class="hl-cmt">// The optimizer family tree</span>
+
+SGD (<span class="hl-num">1951</span>)
+ ├─ + Momentum (<span class="hl-num">1964</span>, Polyak)
+ │   └─ Nesterov (<span class="hl-num">1983</span>)
+ ├─ AdaGrad (<span class="hl-num">2011</span>, Duchi)
+ │   └─ RMSProp (<span class="hl-num">2012</span>, Hinton)
+ │       └─ Adam (<span class="hl-num">2015</span>, Kingma &amp; Ba)
+ │           ├─ AdamW (<span class="hl-num">2019</span>, Loshchilov)
+ │           └─ RAdam (<span class="hl-num">2020</span>, Liu)
+ └─ LAMB, LARS  <span class="hl-cmt">// for large-batch training</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-training-deep-networks.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: Training Deep Networks</a>
+    <a class="ch-nav-btn next" href="04-convolutional-neural-networks.html">Ch 4: Convolutional Neural Networks <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3],6:[3,4],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Vanilla SGD uses the same learning rate for every parameter and has no memory of past gradients — it oscillates in steep dimensions and stalls in flat ones.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Momentum (Polyak, 1964) adds a velocity term that accumulates past gradients — like a ball rolling downhill, it builds speed in consistent directions.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> RMSProp (Hinton, 2012) gives each parameter its own learning rate based on recent gradient magnitudes — large gradients get smaller steps, small gradients get larger steps.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Adam (Kingma &amp; Ba, 2015) combines momentum and RMSProp with bias correction. It\'s the most widely used optimizer in deep learning.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> AdamW decouples weight decay from the gradient update — a small change that significantly improves generalization. It\'s the standard for training transformers.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Learning rate schedules (warmup + cosine decay) are critical. Warmup stabilizes early training; decay fine-tunes in later stages.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> AdamW for transformers/LLMs, SGD+momentum for vision CNNs. The optimizer choice depends on the architecture and task.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Start with AdamW lr=3e-4, add warmup, use cosine decay. This recipe works for the vast majority of deep learning tasks.',color:'#16a34a'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

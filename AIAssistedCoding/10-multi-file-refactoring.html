@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Multi-File & Agentic Refactoring — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}.cc-code .hl-err{color:var(--red);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Multi-File &amp; Agentic Refactoring</h2><span class="tb-sub">Cross-file edits, parallel agents, and safe rollback &mdash; refactoring at scale with AI</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">map</span></div><span class="pipe-label">Map</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">account_tree</span></div><span class="pipe-label">Plan</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">call_split</span></div><span class="pipe-label">Isolate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">edit</span></div><span class="pipe-label">Execute</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Verify</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">merge</span></div><span class="pipe-label">Merge</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">map</span></div>
+        <div><div class="cc-title">Why Multi-File Refactoring Is Hard</div><div class="cc-sub">The challenge that separates toy demos from real engineering</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Single-File Illusion</div>
+            <div class="cc-text">Most AI coding demos show single-file edits: generate a function, fix a bug, write a component. Real codebases don&rsquo;t work that way. Renaming a type affects <strong>every file that imports it</strong>. Changing an API response shape requires updating the endpoint, the client, the types, and the tests. A single logical change can touch <strong>20&ndash;50 files</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What Makes It Hard for AI</div>
+            <div class="cc-text">&bull; <strong>Context limits</strong> &mdash; 50 files exceed any context window<br>&bull; <strong>Implicit dependencies</strong> &mdash; re-exports, barrel files, dynamic imports<br>&bull; <strong>Ordering matters</strong> &mdash; change the type before the consumers<br>&bull; <strong>Cascading failures</strong> &mdash; one wrong edit breaks everything downstream<br>&bull; <strong>Partial visibility</strong> &mdash; the agent can&rsquo;t see all affected files at once</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Common Multi-File Refactors</div>
+            <div class="cc-code"><span class="hl-cmt">// Tasks that always touch multiple files:</span>
+
+<span class="hl-ok">Rename</span>         Variable, function, type, or file
+               across all consumers
+
+<span class="hl-ok">Extract</span>        Pull logic into a shared utility
+               and update all call sites
+
+<span class="hl-ok">API change</span>     Modify endpoint response shape,
+               update client + types + tests
+
+<span class="hl-ok">Migration</span>      Framework upgrade (React class &rarr;
+               hooks across 150+ components)
+
+<span class="hl-ok">Pattern swap</span>   Replace one pattern with another
+               (callbacks &rarr; async/await)
+
+<span class="hl-ok">Move</span>           Relocate files to new directory
+               structure, fix all imports</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Multi-file refactoring is where AI coding agents deliver the most value over completions and chat. A 40-hour manual refactoring job can drop to 16&ndash;32 hours with agent assistance. But it requires a different workflow than single-file edits.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">account_tree</span></div>
+        <div><div class="cc-title">Dependency Mapping: Know What You&rsquo;re Touching</div><div class="cc-sub">The first step is always: find every affected file</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Before You Change Anything</div>
+            <div class="cc-text">The most common multi-file refactoring failure: the agent changes the source but misses consumers. Before making any edit, <strong>map the dependency graph</strong>. Find every file that imports, references, or depends on the thing you&rsquo;re changing. This is the blast radius.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">How Agents Map Dependencies</div>
+            <div class="cc-text">&bull; <strong>Grep/search</strong> &mdash; find all imports of the symbol<br>&bull; <strong>AST analysis</strong> &mdash; parse code into syntax trees, trace references structurally<br>&bull; <strong>Type system</strong> &mdash; use TypeScript&rsquo;s language server to find all usages<br>&bull; <strong>Dependency graphs</strong> &mdash; tools that pre-index the entire codebase and track file-to-file relationships</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Implicit Dependency Trap</div>
+            <div class="cc-text">Agents miss <strong>indirect references</strong>: barrel files (<code>index.ts</code> re-exports), dynamic imports (<code>import()</code>), string-based references (route names, config keys), and reflection. One study found <strong>12 files missed</strong> during a prop rename across 50 components due to indirect import paths through shared index files.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Human Checkpoint</div>
+            <div class="cc-text">After the agent maps dependencies, <strong>review the list before approving changes</strong>. Ask: &ldquo;Are there files you might have missed? Check barrel files and dynamic imports.&rdquo; Run the type checker or linter after changes to catch anything the agent&rsquo;s search missed.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Practical tip:</strong> Before a large refactor, ask the agent to <em>list all affected files without making changes</em>. Review the list. Add any files it missed. Only then approve the actual edits. This two-step approach catches most dependency gaps.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">call_split</span></div>
+        <div><div class="cc-title">Git Worktree Isolation: One Agent, One Branch</div><div class="cc-sub">The infrastructure pattern that makes parallel agents safe</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Problem with Shared Directories</div>
+            <div class="cc-text">If two agents edit the same codebase directory simultaneously, you get <strong>file collisions, index corruption, and context contamination</strong>. Agent A reads a file, Agent B modifies it, Agent A writes its version &mdash; B&rsquo;s changes vanish. Branches alone don&rsquo;t help because switching branches destroys the working context.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Git Worktrees</div>
+            <div class="cc-text">A <strong>git worktree</strong> creates a separate working directory linked to the same repository. Each worktree has its own files, its own branch, and its own index &mdash; but shares the same git history. Multiple agents can work in parallel without interfering with each other.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Setup</div>
+            <div class="cc-code"><span class="hl-cmt">// Create isolated worktrees for agents:</span>
+
+<span class="hl-key">git worktree add</span> ../project-auth agent/auth
+<span class="hl-key">git worktree add</span> ../project-api  agent/api
+<span class="hl-key">git worktree add</span> ../project-ui   agent/ui
+
+<span class="hl-cmt">// Each agent works in its own directory:</span>
+<span class="hl-str">../project-auth/</span>  &rarr; Agent 1 (auth refactor)
+<span class="hl-str">../project-api/</span>   &rarr; Agent 2 (API changes)
+<span class="hl-str">../project-ui/</span>    &rarr; Agent 3 (UI updates)
+
+<span class="hl-cmt">// The fundamental rule:</span>
+<span class="hl-ok">One agent = one worktree = one branch</span>
+
+<span class="hl-cmt">// When done, merge back to main:</span>
+<span class="hl-key">git merge</span> agent/auth
+<span class="hl-key">git merge</span> agent/api
+<span class="hl-key">git merge</span> agent/ui</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key benefit:</strong> If one agent&rsquo;s changes are bad, you discard that worktree without affecting the others. Each agent&rsquo;s work is independently reviewable, testable, and revertible. This is the infrastructure that makes agentic refactoring safe at scale.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">edit</span></div>
+        <div><div class="cc-title">Execution Strategies: How to Order the Changes</div><div class="cc-sub">Dependency order, atomic commits, and the verify-after-each pattern</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Dependency-Order Editing</div>
+            <div class="cc-text">Change files in <strong>dependency order</strong>: types and interfaces first, then implementations, then consumers, then tests. This ensures each file is valid at the time it&rsquo;s edited, because its dependencies have already been updated. Editing in random order creates temporary broken states that confuse the agent.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Atomic Commits</div>
+            <div class="cc-text">After each logical group of changes, <strong>commit</strong>. &ldquo;Renamed User.name to User.displayName in types&rdquo; &mdash; commit. &ldquo;Updated all components to use displayName&rdquo; &mdash; commit. &ldquo;Updated tests&rdquo; &mdash; commit. Small, atomic commits create rollback points. If step 3 breaks, you revert to step 2 without losing step 1.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Verify-After-Each Pattern</div>
+            <div class="cc-code"><span class="hl-cmt">// After each group of changes:</span>
+
+<span class="hl-ok">1.</span> Agent makes edits to a file group
+<span class="hl-ok">2.</span> Run type checker: <span class="hl-str">tsc --noEmit</span>
+<span class="hl-ok">3.</span> Run linter: <span class="hl-str">eslint .</span>
+<span class="hl-ok">4.</span> Run affected tests: <span class="hl-str">npm test -- --changed</span>
+<span class="hl-ok">5.</span> If all pass &rarr; commit &amp; continue
+<span class="hl-err">6.</span> If any fail &rarr; fix before proceeding
+
+<span class="hl-cmt">// Never let errors accumulate.</span>
+<span class="hl-cmt">// Fix each failure before moving on.</span>
+<span class="hl-cmt">// Accumulated errors are exponentially</span>
+<span class="hl-cmt">// harder to debug than isolated ones.</span></div>
+          </div>
+          <div class="cc-note n-green"><strong>Why this works:</strong> Each commit is a known-good state. The agent can always revert to the last passing commit. This transforms a scary 50-file refactor into a series of small, safe, verifiable steps. The total time is longer, but the risk of catastrophic failure drops to near zero.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">groups</span></div>
+        <div><div class="cc-title">Parallel Agents: Divide and Conquer</div><div class="cc-sub">Multiple agents working on the same codebase simultaneously</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Parallelize</div>
+            <div class="cc-text">Parallel agents make sense when the refactoring can be <strong>divided into independent chunks</strong>: different modules, different layers (frontend vs. backend), or different file groups with no shared dependencies. If changes in one chunk affect files in another, keep them sequential.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Three Parallel Patterns</div>
+            <div class="cc-text"><strong>Task-per-agent:</strong> Each agent handles a different part of the refactor. Agent 1 updates the database layer, Agent 2 updates the API, Agent 3 updates the frontend. Clear ownership boundaries prevent conflicts.<br><br><strong>Ensemble:</strong> Multiple agents solve the <em>same</em> problem independently. You pick the best solution. Useful when you&rsquo;re unsure of the right approach.<br><br><strong>Pipeline:</strong> Agents work sequentially, each building on the previous agent&rsquo;s output. Agent 1 maps dependencies, Agent 2 makes changes, Agent 3 writes tests.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Ownership Boundaries</div>
+            <div class="cc-code"><span class="hl-cmt">// Clear file ownership prevents conflicts:</span>
+
+<span class="hl-key">Agent 1</span> (branch: agent/db-layer)
+  <span class="hl-str">src/db/*</span>
+  <span class="hl-str">src/models/*</span>
+  <span class="hl-str">prisma/schema.prisma</span>
+
+<span class="hl-key">Agent 2</span> (branch: agent/api-layer)
+  <span class="hl-str">src/routes/*</span>
+  <span class="hl-str">src/middleware/*</span>
+  <span class="hl-str">src/validators/*</span>
+
+<span class="hl-key">Agent 3</span> (branch: agent/ui-layer)
+  <span class="hl-str">src/components/*</span>
+  <span class="hl-str">src/hooks/*</span>
+  <span class="hl-str">src/pages/*</span>
+
+<span class="hl-cmt">// Shared files (types, utils) are edited</span>
+<span class="hl-cmt">// by ONE designated agent only.</span>
+<span class="hl-cmt">// Human merges all branches at the end.</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Critical rule:</strong> Never delegate cross-agent conflict resolution to AI. When branches conflict, a human reviews and merges. The agent doesn&rsquo;t have the full picture of what the other agents did and will make wrong merge decisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">transform</span></div>
+        <div><div class="cc-title">Codemods &amp; AST Transforms: The Precision Tool</div><div class="cc-sub">When you need guaranteed correctness across thousands of files</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Are Codemods?</div>
+            <div class="cc-text">A <strong>codemod</strong> is a program that transforms code by parsing it into an Abstract Syntax Tree (AST), making structural changes, and writing it back. Unlike find-and-replace, codemods understand code structure: they can rename a function only when it&rsquo;s called as a method, not when it appears in a string or comment.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">AI + Codemods</div>
+            <div class="cc-text">The most powerful combination: use AI to <strong>generate the codemod</strong>, then run the codemod across the entire codebase. The AI handles the creative work (figuring out the transformation), and the codemod handles the mechanical work (applying it to every file reliably). This is faster and safer than having the AI edit each file individually.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Use Codemods vs. Agent Edits</div>
+            <div class="cc-code"><span class="hl-ok">USE CODEMODS when:</span>
+  Same transformation across 50+ files
+  Pattern is mechanical and repeatable
+  Correctness must be guaranteed
+  Framework migration (React class &rarr; hooks)
+  API deprecation (old method &rarr; new method)
+
+<span class="hl-str">USE AGENT EDITS when:</span>
+  Each file needs different logic
+  Changes require understanding context
+  Fewer than ~20 files affected
+  Transformation is creative, not mechanical
+  You need the agent to reason about each case</div>
+          </div>
+          <div class="cc-note n-teal"><strong>The workflow:</strong> Ask the AI to write a codemod. Review the codemod on 2&ndash;3 sample files. If it works correctly, run it across the entire codebase. This gives you AI creativity with codemod reliability &mdash; the best of both worlds.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">What Goes Wrong: Failure Modes</div><div class="cc-sub">The traps that catch even experienced developers</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Missed Files</div>
+            <div class="cc-text">The agent updates 48 of 50 affected files. The two it missed use indirect imports through a barrel file. The code compiles (TypeScript doesn&rsquo;t catch the runtime issue), but crashes in production when those two components render. <strong>Fix:</strong> Always run the full test suite after multi-file changes, not just the files the agent touched.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Inconsistent Patterns</div>
+            <div class="cc-text">The agent applies the new pattern to most files but falls back to the old pattern in a few, creating a codebase with <strong>two competing conventions</strong>. This happens when the agent&rsquo;s context window fills up and it loses track of the target pattern. <strong>Fix:</strong> Use codemods for mechanical changes; use grep to verify consistency after agent edits.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Snowball Effect</div>
+            <div class="cc-text">The agent makes a wrong change in file 5 of 50. Files 6&ndash;50 are edited based on the wrong assumption. By the time you notice, 45 files have cascading errors. <strong>Fix:</strong> Verify after each group (the verify-after-each pattern from Step 4). Catch errors at file 5, not file 50.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Merge Conflicts from Parallel Agents</div>
+            <div class="cc-text">Two agents both edit a shared utility file. Their changes conflict. The merge produces code that neither agent intended. <strong>Fix:</strong> Assign shared files to one agent only. If both agents need to change a shared file, make it sequential: Agent 1 finishes, commits, then Agent 2 starts from that commit.</div>
+          </div>
+          <div class="cc-note n-red"><strong>The meta-lesson:</strong> Multi-file refactoring failures almost always come from <em>insufficient verification</em>, not from the AI making bad edits. The edits are usually fine. The problem is not checking them thoroughly enough before moving on.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">checklist</span></div>
+        <div><div class="cc-title">The Multi-File Refactoring Playbook</div><div class="cc-sub">A step-by-step process for safe, large-scale changes</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Playbook</div>
+            <div class="cc-code"><span class="hl-ok">1. MAP</span>
+   Ask agent to list all affected files.
+   Review the list. Add missed files.
+   Check barrel files and dynamic imports.
+
+<span class="hl-ok">2. PLAN</span>
+   Define the change in dependency order.
+   Identify shared files (single-owner).
+   Decide: codemods or agent edits?
+
+<span class="hl-ok">3. ISOLATE</span>
+   Create a branch (or worktree for parallel).
+   Ensure clean starting state (all tests pass).
+
+<span class="hl-ok">4. EXECUTE</span>
+   Edit in dependency order.
+   Atomic commits after each file group.
+   Verify (typecheck + lint + test) after each.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Continued</div>
+            <div class="cc-code"><span class="hl-ok">5. VERIFY</span>
+   Run full test suite.
+   Grep for old pattern (should be zero).
+   Grep for new pattern (should match count).
+   Manual spot-check 3&ndash;5 files.
+
+<span class="hl-ok">6. REVIEW</span>
+   Review the diff as a whole.
+   Check for inconsistencies.
+   Look for missed edge cases.
+
+<span class="hl-ok">7. MERGE</span>
+   Squash or merge to main.
+   Run CI pipeline.
+   Monitor for runtime errors.
+
+<span class="hl-cmt">// Time investment: 30 min planning saves</span>
+<span class="hl-cmt">// 3+ hours of debugging cascading failures.</span></div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Multi-file refactoring with AI is not &ldquo;ask the agent and walk away.&rdquo; It&rsquo;s a structured collaboration: you map and plan, the agent executes, you verify and review. The 90% time savings come from the agent doing the mechanical editing &mdash; but you still own the strategy and quality.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-vibe-coding.html"><span class="material-symbols-rounded">arrow_back</span> Ch 9: Vibe Coding Workflows</a>
+    <a class="ch-nav-btn next" href="11-testing-debugging.html">Ch 11: AI-Assisted Testing &amp; Debugging <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[2,3],6:[3,4],7:[3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Real refactoring touches 20\u201350 files. AI struggles with context limits, implicit dependencies, ordering, and cascading failures. Multi-file refactoring is where agents deliver the most value \u2014 and the most risk.',color:'#0d9488'},
+    2:{text:'<strong>Step 2:</strong> Before changing anything, map the dependency graph. Find every file that imports or references the target. Watch for barrel files and dynamic imports \u2014 one study found 12 files missed in a 50-component rename.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Git worktrees give each agent its own directory, branch, and index. One agent = one worktree = one branch. If one agent\u2019s changes are bad, discard that worktree without affecting others.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Edit in dependency order: types first, then implementations, then consumers, then tests. Atomic commits after each group. Verify (typecheck + lint + test) after each. Never let errors accumulate.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Parallel agents work when changes divide into independent chunks. Three patterns: task-per-agent, ensemble (pick best), pipeline (sequential handoff). Shared files get one designated owner only.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Codemods (AST transforms) guarantee correctness across thousands of files. Use AI to generate the codemod, then run it mechanically. Best for repetitive, pattern-based migrations.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Failure modes: missed files (indirect imports), inconsistent patterns (context overflow), snowball effect (unchecked errors cascade), merge conflicts (shared files). All preventable with verification.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The playbook: Map \u2192 Plan \u2192 Isolate \u2192 Execute \u2192 Verify \u2192 Review \u2192 Merge. 30 minutes of planning saves 3+ hours of debugging. You own strategy and quality; the agent owns mechanical editing.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

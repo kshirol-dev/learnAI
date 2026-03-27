@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Embeddings — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--teal-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}
+.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Embeddings: Text to Vectors</h2><span class="tb-sub">How text becomes searchable numbers</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="04-embeddings-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Text</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">token</span></div><span class="pipe-label">Tokenize</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Model</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Vector</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">compare_arrows</span></div><span class="pipe-label">Similarity</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">leaderboard</span></div><span class="pipe-label">Benchmark</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Choose</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: What Are Embeddings -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">scatter_plot</span></div><div><div class="cc-title">What Are Embeddings?</div><div class="cc-sub">Converting text into numerical vectors that capture meaning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Core Idea</div><div class="cc-text">An <strong>embedding</strong> is a list of numbers (a vector) that represents the meaning of a piece of text. Texts with similar meanings get similar vectors. "How do I return a product?" and "What is the refund process?" would have vectors that are close together, even though they share few words.</div></div>
+          <div class="cc-block"><div class="cc-label">Why RAG Needs Embeddings</div><div class="cc-text">Traditional keyword search fails when users use different words than the documents. Embeddings enable <strong>semantic search</strong> — finding text by meaning, not exact word matches. This is the foundation of the entire retrieval step in RAG.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># What an embedding looks like</span>
+
+text = <span class="hl-str">"How do I return a product?"</span>
+vector = embed(text)
+
+<span class="hl-cmt"># → [0.023, -0.041, 0.087, ..., -0.012]</span>
+<span class="hl-cmt">#    ^--- 1536 numbers (for text-embedding-3-small)</span>
+<span class="hl-cmt">#    ^--- 3072 numbers (for text-embedding-3-large)</span>
+
+<span class="hl-cmt"># Similar texts → similar vectors</span>
+<span class="hl-str">"refund process"</span>  → cosine_sim = <span class="hl-num">0.92</span>
+<span class="hl-str">"weather today"</span>   → cosine_sim = <span class="hl-num">0.11</span></div>
+          <div class="cc-note n-violet"><strong>Embeddings are the bridge between text and math.</strong> They let you use mathematical operations (distance, similarity) on natural language. Without embeddings, there is no semantic search, and without semantic search, RAG falls back to keyword matching.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: How Embedding Models Work -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">How Embedding Models Work</div><div class="cc-sub">Transformer encoders trained on massive text pairs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Architecture</div><div class="cc-text">Embedding models are <strong>transformer encoders</strong> (like BERT, not like GPT). They read the entire input at once and produce a single vector that summarizes the meaning. The model is trained on millions of text pairs — "this sentence is similar to that sentence" — using <strong>contrastive learning</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">The Training Process</div><div class="cc-text"><strong>Contrastive learning:</strong> Show the model pairs of similar texts (positive pairs) and dissimilar texts (negative pairs). Train it to push similar pairs closer together in vector space and dissimilar pairs further apart. The result: a model that maps meaning to geometry.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Properties</div><div class="cc-text"><strong>Fixed-size output:</strong> Regardless of input length (5 words or 500 words), the output is always the same number of dimensions (e.g., 1536).<br><br><strong>Dense vectors:</strong> Every dimension has a non-zero value, unlike sparse representations (like TF-IDF) where most values are zero.<br><br><strong>Semantic similarity = geometric proximity:</strong> Texts about similar topics cluster together in vector space. You can literally measure meaning with cosine similarity.</div></div>
+          <div class="cc-note n-blue"><strong>Embedding models are NOT generative LLMs.</strong> GPT-4o generates text token by token. Embedding models read the full input and output a single vector. They are smaller, faster, and cheaper. A typical embedding API call costs ~$0.02 per million tokens.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Popular Embedding Models -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Popular Embedding Models</div><div class="cc-sub">The landscape of commercial and open-source options</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Commercial APIs</div><div class="cc-text"><strong>OpenAI text-embedding-3-small</strong> — 1536 dims, best price/performance. ~$0.02/1M tokens.<br><br><strong>OpenAI text-embedding-3-large</strong> — 3072 dims, higher accuracy. ~$0.13/1M tokens. Supports Matryoshka (truncate to fewer dims).<br><br><strong>Cohere embed-v3</strong> — 1024 dims. Supports separate input types for documents vs queries. Multilingual (100+ languages).<br><br><strong>Google text-embedding-004</strong> — 768 dims. Free tier available via Vertex AI. Good multilingual support.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Open-Source (Run Locally)</div><div class="cc-text"><strong>BGE (BAAI)</strong> — bge-large-en-v1.5, bge-m3 (multilingual). Top MTEB scores. Run via sentence-transformers or HuggingFace.<br><br><strong>E5 (Microsoft)</strong> — e5-large-v2, multilingual-e5-large. Requires "query: " and "passage: " prefixes.<br><br><strong>GTE (Alibaba)</strong> — gte-large-en-v1.5. Strong performance, no prefix needed.<br><br><strong>Nomic Embed</strong> — nomic-embed-text-v1.5. 8192 token context. Open weights + open training data.</div></div>
+          <div class="cc-note n-teal"><strong>Open-source models match or beat commercial APIs on benchmarks.</strong> BGE-m3 and GTE-large score competitively with OpenAI on MTEB. The trade-off: you host the model yourself (GPU required for speed) vs paying per API call.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Similarity Measures -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">compare_arrows</span></div><div><div class="cc-title">Similarity Measures</div><div class="cc-sub">How to compare two vectors</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cosine Similarity</div><div class="cc-text">The <strong>most common measure</strong> for embeddings. Measures the angle between two vectors, ignoring their magnitude. Returns a value from -1 (opposite) to 1 (identical). In practice, most embedding similarities fall between 0.3 and 0.95.<br><br><strong>Formula:</strong> cos(θ) = (A · B) / (||A|| × ||B||)</div></div>
+          <div class="cc-block"><div class="cc-label">Other Measures</div><div class="cc-text"><strong>Dot product:</strong> Like cosine but affected by vector magnitude. Faster to compute. Used when vectors are already normalized (magnitude = 1).<br><br><strong>Euclidean distance:</strong> Straight-line distance between vector endpoints. Less common for embeddings because it is sensitive to magnitude differences.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Computing cosine similarity in Python</span>
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+<span class="hl-key">def</span> cosine_sim(a, b):
+    <span class="hl-key">return</span> np.dot(a, b) / (
+        np.linalg.norm(a) * np.linalg.norm(b)
+    )
+
+<span class="hl-cmt"># Example</span>
+v1 = embed(<span class="hl-str">"refund policy"</span>)
+v2 = embed(<span class="hl-str">"return process"</span>)
+v3 = embed(<span class="hl-str">"pizza recipe"</span>)
+
+cosine_sim(v1, v2)  <span class="hl-cmt"># → 0.91 (similar)</span>
+cosine_sim(v1, v3)  <span class="hl-cmt"># → 0.14 (unrelated)</span></div>
+          <div class="cc-note n-amber"><strong>Use cosine similarity unless your vector DB says otherwise.</strong> Most embedding models are trained with cosine similarity in mind. Some vector databases (Pinecone, Weaviate) let you choose the metric at index creation time. OpenAI embeddings are normalized, so cosine = dot product.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Dimensionality and Matryoshka -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Dimensionality &amp; Matryoshka Embeddings</div><div class="cc-sub">More dimensions = more accuracy, but at a cost</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Dimensions Matter</div><div class="cc-text">Each dimension captures one aspect of meaning. More dimensions = more nuance = better retrieval. But more dimensions also mean <strong>more storage</strong> (4 bytes per float32 × dimensions × number of chunks) and <strong>slower search</strong>.<br><br><strong>Common sizes:</strong> 384 (small), 768 (medium), 1024 (Cohere), 1536 (OpenAI small), 3072 (OpenAI large).</div></div>
+          <div class="cc-block"><div class="cc-label">Matryoshka Representation Learning</div><div class="cc-text"><strong>Matryoshka embeddings</strong> (Kusupati et al., 2022) are trained so that the first N dimensions are a valid, useful embedding on their own. You can truncate a 3072-dim vector to 256 dims and still get good results — just slightly less accurate. This lets you <strong>trade accuracy for speed and storage</strong> at query time.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># OpenAI text-embedding-3-large supports Matryoshka</span>
+<span class="hl-key">from</span> openai <span class="hl-key">import</span> OpenAI
+client = OpenAI()
+
+response = client.embeddings.create(
+    model=<span class="hl-str">"text-embedding-3-large"</span>,
+    input=<span class="hl-str">"refund policy"</span>,
+    dimensions=<span class="hl-num">256</span>  <span class="hl-cmt"># truncate from 3072 to 256</span>
+)
+
+<span class="hl-cmt"># Full:     3072 dims → 12 KB per vector</span>
+<span class="hl-cmt"># Truncated: 256 dims →  1 KB per vector</span>
+<span class="hl-cmt"># 12x less storage, ~5% accuracy drop</span></div>
+          <div class="cc-note n-pink"><strong>Matryoshka is a game-changer for large corpora.</strong> If you have 10M chunks at 3072 dims, that is 120 GB of vectors. Truncating to 256 dims drops it to 10 GB with minimal accuracy loss. Start with full dimensions, then truncate if storage or latency becomes a problem.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: MTEB Benchmark -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">leaderboard</span></div><div><div class="cc-title">The MTEB Benchmark</div><div class="cc-sub">How to compare embedding models objectively</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is MTEB</div><div class="cc-text">The <strong>Massive Text Embedding Benchmark</strong> (Muennighoff et al., 2023) evaluates embedding models across 8 task types and 58+ datasets. It is the standard benchmark for comparing embedding models. The leaderboard is hosted on HuggingFace.</div></div>
+          <div class="cc-block"><div class="cc-label">Task Types</div><div class="cc-text"><strong>Retrieval</strong> — The most relevant for RAG. How well does the model find relevant passages?<br><strong>STS</strong> — Semantic Textual Similarity. How well does cosine similarity correlate with human judgments?<br><strong>Classification</strong> — Using embeddings as features for text classification.<br><strong>Clustering</strong> — Grouping similar texts together.<br><strong>Reranking, Pair Classification, Summarization, BitextMining</strong></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How to Read the Leaderboard</div><div class="cc-text"><strong>Focus on the Retrieval column</strong> for RAG use cases. The overall average includes tasks (like classification) that may not matter for your application.<br><br><strong>Check the model size.</strong> A 7B parameter model may score 2% higher than a 330M model, but it is 20x slower and more expensive to run.<br><br><strong>Check the context length.</strong> Some models support 512 tokens max, others support 8192. Make sure it covers your chunk sizes.</div></div>
+          <div class="cc-note n-orange"><strong>MTEB is a starting point, not the final answer.</strong> Benchmark performance on academic datasets may not reflect performance on your specific domain. Always test the top 2-3 models on your actual data before committing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Choosing the Right Model -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Choosing the Right Embedding Model</div><div class="cc-sub">A practical decision framework</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Framework</div><div class="cc-text"><strong>Starting out / prototyping?</strong><br>Use <code>text-embedding-3-small</code> (OpenAI). Cheap, fast, good enough. No infrastructure needed.<br><br><strong>Need best accuracy?</strong><br>Use <code>text-embedding-3-large</code> (OpenAI) or <code>embed-v3</code> (Cohere). Check MTEB Retrieval scores.<br><br><strong>Need to run locally / data privacy?</strong><br>Use BGE-m3, GTE-large, or Nomic Embed via sentence-transformers. Requires a GPU for production throughput.<br><br><strong>Multilingual corpus?</strong><br>Use Cohere embed-v3, BGE-m3, or multilingual-e5-large. Test on your specific languages.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># OpenAI (simplest)</span>
+<span class="hl-key">from</span> openai <span class="hl-key">import</span> OpenAI
+client = OpenAI()
+resp = client.embeddings.create(
+    model=<span class="hl-str">"text-embedding-3-small"</span>,
+    input=[<span class="hl-str">"chunk 1"</span>, <span class="hl-str">"chunk 2"</span>]
+)
+vectors = [e.embedding <span class="hl-key">for</span> e <span class="hl-key">in</span> resp.data]
+
+<span class="hl-cmt"># Open-source (local)</span>
+<span class="hl-key">from</span> sentence_transformers <span class="hl-key">import</span> SentenceTransformer
+model = SentenceTransformer(<span class="hl-str">"BAAI/bge-large-en-v1.5"</span>)
+vectors = model.encode([<span class="hl-str">"chunk 1"</span>, <span class="hl-str">"chunk 2"</span>])</div>
+          <div class="cc-note n-green"><strong>You can always switch models later.</strong> Changing your embedding model means re-embedding all your chunks (a batch job). It is not free, but it is straightforward. Start with the simplest option, measure retrieval quality, and upgrade only if needed.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:4, 5:3, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'An <strong>embedding</strong> is a list of numbers that captures the meaning of text. "How do I return a product?" and "What is the refund process?" get similar vectors even though they share few words. This is what makes semantic search possible — and semantic search is the engine of RAG.',color:'#7c3aed'},
+    2:{text:'Embedding models are <strong>transformer encoders</strong> (BERT-family, not GPT-family). They read the full input at once and output a single fixed-size vector. Trained via <strong>contrastive learning</strong> on millions of text pairs: push similar texts closer, push dissimilar texts apart. The result: meaning becomes geometry.',color:'#2563eb'},
+    3:{text:'<strong>Commercial:</strong> OpenAI text-embedding-3-small/large, Cohere embed-v3, Google text-embedding-004. <strong>Open-source:</strong> BGE (BAAI), E5 (Microsoft), GTE (Alibaba), Nomic Embed. Open-source models match commercial APIs on benchmarks — the trade-off is hosting infrastructure vs API cost.',color:'#0d9488'},
+    4:{text:'<strong>Cosine similarity</strong> is the standard measure: the angle between two vectors, from -1 (opposite) to 1 (identical). Most embedding similarities in practice fall between 0.3 and 0.95. Dot product is equivalent when vectors are normalized (which OpenAI embeddings are). Euclidean distance is less common.',color:'#d97706'},
+    5:{text:'<strong>More dimensions = more accuracy but more storage.</strong> A 3072-dim vector takes 12 KB. With 10M chunks, that is 120 GB. <strong>Matryoshka embeddings</strong> (Kusupati et al., 2022) solve this: the first N dimensions are a valid embedding on their own. Truncate from 3072 to 256 dims for 12x less storage with ~5% accuracy drop.',color:'#db2777'},
+    6:{text:'<strong>MTEB</strong> (Massive Text Embedding Benchmark) is the standard for comparing models. Focus on the <strong>Retrieval</strong> column for RAG. Check model size (accuracy vs speed trade-off) and context length (must cover your chunk sizes). The leaderboard is on HuggingFace and updated regularly.',color:'#ea580c'},
+    7:{text:'<strong>Start with text-embedding-3-small</strong> (OpenAI) for prototyping. Switch to text-embedding-3-large or Cohere embed-v3 for best accuracy. Use BGE-m3 or GTE-large locally for data privacy. For multilingual, use Cohere or BGE-m3. You can always re-embed later — it is a batch job, not a rewrite.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{
+      s.classList.remove('lit','done');
+      if(i<litIdx)s.classList.add('done');
+      else if(i===litIdx)s.classList.add('lit');
+    });
+    arrows.forEach((a,i)=>{
+      a.classList.remove('lit','done');
+      if(i<litIdx)a.classList.add('done');
+      else if(i===litIdx)a.classList.add('lit');
+    });
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';
+    stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));
+    arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

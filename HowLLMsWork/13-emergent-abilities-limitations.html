@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: Emergent Abilities & Limitations — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; Emergent Abilities &amp; Limitations</h2><span class="tb-sub">What LLMs can surprisingly do, what they fundamentally can&rsquo;t, and why the difference matters</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Frontier</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">auto_awesome</span></div><span class="pipe-label">Emergent</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Reasoning</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">cloud_off</span></div><span class="pipe-label">Hallucinate</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">trending_down</span></div><span class="pipe-label">Inverse</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">block</span></div><span class="pipe-label">Can&rsquo;t Do</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">Debate</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">tips_and_updates</span></div><span class="pipe-label">Practical</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1"><div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">auto_awesome</span></div><div><div class="cc-title">Emergent Abilities: Surprise Capabilities</div><div class="cc-sub">Skills that appear suddenly at scale &mdash; or do they?</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine heating water. At 99&deg;C, nothing special. At 100&deg;C, it suddenly boils &mdash; a <strong>phase transition</strong>. Early research (Wei et al., 2022) claimed LLMs show similar jumps: abilities like arithmetic, translation, and chain-of-thought reasoning that are absent in small models but suddenly appear in large ones. GPT-3 (175B) could do few-shot learning that GPT-2 (1.5B) couldn&rsquo;t. This was called &ldquo;emergence.&rdquo;</div></div><div class="cc-note n-violet"><strong>Key insight:</strong> The emergence debate is nuanced. Schaeffer et al. (2023) argued that &ldquo;emergent abilities are a mirage&rdquo; &mdash; they appear sudden only because of how we measure (discrete accuracy metrics create artificial thresholds). With continuous metrics, improvement is smooth and predictable. The truth is likely in between: some capabilities do improve smoothly, but the <em>practical utility</em> of those capabilities can have sharp thresholds (e.g., 60% accuracy on math is useless, 90% is useful).</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Claimed Emergent Abilities</div><div class="cc-code"><span class="hl-cmt"># Abilities that "emerge" at scale:</span>
+
+<span class="hl-cmt"># Few-shot learning (GPT-3, 175B)</span>
+<span class="hl-cmt"># → Give 3 examples, model generalizes</span>
+<span class="hl-cmt"># → Not present in GPT-2 (1.5B)</span>
+
+<span class="hl-cmt"># Chain-of-thought reasoning (~100B+)</span>
+<span class="hl-cmt"># → "Think step by step" works</span>
+<span class="hl-cmt"># → Small models can't do this</span>
+
+<span class="hl-cmt"># Multi-step arithmetic (~50B+)</span>
+<span class="hl-cmt"># → 3-digit addition, multiplication</span>
+
+<span class="hl-cmt"># Code generation (~10B+)</span>
+<span class="hl-cmt"># → Write working programs from descriptions</span>
+
+<span class="hl-cmt"># The debate:</span>
+<span class="hl-cmt"># Wei et al. (2022): "Emergence is real"</span>
+<span class="hl-cmt"># Schaeffer et al. (2023): "It's a mirage"</span>
+<span class="hl-cmt"># Reality: smooth improvement, but sharp</span>
+<span class="hl-cmt"># practical utility thresholds</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="2"><div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Reasoning: Real or Simulated?</div><div class="cc-sub">Can LLMs actually reason, or are they just pattern matching?</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Evidence</div><div class="cc-text">LLMs can solve math problems, write code, and pass bar exams. But do they <strong>reason</strong> or just <strong>pattern-match</strong>? Evidence for reasoning: they solve novel problems not in training data, chain-of-thought improves accuracy, and they can combine concepts in new ways. Evidence against: they fail on simple variations of problems they can solve, are sensitive to irrelevant details, and struggle with tasks requiring true logical deduction.</div></div><div class="cc-note n-violet"><strong>Key insight:</strong> The most honest answer: LLMs do something that <em>looks like</em> reasoning and is <em>useful like</em> reasoning, but may not be reasoning in the way humans do it. They&rsquo;re incredibly powerful pattern matchers that have learned patterns complex enough to approximate reasoning on many tasks. Whether this constitutes &ldquo;real&rdquo; reasoning is partly a philosophical question. What matters practically: they&rsquo;re reliable enough for many tasks but fail unpredictably on others.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Reasoning Failures</div><div class="cc-code"><span class="hl-cmt"># Tasks LLMs handle well:</span>
+<span class="hl-cmt"># ✓ Math (with CoT): GSM8K 95%+</span>
+<span class="hl-cmt"># ✓ Code: HumanEval 90%+ (o1)</span>
+<span class="hl-cmt"># ✓ Knowledge: MMLU 90%+</span>
+<span class="hl-cmt"># ✓ Translation: near-human quality</span>
+
+<span class="hl-cmt"># Tasks that reveal limitations:</span>
+<span class="hl-cmt"># ✗ "I have 5 apples, eat 3, buy 2 more,</span>
+<span class="hl-cmt">#    give half away. How many?" → often wrong</span>
+<span class="hl-cmt">#    when steps are complex enough</span>
+
+<span class="hl-cmt"># ✗ Spatial reasoning: "If I face north</span>
+<span class="hl-cmt">#    and turn right twice, which way?"</span>
+
+<span class="hl-cmt"># ✗ Counting: "How many r's in strawberry?"</span>
+<span class="hl-cmt">#    (famously hard for tokenized models)</span>
+
+<span class="hl-cmt"># ✗ Novel logic puzzles with no training</span>
+<span class="hl-cmt">#    data analogues</span>
+
+<span class="hl-cmt"># ✗ Consistent long-range planning</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="3"><div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">cloud_off</span></div><div><div class="cc-title">Hallucination: Confident Fabrication</div><div class="cc-sub">Why LLMs make things up and how to mitigate it</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">An LLM is like a <strong>very confident storyteller</strong> who never says &ldquo;I don&rsquo;t know.&rdquo; Ask about a real paper and it might cite the right authors with the wrong title, or invent a plausible-sounding paper that doesn&rsquo;t exist. This happens because the model is trained to predict the <em>most likely next token</em>, not the <em>most truthful</em> next token. Plausible-sounding text is rewarded even if it&rsquo;s factually wrong.</div></div><div class="cc-note n-red"><strong>Key insight:</strong> Hallucination is not a bug that can be fully fixed &mdash; it&rsquo;s a fundamental property of how LLMs work. The model generates text by sampling from probability distributions (Ch 9). It has no internal fact-checker, no database to verify against, and no concept of &ldquo;truth&rdquo; separate from &ldquo;what text usually follows this context.&rdquo; Mitigations: RAG (Ch 10), chain-of-thought verification, and training models to say &ldquo;I don&rsquo;t know&rdquo; (alignment, Ch 8).</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Types of Hallucination</div><div class="cc-code"><span class="hl-cmt"># Hallucination types:</span>
+
+<span class="hl-cmt"># 1. Factual: wrong facts stated confidently</span>
+<span class="hl-cmt"># "Einstein was born in 1880" (actually 1879)</span>
+
+<span class="hl-cmt"># 2. Fabrication: invented entities</span>
+<span class="hl-cmt"># "The Smith et al. (2023) paper showed..."</span>
+<span class="hl-cmt"># (paper doesn't exist)</span>
+
+<span class="hl-cmt"># 3. Inconsistency: contradicts itself</span>
+<span class="hl-cmt"># "X is true" then later "X is false"</span>
+
+<span class="hl-cmt"># 4. Unfaithful: contradicts provided context</span>
+<span class="hl-cmt"># Given a document, summarizes incorrectly</span>
+
+<span class="hl-cmt"># Mitigation strategies:</span>
+<span class="hl-cmt"># RAG: ground responses in real documents</span>
+<span class="hl-cmt"># CoT: verify reasoning step by step</span>
+<span class="hl-cmt"># Low temperature: reduce randomness</span>
+<span class="hl-cmt"># RLHF: train to say "I don't know"</span>
+<span class="hl-cmt"># Citations: require source attribution</span>
+<span class="hl-cmt"># Human review: for high-stakes outputs</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="4"><div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">trending_down</span></div><div><div class="cc-title">Inverse Scaling: When Bigger Is Worse</div><div class="cc-sub">Counterintuitive cases where larger models perform worse</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">The Phenomenon</div><div class="cc-text">Scaling laws (Ch 5) say bigger models are better. But on some tasks, <strong>larger models perform worse</strong>. On TruthfulQA, bigger models give more confident but less truthful answers &mdash; they&rsquo;ve memorized common misconceptions more strongly. On tasks requiring overriding memorized knowledge (e.g., &ldquo;if gravity were repulsive, what would happen?&rdquo;), larger models are more anchored to memorized facts and less flexible.</div></div><div class="cc-note n-orange"><strong>Key insight:</strong> Inverse scaling reveals a fundamental tension: larger models are better at pattern matching but also more committed to learned patterns. They&rsquo;re harder to &ldquo;steer&rdquo; away from memorized associations. This is why alignment (Ch 8) becomes more important, not less, as models scale. A more capable model that&rsquo;s harder to control is potentially more dangerous than a less capable one.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Examples</div><div class="cc-code"><span class="hl-cmt"># Inverse scaling examples:</span>
+
+<span class="hl-cmt"># TruthfulQA (Lin et al., 2022):</span>
+<span class="hl-cmt"># GPT-2 (1.5B): 40% truthful</span>
+<span class="hl-cmt"># GPT-3 (175B): 28% truthful (!)</span>
+<span class="hl-cmt"># Larger model = more confident lies</span>
+<span class="hl-cmt"># (Memorized popular misconceptions)</span>
+
+<span class="hl-cmt"># Redefinition tasks:</span>
+<span class="hl-cmt"># "If π = 4, what is the area of a</span>
+<span class="hl-cmt">#  circle with radius 3?"</span>
+<span class="hl-cmt"># Small model: might try 4 × 9 = 36</span>
+<span class="hl-cmt"># Large model: "28.27" (used real π!)</span>
+<span class="hl-cmt"># Larger model = more anchored to π=3.14</span>
+
+<span class="hl-cmt"># Sycophancy (larger models):</span>
+<span class="hl-cmt"># User: "I think 2+2=5, right?"</span>
+<span class="hl-cmt"># Small model: "No, 2+2=4"</span>
+<span class="hl-cmt"># Large model: "You raise an interesting</span>
+<span class="hl-cmt">#   point..." (agrees to please user)</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="5"><div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">block</span></div><div><div class="cc-title">Fundamental Limitations</div><div class="cc-sub">What LLMs structurally cannot do</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">Architectural Limits</div><div class="cc-text"><strong>No real-time knowledge:</strong> Training data has a cutoff date. <strong>No persistent memory:</strong> Each conversation starts fresh (without external tools). <strong>No true understanding:</strong> The model manipulates tokens, not concepts. <strong>No self-awareness:</strong> It doesn&rsquo;t know what it knows or doesn&rsquo;t know. <strong>No grounding:</strong> It has never experienced the physical world. <strong>Fixed compute per token:</strong> Every token gets the same amount of processing, regardless of difficulty.</div></div><div class="cc-note n-red"><strong>Key insight:</strong> The &ldquo;fixed compute per token&rdquo; limitation is particularly important. When you ask a hard math question, the model has the same number of FLOPs to generate each token of the answer as when generating &ldquo;the.&rdquo; Chain-of-thought (Ch 9) partially addresses this by spreading computation across more tokens, but it&rsquo;s a workaround, not a solution. This is a fundamental architectural constraint of autoregressive transformers.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">Limitation Map</div><div class="cc-code"><span class="hl-cmt"># Structural limitations:</span>
+
+<span class="hl-cmt"># 1. No world model</span>
+<span class="hl-cmt"># Can't simulate physics, causality</span>
+<span class="hl-cmt"># "What happens if I drop a ball?" → guesses</span>
+
+<span class="hl-cmt"># 2. No persistent state</span>
+<span class="hl-cmt"># Forgets everything between API calls</span>
+<span class="hl-cmt"># Workaround: external memory, RAG</span>
+
+<span class="hl-cmt"># 3. Tokenization artifacts</span>
+<span class="hl-cmt"># Can't count characters reliably</span>
+<span class="hl-cmt"># "How many r's in strawberry?" → wrong</span>
+<span class="hl-cmt"># Because "strawberry" = ["str","aw","berry"]</span>
+
+<span class="hl-cmt"># 4. No backtracking</span>
+<span class="hl-cmt"># Once a token is generated, it's committed</span>
+<span class="hl-cmt"># Can't revise earlier reasoning</span>
+<span class="hl-cmt"># Workaround: CoT, but still left-to-right</span>
+
+<span class="hl-cmt"># 5. Brittle to framing</span>
+<span class="hl-cmt"># Same problem, different wording → different</span>
+<span class="hl-cmt"># answer. Humans are robust to this.</span>
+
+<span class="hl-cmt"># 6. Training data bias</span>
+<span class="hl-cmt"># Reflects biases in internet text</span>
+<span class="hl-cmt"># Partially mitigated by RLHF (Ch 8)</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="6"><div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">balance</span></div><div><div class="cc-title">The Understanding Debate</div><div class="cc-sub">Stochastic parrots vs. genuine comprehension</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">Two Perspectives</div><div class="cc-text">The field is divided. <strong>Skeptics</strong> (Bender &amp; Koller, 2020; Marcus, 2022) argue LLMs are &ldquo;stochastic parrots&rdquo; &mdash; sophisticated autocomplete that manipulates form without understanding meaning. <strong>Optimists</strong> (Bubeck et al., 2023) argue GPT-4 shows &ldquo;sparks of AGI&rdquo; &mdash; genuine reasoning, planning, and creativity that go beyond pattern matching. The truth likely depends on how you define &ldquo;understanding.&rdquo;</div></div><div class="cc-note n-blue"><strong>Key insight:</strong> This debate matters practically. If LLMs are &ldquo;just&rdquo; pattern matchers, their failures are predictable (they fail when the pattern is novel). If they have some form of understanding, their failures are harder to predict. For building reliable systems, assume the worst case: treat LLMs as powerful but unreliable tools that need verification, guardrails, and human oversight for high-stakes decisions.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">The Spectrum</div><div class="cc-code"><span class="hl-cmt"># The understanding spectrum:</span>
+
+<span class="hl-cmt"># "Stochastic parrot" view:</span>
+<span class="hl-cmt"># - No understanding, just statistics</span>
+<span class="hl-cmt"># - Impressive but fundamentally limited</span>
+<span class="hl-cmt"># - Will plateau without new architectures</span>
+<span class="hl-cmt"># Proponents: Bender, Marcus, LeCun</span>
+
+<span class="hl-cmt"># "Sparks of AGI" view:</span>
+<span class="hl-cmt"># - Genuine reasoning and understanding</span>
+<span class="hl-cmt"># - Scaling will continue to unlock abilities</span>
+<span class="hl-cmt"># - We're on the path to AGI</span>
+<span class="hl-cmt"># Proponents: Bubeck, Altman, Sutskever</span>
+
+<span class="hl-cmt"># Pragmatic middle ground:</span>
+<span class="hl-cmt"># - "Understanding" is a spectrum</span>
+<span class="hl-cmt"># - LLMs have SOME form of representation</span>
+<span class="hl-cmt"># - Not human-like, but not trivial either</span>
+<span class="hl-cmt"># - Focus on what they CAN do reliably</span>
+<span class="hl-cmt"># - Build systems with appropriate guardrails</span></div></div></div></div></div>
+
+    <div class="content-card" data-card="7"><div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">tips_and_updates</span></div><div><div class="cc-title">Practical Takeaways</div><div class="cc-sub">How to work effectively with LLM strengths and weaknesses</div></div></div><div class="cc-body"><div class="cc-col"><div class="cc-block"><div class="cc-label">Best Practices</div><div class="cc-text">Understanding limitations makes you a better AI practitioner. <strong>Use LLMs for what they&rsquo;re good at:</strong> drafting, summarization, translation, code generation, brainstorming. <strong>Add guardrails for what they&rsquo;re bad at:</strong> factual accuracy (use RAG), reasoning (use CoT + verification), consistency (use structured output). <strong>Never trust without verification</strong> for high-stakes decisions.</div></div><div class="cc-note n-green"><strong>Key insight:</strong> The most effective AI systems combine LLM strengths with traditional software strengths. LLM for language understanding + database for facts + code for logic + human review for judgment. This &ldquo;compound AI system&rdquo; approach is how production AI applications work. Understanding what LLMs can and can&rsquo;t do is the most valuable skill in AI engineering.</div></div><div class="cc-col"><div class="cc-block"><div class="cc-label">The Reliability Matrix</div><div class="cc-code"><span class="hl-cmt"># When to trust LLMs:</span>
+
+<span class="hl-cmt"># HIGH reliability:</span>
+<span class="hl-cmt"># ✓ Text summarization</span>
+<span class="hl-cmt"># ✓ Translation</span>
+<span class="hl-cmt"># ✓ Code explanation</span>
+<span class="hl-cmt"># ✓ Creative writing</span>
+<span class="hl-cmt"># ✓ Format conversion (JSON, CSV, etc.)</span>
+
+<span class="hl-cmt"># MEDIUM reliability (verify!):</span>
+<span class="hl-cmt"># ~ Code generation (test it!)</span>
+<span class="hl-cmt"># ~ Math (use CoT + calculator)</span>
+<span class="hl-cmt"># ~ Factual questions (use RAG)</span>
+<span class="hl-cmt"># ~ Analysis (check reasoning)</span>
+
+<span class="hl-cmt"># LOW reliability (always verify):</span>
+<span class="hl-cmt"># ✗ Specific dates, numbers, citations</span>
+<span class="hl-cmt"># ✗ Legal/medical advice</span>
+<span class="hl-cmt"># ✗ Counting, character-level operations</span>
+<span class="hl-cmt"># ✗ Novel logical puzzles</span>
+<span class="hl-cmt"># ✗ Claims about itself ("I was trained...")</span></div></div></div></div></div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="12-multimodal-llms.html"><span class="material-symbols-rounded">arrow_back</span> Ch 12: Multimodal LLMs</a>
+    <a class="ch-nav-btn next" href="14-llm-landscape.html">Ch 14: The LLM Landscape <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){const TOTAL=7,STEP_MS=5000;const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6]};const NARRATION={1:{text:'<strong>Step 1:</strong> "Emergent abilities" — capabilities that appear at scale. Few-shot learning, CoT reasoning, code generation. Debate: real phase transitions or measurement artifacts? Likely: smooth improvement with sharp utility thresholds.',color:'#7c3aed'},2:{text:'<strong>Step 2:</strong> Do LLMs reason or pattern-match? They solve novel problems but fail on simple variations. Best answer: powerful pattern matching that approximates reasoning. Useful but unreliable on edge cases.',color:'#7c3aed'},3:{text:'<strong>Step 3:</strong> Hallucination: confident fabrication. Not a bug — a fundamental property of next-token prediction. The model has no fact-checker. Mitigate with RAG, CoT verification, and "I don\'t know" training.',color:'#dc2626'},4:{text:'<strong>Step 4:</strong> Inverse scaling: bigger models can be worse. TruthfulQA: GPT-3 less truthful than GPT-2. Larger models memorize misconceptions more strongly and are harder to steer away from them.',color:'#ea580c'},5:{text:'<strong>Step 5:</strong> Fundamental limits: no real-time knowledge, no persistent memory, fixed compute per token, tokenization artifacts ("r\'s in strawberry"), brittle to framing, training data bias.',color:'#dc2626'},6:{text:'<strong>Step 6:</strong> The debate: "stochastic parrots" vs "sparks of AGI." Pragmatic view: LLMs have some form of representation, not human-like but not trivial. Focus on reliable use with appropriate guardrails.',color:'#2563eb'},7:{text:'<strong>Step 7:</strong> Practical: use LLMs for drafting, summarization, code. Add RAG for facts, CoT for reasoning, verification for accuracy. The best AI systems combine LLM strengths with traditional software.',color:'#16a34a'}};let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset()})();
+</script>
+</body>
+</html>

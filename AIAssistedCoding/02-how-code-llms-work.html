@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: How Code LLMs Work — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; How Code LLMs Work</h2><span class="tb-sub">From keystrokes to token predictions &mdash; what happens between you and the ghost text</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Source Code</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Tokenize</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Embed</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Transform</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">casino</span></div><span class="pipe-label">Sample</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Output</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">text_fields</span></div>
+        <div><div class="cc-title">Code Is Just Text (To a Model)</div><div class="cc-sub">The starting point: your source code as a string</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Input</div>
+            <div class="cc-text">When you type in your editor, the AI coding tool captures <strong>raw text</strong> &mdash; your current file, cursor position, and surrounding context. To the model, Python, TypeScript, and Rust are all just sequences of characters. There&rsquo;s no special &ldquo;code mode&rdquo; &mdash; the model processes code the same way it processes English, through <strong>token prediction</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What Gets Sent</div>
+            <div class="cc-text">The tool assembles a <strong>prompt</strong> from your code. For inline completions, this typically includes the <strong>prefix</strong> (code before your cursor) and <strong>suffix</strong> (code after your cursor). For chat, it includes your question plus relevant file context. This assembled text is the model&rsquo;s entire view of your world.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Code Is Different</div>
+            <div class="cc-text">Code has properties that make it distinct from prose: <strong>strict syntax</strong> (a missing bracket breaks everything), <strong>semantic indentation</strong> (Python, YAML), <strong>cross-file references</strong> (imports, types), and <strong>execution semantics</strong> (the code must actually run). The model doesn&rsquo;t &ldquo;understand&rdquo; any of this &mdash; it learns statistical patterns that happen to capture these structures.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> A code LLM doesn&rsquo;t parse your code into an AST or run a compiler. It treats <code>def calculate_total(items):</code> as a sequence of tokens, just like it treats &ldquo;The quick brown fox&rdquo; as tokens. The magic is that it&rsquo;s seen so much code that its predictions respect syntax anyway.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">tag</span></div>
+        <div><div class="cc-title">Tokenization: Breaking Code into Pieces</div><div class="cc-sub">BPE and why <code>function</code> is one token but <code>getElementById</code> is four</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Byte Pair Encoding (BPE)</div>
+            <div class="cc-text">Code LLMs use <strong>BPE tokenizers</strong> (originally a 1994 compression algorithm). BPE starts with individual bytes (256 base tokens) and iteratively merges the most frequent adjacent pairs. Common words like <code>function</code> or <code>return</code> become <strong>single tokens</strong>. Rare identifiers like <code>calculateMonthlyRevenue</code> get split into subwords: <code>calculate</code> + <code>Monthly</code> + <code>Revenue</code>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Code vs. Prose Efficiency</div>
+            <div class="cc-text">English text averages <strong>1&ndash;1.5 tokens per word</strong>. Code averages <strong>1.5&ndash;4 tokens per word</strong> because of special characters, camelCase splitting, indentation, and punctuation like <code>{</code>, <code>=></code>, <code>::</code>. This means code fills up context windows faster than English &mdash; a 128K-token window holds less code than you&rsquo;d expect.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Example: How Code Gets Tokenized</div>
+            <div class="cc-code"><span class="hl-cmt">// Source code:</span>
+<span class="hl-key">const</span> total = items.<span class="hl-key">reduce</span>((sum, item) => sum + item.price, <span class="hl-num">0</span>);
+
+<span class="hl-cmt">// Approximate tokens (GPT-4 tokenizer):</span>
+<span class="hl-str">["const"</span>, <span class="hl-str">" total"</span>, <span class="hl-str">" ="</span>, <span class="hl-str">" items"</span>, <span class="hl-str">"."</span>,
+ <span class="hl-str">"reduce"</span>, <span class="hl-str">"(("</span>, <span class="hl-str">"sum"</span>, <span class="hl-str">","</span>, <span class="hl-str">" item"</span>,
+ <span class="hl-str">")"</span>, <span class="hl-str">" =>"</span>, <span class="hl-str">" sum"</span>, <span class="hl-str">" +"</span>,
+ <span class="hl-str">" item"</span>, <span class="hl-str">"."</span>, <span class="hl-str">"price"</span>, <span class="hl-str">","</span>,
+ <span class="hl-str">" 0"</span>, <span class="hl-str">");"</span><span class="hl-str">]</span>
+<span class="hl-cmt">// ~20 tokens for one line of JS</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Why it matters:</strong> Token count directly affects cost (APIs charge per token) and context limits. Understanding tokenization helps you write prompts that fit more useful code into the model&rsquo;s window.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">scatter_plot</span></div>
+        <div><div class="cc-title">Embeddings: Tokens Become Vectors</div><div class="cc-sub">How the model gives meaning to each token</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">From Integer to Vector</div>
+            <div class="cc-text">Each token ID is mapped to a <strong>high-dimensional vector</strong> (typically 4,096&ndash;12,288 dimensions in modern code models). This embedding captures the token&rsquo;s learned &ldquo;meaning&rdquo; &mdash; <code>function</code> and <code>def</code> end up near each other in vector space because they appear in similar contexts across training data.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Positional Encoding</div>
+            <div class="cc-text">Order matters in code &mdash; <code>a = b</code> is different from <code>b = a</code>. <strong>Positional encodings</strong> (like RoPE, used in most modern models) are added to each embedding so the model knows <strong>where</strong> each token sits in the sequence, not just what it is.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What the Model &ldquo;Sees&rdquo;</div>
+            <div class="cc-text">At this stage, your code is a <strong>matrix of numbers</strong> &mdash; each row is one token&rsquo;s embedding vector. A 500-token code snippet becomes a 500 &times; 4,096 matrix. The model has no concept of &ldquo;Python&rdquo; or &ldquo;function&rdquo; &mdash; just patterns of numbers that it will process through transformer layers.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Embeddings are why code LLMs can work across languages. <code>for</code> in Python, <code>for</code> in JavaScript, and <code>for</code> in Go occupy similar regions in vector space because they appear in structurally similar patterns. The model learns language-agnostic coding concepts.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">neurology</span></div>
+        <div><div class="cc-title">The Transformer: Where Reasoning Happens</div><div class="cc-sub">Attention layers decide which tokens matter for the next prediction</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Self-Attention for Code</div>
+            <div class="cc-text">The transformer&rsquo;s <strong>self-attention mechanism</strong> lets every token &ldquo;look at&rdquo; every other token in the context. When predicting the next token after <code>items.reduce((sum, item) => sum +</code>, the model attends heavily to <code>item</code>, <code>reduce</code>, and the variable names &mdash; learning that this pattern typically ends with a property access like <code>item.price</code>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Layers of Understanding</div>
+            <div class="cc-text">Modern code models have <strong>32&ndash;80+ transformer layers</strong>. Early layers capture syntax (bracket matching, indentation). Middle layers capture semantics (variable types, function signatures). Deep layers capture high-level patterns (design patterns, algorithm structure). Each layer refines the representation.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Context Window</div>
+            <div class="cc-text">The context window is the <strong>maximum number of tokens</strong> the model can process at once. GPT-4o supports <strong>128K tokens</strong>, Claude supports <strong>200K tokens</strong>. This determines how much of your codebase the model can &ldquo;see&rdquo; in a single request. Anything outside the window simply doesn&rsquo;t exist to the model.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>The connection:</strong> Attention is quadratic in sequence length &mdash; doubling the context window quadruples the computation. This is why larger context windows are expensive and why tools carefully select which code to include in the prompt rather than sending everything.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">casino</span></div>
+        <div><div class="cc-title">Sampling: Choosing the Next Token</div><div class="cc-sub">Temperature, top-p, and why AI code isn&rsquo;t deterministic</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Probability Distribution</div>
+            <div class="cc-text">After passing through all transformer layers, the model outputs a <strong>probability score for every token in its vocabulary</strong> (typically 32K&ndash;128K tokens). For code completion, the top candidates might be: <code>item.price</code> (72%), <code>item.cost</code> (15%), <code>item.amount</code> (8%), with thousands of other tokens sharing the remaining 5%.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Temperature</div>
+            <div class="cc-text"><strong>Temperature</strong> controls how &ldquo;creative&rdquo; the model is. At <strong>temperature 0</strong> (greedy), it always picks the highest-probability token &mdash; deterministic and safe. At <strong>temperature 0.7&ndash;1.0</strong>, lower-probability tokens get a chance, producing more varied output. For code completion, tools typically use <strong>low temperature (0&ndash;0.2)</strong> because correctness matters more than creativity.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Top-P (Nucleus Sampling)</div>
+            <div class="cc-text"><strong>Top-p sampling</strong> only considers tokens whose cumulative probability reaches a threshold (e.g., p=0.95). This dynamically adjusts the candidate pool &mdash; when the model is confident, only 2&ndash;3 tokens qualify. When uncertain, dozens might. It&rsquo;s more adaptive than a fixed top-k cutoff.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">One Token at a Time</div>
+            <div class="cc-text">The model generates <strong>one token per forward pass</strong>. To produce a 10-line function, it runs hundreds of sequential predictions, each time feeding its previous output back as input. This is why generation has noticeable latency &mdash; and why <strong>speculative decoding</strong> (predicting multiple tokens at once) is a major optimization.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Code completion tools use near-zero temperature because a &ldquo;creative&rdquo; variable name or an &ldquo;imaginative&rdquo; API call is a bug. Chat and refactoring tasks use slightly higher temperature to explore alternative solutions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">vertical_split</span></div>
+        <div><div class="cc-title">Fill-in-the-Middle: The Code Superpower</div><div class="cc-sub">How models generate code between existing lines</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Problem</div>
+            <div class="cc-text">Standard LLMs generate text <strong>left-to-right</strong> &mdash; they can only continue from the end. But coding often requires inserting code <strong>in the middle</strong>: adding a function body between its signature and the next function, filling in a parameter list, or completing a block inside existing logic.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">How FIM Works</div>
+            <div class="cc-text"><strong>Fill-in-the-Middle (FIM)</strong> uses special tokens to split code into prefix, middle, and suffix. The model sees the code before your cursor (prefix) and after your cursor (suffix), then generates the missing middle. This is the core technique behind inline code completion.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">FIM Token Format</div>
+            <div class="cc-code"><span class="hl-cmt">// Your code in the editor:</span>
+<span class="hl-key">function</span> greet(name) {
+  <span class="hl-cmt">|  &lt;-- cursor here</span>
+}
+console.log(greet(<span class="hl-str">"Alice"</span>));
+
+<span class="hl-cmt">// What the model receives:</span>
+<span class="hl-cmd">&lt;PRE&gt;</span><span class="hl-key">function</span> greet(name) {\n  <span class="hl-cmd">&lt;SUF&gt;</span>
+}\nconsole.log(greet(<span class="hl-str">"Alice"</span>));<span class="hl-cmd">&lt;MID&gt;</span>
+
+<span class="hl-cmt">// Model generates the middle:</span>
+<span class="hl-key">return</span> <span class="hl-str">`Hello, ${name}!`</span>;<span class="hl-cmd">&lt;EOT&gt;</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> FIM is what makes AI code completion feel magical. The model doesn&rsquo;t just continue from your cursor &mdash; it generates code that fits seamlessly between what&rsquo;s above and below. Models like CodeLlama, StarCoder2, and DeepSeek-Coder are all trained with FIM.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">memory</span></div>
+        <div><div class="cc-title">Context Assembly: What the Model Actually Sees</div><div class="cc-sub">The prompt is everything &mdash; and it&rsquo;s carefully constructed</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Prompt Budget</div>
+            <div class="cc-text">Every request has a <strong>token budget</strong>. The tool must decide what to include: current file, open tabs, imported files, type definitions, recent edits, conversation history. It&rsquo;s a <strong>packing problem</strong> &mdash; fitting the most useful context into a fixed window. What gets left out is invisible to the model.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Context Sources</div>
+            <div class="cc-text">Modern tools pull context from multiple sources:<br><br>&bull; <strong>Current file</strong> &mdash; code around the cursor (highest priority)<br>&bull; <strong>Open tabs</strong> &mdash; files you&rsquo;re actively working with<br>&bull; <strong>Codebase index</strong> &mdash; semantic search across the full project<br>&bull; <strong>Type definitions</strong> &mdash; interfaces, schemas, API contracts<br>&bull; <strong>Recent edits</strong> &mdash; what you just changed (intent signal)</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The &ldquo;Lost in the Middle&rdquo; Problem</div>
+            <div class="cc-text">Research shows LLMs attend most strongly to tokens at the <strong>beginning and end</strong> of the context window, with weaker attention to the middle. This means the <strong>order</strong> of context matters &mdash; the most important code should be placed at the start or end of the prompt, not buried in the middle.</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical in AI:</strong> The quality of AI code suggestions is directly proportional to the quality of context assembly. A brilliant model with bad context produces bad code. A good model with great context produces great code. This is why &ldquo;context engineering&rdquo; (Ch 7) is the most important skill.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">code</span></div>
+        <div><div class="cc-title">The Full Pipeline in Action</div><div class="cc-sub">Putting it all together: keystroke to ghost text in milliseconds</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">End-to-End Flow</div>
+            <div class="cc-text"><strong>1.</strong> You type a keystroke<br><strong>2.</strong> The tool extracts prefix + suffix around your cursor<br><strong>3.</strong> It assembles context from open files, codebase index, and type definitions<br><strong>4.</strong> The prompt is tokenized via BPE into integer sequences<br><strong>5.</strong> Tokens are embedded into vectors with positional encoding<br><strong>6.</strong> The transformer processes all tokens through 32&ndash;80+ attention layers<br><strong>7.</strong> Output probabilities are sampled at low temperature<br><strong>8.</strong> Generated tokens are decoded back to text and displayed as ghost text</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Speed Matters</div>
+            <div class="cc-text">This entire pipeline must complete in <strong>under 200ms</strong> to feel responsive. Techniques like <strong>speculative decoding</strong> (predicting multiple tokens using a smaller draft model), <strong>KV-cache reuse</strong> (not recomputing unchanged prefix tokens), and <strong>quantization</strong> (running in 4-bit or 8-bit precision) make this possible.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What the Model Doesn&rsquo;t Do</div>
+            <div class="cc-text">The model <strong>never executes your code</strong>, <strong>never checks types</strong>, <strong>never runs tests</strong>, and <strong>never verifies imports exist</strong>. It predicts the most statistically likely next tokens based on patterns in its training data. When it suggests <code>import pandas as pd</code>, it&rsquo;s not checking if pandas is installed &mdash; it&rsquo;s predicting what usually follows the patterns it&rsquo;s seen.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Rule of thumb:</strong> Think of a code LLM as the world&rsquo;s best autocomplete, not a compiler or interpreter. It predicts what code <em>probably</em> comes next based on patterns. It&rsquo;s your job to verify that the prediction is <em>actually</em> correct.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-ai-coding-revolution.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: The AI Coding Revolution</a>
+    <a class="ch-nav-btn next" href="03-training-code-models.html">Ch 3: Training Code Models <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[0,1,2,3],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> To a code LLM, your source code is just a string of characters \u2014 no AST, no compiler. It learns syntax and semantics purely from statistical patterns in training data.',color:'#0d9488'},
+    2:{text:'<strong>Step 2:</strong> BPE tokenizers split code into subword tokens. Code averages 1.5\u20134 tokens per word (vs 1\u20131.5 for English), filling context windows faster than you\u2019d expect.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Each token becomes a high-dimensional vector via embeddings. Positional encodings (RoPE) tell the model where each token sits in the sequence.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> The transformer\u2019s self-attention lets every token attend to every other token. 32\u201380+ layers progressively capture syntax, semantics, and design patterns.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> The model outputs probabilities for every vocabulary token. Low temperature (0\u20130.2) for completions ensures deterministic, correct code over creative alternatives.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Fill-in-the-Middle (FIM) uses &lt;PRE&gt;/&lt;SUF&gt;/&lt;MID&gt; tokens so models can generate code between existing lines \u2014 the core technique behind inline completions.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Context assembly is the packing problem: fitting the most useful code into a fixed token budget. The \u201clost in the middle\u201d effect means placement order matters.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The full pipeline \u2014 keystroke to ghost text \u2014 must complete in under 200ms. Speculative decoding, KV-cache, and quantization make this possible.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

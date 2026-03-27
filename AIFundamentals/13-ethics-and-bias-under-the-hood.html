@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: Ethics &amp; Bias — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone-bar{display:flex;border-bottom:1px solid var(--border-light);overflow-x:auto}.zone-tab{flex:1;min-width:120px;padding:8px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;color:var(--text-3)}.zone-tab.active{color:var(--bg-white);border-bottom-color:transparent}
+.uth-body{display:flex;min-height:500px;position:relative;overflow:hidden}
+.flow-panel{flex:1;padding:28px 32px;position:relative;overflow-y:auto}.flow-panel .zone-title{font-size:11px;font-weight:800;letter-spacing:-.2px;margin-bottom:16px;display:flex;align-items:center;gap:8px}.zone-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;color:#fff}
+.fnode{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:8px;border:1.5px solid var(--border);background:var(--bg-white);cursor:pointer;transition:all .25s}.fnode:hover{box-shadow:var(--shadow-sm)}.fnode .fn-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.fnode .fn-icon .material-symbols-rounded{font-size:15px;color:#fff}.fnode .fn-label{font-size:11px;font-weight:600;color:var(--text-1)}.fnode .fn-sub{font-size:9px;color:var(--text-3);margin-top:1px}
+.fnode.lit{border-color:currentColor;box-shadow:0 0 0 2px currentColor,var(--shadow-md)}.fnode.c-red .fn-icon{background:var(--red)}.fnode.c-red.lit{color:var(--red);border-color:var(--red)}.fnode.c-orange .fn-icon{background:var(--orange)}.fnode.c-orange.lit{color:var(--orange);border-color:var(--orange)}.fnode.c-pink .fn-icon{background:var(--pink)}.fnode.c-pink.lit{color:var(--pink);border-color:var(--pink)}.fnode.c-violet .fn-icon{background:var(--violet)}.fnode.c-violet.lit{color:var(--violet);border-color:var(--violet)}.fnode.c-blue .fn-icon{background:var(--blue)}.fnode.c-blue.lit{color:var(--blue);border-color:var(--blue)}.fnode.c-teal .fn-icon{background:var(--teal)}.fnode.c-teal.lit{color:var(--teal);border-color:var(--teal)}.fnode.c-amber .fn-icon{background:var(--amber)}.fnode.c-amber.lit{color:var(--amber);border-color:var(--amber)}.fnode.c-green .fn-icon{background:var(--green)}.fnode.c-green.lit{color:var(--green);border-color:var(--green)}
+.flow-arrow{display:flex;align-items:center;justify-content:center;padding:2px 0;color:var(--border)}.flow-arrow .material-symbols-rounded{font-size:16px}
+.step-badge{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:4px;color:#fff;margin-left:auto;flex-shrink:0}
+.detail-panel{width:420px;border-left:1px solid var(--border-light);background:var(--bg-muted);padding:24px;overflow-y:auto;display:none;animation:slideIn .3s ease}.detail-panel.open{display:block}@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.dp-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}.dp-title{font-size:14px;font-weight:800;letter-spacing:-.3px}.dp-close{width:28px;height:28px;border-radius:50%;border:none;background:var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:all .15s}.dp-close:hover{background:var(--text-3);color:#fff}.dp-close .material-symbols-rounded{font-size:16px}
+.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin:14px 0 6px}.dp-label:first-child{margin-top:0}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-white);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--blue);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}.dp-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.dp-note.n-pink strong{color:var(--pink)}.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.uth-body{flex-direction:column}.detail-panel{width:100%;border-left:none;border-top:1px solid var(--border-light)}.flow-panel{padding:20px 18px}.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; Ethics &amp; Bias in AI</h2><span class="tb-sub">Fairness metrics, debiasing math, SHAP values, differential privacy, and audit frameworks</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="13-ethics-and-bias-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="zone-bar" id="zoneBar">
+    <div class="zone-tab" data-zone="A" style="background:var(--red-light);color:var(--red)">A &middot; Fairness Metrics</div>
+    <div class="zone-tab" data-zone="B" style="background:var(--orange-light);color:var(--orange)">B &middot; Debiasing</div>
+    <div class="zone-tab" data-zone="C" style="background:var(--violet-light);color:var(--violet)">C &middot; Explainability</div>
+    <div class="zone-tab" data-zone="D" style="background:var(--blue-light);color:var(--blue)">D &middot; Privacy</div>
+    <div class="zone-tab" data-zone="E" style="background:var(--teal-light);color:var(--teal)">E &middot; Audit &amp; Governance</div>
+  </div>
+  <div class="uth-body">
+    <div class="flow-panel" id="flowPanel">
+
+      <!-- Zone A: Fairness Metrics -->
+      <div class="zone-title"><span class="zone-badge" style="background:var(--red)">A</span> Fairness Metrics &amp; Impossibility</div>
+      <div class="fnode c-red" data-step="1" data-detail="1"><div class="fn-icon"><span class="material-symbols-rounded">balance</span></div><div><div class="fn-label">Fairness Metrics: The Math</div><div class="fn-sub">Demographic parity, equalized odds, calibration, disparate impact</div></div><span class="step-badge" style="background:var(--red)">S1</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-red" data-step="2" data-detail="2"><div class="fn-icon"><span class="material-symbols-rounded">block</span></div><div><div class="fn-label">Impossibility Theorem</div><div class="fn-sub">Chouldechova &amp; Kleinberg proofs, worked example</div></div><span class="step-badge" style="background:var(--red)">S2</span></div>
+
+      <!-- Zone B: Debiasing -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--orange)">B</span> Debiasing Techniques</div>
+      <div class="fnode c-orange" data-step="3" data-detail="3"><div class="fn-icon"><span class="material-symbols-rounded">tune</span></div><div><div class="fn-label">Pre-Processing Debiasing</div><div class="fn-sub">Reweighting, resampling, disparate impact remover</div></div><span class="step-badge" style="background:var(--orange)">S3</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-orange" data-step="4" data-detail="4"><div class="fn-icon"><span class="material-symbols-rounded">model_training</span></div><div><div class="fn-label">In-Processing &amp; Post-Processing</div><div class="fn-sub">Adversarial debiasing, constrained optimization, threshold tuning</div></div><span class="step-badge" style="background:var(--orange)">S4</span></div>
+
+      <!-- Zone C: Explainability -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--violet)">C</span> Explainability Methods</div>
+      <div class="fnode c-violet" data-step="5" data-detail="5"><div class="fn-icon"><span class="material-symbols-rounded">scatter_plot</span></div><div><div class="fn-label">SHAP: Shapley Values</div><div class="fn-sub">Game-theoretic feature attribution, computation</div></div><span class="step-badge" style="background:var(--violet)">S5</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-violet" data-step="6" data-detail="6"><div class="fn-icon"><span class="material-symbols-rounded">search</span></div><div><div class="fn-label">LIME &amp; Gradient Methods</div><div class="fn-sub">Local surrogate models, saliency maps, integrated gradients</div></div><span class="step-badge" style="background:var(--violet)">S6</span></div>
+
+      <!-- Zone D: Privacy -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--blue)">D</span> Privacy &amp; Data Protection</div>
+      <div class="fnode c-blue" data-step="7" data-detail="7"><div class="fn-icon"><span class="material-symbols-rounded">lock</span></div><div><div class="fn-label">Differential Privacy</div><div class="fn-sub">&epsilon;-DP definition, noise mechanisms, privacy budget</div></div><span class="step-badge" style="background:var(--blue)">S7</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-blue" data-step="8"><div class="fn-icon"><span class="material-symbols-rounded">hub</span></div><div><div class="fn-label">Federated Learning &amp; Data Governance</div><div class="fn-sub">Training without centralizing data, GDPR compliance</div></div><span class="step-badge" style="background:var(--blue)">S8</span></div>
+
+      <!-- Zone E: Audit & Governance -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--teal)">E</span> Audit &amp; Governance Frameworks</div>
+      <div class="fnode c-teal" data-step="9" data-detail="8"><div class="fn-icon"><span class="material-symbols-rounded">description</span></div><div><div class="fn-label">Model Cards &amp; Datasheets</div><div class="fn-sub">Documentation standards, audit trails</div></div><span class="step-badge" style="background:var(--teal)">S9</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-teal" data-step="10" data-detail="9"><div class="fn-icon"><span class="material-symbols-rounded">checklist</span></div><div><div class="fn-label">AI Audit Pipeline</div><div class="fn-sub">End-to-end fairness audit, toolkits, compliance</div></div><span class="step-badge" style="background:var(--teal)">S10</span></div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="dp-header"><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+      <div id="dpBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10,STEP_MS=7000;
+  const ZONE_MAP={1:'A',2:'A',3:'B',4:'B',5:'C',6:'C',7:'D',8:'D',9:'E',10:'E'};
+  const NARRATION={
+    1:{text:'<strong>Fairness metrics formalized:</strong> Demographic parity: P(\u0176=1|A=0) = P(\u0176=1|A=1). Equalized odds: equal TPR and FPR across groups. Calibration: P(Y=1|\u0176=p,A) = p for all groups. Disparate impact ratio: selection_rate(minority) / selection_rate(majority) \u2265 0.8 (the \u201c80% rule\u201d).',color:'#dc2626'},
+    2:{text:'<strong>Impossibility:</strong> Chouldechova (2017) proved that when base rates differ, calibration + equal FPR + equal FNR cannot all hold. COMPAS was calibrated (scores meant the same for both races) but had unequal false positive rates. ProPublica wanted equalized odds; Northpointe wanted calibration. Both were \u201cright\u201d \u2014 the math says you can\u2019t have both.',color:'#dc2626'},
+    3:{text:'<strong>Pre-processing:</strong> Reweighting assigns sample weights to equalize outcomes: w = P(Y)/P(Y|A). Resampling over/undersamples groups. Disparate Impact Remover (Feldman 2015) transforms features to remove correlation with protected attributes while preserving rank order. All modify data before training.',color:'#ea580c'},
+    4:{text:'<strong>In-processing:</strong> Adversarial debiasing adds a discriminator that tries to predict A from predictions \u2014 the model learns to be unpredictable w.r.t. A. Constrained optimization: min Loss(Y,\u0176) s.t. fairness_metric \u2264 \u03b5. <strong>Post-processing:</strong> Adjust decision thresholds per group to equalize TPR/FPR. No retraining needed.',color:'#ea580c'},
+    5:{text:'<strong>SHAP:</strong> Based on Shapley values from cooperative game theory. \u03c6\u1d62 = \u2211 |S|!(n-|S|-1)!/n! \u00b7 [f(S\u222a{i}) \u2212 f(S)]. Each feature gets a contribution score that sums to the prediction. Properties: efficiency (values sum to output), symmetry, null player, linearity. KernelSHAP and TreeSHAP make computation tractable.',color:'#7c3aed'},
+    6:{text:'<strong>LIME:</strong> Perturb input x, get predictions, fit weighted linear model locally: min \u2211 w(x,z) \u00b7 (f(z) \u2212 g(z))\u00b2 + \u03a9(g). The linear model g explains f around x. <strong>Gradient methods:</strong> Saliency = |\u2202f/\u2202x|. Integrated Gradients: \u03c6\u1d62 = (x\u1d62 \u2212 x\u2032\u1d62) \u00b7 \u222b \u2202f/\u2202x\u1d62 d\u03b1. Satisfies completeness axiom.',color:'#7c3aed'},
+    7:{text:'<strong>Differential privacy:</strong> A mechanism M is (\u03b5,\u03b4)-DP if P(M(D)\u2208S) \u2264 e\u1d4b \u00b7 P(M(D\u2032)\u2208S) + \u03b4 for neighboring databases D, D\u2032. Laplace mechanism: add Lap(sensitivity/\u03b5) noise. Gaussian: add N(0, sensitivity\u00b2\u00b72ln(1.25/\u03b4)/\u03b5\u00b2). DP-SGD clips per-sample gradients and adds noise during training.',color:'#2563eb'},
+    8:{text:'<strong>Federated learning:</strong> Train on distributed data without centralizing it. FedAvg: each client trains locally, sends gradients to server, server averages. Combined with DP for formal privacy guarantees. Used by Apple (keyboard prediction), Google (Gboard), hospitals (medical imaging). GDPR compliance through data minimization.',color:'#2563eb'},
+    9:{text:'<strong>Model cards</strong> (Mitchell et al. 2019): standardized documentation including intended use, performance metrics disaggregated by subgroup, training data description, ethical considerations, and limitations. <strong>Datasheets for datasets</strong> (Gebru et al. 2021): who collected the data, how, consent, preprocessing, and known biases.',color:'#0d9488'},
+    10:{text:'<strong>AI audit pipeline:</strong> 1) Define protected attributes and fairness criteria. 2) Disaggregate metrics by subgroup. 3) Test for disparate impact (80% rule). 4) Apply debiasing if needed. 5) Generate explanations for sample decisions. 6) Document in model card. 7) Monitor post-deployment for drift. Tools: Fairlearn, AIF360, What-If Tool, Aequitas.',color:'#0d9488'},
+  };
+  const DETAILS={
+    1:{title:'Fairness Metrics: Formal Definitions',color:'#dc2626',body:`
+<div class="dp-label">Notation</div>
+<div class="dp-code"><span class="hl-key">Y</span>  = true label (0 or 1)
+<span class="hl-key">\u0176</span>  = predicted label
+<span class="hl-key">A</span>  = protected attribute (e.g., race, gender)
+<span class="hl-key">S</span>  = score / predicted probability</div>
+<div class="dp-label">Demographic Parity (Statistical Parity)</div>
+<div class="dp-code"><span class="hl-key">P(\u0176=1 | A=0) = P(\u0176=1 | A=1)</span>
+
+<span class="hl-cmt">// Example: Hiring system</span>
+Group A (men):   <span class="hl-num">200</span> applicants, <span class="hl-num">60</span> hired = <span class="hl-ok">30%</span>
+Group B (women): <span class="hl-num">100</span> applicants, <span class="hl-num">30</span> hired = <span class="hl-ok">30%</span>
+<span class="hl-ok">\u2713 Demographic parity satisfied</span>
+
+<span class="hl-cmt">// Disparate Impact Ratio (80% rule):</span>
+<span class="hl-key">DI</span> = min(rate_A, rate_B) / max(rate_A, rate_B)
+DI = 30% / 30% = <span class="hl-ok">1.0</span> \u2265 0.8 \u2713</div>
+<div class="dp-label">Equalized Odds</div>
+<div class="dp-code"><span class="hl-cmt">// Equal True Positive Rate (TPR):</span>
+<span class="hl-key">P(\u0176=1 | Y=1, A=0) = P(\u0176=1 | Y=1, A=1)</span>
+
+<span class="hl-cmt">// Equal False Positive Rate (FPR):</span>
+<span class="hl-key">P(\u0176=1 | Y=0, A=0) = P(\u0176=1 | Y=0, A=1)</span>
+
+<span class="hl-cmt">// Example: Recidivism prediction</span>
+           TPR      FPR
+Group A:   <span class="hl-num">70%</span>      <span class="hl-num">25%</span>
+Group B:   <span class="hl-num">70%</span>      <span class="hl-num">25%</span>
+<span class="hl-ok">\u2713 Equalized odds satisfied</span>
+
+<span class="hl-cmt">// Equal Opportunity: relaxed version</span>
+<span class="hl-cmt">// Only requires equal TPR (not FPR)</span></div>
+<div class="dp-label">Calibration</div>
+<div class="dp-code"><span class="hl-key">P(Y=1 | S=s, A=0) = P(Y=1 | S=s, A=1) = s</span>
+
+<span class="hl-cmt">// When model says "70% risk":</span>
+Group A: 70% of those scored 0.7 actually reoffend
+Group B: 70% of those scored 0.7 actually reoffend
+<span class="hl-ok">\u2713 Calibration satisfied</span>
+
+<span class="hl-cmt">// Scores mean the same thing for everyone</span>
+<span class="hl-cmt">// Essential for trust in risk scores</span></div>
+<div class="dp-note n-red"><strong>Which to use?</strong> Demographic parity for equal outcomes (affirmative action). Equalized odds for equal accuracy (criminal justice). Calibration for meaningful scores (credit risk). Individual fairness for case-by-case consistency. The choice depends on the domain, stakeholders, and legal requirements.</div>`},
+    2:{title:'Impossibility Theorem: Worked Example',color:'#dc2626',body:`
+<div class="dp-label">Setup: Different Base Rates</div>
+<div class="dp-code"><span class="hl-cmt">// Two groups with different recidivism rates</span>
+<span class="hl-key">Group A:</span> base rate = <span class="hl-num">30%</span> (30% actually reoffend)
+<span class="hl-key">Group B:</span> base rate = <span class="hl-num">50%</span> (50% actually reoffend)
+
+<span class="hl-cmt">// A calibrated model must reflect these rates</span>
+<span class="hl-cmt">// Score of 0.5 means 50% chance for BOTH groups</span></div>
+<div class="dp-label">The Conflict</div>
+<div class="dp-code"><span class="hl-cmt">// If the model is CALIBRATED:</span>
+<span class="hl-cmt">// Group B has higher base rate \u2192 more high scores</span>
+<span class="hl-cmt">// \u2192 More people flagged in Group B</span>
+<span class="hl-err">\u2717 Violates demographic parity</span>
+
+<span class="hl-cmt">// If we FORCE demographic parity:</span>
+<span class="hl-cmt">// Must flag same % in both groups</span>
+<span class="hl-cmt">// Group B (higher base rate) \u2192 lower threshold</span>
+<span class="hl-cmt">// Score of 0.4 means "flagged" for B but not A</span>
+<span class="hl-err">\u2717 Violates calibration (scores mean different things)</span>
+
+<span class="hl-cmt">// If we FORCE equalized odds:</span>
+<span class="hl-cmt">// Equal FPR requires different thresholds</span>
+<span class="hl-cmt">// Different thresholds \u2192 scores not calibrated</span>
+<span class="hl-err">\u2717 Violates calibration</span></div>
+<div class="dp-label">Chouldechova (2017): Formal Proof</div>
+<div class="dp-code"><span class="hl-cmt">// If base rates differ: P(Y=1|A=0) \u2260 P(Y=1|A=1)</span>
+<span class="hl-cmt">// Then it is IMPOSSIBLE to simultaneously satisfy:</span>
+
+<span class="hl-key">1.</span> Calibration (predictive parity)
+<span class="hl-key">2.</span> Equal FPR (false positive rate)
+<span class="hl-key">3.</span> Equal FNR (false negative rate)
+
+<span class="hl-cmt">// Proof sketch:</span>
+<span class="hl-cmt">// PPV = TP/(TP+FP) = calibration</span>
+<span class="hl-cmt">// FPR = FP/(FP+TN)</span>
+<span class="hl-cmt">// FNR = FN/(FN+TP)</span>
+<span class="hl-cmt">// These are algebraically linked through</span>
+<span class="hl-cmt">// base rate. When base rates differ,</span>
+<span class="hl-cmt">// the system is over-determined.</span></div>
+<div class="dp-note n-red"><strong>The COMPAS debate:</strong> ProPublica showed COMPAS had unequal FPR (Black defendants falsely flagged at 2x rate). Northpointe showed COMPAS was calibrated (a score of 7 meant the same risk for both races). Both were correct. The impossibility theorem explains why: with different base rates, you literally cannot have both. This is a <em>values</em> choice, not a bug.</div>`},
+    3:{title:'Pre-Processing Debiasing Methods',color:'#ea580c',body:`
+<div class="dp-label">Reweighting (Kamiran & Calders, 2012)</div>
+<div class="dp-code"><span class="hl-cmt">// Assign weights to equalize P(\u0176|A)</span>
+
+<span class="hl-key">w(x)</span> = P(Y) / P(Y|A)
+
+<span class="hl-cmt">// Example: hiring data</span>
+<span class="hl-cmt">// 80% male, 20% female in positive class</span>
+
+<span class="hl-key">w(female, hired)</span>   = P(hired) / P(hired|female)
+                     = 0.3 / 0.15 = <span class="hl-num">2.0</span>  <span class="hl-cmt">// upweight</span>
+<span class="hl-key">w(male, hired)</span>     = 0.3 / 0.34 = <span class="hl-num">0.88</span> <span class="hl-cmt">// downweight</span>
+<span class="hl-key">w(female, not hired)</span> = 0.7 / 0.85 = <span class="hl-num">0.82</span>
+<span class="hl-key">w(male, not hired)</span>   = 0.7 / 0.66 = <span class="hl-num">1.06</span>
+
+<span class="hl-cmt">// Train model with weighted loss</span>
+<span class="hl-cmt">// Effectively balances representation</span></div>
+<div class="dp-label">Disparate Impact Remover (Feldman, 2015)</div>
+<div class="dp-code"><span class="hl-cmt">// Transform features to remove correlation with A</span>
+<span class="hl-cmt">// while preserving within-group rank order</span>
+
+<span class="hl-key">For each feature x\u1d62:</span>
+  1. Compute CDF per group: F\u2090(x\u1d62), F\u2090\u2032(x\u1d62)
+  2. Compute median CDF: F\u2098(x\u1d62) = avg of CDFs
+  3. Map each value: x\u1d62\u2032 = F\u2098\u207b\u00b9(F\u2090(x\u1d62))
+
+<span class="hl-cmt">// Result: both groups have same distribution</span>
+<span class="hl-cmt">// for each feature, but rank order preserved</span>
+<span class="hl-cmt">// \u03bb parameter controls repair level (0=none, 1=full)</span></div>
+<div class="dp-note n-orange"><strong>Trade-off:</strong> Pre-processing methods are model-agnostic (work with any downstream model) but may reduce predictive accuracy. The more aggressively you remove bias, the more information you lose. Reweighting is simplest; disparate impact remover is more principled but computationally expensive.</div>`},
+    4:{title:'In-Processing & Post-Processing Debiasing',color:'#ea580c',body:`
+<div class="dp-label">Adversarial Debiasing (Zhang et al., 2018)</div>
+<div class="dp-code"><span class="hl-cmt">// Two networks trained simultaneously:</span>
+
+<span class="hl-key">Predictor:</span>  f(x) \u2192 \u0176  (predict target Y)
+<span class="hl-key">Adversary:</span>  g(\u0176) \u2192 \u00c2  (predict protected attribute A)
+
+<span class="hl-cmt">// Predictor loss:</span>
+<span class="hl-key">L</span> = L_pred(\u0176, Y) <span class="hl-err">\u2212 \u03bb \u00b7 L_adv(\u00c2, A)</span>
+
+<span class="hl-cmt">// Predictor MINIMIZES prediction loss</span>
+<span class="hl-cmt">// while MAXIMIZING adversary loss</span>
+<span class="hl-cmt">// (making A unpredictable from \u0176)</span>
+
+<span class="hl-cmt">// At equilibrium: predictions are accurate</span>
+<span class="hl-cmt">// but carry no information about A</span></div>
+<div class="dp-label">Constrained Optimization</div>
+<div class="dp-code"><span class="hl-cmt">// Add fairness as explicit constraint:</span>
+
+<span class="hl-key">min\u03b8</span>  L(Y, f\u03b8(X))
+<span class="hl-key">s.t.</span>  |FPR(A=0) \u2212 FPR(A=1)| \u2264 \u03b5
+      |TPR(A=0) \u2212 TPR(A=1)| \u2264 \u03b5
+
+<span class="hl-cmt">// Solved via Lagrangian relaxation:</span>
+<span class="hl-key">L\u03bb</span> = L(Y,\u0176) + \u03bb\u2081\u00b7|FPR gap| + \u03bb\u2082\u00b7|TPR gap|
+
+<span class="hl-cmt">// Exponentiated gradient (Agarwal 2018):</span>
+<span class="hl-cmt">// Reduces to sequence of cost-sensitive problems</span>
+<span class="hl-cmt">// Implemented in Fairlearn</span></div>
+<div class="dp-label">Post-Processing: Threshold Adjustment</div>
+<div class="dp-code"><span class="hl-cmt">// Different decision thresholds per group:</span>
+
+<span class="hl-key">Group A:</span> predict 1 if score > <span class="hl-num">0.45</span>
+<span class="hl-key">Group B:</span> predict 1 if score > <span class="hl-num">0.55</span>
+
+<span class="hl-cmt">// Choose thresholds to equalize FPR or TPR</span>
+<span class="hl-cmt">// Hardt et al. (2016): optimal post-processing</span>
+<span class="hl-cmt">// for equalized odds via linear program</span>
+
+<span class="hl-ok">Pros:</span> No retraining, works with any model
+<span class="hl-err">Cons:</span> Different thresholds may feel unfair
+       Requires group labels at inference time</div>
+<div class="dp-note n-orange"><strong>Choosing a method:</strong> Pre-processing when you can\u2019t modify the model (black-box). In-processing for best accuracy-fairness trade-off. Post-processing when the model is already trained and deployed. In practice, combine methods: clean data (pre) + constrained training (in) + threshold tuning (post).</div>`},
+    5:{title:'SHAP: Shapley Values for ML',color:'#7c3aed',body:`
+<div class="dp-label">Shapley Value Formula</div>
+<div class="dp-code"><span class="hl-cmt">// From cooperative game theory (Shapley, 1953)</span>
+<span class="hl-cmt">// Fair allocation of "payout" among players</span>
+
+<span class="hl-key">\u03c6\u1d62</span> = \u2211\u209b\u2286N\\{i} |S|!(n\u2212|S|\u22121)! / n! \u00b7 [f(S\u222a{i}) \u2212 f(S)]
+
+<span class="hl-cmt">// For ML: "players" = features, "payout" = prediction</span>
+<span class="hl-cmt">// \u03c6\u1d62 = contribution of feature i to this prediction</span>
+
+<span class="hl-key">Properties (uniquely defined):</span>
+<span class="hl-ok">Efficiency:</span>   \u2211 \u03c6\u1d62 = f(x) \u2212 E[f(x)]
+<span class="hl-ok">Symmetry:</span>    equal features get equal \u03c6
+<span class="hl-ok">Null player:</span> irrelevant features get \u03c6 = 0
+<span class="hl-ok">Linearity:</span>   \u03c6(f+g) = \u03c6(f) + \u03c6(g)</div>
+<div class="dp-label">Worked Example (3 features)</div>
+<div class="dp-code"><span class="hl-cmt">// Loan approval: f(age, income, debt) = 0.8</span>
+<span class="hl-cmt">// E[f] = 0.5 (average prediction)</span>
+
+<span class="hl-cmt">// For feature "income":</span>
+<span class="hl-cmt">// Check all subsets without income:</span>
+
+<span class="hl-key">S = {}:</span>
+  f({income}) \u2212 f({}) = 0.65 \u2212 0.50 = <span class="hl-num">+0.15</span>
+  weight: 0!2!/3! = <span class="hl-num">1/3</span>
+
+<span class="hl-key">S = {age}:</span>
+  f({age,income}) \u2212 f({age}) = 0.75 \u2212 0.55 = <span class="hl-num">+0.20</span>
+  weight: 1!1!/3! = <span class="hl-num">1/6</span>
+
+<span class="hl-key">S = {debt}:</span>
+  f({debt,income}) \u2212 f({debt}) = 0.70 \u2212 0.45 = <span class="hl-num">+0.25</span>
+  weight: 1!1!/3! = <span class="hl-num">1/6</span>
+
+<span class="hl-key">S = {age,debt}:</span>
+  f({age,debt,income}) \u2212 f({age,debt}) = 0.80 \u2212 0.60 = <span class="hl-num">+0.20</span>
+  weight: 2!0!/3! = <span class="hl-num">1/3</span>
+
+<span class="hl-key">\u03c6_income</span> = 1/3(0.15) + 1/6(0.20) + 1/6(0.25) + 1/3(0.20)
+         = 0.05 + 0.033 + 0.042 + 0.067 = <span class="hl-ok">+0.192</span></div>
+<div class="dp-note n-violet"><strong>Computational cost:</strong> Exact Shapley values require 2\u207f evaluations (exponential in features). KernelSHAP approximates via weighted linear regression on random subsets. TreeSHAP (Lundberg 2020) computes exact values in O(TLD\u00b2) for tree models. For deep learning, DeepSHAP uses backpropagation-based approximation.</div>`},
+    6:{title:'LIME & Gradient-Based Explanations',color:'#7c3aed',body:`
+<div class="dp-label">LIME Algorithm (Ribeiro, 2016)</div>
+<div class="dp-code"><span class="hl-cmt">// Explain prediction f(x) with local linear model</span>
+
+<span class="hl-key">1. Perturb:</span> Generate N neighbors z around x
+   <span class="hl-cmt">// For text: randomly remove words</span>
+   <span class="hl-cmt">// For images: randomly mask superpixels</span>
+   <span class="hl-cmt">// For tabular: sample from training distribution</span>
+
+<span class="hl-key">2. Predict:</span> Get f(z) for each neighbor
+
+<span class="hl-key">3. Weight:</span> w(x,z) = exp(\u2212D(x,z)\u00b2 / \u03c3\u00b2)
+   <span class="hl-cmt">// Closer neighbors get higher weight</span>
+
+<span class="hl-key">4. Fit:</span> min\u2091 \u2211 w(x,z) \u00b7 (f(z) \u2212 g(z))\u00b2 + \u03a9(g)
+   <span class="hl-cmt">// g = interpretable model (linear, decision tree)</span>
+   <span class="hl-cmt">// \u03a9 = complexity penalty</span>
+
+<span class="hl-key">5. Return:</span> coefficients of g as feature importances</div>
+<div class="dp-label">Integrated Gradients (Sundararajan, 2017)</div>
+<div class="dp-code"><span class="hl-cmt">// Attribution for deep neural networks</span>
+
+<span class="hl-key">\u03c6\u1d62</span> = (x\u1d62 \u2212 x\u2032\u1d62) \u00b7 \u222b\u2080\u00b9 (\u2202f / \u2202x\u1d62)(\u03b1) d\u03b1
+
+<span class="hl-cmt">// x\u2032 = baseline (e.g., black image, zero vector)</span>
+<span class="hl-cmt">// Integrate gradient along path from x\u2032 to x</span>
+
+<span class="hl-cmt">// Approximation (m steps):</span>
+<span class="hl-key">\u03c6\u1d62</span> \u2248 (x\u1d62 \u2212 x\u2032\u1d62) / m \u00b7 \u2211\u2096\u2081\u1d50 \u2202f/\u2202x\u1d62(x\u2032 + k/m \u00b7 (x\u2212x\u2032))
+
+<span class="hl-key">Axioms satisfied:</span>
+<span class="hl-ok">Completeness:</span> \u2211 \u03c6\u1d62 = f(x) \u2212 f(x\u2032)
+<span class="hl-ok">Sensitivity:</span>  if feature matters, \u03c6 \u2260 0
+<span class="hl-ok">Symmetry:</span>    equal features get equal \u03c6</div>
+<div class="dp-note n-violet"><strong>LIME vs SHAP vs Integrated Gradients:</strong> LIME is model-agnostic but unstable (different perturbations \u2192 different explanations). SHAP has theoretical guarantees but is expensive. Integrated Gradients is fast for neural networks but requires differentiability. For high-stakes decisions, use multiple methods and check consistency.</div>`},
+    7:{title:'Differential Privacy: The Math',color:'#2563eb',body:`
+<div class="dp-label">(\u03b5, \u03b4)-Differential Privacy</div>
+<div class="dp-code"><span class="hl-cmt">// A randomized mechanism M is (\u03b5,\u03b4)-DP if:</span>
+
+<span class="hl-key">P(M(D) \u2208 S) \u2264 e\u1d4b \u00b7 P(M(D\u2032) \u2208 S) + \u03b4</span>
+
+<span class="hl-cmt">// For ALL neighboring databases D, D\u2032</span>
+<span class="hl-cmt">// (differing in one record)</span>
+<span class="hl-cmt">// For ALL possible outputs S</span>
+
+<span class="hl-key">\u03b5 (epsilon):</span> privacy budget
+  \u03b5 = 0:   perfect privacy (pure noise)
+  \u03b5 = 1:   strong privacy
+  \u03b5 = 10:  weak privacy
+  <span class="hl-cmt">// Apple uses \u03b5 = 2\u20138, Google uses \u03b5 = 1\u20139</span>
+
+<span class="hl-key">\u03b4 (delta):</span> failure probability
+  Typically \u03b4 < 1/n (less than 1/dataset_size)</div>
+<div class="dp-label">Noise Mechanisms</div>
+<div class="dp-code"><span class="hl-key">Laplace Mechanism (\u03b5-DP):</span>
+  M(D) = f(D) + Lap(\u0394f / \u03b5)
+  <span class="hl-cmt">// \u0394f = sensitivity = max|f(D) \u2212 f(D\u2032)|</span>
+
+  <span class="hl-cmt">// Example: count query, \u0394f = 1</span>
+  <span class="hl-cmt">// \u03b5 = 1: add noise from Lap(1)</span>
+  <span class="hl-cmt">// True count: 500, reported: 500 \u00b1 ~1</span>
+
+<span class="hl-key">Gaussian Mechanism ((\u03b5,\u03b4)-DP):</span>
+  M(D) = f(D) + N(0, \u03c3\u00b2)
+  \u03c3 = \u0394f \u00b7 \u221a(2 ln(1.25/\u03b4)) / \u03b5
+
+<span class="hl-key">DP-SGD (Abadi et al., 2016):</span>
+  1. Clip per-sample gradient: ||g\u1d62|| \u2264 C
+  2. Average clipped gradients
+  3. Add noise: g\u0303 = (1/B)\u2211 clip(g\u1d62) + N(0, C\u00b2\u03c3\u00b2/B\u00b2)
+  4. Track cumulative privacy via moments accountant
+  <span class="hl-cmt">// Used to train Apple\u2019s on-device models</span></div>
+<div class="dp-note n-blue"><strong>Composition:</strong> Each query spends privacy budget. k queries of \u03b5-DP each cost k\u03b5 total (basic composition) or \u221ak\u00b7\u03b5 (advanced composition). The moments accountant tracks exact budget for DP-SGD across training steps. Once budget is exhausted, no more queries allowed.</div>`},
+    8:{title:'Model Cards: Documentation Standard',color:'#0d9488',body:`
+<div class="dp-label">Model Card Template (Mitchell et al., 2019)</div>
+<div class="dp-code"><span class="hl-key">1. Model Details</span>
+   Developer, version, type, license
+   Training date, framework, hyperparameters
+
+<span class="hl-key">2. Intended Use</span>
+   Primary use cases
+   Out-of-scope uses (explicit!)
+   Users and stakeholders
+
+<span class="hl-key">3. Factors</span>
+   Relevant demographic groups
+   Environmental factors (lighting, language)
+   Instrumentation (camera type, etc.)
+
+<span class="hl-key">4. Metrics</span>
+   Performance metrics chosen and why
+   Decision thresholds and rationale
+
+<span class="hl-key">5. Evaluation Data</span>
+   Datasets used, preprocessing
+   Motivation for dataset choice
+
+<span class="hl-key">6. Training Data</span>
+   Same as above for training set
+
+<span class="hl-key">7. Quantitative Analyses</span>
+   <span class="hl-err">DISAGGREGATED by subgroup</span>
+   Intersectional analysis (race \u00d7 gender)
+
+<span class="hl-key">8. Ethical Considerations</span>
+   Known biases, risks, mitigations
+
+<span class="hl-key">9. Caveats and Recommendations</span>
+   Limitations, failure modes</div>
+<div class="dp-label">Datasheets for Datasets (Gebru et al., 2021)</div>
+<div class="dp-code"><span class="hl-key">Motivation:</span>    Why was this dataset created?
+<span class="hl-key">Composition:</span>   What\u2019s in it? Demographics?
+<span class="hl-key">Collection:</span>    How was data collected? Consent?
+<span class="hl-key">Preprocessing:</span> What cleaning was done?
+<span class="hl-key">Uses:</span>          Intended tasks, known misuses
+<span class="hl-key">Distribution:</span>  How is it shared? License?
+<span class="hl-key">Maintenance:</span>   Who maintains it? Updates?
+
+<span class="hl-cmt">// Both are now standard practice at</span>
+<span class="hl-cmt">// Google, Microsoft, Hugging Face, Meta</span></div>
+<div class="dp-note n-teal"><strong>Why documentation matters:</strong> Model cards make bias visible. If a face recognition model\u2019s card shows 34% error for dark-skinned women vs 0.8% for light-skinned men, the disparity is undeniable. Documentation creates accountability \u2014 it\u2019s much harder to deploy a biased model when the bias is written down in an official document.</div>`},
+    9:{title:'AI Audit Pipeline: End-to-End',color:'#0d9488',body:`
+<div class="dp-label">Fairness Audit Steps</div>
+<div class="dp-code"><span class="hl-key">Step 1: Define Scope</span>
+  Protected attributes (race, gender, age, ...)
+  Fairness criteria (which metric? why?)
+  Legal requirements (EEOC, EU AI Act, ...)
+
+<span class="hl-key">Step 2: Data Audit</span>
+  Representation analysis per subgroup
+  Label quality check per subgroup
+  Proxy variable detection
+  <span class="hl-cmd">Tool: Aequitas, pandas-profiling</span>
+
+<span class="hl-key">Step 3: Model Evaluation</span>
+  Disaggregate ALL metrics by subgroup
+  Intersectional analysis (race \u00d7 gender \u00d7 age)
+  Disparate impact ratio (\u2265 0.8?)
+  <span class="hl-cmd">Tool: Fairlearn, AIF360, What-If Tool</span>
+
+<span class="hl-key">Step 4: Mitigation</span>
+  Apply debiasing (pre/in/post-processing)
+  Re-evaluate metrics
+  Document accuracy-fairness trade-off
+
+<span class="hl-key">Step 5: Explanation</span>
+  Generate SHAP/LIME for sample decisions
+  Verify explanations are sensible
+  Check for proxy reliance
+
+<span class="hl-key">Step 6: Documentation</span>
+  Model card with disaggregated metrics
+  Datasheet for training data
+  Audit report with findings
+
+<span class="hl-key">Step 7: Monitoring</span>
+  Track fairness metrics in production
+  Alert on drift (distribution shift)
+  Periodic re-audit (quarterly/annually)</div>
+<div class="dp-label">Toolkits</div>
+<div class="dp-code"><span class="hl-key">Fairlearn</span> (Microsoft)
+  Metrics, mitigation, dashboard
+  ExponentiatedGradient, ThresholdOptimizer
+
+<span class="hl-key">AI Fairness 360</span> (IBM)
+  70+ fairness metrics
+  11 bias mitigation algorithms
+  Pre/in/post-processing
+
+<span class="hl-key">What-If Tool</span> (Google)
+  Interactive visualization
+  Counterfactual exploration
+  Threshold comparison
+
+<span class="hl-key">Aequitas</span> (U Chicago)
+  Bias audit toolkit
+  Group fairness metrics
+  Disparity analysis</div>
+<div class="dp-note n-teal"><strong>Audits are not one-time events.</strong> Models drift as data distributions change. A fair model today may become unfair in 6 months. Continuous monitoring with automated alerts is essential. The EU AI Act requires ongoing conformity assessment for high-risk AI systems \u2014 not just at deployment, but throughout the lifecycle.</div>`},
+  };
+  let current=0,playing=false,timer=null;const nodes=document.querySelectorAll('.fnode[data-step]');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const detailPanel=document.getElementById('detailPanel');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');const zoneTabs=document.querySelectorAll('.zone-tab');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightNodes(step){nodes.forEach(n=>{const s=parseInt(n.dataset.step);n.classList.toggle('lit',s===step)});const zone=ZONE_MAP[step];zoneTabs.forEach(t=>{t.classList.toggle('active',t.dataset.zone===zone)})}
+  function showDetail(id){const d=DETAILS[id];if(!d)return;dpTitle.textContent=d.title;dpTitle.style.color=d.color;dpBody.innerHTML=d.body;detailPanel.classList.add('open')}
+  function hideDetail(){detailPanel.classList.remove('open')}
+  function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}const activeNode=document.querySelector(`.fnode[data-step="${step}"]`);if(activeNode){activeNode.scrollIntoView({behavior:'smooth',block:'nearest'});const detailId=activeNode.dataset.detail;if(detailId)showDetail(parseInt(detailId));else hideDetail()}}
+  function showReset(){nodes.forEach(n=>n.classList.remove('lit'));zoneTabs.forEach(t=>t.classList.remove('active'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the deep dive...';hideDetail()}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);
+  nodes.forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.dataset.step);goTo(s)})});
+  dpClose.addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')hideDetail()});reset();
+})();
+</script>
+</body>
+</html>

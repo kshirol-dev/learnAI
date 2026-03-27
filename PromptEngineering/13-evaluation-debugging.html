@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: Evaluation, Debugging & Pitfalls — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; Evaluation, Debugging &amp; Pitfalls</h2><span class="tb-sub">Why prompts fail, the wording trap, systematic debugging, and LLM-as-judge evaluation</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Mastery</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Prompts = Code</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Wording Trap</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">troubleshoot</span></div><span class="pipe-label">Debug Framework</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Edge Cases</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">gavel</span></div><span class="pipe-label">LLM-as-Judge</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Test Suites</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Top Pitfalls</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Debug Playbook</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Prompts Are Software &mdash; Treat Them That Way</div><div class="cc-sub">They need testing, versioning, debugging, and iteration &mdash; just like code</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Mindset Shift</div><div class="cc-text">Most people treat prompts like messages: write once, send, hope for the best. But production prompts are <strong>software artifacts</strong>:<br><br>• They have <strong>inputs</strong> (user messages, context) and <strong>outputs</strong> (model responses)<br>• They can have <strong>bugs</strong> (wrong output for certain inputs)<br>• They need <strong>testing</strong> (does it work for all expected inputs?)<br>• They need <strong>versioning</strong> (what changed? did it break anything?)<br>• They need <strong>monitoring</strong> (is it still working in production?)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Prompt Development Lifecycle</div><div class="cc-code"><span class="hl-key">1. Draft</span> → Write the initial prompt
+<span class="hl-key">2. Test</span>  → Run against 10-20 examples
+<span class="hl-key">3. Debug</span> → Identify failure patterns
+<span class="hl-key">4. Fix</span>   → Modify the prompt
+<span class="hl-key">5. Test</span>  → Verify fix, check regressions
+<span class="hl-key">6. Ship</span>  → Deploy to production
+<span class="hl-key">7. Monitor</span> → Track quality metrics
+<span class="hl-key">8. Iterate</span> → Fix new failure modes</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The difference between a hobby prompt and a production prompt is the same as the difference between a script and a product: testing, error handling, and monitoring. If your prompt handles user input, it needs the same rigor as any other piece of software.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">text_fields</span></div><div><div class="cc-title">The Wording Trap: Same Intent, Different Output</div><div class="cc-sub">Tiny wording changes cause dramatically different results &mdash; and this is why prompt debugging is hard</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Prompts, Same Intent</div><div class="cc-code"><span class="hl-key">Prompt A:</span>
+"Summarize this article."
+
+<span class="hl-key">Prompt B:</span>
+"Provide a brief summary of this article."
+
+<span class="hl-key">Prompt C:</span>
+"Summarize this article in 3 bullet
+points, each under 20 words."</div></div>
+          <div class="cc-block"><div class="cc-label">What You Get</div><div class="cc-code"><span class="hl-key">Prompt A output:</span>
+A 200-word paragraph that's more of a
+rewrite than a summary. Includes opinions
+the article didn't express.
+
+<span class="hl-key">Prompt B output:</span>
+A 50-word paragraph. Better, but still
+prose. Buries the key points.
+
+<span class="hl-key">Prompt C output:</span>
+• Point 1 (18 words)
+• Point 2 (16 words)
+• Point 3 (19 words)
+Clean, scannable, actionable.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why This Happens</div><div class="cc-text"><strong>Token-level sensitivity:</strong> The model predicts the next token based on all previous tokens. &ldquo;Summarize&rdquo; vs &ldquo;Provide a brief summary&rdquo; activates different probability distributions. &ldquo;Brief&rdquo; nudges toward shorter output. &ldquo;3 bullet points, each under 20 words&rdquo; constrains the output format precisely.<br><br><strong>Ambiguity is the enemy:</strong> &ldquo;Summarize&rdquo; is ambiguous &mdash; how long? what format? what to include? The model fills in the blanks with its training distribution, which may not match your intent.</div></div>
+          <div class="cc-block"><div class="cc-label">The Real-World Impact</div><div class="cc-text">In production, the wording trap means:<br><br>• A prompt that works in testing might fail with slightly different user inputs<br>• A &ldquo;small improvement&rdquo; to the prompt can break existing behavior<br>• Two team members writing &ldquo;the same&rdquo; prompt get different results</div></div>
+          <div class="cc-note n-red"><strong>The pattern:</strong> Every word in a prompt matters. This isn&rsquo;t a flaw &mdash; it&rsquo;s how language models work. The fix isn&rsquo;t to find the &ldquo;perfect wording&rdquo; but to be explicit enough that wording variations don&rsquo;t matter. Constraints beat cleverness.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">troubleshoot</span></div><div><div class="cc-title">The 5-Step Debugging Framework</div><div class="cc-sub">When a prompt fails, check these five things in order</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Framework</div><div class="cc-code"><span class="hl-key">Step 1: Is the instruction clear?</span>
+Can a human follow this prompt and
+produce the expected output? If not,
+the model can't either.
+
+<span class="hl-key">Step 2: Is there enough context?</span>
+Does the prompt include all information
+needed to answer? Or is the model
+expected to "just know" something?
+
+<span class="hl-key">Step 3: Is the format specified?</span>
+Did you tell the model HOW to respond?
+(JSON, bullets, table, length, structure)
+
+<span class="hl-key">Step 4: Are there conflicting constraints?</span>
+"Be concise" + "Include all details"
+"Be creative" + "Follow this template"
+These cancel each other out.
+
+<span class="hl-key">Step 5: Is the task too complex?</span>
+If one prompt tries to do 3 things,
+split it into 3 prompts.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Applying the Framework</div><div class="cc-code"><span class="hl-key">Failing prompt:</span>
+"Analyze this customer feedback and
+give me insights."
+
+<span class="hl-str">Step 1:</span> "Analyze" how? "Insights" about
+what? → <span class="hl-key">Instruction unclear</span>
+
+<span class="hl-str">Step 2:</span> No context about the product,
+customer segment, or goals → <span class="hl-key">Missing
+context</span>
+
+<span class="hl-str">Step 3:</span> No format specified → model
+writes a 500-word essay → <span class="hl-key">No format</span>
+
+<span class="hl-key">Fixed prompt:</span>
+"Analyze these 50 customer reviews for
+our project management SaaS. Identify:
+1. Top 3 complaints (with review count)
+2. Top 3 praised features
+3. 2 feature requests mentioned 5+ times
+
+Format: JSON with arrays for each
+category. Each item: {topic, count,
+example_quote}."</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Most prompt failures fall into one of these five categories. Running through the checklist takes 30 seconds and catches 80% of issues. The most common culprit? Step 1 &mdash; the instruction isn&rsquo;t as clear as you think it is.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">Domain Example: The 90% Prompt</div><div class="cc-sub">A prompt that works for most inputs but fails on edge cases &mdash; and how to debug it</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Prompt</div><div class="cc-code"><span class="hl-key">Task:</span> Classify support tickets into
+categories: BILLING, TECHNICAL, ACCOUNT,
+FEATURE_REQUEST
+
+<span class="hl-key">Prompt:</span>
+"Classify this support ticket into one
+category: BILLING, TECHNICAL, ACCOUNT,
+or FEATURE_REQUEST. Reply with ONLY the
+category name."</div></div>
+          <div class="cc-block"><div class="cc-label">Works for 90%</div><div class="cc-code"><span class="hl-str">"I was charged twice"</span>
+→ BILLING ✓
+
+<span class="hl-str">"App crashes on login"</span>
+→ TECHNICAL ✓
+
+<span class="hl-str">"Can you add dark mode?"</span>
+→ FEATURE_REQUEST ✓</div></div>
+          <div class="cc-block"><div class="cc-label">Fails on 10%</div><div class="cc-code"><span class="hl-str">"I was charged twice and now I can't
+log in to see my invoices"</span>
+→ BILLING? TECHNICAL? ACCOUNT?
+<span class="hl-cmt">(Model picks randomly each time)</span>
+
+<span class="hl-str">"Your app is garbage"</span>
+→ TECHNICAL? (It's actually a complaint,
+not a technical issue)
+
+<span class="hl-str">"Thanks, that fixed it!"</span>
+→ TECHNICAL? (It's a resolution, not
+a new ticket)</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Debugging Process</div><div class="cc-text"><strong>1. Collect failures:</strong> Run the prompt against 100 tickets. Find the 10 that fail.<br><br><strong>2. Categorize failure patterns:</strong><br>• Multi-category tickets (3 failures)<br>• Vague complaints (4 failures)<br>• Non-ticket messages (3 failures)<br><br><strong>3. Fix each pattern:</strong></div></div>
+          <div class="cc-block"><div class="cc-label">The Fixed Prompt</div><div class="cc-code"><span class="hl-key">"Classify this support ticket. Rules:</span>
+
+<span class="hl-str">1. If the ticket spans multiple
+   categories, choose the PRIMARY issue
+   (the one the customer wants resolved
+   most urgently).</span>
+
+<span class="hl-str">2. If the ticket is a vague complaint
+   with no specific issue, classify as
+   ACCOUNT.</span>
+
+<span class="hl-str">3. If the message is not a support
+   ticket (e.g., 'thanks', 'ok', spam),
+   classify as NONE.</span>
+
+Categories: BILLING, TECHNICAL, ACCOUNT,
+FEATURE_REQUEST, NONE
+
+Reply with ONLY the category name."</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The 90% prompt is the most dangerous prompt &mdash; it works well enough that you ship it, but fails unpredictably in production. Always test with edge cases: multi-category inputs, vague inputs, empty inputs, adversarial inputs, and non-standard inputs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">gavel</span></div><div><div class="cc-title">LLM-as-Judge: Automated Quality Evaluation</div><div class="cc-sub">Use one model to evaluate another model&rsquo;s output &mdash; scalable quality assurance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Concept</div><div class="cc-text">Manual evaluation doesn&rsquo;t scale. If your prompt processes 10,000 inputs/day, you can&rsquo;t review each output. Solution: use an LLM to evaluate the outputs of another LLM.<br><br><strong>The flow:</strong><br>1. Your prompt generates an output<br>2. A &ldquo;judge&rdquo; prompt evaluates that output<br>3. The judge scores it on a rubric<br>4. Low scores trigger alerts or human review</div></div>
+          <div class="cc-block"><div class="cc-label">The Judge Prompt</div><div class="cc-code"><span class="hl-key">System:</span> "You are a quality evaluator for
+a customer support chatbot. Rate each
+response on these criteria:"
+
+<span class="hl-str">1. ACCURACY (1-5):</span> Is the information
+   factually correct? Does it match the
+   provided context?
+
+<span class="hl-str">2. HELPFULNESS (1-5):</span> Does it actually
+   solve the customer's problem or just
+   acknowledge it?
+
+<span class="hl-str">3. TONE (1-5):</span> Professional, empathetic,
+   not robotic?
+
+<span class="hl-str">4. SAFETY (pass/fail):</span> Does it make
+   promises the company can't keep? Does
+   it reveal internal information?
+
+<span class="hl-key">Output format:</span>
+{
+  "accuracy": 4,
+  "helpfulness": 3,
+  "tone": 5,
+  "safety": "pass",
+  "issues": ["Didn't address the
+    customer's second question"],
+  "overall": 4
+}</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Making It Work</div><div class="cc-text"><strong>Use a stronger model as judge:</strong> If your chatbot uses GPT-4o-mini, use GPT-4o or Claude 3.5 Sonnet as the judge. The judge should be at least as capable as the model being evaluated.<br><br><strong>Calibrate with human ratings:</strong> Have humans rate 50&ndash;100 outputs. Then run the judge on the same outputs. If the judge&rsquo;s scores correlate with human scores (r &gt; 0.7), it&rsquo;s reliable.<br><br><strong>Focus on pass/fail for safety:</strong> Numeric scores are useful for quality. Binary pass/fail is better for safety checks.</div></div>
+          <div class="cc-block"><div class="cc-label">Automated Pipeline</div><div class="cc-code"><span class="hl-cmt"># Evaluate every Nth response</span>
+<span class="hl-key">if</span> response_count % <span class="hl-num">10</span> == <span class="hl-num">0</span>:
+    score = judge(
+        input=user_message,
+        output=bot_response,
+        context=retrieved_docs
+    )
+    <span class="hl-key">if</span> score[<span class="hl-str">"safety"</span>] == <span class="hl-str">"fail"</span>:
+        alert_team(response)
+    <span class="hl-key">if</span> score[<span class="hl-str">"overall"</span>] < <span class="hl-num">3</span>:
+        queue_for_review(response)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> LLM-as-judge isn&rsquo;t perfect, but it&rsquo;s far better than no evaluation. It catches obvious failures (hallucinations, safety violations, off-topic responses) reliably. Use it as a first filter, with human review for flagged cases.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Building a Prompt Test Suite</div><div class="cc-sub">Systematic testing that catches regressions before they reach production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Test Case Structure</div><div class="cc-code">test_cases = [
+  {
+    <span class="hl-str">"id"</span>: <span class="hl-str">"billing_simple"</span>,
+    <span class="hl-str">"input"</span>: <span class="hl-str">"I was charged twice"</span>,
+    <span class="hl-str">"expected"</span>: <span class="hl-str">"BILLING"</span>,
+    <span class="hl-str">"type"</span>: <span class="hl-str">"exact_match"</span>
+  },
+  {
+    <span class="hl-str">"id"</span>: <span class="hl-str">"multi_category"</span>,
+    <span class="hl-str">"input"</span>: <span class="hl-str">"Charged twice and can't
+      log in"</span>,
+    <span class="hl-str">"expected"</span>: <span class="hl-str">"BILLING"</span>,
+    <span class="hl-str">"type"</span>: <span class="hl-str">"exact_match"</span>
+  },
+  {
+    <span class="hl-str">"id"</span>: <span class="hl-str">"not_a_ticket"</span>,
+    <span class="hl-str">"input"</span>: <span class="hl-str">"Thanks!"</span>,
+    <span class="hl-str">"expected"</span>: <span class="hl-str">"NONE"</span>,
+    <span class="hl-str">"type"</span>: <span class="hl-str">"exact_match"</span>
+  },
+  {
+    <span class="hl-str">"id"</span>: <span class="hl-str">"summary_quality"</span>,
+    <span class="hl-str">"input"</span>: <span class="hl-str">"[long article]"</span>,
+    <span class="hl-str">"expected"</span>: <span class="hl-str">"3 bullet points,
+      each &lt;20 words"</span>,
+    <span class="hl-str">"type"</span>: <span class="hl-str">"llm_judge"</span>
+  }
+]</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Test Types</div><div class="cc-text"><strong>Exact match:</strong> Output must equal expected value. Best for classification, extraction, structured output.<br><br><strong>Contains:</strong> Output must contain specific strings. Good for checking that key facts are included.<br><br><strong>Not contains:</strong> Output must NOT contain certain strings. Good for safety checks (no PII, no hallucinated URLs).<br><br><strong>Format check:</strong> Output must parse as valid JSON/XML. Good for structured output prompts.<br><br><strong>LLM judge:</strong> Use a judge prompt to score quality. Best for open-ended generation where exact matching is impossible.</div></div>
+          <div class="cc-block"><div class="cc-label">Run on Every Prompt Change</div><div class="cc-code"><span class="hl-cmt"># Before deploying a prompt change:</span>
+
+results = run_test_suite(
+    prompt=new_prompt,
+    tests=test_cases
+)
+
+passed = sum(<span class="hl-num">1</span> <span class="hl-key">for</span> r <span class="hl-key">in</span> results
+             <span class="hl-key">if</span> r[<span class="hl-str">"passed"</span>])
+print(f<span class="hl-str">"{passed}/{len(results)} passed"</span>)
+
+<span class="hl-cmt"># If pass rate drops, don't deploy</span>
+<span class="hl-key">if</span> passed < len(results) * <span class="hl-num">0.95</span>:
+    print(<span class="hl-str">"BLOCKED: regression detected"</span>)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> A test suite of 20&ndash;30 cases catches most regressions. Include: 10 happy-path cases, 5 edge cases, 5 adversarial cases, and 5&ndash;10 real production failures you&rsquo;ve seen. Run the suite before every prompt change. It takes 30 seconds and saves hours of debugging in production.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Top 7 Prompt Engineering Pitfalls</div><div class="cc-sub">Mistakes that even experienced practitioners make</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pitfalls 1-4</div><div class="cc-code"><span class="hl-key">1. The Kitchen Sink Prompt</span>
+Cramming 5 tasks into one prompt.
+The model does all 5 poorly instead
+of any 1 well. Split into focused
+prompts.
+
+<span class="hl-key">2. The Invisible Assumption</span>
+"Summarize for our audience" — what
+audience? The prompt assumes context
+the model doesn't have. Be explicit.
+
+<span class="hl-key">3. The Contradictory Constraint</span>
+"Be thorough but keep it under 50
+words." Pick one. If you need both,
+say "Cover the 3 most important points
+in under 50 words."
+
+<span class="hl-key">4. The Negative-Only Instruction</span>
+"Don't be formal. Don't use jargon.
+Don't be too long." Tell the model
+what TO do, not just what to avoid.
+"Write in a casual, conversational
+tone. Use simple language. Keep it
+under 100 words."</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pitfalls 5-7</div><div class="cc-code"><span class="hl-key">5. The Temperature Mismatch</span>
+Using temperature=1.0 for classification
+(needs determinism) or temperature=0
+for creative writing (needs variety).
+Match temperature to the task.
+
+<span class="hl-key">6. The Untested Production Prompt</span>
+"It worked in ChatGPT, ship it."
+ChatGPT testing ≠ production testing.
+Different inputs, different scale,
+different failure modes.
+
+<span class="hl-key">7. The Frozen Prompt</span>
+Writing a prompt once and never
+updating it. Models change, user
+patterns change, edge cases emerge.
+Prompts need maintenance like code.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> These pitfalls share a common root: treating prompts as one-off messages instead of maintained software. The fix is always the same: be explicit, test systematically, and iterate based on real failures.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Prompt Debugging Playbook</div><div class="cc-sub">A systematic approach to finding and fixing prompt failures</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When a Prompt Fails</div><div class="cc-code"><span class="hl-key">1. Reproduce</span>
+   Run the exact same input 3 times.
+   Is the failure consistent or random?
+   Consistent → prompt bug
+   Random → temperature/sampling issue
+
+<span class="hl-key">2. Diagnose (5-step framework)</span>
+   □ Instruction clear?
+   □ Enough context?
+   □ Format specified?
+   □ Conflicting constraints?
+   □ Task too complex?
+
+<span class="hl-key">3. Isolate</span>
+   Remove parts of the prompt until you
+   find the minimum that reproduces the
+   failure. Often it's one ambiguous
+   sentence.
+
+<span class="hl-key">4. Fix</span>
+   Make the smallest change that fixes
+   the failure. Don't rewrite the whole
+   prompt — you'll introduce new bugs.
+
+<span class="hl-key">5. Verify</span>
+   Run the fix against:
+   - The failing input (should pass now)
+   - 10 previously passing inputs
+     (should still pass — no regression)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quick Reference</div><div class="cc-text"><strong>Wrong format?</strong> → Add explicit format instructions with an example<br><br><strong>Too long/short?</strong> → Add word/sentence count constraint<br><br><strong>Hallucinating?</strong> → Add &ldquo;Only use information from the provided context&rdquo;<br><br><strong>Inconsistent?</strong> → Lower temperature, add few-shot examples<br><br><strong>Wrong tool called?</strong> → Improve tool descriptions (Ch 12)<br><br><strong>Loses context?</strong> → Add summaries (Ch 11)<br><br><strong>Works sometimes?</strong> → Run 10x, find the pattern in failures</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Prompt debugging is a learnable skill. The 5-step framework (reproduce, diagnose, isolate, fix, verify) works for every failure mode. The key discipline is making the <em>smallest</em> fix and verifying it doesn&rsquo;t break existing behavior. Prompt engineering is iterative, not inspirational.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="12-tool-use-function-calling.html"><span class="material-symbols-rounded">arrow_back</span> Ch 12: Tool Use &amp; Function Calling</a>
+    <a class="ch-nav-btn next" href="14-prompt-engineers-toolkit.html">Ch 14: The Prompt Engineer&rsquo;s Toolkit <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Prompts are software — they need testing, versioning, debugging, and monitoring. The development lifecycle: draft → test → debug → fix → verify → ship → monitor → iterate.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> The wording trap: "Summarize" vs "Summarize in 3 bullets under 20 words" — same intent, wildly different output. Constraints beat cleverness every time.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> The 5-step debug framework: Is the instruction clear? Enough context? Format specified? Conflicting constraints? Task too complex? Catches 80% of failures.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> The 90% prompt: works for most inputs, fails on edge cases (multi-category, vague, non-standard). Always test with edge cases before shipping.',color:'#ea580c'},
+    5:{text:'<strong>Step 5:</strong> LLM-as-judge: use a stronger model to evaluate outputs on a rubric. Catches hallucinations, safety violations, and quality drops at scale.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Test suites: 20-30 cases (happy path + edge + adversarial + real failures). Run before every prompt change. Takes 30 seconds, saves hours.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Top pitfalls: kitchen sink prompts, invisible assumptions, contradictory constraints, negative-only instructions, temperature mismatch, untested prompts, frozen prompts.',color:'#d97706'},
+    8:{text:'<strong>Step 8:</strong> Debug playbook: reproduce → diagnose → isolate → fix (smallest change) → verify (no regression). Prompt engineering is iterative, not inspirational.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

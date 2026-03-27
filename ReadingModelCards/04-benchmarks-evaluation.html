@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Benchmarks & Evaluation — Reading Model Cards</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--pink-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--pink),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Benchmarks &amp; Evaluation Results</h2><span class="tb-sub">Reading the scoreboard &mdash; what benchmarks measure, what ranges are good, and what to be skeptical of</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Knowledge</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Coding</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">calculate</span></div><span class="pipe-label">Reasoning</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">people</span></div><span class="pipe-label">Human Pref</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Testing</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Red Flags</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">Knowledge Benchmarks: MMLU &amp; Friends</div><div class="cc-sub">The &ldquo;SAT test&rdquo; for AI models &mdash; and why it&rsquo;s becoming less useful</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">MMLU (Massive Multitask Language Understanding)</div>
+            <div class="cc-text">57 subjects, 16,000 multiple-choice questions covering STEM, humanities, social sciences, and professional areas like law and medicine. <strong>Think of it as a college entrance exam for AI.</strong> Scoring guide: <strong>25&ndash;40%</strong> = barely above random guessing (25% is chance). <strong>60&ndash;80%</strong> = strong. <strong>80&ndash;90%</strong> = approaching human expert level. <strong>90%+</strong> = exceeds average human performance. Leading models now score 91&ndash;94%, making MMLU &ldquo;saturated&rdquo; &mdash; it can no longer distinguish between frontier models.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">MMLU-Pro &amp; GPQA</div>
+            <div class="cc-text"><strong>MMLU-Pro:</strong> A harder successor with 10 answer choices instead of 4, requiring chain-of-thought reasoning. Scores are typically 20&ndash;30 points lower than MMLU, making it better for distinguishing current models.<br><br><strong>GPQA (Graduate-Level Problem QA):</strong> PhD-level questions in physics, chemistry, and biology. Even domain experts only score ~65%. Model scores in the 40&ndash;60% range indicate strong reasoning. This is the &ldquo;hard&rdquo; knowledge benchmark.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> When you see MMLU on a card, check the score range. Above 90% is table stakes for frontier models &mdash; it no longer differentiates. MMLU-Pro and GPQA scores are more informative for comparing current models.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">code</span></div>
+        <div><div class="cc-title">Coding Benchmarks: HumanEval &amp; SWE-bench</div><div class="cc-sub">Can this model actually write code that works?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">HumanEval</div>
+            <div class="cc-text">164 Python programming problems where the model writes a function and it&rsquo;s tested against unit tests. Measures <strong>pass@1</strong> (does the first attempt pass?). Scores: <strong>30&ndash;50%</strong> = basic coding. <strong>50&ndash;70%</strong> = competent. <strong>70&ndash;90%</strong> = strong. <strong>90%+</strong> = frontier (and the benchmark is becoming saturated). Note: HumanEval tests <em>isolated function writing</em>, not real-world software engineering.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">SWE-bench</div>
+            <div class="cc-text"><strong>SWE-bench Verified</strong> tests whether a model can solve <em>real GitHub issues</em> from popular open-source projects &mdash; understanding codebases, writing patches, and passing test suites. This is much harder than HumanEval. Scores of <strong>30&ndash;50%</strong> are currently state-of-the-art. SWE-bench is the closest benchmark to &ldquo;can this model actually do engineering work?&rdquo;</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> If you need a model for coding, HumanEval tells you about syntax and algorithm ability. SWE-bench tells you about real-world engineering. A model scoring 90% on HumanEval but 20% on SWE-bench can write functions but can&rsquo;t navigate codebases.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">calculate</span></div>
+        <div><div class="cc-title">Reasoning &amp; Math: GSM8K, MATH, BBH</div><div class="cc-sub">Can this model think, or just pattern-match?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Math Benchmarks</div>
+            <div class="cc-text"><strong>GSM8K:</strong> 8,500 grade-school math word problems. Tests basic multi-step arithmetic reasoning. Frontier models now score 95%+, so it&rsquo;s becoming saturated. Still useful for testing smaller models.<br><br><strong>MATH:</strong> Competition-level math problems (AMC, AIME, Olympiad). Much harder. Scores of <strong>50&ndash;70%</strong> are strong; <strong>70%+</strong> is exceptional. This benchmark genuinely tests mathematical reasoning.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Reasoning Benchmarks</div>
+            <div class="cc-text"><strong>BBH (BIG-Bench Hard):</strong> 23 challenging tasks from the BIG-Bench suite where models previously lagged behind humans. Tests logical reasoning, causal understanding, and multi-step inference.<br><br><strong>IFEval (Instruction Following Eval):</strong> Tests whether the model follows specific formatting instructions (&ldquo;respond in JSON,&rdquo; &ldquo;use exactly 3 paragraphs&rdquo;). Critical for production use where output format matters.<br><br><strong>ARC (AI2 Reasoning Challenge):</strong> Science questions from grades 3&ndash;9. The &ldquo;Challenge Set&rdquo; requires complex reasoning beyond fact retrieval.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Reasoning benchmarks are currently the best discriminators between models. Knowledge benchmarks are saturated above 90%, but reasoning scores still range widely (40&ndash;85%), making them more informative for model comparison.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">people</span></div>
+        <div><div class="cc-title">Human Preference: Arena Elo &amp; Chatbot Arena</div><div class="cc-sub">The closest thing to &ldquo;how good does it actually feel to use this model?&rdquo;</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Chatbot Arena Is</div>
+            <div class="cc-text"><strong>Chatbot Arena</strong> (by LMSYS) is a platform where users chat with two anonymous models side-by-side and vote for the better response. Over millions of human votes, models receive an <strong>Elo rating</strong> (like chess). This is widely considered the most meaningful benchmark for real-world model quality because it reflects <em>actual human preferences</em>, not synthetic test questions.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How to Interpret It</div>
+            <div class="cc-text">Arena Elo is a <strong>relative ranking</strong>, not an absolute score. A model with Elo 1250 will beat a model with Elo 1150 roughly 64% of the time. The top 5 models are typically within 30&ndash;50 Elo points of each other. Arena scores are separated by category: overall, coding, math, hard prompts, creative writing &mdash; a model might rank #1 in coding but #10 in creative writing.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> If you had to look at only one evaluation metric, Arena Elo is the most informative. It captures everything benchmarks miss: tone, helpfulness, nuance, and the &ldquo;feel&rdquo; of the model. Look for Arena rankings if the model card mentions them.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">science</span></div>
+        <div><div class="cc-title">Few-Shot vs. Zero-Shot Testing</div><div class="cc-sub">Why the same model gets different scores depending on how it&rsquo;s tested</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Difference</div>
+            <div class="cc-text"><strong>Zero-shot:</strong> The model gets only the question. &ldquo;What is the capital of France?&rdquo; No examples, no hints.<br><br><strong>Few-shot (e.g., 5-shot):</strong> The model gets 5 example question-answer pairs before the actual question. This &ldquo;primes&rdquo; the model and typically produces <strong>higher scores</strong> because the model learns the expected format from the examples.<br><br>The difference can be 5&ndash;15 percentage points on the same benchmark.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why This Matters for Comparison</div>
+            <div class="cc-text">If Model A reports &ldquo;MMLU: 85% (5-shot)&rdquo; and Model B reports &ldquo;MMLU: 80% (0-shot),&rdquo; <strong>you cannot directly compare them</strong>. Model B might actually be better &mdash; it just wasn&rsquo;t given examples. Always check whether the card specifies the shot count. When comparing models on a leaderboard, make sure all models were tested under the <strong>same conditions</strong> (same shot count, same prompt template).</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Testing conditions matter as much as the score itself. A model card that doesn&rsquo;t specify whether its scores are 0-shot or 5-shot is hiding important context. Always look for the shot count next to the benchmark name.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">update</span></div>
+        <div><div class="cc-title">Open LLM Leaderboard v1 vs. v2</div><div class="cc-sub">Why the benchmarks changed and what the new ones tell you</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The v1 Benchmarks (Retired)</div>
+            <div class="cc-text">The original Open LLM Leaderboard used: <strong>ARC, HellaSwag, MMLU, TruthfulQA, Winogrande, GSM8K</strong>. These benchmarks became saturated &mdash; top models scored 85&ndash;95% on most of them, making it impossible to distinguish between frontier models. Worse, some models showed signs of <strong>data contamination</strong> (training on benchmark test data), inflating scores artificially.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The v2 Benchmarks (Current)</div>
+            <div class="cc-text">The updated leaderboard uses harder alternatives: <strong>MMLU-Pro, IFEval, BBH, MATH, GPQA, MuSR</strong>. These span a wider score range (40&ndash;85%), are less contaminated, and test genuine reasoning rather than pattern matching. If a model card shows v1 benchmarks (ARC, HellaSwag), the scores may be outdated or inflated. Look for v2 benchmarks for more reliable comparisons.</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> If you see a model card that prominently features HellaSwag and TruthfulQA scores but omits MMLU-Pro and GPQA, the card may be using outdated (and flattering) benchmarks. Always check which benchmark version is being reported.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">Red Flags in Benchmark Reporting</div><div class="cc-sub">How to spot cherry-picked, inflated, or misleading evaluation results</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Watch For</div>
+            <div class="cc-text"><strong>Cherry-picking:</strong> The card only shows benchmarks where the model wins and omits standard ones where it underperforms. A card that shows 5 custom benchmarks but no MMLU, no HumanEval, and no Arena score is likely hiding something.<br><br><strong>No comparison baseline:</strong> Showing a score without context. &ldquo;85% on our internal eval&rdquo; means nothing if you don&rsquo;t know what other models score on the same eval.<br><br><strong>Contamination signals:</strong> A small model matching or beating much larger models on specific benchmarks. A 7B model scoring 92% on MMLU should make you skeptical.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Healthy Card</div>
+            <div class="cc-text">A trustworthy model card: shows <strong>standard benchmarks</strong> (at least MMLU/MMLU-Pro, one coding benchmark, one reasoning benchmark), includes <strong>comparison with the base model</strong> and competing models of similar size, specifies <strong>testing conditions</strong> (shot count, prompt template), and acknowledges <strong>weaknesses</strong> (&ldquo;this model underperforms on multilingual tasks&rdquo;).</div>
+          </div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> A model card that only shows benchmarks where it wins is like a resume that only lists strengths. Always check what is <em>missing</em>. The benchmarks a model card chooses not to report are as informative as the ones it does.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">checklist</span></div>
+        <div><div class="cc-title">Your Benchmark Decoder</div><div class="cc-sub">A one-line summary for every benchmark you&rsquo;ll encounter</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quick Reference</div>
+            <div class="cc-code"><span class="hl-key">MMLU</span>      <span class="hl-cmt">Knowledge across 57 subjects</span>
+<span class="hl-key">MMLU-Pro</span>  <span class="hl-cmt">Harder MMLU, 10 choices, CoT</span>
+<span class="hl-key">GPQA</span>      <span class="hl-cmt">PhD-level science questions</span>
+<span class="hl-key">HumanEval</span> <span class="hl-cmt">Python function generation</span>
+<span class="hl-key">SWE-bench</span> <span class="hl-cmt">Real GitHub issue resolution</span>
+<span class="hl-key">GSM8K</span>     <span class="hl-cmt">Grade-school math word problems</span>
+<span class="hl-key">MATH</span>      <span class="hl-cmt">Competition-level math</span>
+<span class="hl-key">BBH</span>       <span class="hl-cmt">Hard reasoning tasks</span>
+<span class="hl-key">IFEval</span>    <span class="hl-cmt">Instruction following accuracy</span>
+<span class="hl-key">ARC</span>       <span class="hl-cmt">Science reasoning (grades 3-9)</span>
+<span class="hl-key">HellaSwag</span> <span class="hl-cmt">Common-sense continuation</span>
+<span class="hl-key">TruthfulQA</span><span class="hl-cmt"> Resistance to false claims</span>
+<span class="hl-key">Arena Elo</span> <span class="hl-cmt">Human preference rating</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Your Reading Strategy</div>
+            <div class="cc-text"><strong>Step 1:</strong> Identify which benchmarks are reported. Are they standard (MMLU, HumanEval) or custom?<br><strong>Step 2:</strong> Check the testing conditions (shot count, v1 vs v2 benchmarks).<br><strong>Step 3:</strong> Compare against models of the same size class, not just the leaderboard top.<br><strong>Step 4:</strong> Check for Arena Elo if available &mdash; it&rsquo;s the most holistic measure.<br><strong>Step 5:</strong> Note what&rsquo;s missing. No coding benchmark? The model may not be good at code.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Benchmarks are proxies, not proof. They tell you a model&rsquo;s performance on specific tests under specific conditions. The only real benchmark is how well it works on <em>your</em> task. Use card benchmarks to narrow your shortlist, then test the finalists yourself.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-architecture-parameters.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Architecture &amp; Parameters</a>
+    <a class="ch-nav-btn next" href="05-training-data-licensing.html">Ch 5: Training Data &amp; Licensing <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[0,4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Knowledge:</strong> MMLU tests 57 subjects but is now saturated above 90%. MMLU-Pro and GPQA are the harder successors that better differentiate frontier models.',color:'#7c3aed'},
+    2:{text:'<strong>Coding:</strong> HumanEval tests isolated function writing. SWE-bench tests real GitHub issue resolution. A model can score 90% on one and 20% on the other.',color:'#0d9488'},
+    3:{text:'<strong>Reasoning:</strong> GSM8K (grade-school math), MATH (competition-level), BBH (hard reasoning), IFEval (instruction following). Reasoning benchmarks are the best current discriminators.',color:'#2563eb'},
+    4:{text:'<strong>Human Preference:</strong> Chatbot Arena Elo &mdash; millions of human votes, side-by-side comparison. The most holistic single metric for real-world model quality.',color:'#ea580c'},
+    5:{text:'<strong>Testing Conditions:</strong> 0-shot vs 5-shot can swing scores by 15 points. Always check the shot count. You can&rsquo;t compare scores tested under different conditions.',color:'#16a34a'},
+    6:{text:'<strong>Leaderboard v1 vs v2:</strong> v1 benchmarks (ARC, HellaSwag) are saturated and potentially contaminated. v2 (MMLU-Pro, GPQA, BBH) is more informative.',color:'#db2777'},
+    7:{text:'<strong>Red Flags:</strong> Cherry-picked benchmarks, no comparison baseline, missing standard tests, small models with suspiciously high scores. Always check what&rsquo;s <em>missing</em>.',color:'#d97706'},
+    8:{text:'<strong>Decoder:</strong> MMLU=knowledge, HumanEval=coding, MATH=reasoning, Arena=human preference. Benchmarks narrow your shortlist; testing proves the winner.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 14: The AI Landscape Today — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone-bar{display:flex;border-bottom:1px solid var(--border-light);overflow-x:auto}.zone-tab{flex:1;min-width:120px;padding:8px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;color:var(--text-3)}.zone-tab.active{color:var(--bg-white);border-bottom-color:transparent}
+.uth-body{display:flex;min-height:500px;position:relative;overflow:hidden}
+.flow-panel{flex:1;padding:28px 32px;position:relative;overflow-y:auto}.flow-panel .zone-title{font-size:11px;font-weight:800;letter-spacing:-.2px;margin-bottom:16px;display:flex;align-items:center;gap:8px}.zone-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;color:#fff}
+.fnode{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:8px;border:1.5px solid var(--border);background:var(--bg-white);cursor:pointer;transition:all .25s}.fnode:hover{box-shadow:var(--shadow-sm)}.fnode .fn-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.fnode .fn-icon .material-symbols-rounded{font-size:15px;color:#fff}.fnode .fn-label{font-size:11px;font-weight:600;color:var(--text-1)}.fnode .fn-sub{font-size:9px;color:var(--text-3);margin-top:1px}
+.fnode.lit{border-color:currentColor;box-shadow:0 0 0 2px currentColor,var(--shadow-md)}.fnode.c-red .fn-icon{background:var(--red)}.fnode.c-red.lit{color:var(--red);border-color:var(--red)}.fnode.c-orange .fn-icon{background:var(--orange)}.fnode.c-orange.lit{color:var(--orange);border-color:var(--orange)}.fnode.c-pink .fn-icon{background:var(--pink)}.fnode.c-pink.lit{color:var(--pink);border-color:var(--pink)}.fnode.c-violet .fn-icon{background:var(--violet)}.fnode.c-violet.lit{color:var(--violet);border-color:var(--violet)}.fnode.c-blue .fn-icon{background:var(--blue)}.fnode.c-blue.lit{color:var(--blue);border-color:var(--blue)}.fnode.c-teal .fn-icon{background:var(--teal)}.fnode.c-teal.lit{color:var(--teal);border-color:var(--teal)}.fnode.c-amber .fn-icon{background:var(--amber)}.fnode.c-amber.lit{color:var(--amber);border-color:var(--amber)}.fnode.c-green .fn-icon{background:var(--green)}.fnode.c-green.lit{color:var(--green);border-color:var(--green)}
+.flow-arrow{display:flex;align-items:center;justify-content:center;padding:2px 0;color:var(--border)}.flow-arrow .material-symbols-rounded{font-size:16px}
+.step-badge{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:4px;color:#fff;margin-left:auto;flex-shrink:0}
+.detail-panel{width:420px;border-left:1px solid var(--border-light);background:var(--bg-muted);padding:24px;overflow-y:auto;display:none;animation:slideIn .3s ease}.detail-panel.open{display:block}@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.dp-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}.dp-title{font-size:14px;font-weight:800;letter-spacing:-.3px}.dp-close{width:28px;height:28px;border-radius:50%;border:none;background:var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:all .15s}.dp-close:hover{background:var(--text-3);color:#fff}.dp-close .material-symbols-rounded{font-size:16px}
+.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin:14px 0 6px}.dp-label:first-child{margin-top:0}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-white);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--blue);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}.dp-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.dp-note.n-pink strong{color:var(--pink)}.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.uth-body{flex-direction:column}.detail-panel{width:100%;border-left:none;border-top:1px solid var(--border-light)}.flow-panel{padding:20px 18px}.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 14 &mdash; The AI Landscape Today</h2><span class="tb-sub">MoE internals, test-time compute, agent architectures, RAG pipelines, and MCP protocol</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="14-ai-landscape-today-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the final deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="zone-bar" id="zoneBar">
+    <div class="zone-tab" data-zone="A" style="background:var(--red-light);color:var(--red)">A &middot; Model Architectures</div>
+    <div class="zone-tab" data-zone="B" style="background:var(--orange-light);color:var(--orange)">B &middot; Test-Time Compute</div>
+    <div class="zone-tab" data-zone="C" style="background:var(--violet-light);color:var(--violet)">C &middot; Agent Systems</div>
+    <div class="zone-tab" data-zone="D" style="background:var(--blue-light);color:var(--blue)">D &middot; RAG &amp; Context</div>
+    <div class="zone-tab" data-zone="E" style="background:var(--teal-light);color:var(--teal)">E &middot; Inference &amp; Deployment</div>
+  </div>
+  <div class="uth-body">
+    <div class="flow-panel" id="flowPanel">
+
+      <!-- Zone A: Model Architectures -->
+      <div class="zone-title"><span class="zone-badge" style="background:var(--red)">A</span> Modern Model Architectures</div>
+      <div class="fnode c-red" data-step="1" data-detail="1"><div class="fn-icon"><span class="material-symbols-rounded">hub</span></div><div><div class="fn-label">Mixture of Experts (MoE)</div><div class="fn-sub">Sparse routing, expert selection, DeepSeek/Llama 4/Mistral</div></div><span class="step-badge" style="background:var(--red)">S1</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-red" data-step="2" data-detail="2"><div class="fn-icon"><span class="material-symbols-rounded">view_in_ar</span></div><div><div class="fn-label">Multimodal Architecture</div><div class="fn-sub">Vision encoders, cross-attention, early vs late fusion</div></div><span class="step-badge" style="background:var(--red)">S2</span></div>
+
+      <!-- Zone B: Test-Time Compute -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--orange)">B</span> Test-Time Compute &amp; Reasoning</div>
+      <div class="fnode c-orange" data-step="3" data-detail="3"><div class="fn-icon"><span class="material-symbols-rounded">psychology</span></div><div><div class="fn-label">Chain-of-Thought &amp; Reasoning Tokens</div><div class="fn-sub">How o1/o3/R1 think before answering</div></div><span class="step-badge" style="background:var(--orange)">S3</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-orange" data-step="4" data-detail="4"><div class="fn-icon"><span class="material-symbols-rounded">speed</span></div><div><div class="fn-label">Compute-Optimal Inference</div><div class="fn-sub">Scaling laws for inference, adaptive compute</div></div><span class="step-badge" style="background:var(--orange)">S4</span></div>
+
+      <!-- Zone C: Agent Systems -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--violet)">C</span> Agent Architectures</div>
+      <div class="fnode c-violet" data-step="5" data-detail="5"><div class="fn-icon"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="fn-label">ReAct &amp; Agent Loops</div><div class="fn-sub">Reason-Act-Observe pattern, tool calling, memory</div></div><span class="step-badge" style="background:var(--violet)">S5</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-violet" data-step="6" data-detail="6"><div class="fn-icon"><span class="material-symbols-rounded">cable</span></div><div><div class="fn-label">MCP Protocol Internals</div><div class="fn-sub">JSON-RPC, tools/resources/prompts, transport</div></div><span class="step-badge" style="background:var(--violet)">S6</span></div>
+
+      <!-- Zone D: RAG & Context -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--blue)">D</span> RAG &amp; Context Engineering</div>
+      <div class="fnode c-blue" data-step="7" data-detail="7"><div class="fn-icon"><span class="material-symbols-rounded">manage_search</span></div><div><div class="fn-label">RAG Pipeline Architecture</div><div class="fn-sub">Embedding, chunking, retrieval, reranking, generation</div></div><span class="step-badge" style="background:var(--blue)">S7</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-blue" data-step="8"><div class="fn-icon"><span class="material-symbols-rounded">database</span></div><div><div class="fn-label">Vector Databases &amp; Embeddings</div><div class="fn-sub">ANN search, HNSW, cosine similarity, hybrid search</div></div><span class="step-badge" style="background:var(--blue)">S8</span></div>
+
+      <!-- Zone E: Inference & Deployment -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--teal)">E</span> Inference &amp; Deployment</div>
+      <div class="fnode c-teal" data-step="9" data-detail="8"><div class="fn-icon"><span class="material-symbols-rounded">memory</span></div><div><div class="fn-label">Inference Optimizations</div><div class="fn-sub">KV cache, continuous batching, speculative decoding, quantization</div></div><span class="step-badge" style="background:var(--teal)">S9</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-teal" data-step="10" data-detail="9"><div class="fn-icon"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="fn-label">The Full Picture</div><div class="fn-sub">Connecting all 14 chapters &mdash; the complete AI stack</div></div><span class="step-badge" style="background:var(--teal)">S10</span></div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="dp-header"><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+      <div id="dpBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10,STEP_MS=7000;
+  const ZONE_MAP={1:'A',2:'A',3:'B',4:'B',5:'C',6:'C',7:'D',8:'D',9:'E',10:'E'};
+  const NARRATION={
+    1:{text:'<strong>Mixture of Experts (MoE):</strong> Instead of activating all parameters, a router selects top-k experts per token. DeepSeek-V3: 671B total, 37B active. Llama 4 Scout: 109B total, 17B active. You get the capacity of a huge model at the cost of a small one. The router is a simple linear layer + softmax.',color:'#dc2626'},
+    2:{text:'<strong>Multimodal architecture:</strong> Vision encoder (ViT) produces image tokens. These are projected into the LLM\u2019s embedding space and concatenated with text tokens. Cross-attention or early fusion lets the model reason over both modalities. GPT-4o processes text, images, and audio in a single forward pass.',color:'#dc2626'},
+    3:{text:'<strong>Reasoning tokens:</strong> o1/o3 generate hidden chain-of-thought tokens before the answer. Trained via RL (GRPO/PPO) to produce useful reasoning. DeepSeek-R1 showed this emerges from pure RL without supervised CoT data. The model learns to \u201cthink\u201d because thinking leads to higher rewards on hard problems.',color:'#ea580c'},
+    4:{text:'<strong>Compute-optimal inference:</strong> Spending more compute at inference (more reasoning tokens, more samples, majority voting) improves accuracy on hard tasks. A 7B model with 64 samples can match a 70B model with 1 sample. Adaptive compute: easy questions get fast answers; hard questions get extended thinking.',color:'#ea580c'},
+    5:{text:'<strong>ReAct pattern:</strong> Thought \u2192 Action \u2192 Observation \u2192 repeat. The LLM reasons about what to do, calls a tool, reads the result, then decides the next step. Tool calls are structured JSON: {name, arguments}. Memory: short-term (conversation) + long-term (vector store). Planning: task decomposition into subtasks.',color:'#7c3aed'},
+    6:{text:'<strong>MCP protocol:</strong> JSON-RPC 2.0 over stdio or HTTP/SSE. Three primitives: Resources (read-only data), Tools (executable actions), Prompts (templates). Client discovers server capabilities via initialize handshake. Tools have JSON Schema for parameters. Adopted by all major AI providers by early 2026.',color:'#7c3aed'},
+    7:{text:'<strong>RAG pipeline:</strong> Chunk documents \u2192 embed with model (e.g., text-embedding-3-large) \u2192 store in vector DB \u2192 at query time: embed query, retrieve top-k similar chunks, rerank, inject into prompt, generate answer. Advanced: hybrid search (vector + keyword), HyDE (hypothetical document embedding), iterative retrieval.',color:'#2563eb'},
+    8:{text:'<strong>Vector databases:</strong> Store high-dimensional embeddings (768\u20133072d). ANN search via HNSW (hierarchical navigable small world graphs) finds approximate nearest neighbors in O(log n). Cosine similarity measures semantic closeness. Hybrid search combines vector similarity with BM25 keyword matching for best results.',color:'#2563eb'},
+    9:{text:'<strong>Inference optimizations:</strong> KV cache avoids recomputing attention for previous tokens. Continuous batching serves multiple requests simultaneously. Speculative decoding: small model drafts tokens, large model verifies in parallel (2\u20133x speedup). Quantization: FP16 \u2192 INT4 cuts memory 4x with minimal quality loss.',color:'#0d9488'},
+    10:{text:'<strong>The complete picture:</strong> Data (Ch 4) \u2192 Neural networks (Ch 5\u20136) \u2192 CNNs/RNNs (Ch 7\u20138) \u2192 Transformers (Ch 9) \u2192 LLMs (Ch 10) \u2192 Generative AI (Ch 11) \u2192 RL (Ch 12) \u2192 Ethics (Ch 13) \u2192 Today\u2019s landscape. Every modern AI system builds on these foundations. You now understand the full stack.',color:'#0d9488'},
+  };
+  const DETAILS={
+    1:{title:'Mixture of Experts: Router & Expert Selection',color:'#dc2626',body:`
+<div class="dp-label">MoE Architecture</div>
+<div class="dp-code"><span class="hl-cmt">// Standard transformer FFN (dense):</span>
+<span class="hl-key">FFN(x)</span> = W\u2082 \u00b7 GELU(W\u2081 \u00b7 x)
+<span class="hl-cmt">// ALL parameters activated for every token</span>
+
+<span class="hl-cmt">// MoE FFN (sparse):</span>
+<span class="hl-key">MoE(x)</span> = \u2211\u1d62 g\u1d62(x) \u00b7 Expert\u1d62(x)
+
+<span class="hl-cmt">// Router: linear layer + top-k selection</span>
+<span class="hl-key">g(x)</span> = TopK(softmax(W\u1d63 \u00b7 x), k)
+<span class="hl-cmt">// Only k experts activated per token (k=2 typical)</span>
+
+<span class="hl-cmt">// Each expert is a standard FFN</span>
+<span class="hl-key">Expert\u1d62(x)</span> = W\u2082\u1d62 \u00b7 SiLU(W\u2081\u1d62 \u00b7 x)</div>
+<div class="dp-label">Real Model Configurations</div>
+<div class="dp-code"><span class="hl-key">DeepSeek-V3:</span>
+  Total params:  <span class="hl-num">671B</span>
+  Active params: <span class="hl-num">37B</span> (per token)
+  Experts:       <span class="hl-num">256</span> routed + 1 shared
+  Top-k:         <span class="hl-num">8</span> experts per token
+  Training cost: <span class="hl-num">~$5.6M</span> (2048 H800 GPUs)
+
+<span class="hl-key">Llama 4 Scout:</span>
+  Total params:  <span class="hl-num">109B</span>
+  Active params: <span class="hl-num">17B</span>
+  Experts:       <span class="hl-num">16</span>
+  Top-k:         <span class="hl-num">1</span>
+  Context:       <span class="hl-num">10M</span> tokens
+
+<span class="hl-key">Mistral Large 3:</span>
+  Total params:  <span class="hl-num">675B</span>
+  Active params: <span class="hl-num">41B</span>
+  License:       Apache 2.0</div>
+<div class="dp-label">Load Balancing</div>
+<div class="dp-code"><span class="hl-cmt">// Problem: some experts get all the tokens</span>
+<span class="hl-cmt">// Solution: auxiliary load-balancing loss</span>
+
+<span class="hl-key">L_balance</span> = \u03b1 \u00b7 N \u00b7 \u2211\u1d62 f\u1d62 \u00b7 P\u1d62
+
+<span class="hl-cmt">// f\u1d62 = fraction of tokens routed to expert i</span>
+<span class="hl-cmt">// P\u1d62 = average routing probability for expert i</span>
+<span class="hl-cmt">// Encourages uniform distribution across experts</span>
+
+<span class="hl-cmt">// DeepSeek uses auxiliary-loss-free balancing:</span>
+<span class="hl-cmt">// Bias terms in router, no extra loss needed</span></div>
+<div class="dp-note n-red"><strong>Why MoE won:</strong> A 671B MoE model with 37B active parameters runs at the speed of a 37B dense model but has the knowledge capacity of a 671B model. This is why DeepSeek-V3 trained for $5.6M instead of $100M+ \u2014 you only need to train the active parameters efficiently. MoE is now the default architecture for frontier models.</div>`},
+    2:{title:'Multimodal Architecture: Vision + Language',color:'#dc2626',body:`
+<div class="dp-label">Vision Encoder Pipeline</div>
+<div class="dp-code"><span class="hl-cmt">// Image \u2192 patches \u2192 ViT \u2192 visual tokens</span>
+
+<span class="hl-key">1. Patchify:</span>
+   Image 384\u00d7384 \u2192 576 patches (16\u00d716 each)
+
+<span class="hl-key">2. Vision Transformer (ViT):</span>
+   Embed patches + position encoding
+   Self-attention across all patches
+   Output: 576 visual tokens \u2208 \u211d\u00b9\u2070\u00b2\u2074
+
+<span class="hl-key">3. Projection:</span>
+   Linear layer maps ViT dim \u2192 LLM dim
+   576 visual tokens \u2208 \u211d\u00b9\u2070\u00b2\u2074 \u2192 \u211d\u2074\u2070\u2079\u2076
+
+<span class="hl-key">4. Concatenate with text tokens:</span>
+   [text_tokens, visual_tokens, text_tokens]
+   LLM processes both modalities together</div>
+<div class="dp-label">Fusion Strategies</div>
+<div class="dp-code"><span class="hl-key">Early Fusion (GPT-4o, Gemini):</span>
+  All modalities share the same transformer
+  Image/audio tokens interleaved with text
+  <span class="hl-ok">Deepest integration, best cross-modal reasoning</span>
+  <span class="hl-err">Most expensive to train from scratch</span>
+
+<span class="hl-key">Cross-Attention Fusion (Flamingo, Llama 3.2):</span>
+  Frozen LLM + cross-attention to visual tokens
+  Visual tokens as keys/values, text as queries
+  <span class="hl-ok">Can add vision to existing LLM</span>
+  <span class="hl-err">Weaker integration than early fusion</span>
+
+<span class="hl-key">Late Fusion (CLIP-style):</span>
+  Separate encoders, shared embedding space
+  Contrastive learning aligns modalities
+  <span class="hl-ok">Simple, modular</span>
+  <span class="hl-err">No fine-grained cross-modal reasoning</span></div>
+<div class="dp-note n-red"><strong>The trend:</strong> Early fusion is winning. GPT-4o, Gemini 2.0, and Llama 4 all use early fusion \u2014 treating images, audio, and text as the same type of token. This enables reasoning like \u201cthe person in this image is saying [audio] about [text topic].\u201d Natively multimodal models are replacing modular pipelines.</div>`},
+    3:{title:'Reasoning Tokens: How o1/R1 Think',color:'#ea580c',body:`
+<div class="dp-label">Chain-of-Thought via RL</div>
+<div class="dp-code"><span class="hl-cmt">// Standard LLM: prompt \u2192 answer (one pass)</span>
+<span class="hl-cmt">// Reasoning model: prompt \u2192 [thinking...] \u2192 answer</span>
+
+<span class="hl-key">Training pipeline (DeepSeek-R1):</span>
+
+<span class="hl-key">Stage 1: Cold Start</span>
+  Small amount of CoT examples
+  SFT to teach the format of reasoning
+
+<span class="hl-key">Stage 2: RL (GRPO)</span>
+  Generate multiple solutions per problem
+  Reward: correctness (math, code = verifiable)
+  No reward model needed \u2014 ground truth is reward
+  Model learns to produce useful reasoning
+  <span class="hl-ok">Reasoning EMERGES from RL alone</span>
+
+<span class="hl-key">Stage 3: Rejection Sampling + SFT</span>
+  Generate many solutions, keep correct ones
+  Fine-tune on curated reasoning traces
+  Distill into smaller models (1.5B\u201370B)</div>
+<div class="dp-label">What Reasoning Tokens Look Like</div>
+<div class="dp-code"><span class="hl-cmt">// User: What is 27 \u00d7 43?</span>
+
+<span class="hl-key">[thinking]</span>
+Let me break this down.
+27 \u00d7 43 = 27 \u00d7 40 + 27 \u00d7 3
+27 \u00d7 40 = 1080
+27 \u00d7 3 = 81
+1080 + 81 = 1161
+Let me verify: 43 \u00d7 27
+= 43 \u00d7 25 + 43 \u00d7 2
+= 1075 + 86 = 1161 \u2713
+<span class="hl-key">[/thinking]</span>
+
+<span class="hl-ok">27 \u00d7 43 = 1,161</span>
+
+<span class="hl-cmt">// OpenAI o1: thinking tokens are HIDDEN</span>
+<span class="hl-cmt">// DeepSeek-R1: thinking tokens are VISIBLE</span>
+<span class="hl-cmt">// Claude 3.7: developer controls thinking budget</span></div>
+<div class="dp-note n-orange"><strong>Why RL works for reasoning:</strong> Math and code have verifiable answers \u2014 the reward signal is binary (correct/incorrect). The model discovers that breaking problems into steps, checking work, and trying alternative approaches leads to more correct answers. This is why DeepSeek-R1 didn\u2019t need supervised CoT data \u2014 RL alone was sufficient.</div>`},
+    4:{title:'Compute-Optimal Inference Scaling',color:'#ea580c',body:`
+<div class="dp-label">Inference Scaling Laws</div>
+<div class="dp-code"><span class="hl-cmt">// Traditional scaling: more training compute</span>
+<span class="hl-cmt">// New scaling: more inference compute</span>
+
+<span class="hl-key">Methods to spend more inference compute:</span>
+
+<span class="hl-num">1.</span> <span class="hl-key">More reasoning tokens</span>
+   Let the model think longer
+   o3 uses up to 100K+ thinking tokens
+
+<span class="hl-num">2.</span> <span class="hl-key">Best-of-N sampling</span>
+   Generate N answers, pick the best
+   Use reward model or majority vote
+   N=64: significant accuracy boost
+
+<span class="hl-num">3.</span> <span class="hl-key">Tree search</span>
+   Branch at each reasoning step
+   Evaluate branches with value model
+   Similar to MCTS (Ch 12)
+
+<span class="hl-num">4.</span> <span class="hl-key">Iterative refinement</span>
+   Generate answer, critique, improve
+   Self-consistency checking</div>
+<div class="dp-label">The Economics</div>
+<div class="dp-code"><span class="hl-key">Training compute (one-time):</span>
+  GPT-4:  ~$100M
+  Llama 3: ~$30M
+  DeepSeek-V3: ~$5.6M
+
+<span class="hl-key">Inference compute (per query):</span>
+  Standard query:   ~<span class="hl-num">500</span> tokens, <span class="hl-num">$0.001</span>
+  Reasoning query:  ~<span class="hl-num">10,000</span> tokens, <span class="hl-num">$0.05</span>
+  Deep reasoning:   ~<span class="hl-num">100,000</span> tokens, <span class="hl-num">$0.50</span>
+
+<span class="hl-cmt">// Inference projected to be 2/3 of total</span>
+<span class="hl-cmt">// AI compute spend by 2026</span>
+
+<span class="hl-key">Adaptive compute:</span>
+  Easy: \u201cWhat\u2019s 2+2?\u201d \u2192 instant (no thinking)
+  Hard: \u201cProve this theorem\u201d \u2192 60s of thinking
+  <span class="hl-ok">Gemini 3 Pro adjusts automatically</span></div>
+<div class="dp-note n-orange"><strong>The key insight:</strong> You can trade inference compute for training compute. A small model that thinks for 60 seconds can match a large model that answers instantly. This democratizes AI \u2014 you don\u2019t need $100M to train a frontier model if you can spend more at inference time. Open-weight reasoning models make this accessible to everyone.</div>`},
+    5:{title:'ReAct Agent Loop & Tool Calling',color:'#7c3aed',body:`
+<div class="dp-label">ReAct Pattern (Yao et al., 2022)</div>
+<div class="dp-code"><span class="hl-cmt">// Interleave Reasoning and Acting</span>
+
+<span class="hl-key">User:</span> \u201cWhat\u2019s the weather in Tokyo and should I bring an umbrella?\u201d
+
+<span class="hl-key">Thought 1:</span> I need to check Tokyo\u2019s weather.
+<span class="hl-key">Action 1:</span> search(\u201cTokyo weather today\u201d)
+<span class="hl-key">Observation 1:</span> \u201cTokyo: 18\u00b0C, 70% chance of rain\u201d
+
+<span class="hl-key">Thought 2:</span> 70% rain probability is high.
+<span class="hl-key">Action 2:</span> none (sufficient info)
+
+<span class="hl-key">Answer:</span> Tokyo is 18\u00b0C with 70% chance of rain.
+         Yes, bring an umbrella.</div>
+<div class="dp-label">Tool Calling Format</div>
+<div class="dp-code"><span class="hl-cmt">// LLM generates structured tool calls</span>
+
+<span class="hl-key">Tool Definition (provided in system prompt):</span>
+{
+  "name": "search",
+  "description": "Search the web",
+  "parameters": {
+    "query": {"type": "string"}
+  }
+}
+
+<span class="hl-key">LLM Output:</span>
+{
+  "tool_calls": [{
+    "name": "search",
+    "arguments": {"query": "Tokyo weather"}
+  }]
+}
+
+<span class="hl-key">System executes tool, returns result to LLM</span>
+<span class="hl-key">LLM generates next thought/action or final answer</span></div>
+<div class="dp-label">Agent Memory</div>
+<div class="dp-code"><span class="hl-key">Short-term:</span> Conversation history (context window)
+<span class="hl-key">Working:</span>   Scratchpad for current task
+<span class="hl-key">Long-term:</span> Vector store of past interactions
+<span class="hl-key">Episodic:</span>  Summaries of completed tasks
+
+<span class="hl-cmt">// Context window is limited (128K\u201310M tokens)</span>
+<span class="hl-cmt">// Long-term memory uses RAG to retrieve relevant</span>
+<span class="hl-cmt">// past context on demand</span></div>
+<div class="dp-note n-violet"><strong>Agent reliability:</strong> The biggest challenge is not capability but reliability. Agents fail when: tools return unexpected results, the plan is wrong, the model hallucinates a tool call, or errors compound over many steps. Production agents need error handling, retries, human-in-the-loop fallbacks, and extensive testing.</div>`},
+    6:{title:'MCP Protocol: JSON-RPC Internals',color:'#7c3aed',body:`
+<div class="dp-label">MCP Architecture</div>
+<div class="dp-code"><span class="hl-cmt">// Client (AI app) \u2194 Server (tool provider)</span>
+
+<span class="hl-key">Three Primitives:</span>
+
+<span class="hl-num">1.</span> <span class="hl-key">Resources</span> (read-only data)
+   URI-addressed content the server exposes
+   e.g., file://project/README.md
+   Client can list and read resources
+
+<span class="hl-num">2.</span> <span class="hl-key">Tools</span> (executable actions)
+   Functions the LLM can call
+   JSON Schema defines parameters
+   e.g., github_create_issue, db_query
+
+<span class="hl-num">3.</span> <span class="hl-key">Prompts</span> (templates)
+   Reusable prompt templates
+   Server-defined, client-invoked</div>
+<div class="dp-label">Protocol Flow</div>
+<div class="dp-code"><span class="hl-cmt">// 1. Initialize handshake</span>
+<span class="hl-key">Client \u2192 Server:</span>
+  {"jsonrpc":"2.0", "method":"initialize",
+   "params":{"capabilities":{}}}
+
+<span class="hl-key">Server \u2192 Client:</span>
+  {"result":{"capabilities":{"tools":{}},
+   "serverInfo":{"name":"github-mcp"}}}
+
+<span class="hl-cmt">// 2. Discover tools</span>
+<span class="hl-key">Client \u2192 Server:</span>
+  {"method":"tools/list"}
+
+<span class="hl-key">Server \u2192 Client:</span>
+  {"result":{"tools":[
+    {"name":"create_issue",
+     "inputSchema":{"type":"object",
+       "properties":{"title":{"type":"string"},
+                     "body":{"type":"string"}}}}
+  ]}}
+
+<span class="hl-cmt">// 3. Call tool</span>
+<span class="hl-key">Client \u2192 Server:</span>
+  {"method":"tools/call",
+   "params":{"name":"create_issue",
+     "arguments":{"title":"Bug fix",
+                  "body":"Fixed the crash"}}}</div>
+<div class="dp-label">Transport Options</div>
+<div class="dp-code"><span class="hl-key">Stdio:</span>  Local process, stdin/stdout
+        Lowest latency, best for dev tools
+        Used by Cursor, VS Code
+
+<span class="hl-key">HTTP + SSE:</span> Remote server, streaming
+        Server-Sent Events for notifications
+        Used for cloud-hosted MCP servers
+
+<span class="hl-key">Streamable HTTP:</span> Newest transport
+        Supports both request/response and streaming
+        Replacing SSE for remote connections</div>
+<div class="dp-note n-violet"><strong>Why MCP matters:</strong> Before MCP, every AI app built custom integrations for every tool. MCP standardizes this: build one MCP server for GitHub, and it works with Cursor, Claude Desktop, Copilot, and any MCP client. 97M monthly SDK downloads by Feb 2026. It\u2019s becoming the standard interface between AI and the world.</div>`},
+    7:{title:'RAG Pipeline: End-to-End',color:'#2563eb',body:`
+<div class="dp-label">Indexing Pipeline</div>
+<div class="dp-code"><span class="hl-key">1. Load documents</span>
+   PDF, HTML, Markdown, code, etc.
+
+<span class="hl-key">2. Chunk</span>
+   Split into 256\u2013512 token chunks
+   Overlap: 50\u2013100 tokens (preserve context)
+   Strategies: fixed-size, recursive, semantic
+
+<span class="hl-key">3. Embed</span>
+   text-embedding-3-large: 3072 dimensions
+   Each chunk \u2192 dense vector
+   ~$0.13 per 1M tokens
+
+<span class="hl-key">4. Store</span>
+   Vector DB: Pinecone, Weaviate, Chroma, pgvector
+   Index with HNSW for fast ANN search
+   Store metadata (source, page, date)</div>
+<div class="dp-label">Query Pipeline</div>
+<div class="dp-code"><span class="hl-key">1. Embed query</span>
+   Same embedding model as indexing
+   \u201cHow does authentication work?\u201d \u2192 vector
+
+<span class="hl-key">2. Retrieve</span>
+   ANN search: top-k=10 most similar chunks
+   Cosine similarity: sim(q,d) = q\u00b7d / (||q|| \u00b7 ||d||)
+
+<span class="hl-key">3. Rerank (optional)</span>
+   Cross-encoder scores (query, chunk) pairs
+   More accurate than embedding similarity
+   Cohere Rerank, bge-reranker, ColBERT
+
+<span class="hl-key">4. Augment prompt</span>
+   System: \u201cAnswer based on these documents:\u201d
+   + top-5 reranked chunks
+   + user question
+
+<span class="hl-key">5. Generate</span>
+   LLM produces grounded answer
+   Can cite sources from metadata</div>
+<div class="dp-label">Advanced RAG Patterns</div>
+<div class="dp-code"><span class="hl-key">HyDE:</span> Generate hypothetical answer first,
+      embed that, retrieve similar real docs
+
+<span class="hl-key">Multi-query:</span> Rephrase question 3\u20135 ways,
+             retrieve for each, merge results
+
+<span class="hl-key">Iterative:</span> Retrieve \u2192 generate \u2192 if incomplete,
+           retrieve again with refined query
+
+<span class="hl-key">Hybrid search:</span> Vector (semantic) + BM25 (keyword)
+              Reciprocal rank fusion to merge</div>
+<div class="dp-note n-blue"><strong>RAG vs fine-tuning:</strong> RAG adds knowledge without retraining (cheaper, updatable, auditable). Fine-tuning changes model behavior (style, format, domain expertise). Best practice: RAG for facts and documents, fine-tuning for behavior and format. Many production systems use both.</div>`},
+    8:{title:'Inference Optimizations: The Full Stack',color:'#0d9488',body:`
+<div class="dp-label">KV Cache</div>
+<div class="dp-code"><span class="hl-cmt">// Autoregressive generation: one token at a time</span>
+<span class="hl-cmt">// Without cache: recompute attention for ALL tokens</span>
+<span class="hl-cmt">// With cache: store K,V for previous tokens</span>
+
+<span class="hl-key">Token 1:</span> compute K\u2081,V\u2081, store in cache
+<span class="hl-key">Token 2:</span> compute K\u2082,V\u2082, attend to [K\u2081,K\u2082],[V\u2081,V\u2082]
+<span class="hl-key">Token n:</span> compute K\u2099,V\u2099, attend to [K\u2081..K\u2099],[V\u2081..V\u2099]
+
+<span class="hl-cmt">// KV cache size per token per layer:</span>
+<span class="hl-key">size</span> = 2 \u00d7 n_heads \u00d7 d_head \u00d7 dtype_bytes
+<span class="hl-cmt">// Llama 70B, 128K context, FP16:</span>
+<span class="hl-cmt">// ~40 GB just for KV cache!</span>
+
+<span class="hl-key">GQA (Grouped-Query Attention):</span>
+  Share KV heads across query heads
+  Llama 3: 8 KV heads for 64 query heads
+  <span class="hl-ok">8x less KV cache memory</span></div>
+<div class="dp-label">Speculative Decoding</div>
+<div class="dp-code"><span class="hl-cmt">// Small model drafts, large model verifies</span>
+
+<span class="hl-key">1.</span> Draft model generates k=5 tokens quickly
+<span class="hl-key">2.</span> Target model scores all 5 in ONE forward pass
+<span class="hl-key">3.</span> Accept tokens that match target distribution
+<span class="hl-key">4.</span> Reject and resample from first mismatch
+
+<span class="hl-cmt">// Acceptance rate: ~70\u201390% for good draft models</span>
+<span class="hl-cmt">// Speedup: 2\u20133x with NO quality loss</span>
+<span class="hl-cmt">// Mathematically equivalent to target model alone</span></div>
+<div class="dp-label">Quantization</div>
+<div class="dp-code"><span class="hl-key">Precision    Bits   Memory   Quality</span>
+FP32         32     100%     baseline
+FP16/BF16    16     50%      ~same
+INT8 (W8A8)  8      25%      ~same
+INT4 (GPTQ)  4      12.5%    slight loss
+INT4 (AWQ)   4      12.5%    better than GPTQ
+
+<span class="hl-cmt">// Llama 3 70B:</span>
+<span class="hl-key">FP16:</span>  <span class="hl-num">140 GB</span> (needs 2\u00d7 A100 80GB)
+<span class="hl-key">INT4:</span>  <span class="hl-num">~35 GB</span> (fits on 1\u00d7 A100 or M2 Ultra)
+
+<span class="hl-cmt">// llama.cpp: runs quantized models on CPU</span>
+<span class="hl-cmt">// Ollama: one-command local model serving</span></div>
+<div class="dp-note n-teal"><strong>The inference stack:</strong> vLLM (PagedAttention + continuous batching) is the standard serving engine. TensorRT-LLM for NVIDIA optimization. llama.cpp + Ollama for local deployment. Together, these optimizations make it possible to serve frontier-class models at reasonable cost \u2014 or run them on a laptop.</div>`},
+    9:{title:'The Complete AI Stack: All 14 Chapters Connected',color:'#0d9488',body:`
+<div class="dp-label">From Foundations to Frontier</div>
+<div class="dp-code"><span class="hl-key">Ch 1\u20132: What AI Is &amp; History</span>
+  Dartmouth 1956 \u2192 AI winters \u2192 deep learning era
+  <span class="hl-str">Foundation: understanding the field</span>
+
+<span class="hl-key">Ch 3: ML Paradigms</span>
+  Supervised, unsupervised, reinforcement, self-supervised
+  <span class="hl-str">Foundation: how machines learn</span>
+
+<span class="hl-key">Ch 4: Data &amp; Features</span>
+  Cleaning, encoding, splitting, augmentation
+  <span class="hl-str">Foundation: garbage in, garbage out</span>
+
+<span class="hl-key">Ch 5\u20136: Neurons &amp; Training</span>
+  Perceptrons \u2192 MLPs \u2192 backprop \u2192 optimizers
+  <span class="hl-str">Foundation: how neural networks learn</span>
+
+<span class="hl-key">Ch 7\u20138: CNNs &amp; RNNs</span>
+  Spatial patterns (vision) + temporal patterns (sequences)
+  <span class="hl-str">Foundation: specialized architectures</span>
+
+<span class="hl-key">Ch 9: Transformers</span>
+  Attention is all you need \u2014 the master architecture
+  <span class="hl-str">Foundation: everything since 2017</span>
+
+<span class="hl-key">Ch 10: LLMs</span>
+  Tokenization \u2192 pretraining \u2192 alignment \u2192 generation
+  <span class="hl-str">Foundation: the GPT/Claude/Gemini era</span>
+
+<span class="hl-key">Ch 11: Generative AI</span>
+  GANs, VAEs, diffusion, text-to-image/video/audio
+  <span class="hl-str">Foundation: AI that creates</span>
+
+<span class="hl-key">Ch 12: Reinforcement Learning</span>
+  Q-learning \u2192 DQN \u2192 PPO \u2192 AlphaZero \u2192 RLHF
+  <span class="hl-str">Foundation: learning from rewards</span>
+
+<span class="hl-key">Ch 13: Ethics &amp; Bias</span>
+  Fairness, explainability, privacy, regulation
+  <span class="hl-str">Foundation: responsible AI</span>
+
+<span class="hl-key">Ch 14: The Landscape Today</span>
+  MoE, reasoning, agents, RAG, open source
+  <span class="hl-str">Foundation: where we are now</span></div>
+<div class="dp-note n-green"><strong>You\u2019ve completed the full journey.</strong> From a single artificial neuron (1943) to reasoning agents that write code, browse the web, and solve math problems (2025). The architectures will keep changing \u2014 but the principles you\u2019ve learned (gradient descent, attention, self-supervised learning, reinforcement learning, fairness) are the permanent foundation. Whatever comes next, you\u2019re ready to understand it.</div>`},
+  };
+  let current=0,playing=false,timer=null;const nodes=document.querySelectorAll('.fnode[data-step]');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const detailPanel=document.getElementById('detailPanel');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');const zoneTabs=document.querySelectorAll('.zone-tab');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightNodes(step){nodes.forEach(n=>{const s=parseInt(n.dataset.step);n.classList.toggle('lit',s===step)});const zone=ZONE_MAP[step];zoneTabs.forEach(t=>{t.classList.toggle('active',t.dataset.zone===zone)})}
+  function showDetail(id){const d=DETAILS[id];if(!d)return;dpTitle.textContent=d.title;dpTitle.style.color=d.color;dpBody.innerHTML=d.body;detailPanel.classList.add('open')}
+  function hideDetail(){detailPanel.classList.remove('open')}
+  function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}const activeNode=document.querySelector(`.fnode[data-step="${step}"]`);if(activeNode){activeNode.scrollIntoView({behavior:'smooth',block:'nearest'});const detailId=activeNode.dataset.detail;if(detailId)showDetail(parseInt(detailId));else hideDetail()}}
+  function showReset(){nodes.forEach(n=>n.classList.remove('lit'));zoneTabs.forEach(t=>t.classList.remove('active'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the final deep dive...';hideDetail()}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);
+  nodes.forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.dataset.step);goTo(s)})});
+  dpClose.addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')hideDetail()});reset();
+})();
+</script>
+</body>
+</html>

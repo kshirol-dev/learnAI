@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Production Observability — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Production Observability</h2><span class="tb-sub">The 5 pillars of monitoring AI systems &mdash; cost, latency, quality, safety, and hallucination detection</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">payments</span></div><span class="pipe-label">Cost</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Latency</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Quality</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">shield</span></div><span class="pipe-label">Safety</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Hallucin.</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">dashboard</span></div><span class="pipe-label">Dashboard</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">visibility</span></div>
+        <div><div class="cc-title">Why Production Observability Is Different</div><div class="cc-sub">Traditional monitoring doesn&rsquo;t work for AI systems</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Observability Gap</div>
+            <div class="cc-text">Traditional software monitoring tracks <strong>uptime, error rates, and response times</strong>. For LLM systems, the server can return 200 OK while delivering a <strong>completely wrong, hallucinated, or harmful response</strong>. Your HTTP metrics will show green while your users are getting garbage. You need a fundamentally different monitoring approach.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Five Pillars</div>
+            <div class="cc-text">Production LLM observability requires monitoring five dimensions simultaneously:<br><br>1. <strong>Cost:</strong> How much are you spending per query, per feature, per user?<br>2. <strong>Latency:</strong> How fast are responses? Where are the bottlenecks?<br>3. <strong>Quality:</strong> Are responses actually good? Is quality stable over time?<br>4. <strong>Safety:</strong> Are harmful outputs reaching users?<br>5. <strong>Hallucination:</strong> Is the system fabricating information?</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Traces: The Foundation</div>
+            <div class="cc-text">The building block of LLM observability is the <strong>trace</strong> &mdash; a complete record of what happened for a single request. A trace captures:<br><br>&bull; <strong>Input:</strong> The user query and system prompt<br>&bull; <strong>Retrieval:</strong> Which documents were fetched (for RAG)<br>&bull; <strong>LLM call:</strong> Model, tokens in/out, latency, cost<br>&bull; <strong>Output:</strong> The generated response<br>&bull; <strong>Post-processing:</strong> Guardrail checks, formatting<br><br>Tools like <strong>Langfuse, Phoenix, and LangSmith</strong> capture traces automatically with OpenTelemetry-compatible instrumentation.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Without traces, debugging a production issue is like debugging a program without logs. Traces are the single most important investment in LLM observability. Instrument from day one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">payments</span></div>
+        <div><div class="cc-title">Pillar 1: Cost Tracking</div><div class="cc-sub">Know exactly where every dollar goes</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Cost Tracking Matters</div>
+            <div class="cc-text">LLM costs are <strong>unpredictable and can spike without warning</strong>. A runaway agent loop can burn $1,000 in minutes. A prompt change that adds 500 tokens can double your monthly bill. Without cost tracking, you discover budget overruns from your finance team, not your dashboard.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What to Track</div>
+            <div class="cc-text">&bull; <strong>Cost per query:</strong> Average and p95 cost per user request<br>&bull; <strong>Cost per model:</strong> Breakdown by GPT-4o vs Claude vs Haiku<br>&bull; <strong>Cost per feature:</strong> Which product features are most expensive?<br>&bull; <strong>Cost per user:</strong> Are power users driving disproportionate costs?<br>&bull; <strong>Daily/weekly budget:</strong> Set limits and alert when approaching</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Cost Attribution</div>
+            <div class="cc-text">Break down costs by the dimensions that matter for your business. A typical attribution model:<br><br>&bull; <strong>By model:</strong> 60% GPT-4o, 25% embeddings, 15% Haiku<br>&bull; <strong>By pipeline stage:</strong> 40% generation, 35% retrieval, 25% guardrails<br>&bull; <strong>By feature:</strong> 50% chat, 30% search, 20% summarization<br><br>This tells you where to optimize. If embeddings are 25% of cost, switching to a cheaper embedding model has high ROI.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Budget rule:</strong> Set daily cost alerts at 80% of your budget. Set hard limits that automatically disable features or switch to cheaper models when exceeded. A $500/day budget with no alerting is a $15,000/month surprise waiting to happen.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">speed</span></div>
+        <div><div class="cc-title">Pillar 2: Latency Profiling</div><div class="cc-sub">Users abandon after 3 seconds &mdash; know where your time goes</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Measure</div>
+            <div class="cc-text">&bull; <strong>End-to-end latency:</strong> Total time from user query to response delivered<br>&bull; <strong>Time to first token (TTFT):</strong> How long before the user sees anything? Critical for streaming UX<br>&bull; <strong>Percentiles:</strong> Track p50 (median), p95 (most users), and p99 (worst case). Averages hide tail latency problems<br>&bull; <strong>Per-component breakdown:</strong> How much time in retrieval vs generation vs guardrails?</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Latency Decomposition</div>
+            <div class="cc-code"><span class="hl-cmt">// Typical RAG pipeline latency</span>
+
+<span class="hl-key">Embedding query</span>     <span class="hl-num">~50ms</span>
+<span class="hl-key">Vector search</span>       <span class="hl-num">~30ms</span>
+<span class="hl-key">Reranking</span>           <span class="hl-num">~100ms</span>
+<span class="hl-key">LLM generation</span>      <span class="hl-num">~1500ms</span>  &larr; bottleneck
+<span class="hl-key">Guardrail checks</span>    <span class="hl-num">~200ms</span>
+<span class="hl-key">Total</span>               <span class="hl-num">~1880ms</span>
+
+<span class="hl-cmt">// With streaming: TTFT ~300ms</span>
+<span class="hl-cmt">// Users perceive this as fast</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Optimization Levers</div>
+            <div class="cc-text">&bull; <strong>Streaming:</strong> Stream tokens to the user as they&rsquo;re generated. TTFT drops from 2s to 300ms even though total time is the same<br>&bull; <strong>Parallel execution:</strong> Run retrieval and guardrail checks in parallel where possible<br>&bull; <strong>Model selection:</strong> Use faster models (GPT-4o-mini, Haiku) for simple queries, stronger models for complex ones<br>&bull; <strong>Caching:</strong> Cache embeddings, retrieval results, and even full responses for repeated queries<br>&bull; <strong>Prompt optimization:</strong> Shorter prompts = fewer tokens = faster generation</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Latency perception matters more than actual latency. Streaming makes a 3-second response feel instant because the user sees content appearing immediately. Always implement streaming for user-facing LLM applications.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">star</span></div>
+        <div><div class="cc-title">Pillar 3: Quality Monitoring</div><div class="cc-sub">Tracking response quality in real-time</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Continuous Quality Scoring</div>
+            <div class="cc-text">Run an <strong>LLM judge on 5&ndash;10% of production responses</strong> to continuously score quality. Track multiple dimensions:<br><br>&bull; <strong>Relevancy:</strong> Does the response address the user&rsquo;s actual question?<br>&bull; <strong>Helpfulness:</strong> Is it actually useful, or just technically correct but unhelpful?<br>&bull; <strong>Coherence:</strong> Does it make logical sense, or contradict itself?<br>&bull; <strong>Completeness:</strong> Does it cover all aspects of the question?<br><br>Plot these scores over time. A declining trend signals a problem before users complain.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">User Signals</div>
+            <div class="cc-text">Supplement automated scoring with <strong>implicit user feedback</strong>:<br><br>&bull; <strong>Thumbs up/down:</strong> Direct quality signal (if your UI supports it)<br>&bull; <strong>Regeneration rate:</strong> Users clicking &ldquo;try again&rdquo; indicates dissatisfaction<br>&bull; <strong>Follow-up questions:</strong> Indicate the first answer was incomplete<br>&bull; <strong>Session abandonment:</strong> User leaves without resolution</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quality Degradation Patterns</div>
+            <div class="cc-text">Learn to recognize these patterns in your quality dashboards:<br><br>&bull; <strong>Sudden cliff:</strong> Quality drops sharply on a specific date &rarr; model update or prompt change<br>&bull; <strong>Gradual decline:</strong> Quality slowly erodes over weeks &rarr; data drift or concept drift<br>&bull; <strong>Time-of-day patterns:</strong> Quality worse during peak hours &rarr; load-related timeouts or truncation<br>&bull; <strong>Topic-specific drops:</strong> Quality fine overall but terrible for one topic &rarr; missing or outdated documents in RAG</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> When automated quality scores and user feedback signals diverge (high automated score but high regeneration rate), your automated metric needs recalibration. User behavior is the ultimate ground truth.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">shield</span></div>
+        <div><div class="cc-title">Pillar 4: Safety Monitoring</div><div class="cc-sub">Detecting harmful outputs before they cause damage</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Detect</div>
+            <div class="cc-text">&bull; <strong>PII leakage:</strong> Names, emails, SSNs, credit card numbers appearing in responses<br>&bull; <strong>Toxic content:</strong> Hate speech, harassment, explicit material, violent content<br>&bull; <strong>Policy violations:</strong> Responses that violate your organization&rsquo;s usage policies<br>&bull; <strong>Prompt injection success:</strong> Users who successfully manipulated the model<br>&bull; <strong>Jailbreak attempts:</strong> Users trying to bypass safety guardrails (even if unsuccessful &mdash; track the attempts)</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Real-Time vs Batch Monitoring</div>
+            <div class="cc-text">&bull; <strong>Real-time (pre-response):</strong> Block harmful outputs before they reach users. Adds 100&ndash;500ms latency but prevents harm. Essential for safety-critical applications<br>&bull; <strong>Batch (post-response):</strong> Analyze responses after delivery. No latency impact but harm may have already occurred. Good for trend analysis and improving guardrails<br><br><strong>Use both:</strong> Real-time for critical safety checks, batch for comprehensive analysis and guardrail improvement.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Safety Metrics to Track</div>
+            <div class="cc-text">&bull; <strong>Safety violation rate:</strong> % of responses flagged by safety classifiers<br>&bull; <strong>PII leak rate:</strong> % of responses containing detected PII<br>&bull; <strong>Prompt injection attempt rate:</strong> % of inputs classified as injection attempts<br>&bull; <strong>Jailbreak success rate:</strong> % of injection attempts that bypassed guardrails<br>&bull; <strong>False positive rate:</strong> % of safe responses incorrectly blocked (impacts UX)</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical:</strong> Safety monitoring is non-negotiable for user-facing systems. A single harmful response can trigger regulatory action, lawsuits, or brand damage costing millions. The cost of safety monitoring ($100&ndash;$500/month) is trivial compared to the cost of a safety incident.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div>
+        <div><div class="cc-title">Pillar 5: Hallucination Detection</div><div class="cc-sub">Catching fabricated facts before users trust them</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Detection Methods</div>
+            <div class="cc-text">&bull; <strong>Source verification (RAG):</strong> Compare every claim in the response against the retrieved documents. Flag claims not supported by any source<br>&bull; <strong>Self-consistency:</strong> Generate multiple responses to the same query. If they disagree on key facts, flag for review<br>&bull; <strong>Confidence scoring:</strong> Low token-level probabilities correlate with hallucination. Models are less &ldquo;confident&rdquo; when fabricating<br>&bull; <strong>LLM-as-judge:</strong> Ask a judge model: &ldquo;Are all claims in this response supported by the provided context?&rdquo;</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Hallucination Metrics</div>
+            <div class="cc-text">&bull; <strong>Hallucination rate:</strong> % of responses containing at least one unsupported claim<br>&bull; <strong>Severity classification:</strong> Minor (wrong date) vs major (wrong medical advice) vs critical (fabricated citation)<br>&bull; <strong>Category tracking:</strong> Fabricated facts, wrong attributions, invented citations, contradictions with source<br><br>Track these over time. A rising hallucination rate signals model degradation, data quality issues, or retrieval problems.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> No hallucination detection method catches 100% of hallucinations. Layer multiple methods and accept that some will slip through. The goal is to minimize the rate and severity, not achieve perfection. Target: &lt;5% hallucination rate for most applications, &lt;1% for safety-critical ones.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">notifications</span></div>
+        <div><div class="cc-title">Alerting &amp; Incident Response</div><div class="cc-sub">Know when things go wrong, fast</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Alert Design</div>
+            <div class="cc-text">&bull; <strong>Threshold alerts:</strong> Metric crosses a predefined boundary (e.g., cost &gt; $500/day)<br>&bull; <strong>Anomaly alerts:</strong> Metric deviates from its normal pattern (e.g., 2&sigma; from 7-day rolling average)<br>&bull; <strong>Rate-of-change alerts:</strong> Metric changing faster than expected (e.g., quality dropping 1%/hour)<br>&bull; <strong>Composite alerts:</strong> Multiple metrics degrading simultaneously (strongest signal of a real problem)<br><br>Prefer <strong>anomaly detection over fixed thresholds</strong> when possible &mdash; it adapts to natural variation and seasonal patterns.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Incident Response Playbook</div>
+            <div class="cc-text">1. <strong>Detect:</strong> Alert fires automatically<br>2. <strong>Triage:</strong> Is this a real issue? Check the dashboard for context<br>3. <strong>Diagnose:</strong> Which pillar is affected? Examine traces for the affected time window<br>4. <strong>Mitigate:</strong> Rollback to previous config, disable the affected feature, or add an emergency guardrail<br>5. <strong>Fix:</strong> Root cause analysis and permanent fix<br>6. <strong>Learn:</strong> Add the failure case to your eval dataset so it&rsquo;s caught automatically next time</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Every production incident should result in a new eval example. Your eval dataset should grow from production failures, making it increasingly representative over time. This is the flywheel from Chapter 7 in action.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">dashboard</span></div>
+        <div><div class="cc-title">The Observability Dashboard</div><div class="cc-sub">One view, five pillars, traffic-light status</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Dashboard Layout</div>
+            <div class="cc-code"><span class="hl-cmt">// Production Health Dashboard</span>
+
+<span class="hl-key">Cost</span>       <span class="hl-str">[GREEN]</span>  $342 / $500 daily budget
+<span class="hl-key">Latency</span>    <span class="hl-str">[GREEN]</span>  p95: 1.8s (target: &lt;3s)
+<span class="hl-key">Quality</span>    <span class="hl-num">[YELLOW]</span> 0.82 relevancy (target: 0.85)
+<span class="hl-key">Safety</span>     <span class="hl-str">[GREEN]</span>  0 violations today
+<span class="hl-key">Hallucin.</span>  <span class="hl-str">[GREEN]</span>  2.1% rate (target: &lt;5%)
+
+<span class="hl-cmt">// Trend: Quality declining 0.5%/week</span>
+<span class="hl-cmt">// Action: Investigate query distribution shift</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Building Your Dashboard</div>
+            <div class="cc-text">Start with the 5 pillars as top-level traffic-light indicators. Green/yellow/red for each metric. Then add drill-down capability:<br><br>&bull; <strong>Time-series plots:</strong> Spot trends and anomalies over days/weeks<br>&bull; <strong>Per-feature breakdown:</strong> Which features need attention?<br>&bull; <strong>Recent incidents:</strong> What went wrong recently and was it resolved?<br>&bull; <strong>Eval suite status:</strong> Last CI/CD eval run results and trends<br>&bull; <strong>Cost projection:</strong> At current rate, what&rsquo;s the monthly bill?</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Next up:</strong> Chapter 10 covers guardrails and safety in depth &mdash; input/output filtering, PII detection, prompt injection defense, content moderation, and the frameworks that make implementation easier.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-eval-tools.html"><span class="material-symbols-rounded">arrow_back</span> Ch 8: Eval Tools</a>
+    <a class="ch-nav-btn next" href="10-guardrails-safety.html">Ch 10: Guardrails &amp; Safety <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3,4],2:[0],3:[1],4:[2],5:[3],6:[4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Traditional monitoring shows green while LLMs deliver garbage. You need 5 pillars: cost, latency, quality, safety, and hallucination detection.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Cost tracking: monitor spend per model, per feature, per user. Set daily budgets and alerts. A runaway agent loop can burn $1,000s in minutes.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> Latency profiling: track p50, p95, p99 and TTFT. Decompose into retrieval, generation, and guardrails. Streaming makes 3s feel instant.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Quality monitoring: LLM judge on 5\u201310% of responses. Track relevancy, helpfulness, coherence. Watch for sudden cliffs and gradual decline.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Safety monitoring: detect PII leakage, toxic content, prompt injection, and policy violations. Use real-time blocking for critical checks.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Hallucination detection: source verification, self-consistency, confidence scoring, and LLM-as-judge. Target <5% rate, <1% for safety-critical.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Alerting: prefer anomaly detection over fixed thresholds. Every incident becomes an eval example \u2014 the flywheel from Chapter 7.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The dashboard: 5 pillars as traffic lights (green/yellow/red), time-series trends, per-feature breakdown, and cost projection.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

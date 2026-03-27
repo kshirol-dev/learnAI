@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: The Agent Loop — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}.cc-code .hl-err{color:var(--red);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; The Agent Loop</h2><span class="tb-sub">Reason &rarr; Act &rarr; Observe &rarr; Repeat &mdash; how coding agents think and work</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">Prompt</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Reason</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Tool Call</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">visibility</span></div><span class="pipe-label">Observe</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Loop</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Done</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div>
+        <div><div class="cc-title">The Core Loop: Reason &rarr; Act &rarr; Observe</div><div class="cc-sub">The simplest idea that makes agents powerful</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Is an Agent Loop?</div>
+            <div class="cc-text">An AI coding agent is just an LLM in a loop. It receives your request, <strong>reasons</strong> about what to do, <strong>acts</strong> by calling a tool (read a file, run a command, edit code), <strong>observes</strong> the result, and then reasons again. This cycle repeats until the task is done or the agent decides it needs your input.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The ReAct Pattern</div>
+            <div class="cc-text">This architecture is called <strong>ReAct</strong> (Reasoning + Acting). The key insight: interleaving reasoning with real-world observations produces dramatically better results than generating an entire plan upfront. Each observation informs the next reasoning step, allowing the agent to adapt to what it discovers.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Loop in Pseudocode</div>
+            <div class="cc-code"><span class="hl-key">while</span> task_not_complete:
+
+  <span class="hl-cmt">// 1. REASON: LLM thinks about next step</span>
+  thought = model.generate(
+    system_prompt + conversation + tool_results
+  )
+
+  <span class="hl-cmt">// 2. ACT: LLM requests tool use</span>
+  tool_call = thought.extract_tool_call()
+  <span class="hl-key">if</span> tool_call <span class="hl-key">is</span> None:
+    <span class="hl-key">break</span>  <span class="hl-cmt">// No more tools needed → done</span>
+
+  <span class="hl-cmt">// 3. OBSERVE: Execute tool, get result</span>
+  result = execute(tool_call)
+  conversation.append(result)
+
+  <span class="hl-cmt">// Loop back to REASON with new info</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The loop terminates when the model produces a response with <em>no tool calls</em>. That&rsquo;s the only exit condition. The model itself decides when it&rsquo;s done &mdash; there&rsquo;s no external orchestrator counting steps or checking completion criteria.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">handyman</span></div>
+        <div><div class="cc-title">The Toolbox: What Agents Can Do</div><div class="cc-sub">Every action is a tool call &mdash; the model never executes directly</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Core Tool Categories</div>
+            <div class="cc-code"><span class="hl-cmt">// FILE OPERATIONS</span>
+<span class="hl-ok">Read</span>        Read file contents (with line ranges)
+<span class="hl-ok">Write</span>       Create or overwrite a file
+<span class="hl-ok">StrReplace</span>  Find-and-replace within a file
+<span class="hl-ok">Glob</span>        Find files matching a pattern
+
+<span class="hl-cmt">// SEARCH</span>
+<span class="hl-ok">Grep</span>        Regex search across files
+<span class="hl-ok">Semantic</span>    Find code by meaning, not text
+
+<span class="hl-cmt">// EXECUTION</span>
+<span class="hl-ok">Shell</span>       Run terminal commands (npm, git, etc.)
+<span class="hl-ok">Lint</span>        Check files for errors
+
+<span class="hl-cmt">// EXTERNAL</span>
+<span class="hl-ok">WebSearch</span>   Look up documentation
+<span class="hl-ok">WebFetch</span>    Read a URL&rsquo;s content
+<span class="hl-ok">MCP Tools</span>   Connect to external services</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Model Requests, Your System Executes</div>
+            <div class="cc-text">The LLM <strong>never runs code directly</strong>. It outputs a structured tool request (tool name + arguments), your IDE or CLI intercepts it, decides whether to allow it (permission check), executes the tool, and sends the result back. The model only sees text in and text out.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Parallel Tool Calls</div>
+            <div class="cc-text">Modern agents can request <strong>multiple tools in a single turn</strong>. If the agent needs to read three files and they&rsquo;re independent, it requests all three simultaneously. The system executes them in parallel and returns all results at once. This cuts round-trip latency dramatically for discovery-heavy tasks.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Why it matters:</strong> Tools are the agent&rsquo;s hands. The quality and design of the tool set directly determines what the agent can accomplish. A model with great reasoning but poor tools will underperform a slightly weaker model with well-designed tools.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">data_object</span></div>
+        <div><div class="cc-title">Context Injection: What the Agent Sees Before You Speak</div><div class="cc-sub">The invisible context that shapes every response</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Silently Injected Context</div>
+            <div class="cc-text">Before your message reaches the model, the system silently prepends a rich context payload:<br><br>&bull; <strong>System prompt</strong> &mdash; personality, rules, capabilities<br>&bull; <strong>Open files</strong> &mdash; what you&rsquo;re currently looking at<br>&bull; <strong>Recently viewed files</strong> &mdash; what you were working on<br>&bull; <strong>Git status</strong> &mdash; branch, staged changes, diffs<br>&bull; <strong>OS and workspace info</strong> &mdash; paths, shell, environment<br>&bull; <strong>Rules files</strong> &mdash; project-specific instructions (AGENTS.md, .cursorrules)<br>&bull; <strong>Linter errors</strong> &mdash; current problems in open files</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why This Matters</div>
+            <div class="cc-text">This injected context is <strong>invisible to you</strong> but gives the agent awareness of your project without you explaining anything. When you say &ldquo;fix the error,&rdquo; the agent already knows which file has the error, what the error message is, and what branch you&rsquo;re on.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Token Cost</div>
+            <div class="cc-text">All this context consumes tokens from the model&rsquo;s context window. A typical agent session starts with <strong>3,000&ndash;8,000 tokens</strong> of injected context before you type a single word. This is why context engineering (Ch 7) is critical &mdash; every wasted token in the system prompt is a token the agent can&rsquo;t use for reasoning about your actual task.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Practical tip:</strong> Keep your rules files concise. A 500-line AGENTS.md file consumes ~2,000 tokens on every single request. Under context pressure, agents may skip advisory rules entirely. Put only critical, non-obvious instructions in rules files.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">memory</span></div>
+        <div><div class="cc-title">Context Window Management: The Agent&rsquo;s Working Memory</div><div class="cc-sub">What happens when the conversation gets too long</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Accumulation Problem</div>
+            <div class="cc-text">Every turn in the agent loop &mdash; your message, the model&rsquo;s reasoning, tool calls, tool results &mdash; gets appended to the conversation. A complex task might involve <strong>20&ndash;50 tool calls</strong>, each adding hundreds or thousands of tokens. A single file read can add 3,000+ tokens. The context window fills up fast.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Automatic Compaction</div>
+            <div class="cc-text">When the conversation approaches the token limit, the system <strong>automatically summarizes</strong> older messages. Key decisions, file paths, and error messages are preserved. Exact tool outputs and intermediate reasoning are compressed. This happens transparently &mdash; the agent doesn&rsquo;t know its earlier memories have been summarized.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Gets Lost</div>
+            <div class="cc-text">&bull; <strong>Exact code</strong> from early file reads &mdash; replaced with summaries<br>&bull; <strong>Intermediate reasoning</strong> &mdash; only conclusions preserved<br>&bull; <strong>Failed attempts</strong> &mdash; compressed to &ldquo;tried X, didn&rsquo;t work&rdquo;<br>&bull; <strong>Verbose tool outputs</strong> &mdash; trimmed to key information<br><br>This is why agents sometimes &ldquo;forget&rdquo; decisions made earlier in a long session or re-read files they already read.</div>
+          </div>
+          <div class="cc-note n-red"><strong>Context drift:</strong> Nearly 65% of enterprise AI agent failures are caused by context drift &mdash; not raw token exhaustion, but subtle misalignments that compound across multi-step workflows. The agent&rsquo;s understanding gradually diverges from reality as summaries lose nuance. For complex tasks, shorter focused sessions beat marathon sessions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">error</span></div>
+        <div><div class="cc-title">Error Recovery: When Things Go Wrong</div><div class="cc-sub">The fix-the-fix loop and how to escape it</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Cascading Error Problem</div>
+            <div class="cc-text">The most common agent failure mode: the agent makes an edit, it introduces a bug, the agent tries to fix the bug, the fix introduces a new bug, and the cycle continues. Each &ldquo;fix&rdquo; moves further from the original working state. After 3&ndash;4 iterations, the code is often worse than where it started.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why Agents Get Stuck</div>
+            <div class="cc-text">&bull; <strong>Sunk cost reasoning</strong> &mdash; the agent tries to salvage its approach instead of reverting<br>&bull; <strong>Lost context</strong> &mdash; the original working code was compacted away<br>&bull; <strong>Narrow focus</strong> &mdash; fixing the symptom without understanding the root cause<br>&bull; <strong>No test feedback</strong> &mdash; the agent doesn&rsquo;t know if the fix actually works</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Checkpoint & Revert</div>
+            <div class="cc-text">Modern agents implement a <strong>checkpoint system</strong> that snapshots file contents before each edit. When the agent spirals, you can revert to any previous checkpoint instantly &mdash; no git required. This is the single most important safety feature: the ability to undo everything the agent did and try a different approach.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">When to Intervene</div>
+            <div class="cc-code"><span class="hl-cmt">// Signs the agent is in a fix-the-fix loop:</span>
+
+<span class="hl-err">1.</span> Same file edited 3+ times in a row
+<span class="hl-err">2.</span> Error count is increasing, not decreasing
+<span class="hl-err">3.</span> Agent is undoing its own recent changes
+<span class="hl-err">4.</span> New errors appear in files the agent didn&rsquo;t touch
+<span class="hl-err">5.</span> Agent says &ldquo;let me try a different approach&rdquo;
+     for the second time
+
+<span class="hl-ok">Action:</span> Stop. Revert to checkpoint. Restate the
+problem with more context or a different strategy.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The best developers using AI agents aren&rsquo;t the ones who let the agent run longest. They&rsquo;re the ones who intervene earliest when they spot a spiral. Knowing when to stop and revert is a core skill.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">security</span></div>
+        <div><div class="cc-title">Permissions &amp; Safety: The Trust Boundary</div><div class="cc-sub">What agents can do without asking &mdash; and what requires your approval</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Permission Model</div>
+            <div class="cc-text">Agent tools are categorized by risk level:<br><br>&bull; <strong>Read-only</strong> (auto-approved) &mdash; reading files, searching code, listing directories<br>&bull; <strong>Write</strong> (may require approval) &mdash; editing files, creating files<br>&bull; <strong>Execute</strong> (usually requires approval) &mdash; running shell commands, installing packages<br>&bull; <strong>Network</strong> (requires approval) &mdash; web requests, API calls<br>&bull; <strong>Destructive</strong> (always requires approval) &mdash; deleting files, force-pushing git</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Sandboxing</div>
+            <div class="cc-text">Commands run inside a <strong>sandbox</strong> that restricts filesystem access, network access, and system calls. The agent can write to your workspace but not to system directories. Network access is limited to known package registries and version control providers. Broader access requires explicit permission.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Trust Spectrum</div>
+            <div class="cc-code"><span class="hl-cmt">// Trust levels in practice:</span>
+
+<span class="hl-ok">YOLO Mode</span>
+  Auto-approve everything. Maximum speed.
+  Risk: agent runs <span class="hl-err">rm -rf</span> or pushes to main.
+
+<span class="hl-str">Balanced Mode</span>
+  Auto-approve reads + writes.
+  Prompt for shell commands + network.
+  Best for most development work.
+
+<span class="hl-key">Cautious Mode</span>
+  Approve every action individually.
+  Slowest, but safest for production code.
+  Good for unfamiliar codebases.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Practical guidance:</strong> Start cautious with a new agent or unfamiliar codebase. As you build trust and understand the agent&rsquo;s patterns, gradually increase autonomy. Most experienced developers settle on balanced mode &mdash; auto-approve file operations, review shell commands.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">account_tree</span></div>
+        <div><div class="cc-title">Planning Mode: Think Before You Code</div><div class="cc-sub">Why the best agent sessions start with a plan</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Plan Then Execute</div>
+            <div class="cc-text">The most effective pattern for complex tasks: ask the agent to <strong>plan first, code second</strong>. In planning mode, the agent reads the codebase, identifies affected files, outlines the approach, and presents it for your review. Only after you approve does it start making changes. This prevents the agent from charging down the wrong path.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What a Good Plan Looks Like</div>
+            <div class="cc-code"><span class="hl-cmt">// Agent plan for &ldquo;add user authentication&rdquo;:</span>
+
+<span class="hl-ok">1.</span> Create <span class="hl-str">auth/middleware.ts</span>
+   &rarr; JWT verification, session handling
+
+<span class="hl-ok">2.</span> Update <span class="hl-str">routes/api.ts</span>
+   &rarr; Wrap protected routes with auth middleware
+
+<span class="hl-ok">3.</span> Create <span class="hl-str">auth/login.ts</span>
+   &rarr; Login endpoint, password hashing
+
+<span class="hl-ok">4.</span> Update <span class="hl-str">db/schema.ts</span>
+   &rarr; Add users table with email, hash, role
+
+<span class="hl-ok">5.</span> Add tests in <span class="hl-str">tests/auth.test.ts</span>
+   &rarr; Login, protected routes, token expiry
+
+<span class="hl-cmt">// Dependencies: bcrypt, jsonwebtoken</span>
+<span class="hl-cmt">// Estimated: 5 files, ~200 lines</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Planning Works</div>
+            <div class="cc-text">&bull; <strong>Catches wrong assumptions early</strong> &mdash; you can correct the approach before any code is written<br>&bull; <strong>Reduces fix-the-fix loops</strong> &mdash; the agent has a coherent strategy instead of improvising<br>&bull; <strong>Creates documentation</strong> &mdash; the plan itself serves as a record of what was done and why<br>&bull; <strong>Enables partial execution</strong> &mdash; you can approve steps 1&ndash;3 and handle step 4 yourself</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">When to Skip Planning</div>
+            <div class="cc-text">Not every task needs a plan. Skip it for:<br>&bull; Single-file changes with clear scope<br>&bull; Bug fixes where you already know the cause<br>&bull; Boilerplate generation (tests, types, configs)<br>&bull; Tasks you&rsquo;ve done before and trust the agent with</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Save good plans. When the agent produces a plan you approve, that plan becomes reusable documentation. Next time you need similar work, paste the plan structure and the agent will follow the same pattern.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">trending_up</span></div>
+        <div><div class="cc-title">The Agent Gets Better: Self-Improvement Loops</div><div class="cc-sub">How agents learn from your corrections across sessions</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Stateless Problem</div>
+            <div class="cc-text">Agents are <strong>stateless between sessions</strong>. Every new conversation starts from zero. The agent doesn&rsquo;t remember that you prefer tabs over spaces, that your project uses a specific testing framework, or that you corrected it three times yesterday about import paths. This is why the same mistakes repeat.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Rules Files as Persistent Memory</div>
+            <div class="cc-text">The solution: <strong>rules files</strong> (AGENTS.md, .cursorrules, CLAUDE.md) act as persistent memory injected at session start. When you notice the agent making the same mistake repeatedly, add a rule. These files accumulate your project&rsquo;s conventions, preferences, and gotchas &mdash; becoming a living style guide the agent follows.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Automated Self-Reflection</div>
+            <div class="cc-text">Emerging tools analyze past session transcripts to identify <strong>moments of friction</strong> &mdash; where you said &ldquo;no,&rdquo; &ldquo;not that,&rdquo; or had to repeat instructions. They automatically propose additions to your rules files. In practice, this has reduced correction rates from <strong>0.45 to 0.07 per session</strong> over daily iterations.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Compound Effect</div>
+            <div class="cc-text">Over weeks, a well-maintained rules file transforms the agent experience. The agent knows your naming conventions, testing patterns, error handling style, and architectural preferences. It stops making the mistakes you&rsquo;ve corrected. The investment in rules pays compound returns on every future session.</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The agent loop isn&rsquo;t just Reason &rarr; Act &rarr; Observe within a session. There&rsquo;s a <em>meta-loop</em> across sessions: Use &rarr; Correct &rarr; Encode Rule &rarr; Better Next Time. The developers who get the most from AI agents are the ones who invest in this outer loop.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-code-completion-anatomy.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: Code Completion Anatomy</a>
+    <a class="ch-nav-btn next" href="07-context-engineering.html">Ch 7: Context Engineering <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1,2],3:[0,1,2,3],4:[3,4],5:[4,1,2,3],6:[0,1,2,3,4],7:[0,1],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The agent loop is simple: Reason \u2192 Act \u2192 Observe \u2192 Repeat. The LLM reasons about the next step, calls a tool, sees the result, and loops until no more tool calls are needed.',color:'#0d9488'},
+    2:{text:'<strong>Step 2:</strong> Tools are the agent\u2019s hands: file read/write, search, shell execution, web access, and MCP integrations. The model requests tools; your system executes them. Multiple tools can run in parallel.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Before your message reaches the model, the system injects open files, git status, OS info, and rules files. This invisible context gives the agent project awareness without you explaining anything.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Every tool call adds tokens to the conversation. When the context window fills, older messages are automatically summarized. 65% of agent failures come from context drift, not token exhaustion.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> The fix-the-fix loop is the #1 failure mode: agent edits \u2192 bug \u2192 fix attempt \u2192 new bug \u2192 worse code. Checkpoints let you revert instantly. Intervene early when you spot a spiral.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Tools are tiered by risk: reads auto-approve, writes may prompt, shell commands need approval, destructive actions always need approval. Sandboxing restricts filesystem and network access.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> For complex tasks, ask the agent to plan before coding. Review the plan, approve or adjust, then let it execute. This prevents wrong-path spirals and creates reusable documentation.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Agents are stateless between sessions. Rules files (AGENTS.md) act as persistent memory. A meta-loop across sessions \u2014 Use \u2192 Correct \u2192 Encode Rule \u2192 Better Next Time \u2014 compounds over weeks.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

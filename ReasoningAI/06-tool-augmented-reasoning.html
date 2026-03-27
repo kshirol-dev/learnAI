@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Tool-Augmented Reasoning — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Tool-Augmented Reasoning</h2><span class="tb-sub">Code interpreters, calculators, retrieval, Toolformer, PAL, and production patterns for tool use</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Question</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">Plan</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Tool</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">terminal</span></div><span class="pipe-label">Run</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">visibility</span></div><span class="pipe-label">Observe</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Answer</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">handshake</span></div><div><div class="cc-title">Neural + Symbolic: Why Tools Help</div><div class="cc-sub">LLMs plan; tools compute and ground</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Complementarity Idea</div><div class="cc-text">LLMs are strong at <strong>language understanding</strong>, <strong>decomposition</strong>, and <strong>choosing strategies</strong>, but weak at <strong>exact arithmetic</strong>, <strong>long-horizon symbolic manipulation</strong>, and <strong>up-to-date facts</strong> unless memorized. <strong>Tool-augmented reasoning</strong> pairs the model with external systems that are reliable for those subtasks: a Python interpreter for math, a search API for current events, a calculator for precision, a database for structured lookup, or a symbolic engine for algebra. The model&rsquo;s job becomes: parse the user goal, decide which tool to call with which arguments, read the tool output, and iterate until a final answer. This pattern is sometimes described as <strong>neural orchestration + symbolic execution</strong>: the LLM is the controller; tools are the effectors. It directly addresses failure modes from Chapter 1 (counting, multi-step arithmetic) without requiring the model to &ldquo;do all the math in weights.&rdquo;</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Tools Buy You</div><div class="cc-code"><span class="hl-cmt">// Typical tool-augmented loop</span>
+
+<span class="hl-key">1. Understand</span> user question (NLU)
+<span class="hl-key">2. Plan</span> sub-steps (CoT / agent)
+<span class="hl-key">3. Call tool</span> with structured args
+<span class="hl-key">4. Observe</span> deterministic output
+<span class="hl-key">5. Repeat</span> until done
+
+<span class="hl-key">Examples</span>:
+  Math → Python / calculator
+  Facts → web search / RAG
+  Code → run tests in sandbox
+  Time → calendar / clock API
+  <span class="hl-cmt">// Ground truth from environment</span>
+
+<span class="hl-key">vs Pure LLM</span>:
+  Pure: next-token guess for "17×24"
+  Tool: emit code → interpreter = <span class="hl-num">408</span>
+  <span class="hl-cmt">// Correctness from execution</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Tools turn <strong>soft reasoning</strong> into <strong>hard checks</strong>. When execution is deterministic, errors shrink from &ldquo;plausible wrong text&rdquo; to &ldquo;wrong program&rdquo; &mdash; which you can catch with tests, types, and retries.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">terminal</span></div><div><div class="cc-title">Code Interpreters &amp; ReAct-Style Loops</div><div class="cc-sub">Reasoning, Acting, and observing in production agents</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reason + Act + Observe</div><div class="cc-text">A widely used pattern (popularized by work such as <strong>ReAct</strong>: interleaving reasoning traces with actions) alternates: (1) the model explains what it will do next, (2) it emits a tool call (often JSON or a DSL), (3) the host runs the tool and returns output as text, (4) the model continues. Products like <strong>ChatGPT Code Interpreter / Advanced Data Analysis</strong> and many coding agents use <strong>sandboxed Python</strong> environments: the model writes code, the runtime executes it, stdout/stderr and plots return to the model. This is especially effective for <strong>data analysis</strong>, <strong>simulation</strong>, and <strong>numeric word problems</strong>. Engineering essentials: timeouts, resource limits, dependency allowlists, and stripping secrets from the environment. Reliability improves when you require the model to <strong>print intermediate values</strong> and <strong>assert invariants</strong> in code.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Sketch of a Loop</div><div class="cc-code"><span class="hl-cmt"># Host-driven tool loop (conceptual)</span>
+
+<span class="hl-key">while</span> <span class="hl-key">not</span> done:
+    msg = model.generate(messages)
+    <span class="hl-key">if</span> msg.has_tool_call():
+        result = sandbox.run(msg.tool_call)
+        messages.append(tool_result(result))
+    <span class="hl-key">else</span>:
+        done = <span class="hl-key">True</span>
+
+<span class="hl-cmt"># Good practices</span>
+<span class="hl-cmt"># - cap steps, wall-clock, memory</span>
+<span class="hl-cmt"># - log tool I/O for audit</span>
+<span class="hl-cmt"># - validate JSON schema before run</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The interpreter is a <strong>verifier of procedure</strong>. If the code runs and tests pass, you have stronger evidence than a single free-form answer &mdash; especially for coding and quantitative tasks.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">Toolformer: Self-Supervised Tool Learning</div><div class="cc-sub">Schick et al., NeurIPS 2023 (arXiv:2302.04761)</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Toolformer Did</div><div class="cc-text"><strong>Toolformer</strong> (Meta AI Research) showed that a language model can learn <strong>when and how to invoke external APIs</strong> (calculator, Q&amp;A system, search, translation, calendar, etc.) in a mostly <strong>self-supervised</strong> way: start from plain text, sample candidate API calls, execute them, and keep calls that reduce perplexity on future tokens. The model learns to insert special tokens marking API calls, arguments, and where to splice results back into the context. Reported benefits include better performance on tasks that are hard for vanilla LMs (arithmetic, missing world knowledge, low-resource translation) while preserving general language modeling ability. Toolformer is an important reference for <strong>learned tool-use policies</strong> as opposed to purely prompt-engineered tool instructions.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Training Intuition</div><div class="cc-code"><span class="hl-cmt">// Self-supervised filter (high level)</span>
+
+<span class="hl-key">For</span> each candidate API call c:
+  execute(c) → result r
+  score = LM_loss(text | with r)
+        − LM_loss(text | without r)
+  <span class="hl-key">if</span> score improves enough:
+      keep c as positive example
+  <span class="hl-key">else</span>:
+      discard
+
+<span class="hl-key">Tools in paper</span>:
+  calculator, QA, search, translation,
+  calendar (each with brief demos)
+  <span class="hl-cmt">// NeurIPS 2023; arXiv 2302.04761</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Toolformer connects <strong>language modeling objectives</strong> to <strong>tool usefulness</strong>: if an API call makes the next-token prediction easier, it was probably helpful. That&rsquo;s a scalable way to harvest training signal without giant human tool-use datasets.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">PAL: Program-Aided Language Models</div><div class="cc-sub">Gao et al., ICML 2023 (PMLR 202:gao23f)</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Programs as Intermediate Representations</div><div class="cc-text"><strong>PAL (Program-Aided Language Models)</strong> asks the LLM to emit a <strong>Python program</strong> that encodes the reasoning steps, then runs the program in an interpreter to obtain the answer. The LLM focuses on <strong>structuring the problem</strong> (variables, loops, equations); the runtime handles <strong>arithmetic and logic</strong> reliably. The PAL paper reports strong gains on math and symbolic tasks versus chain-of-thought alone &mdash; including reported state-of-the-art style improvements on <strong>GSM8K</strong> in their setting and large gains on some <strong>BIG-Bench Hard</strong> style tasks, because many failure modes are execution slips rather than misunderstanding. PAL is a clean pattern for teams: keep the model&rsquo;s output <strong>machine-checkable</strong> when possible.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">PAL Pattern</div><div class="cc-code"><span class="hl-cmt"># Model output (illustrative)</span>
+apples_start = <span class="hl-num">23</span>
+used = <span class="hl-num">20</span>
+bought = <span class="hl-num">6</span>
+apples = apples_start - used + bought
+<span class="hl-key">print</span>(apples)
+
+<span class="hl-cmt"># Host runs interpreter → 9</span>
+<span class="hl-cmt"># Final answer extracted from stdout</span>
+
+<span class="hl-key">Why it works</span>:
+  Decomposition: natural for LLMs
+  Arithmetic: delegated to Python
+  <span class="hl-cmt">// ICML 2023; see official PAL page</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> PAL is the software engineer&rsquo;s version of CoT: don&rsquo;t ask the model to <em>simulate</em> a CPU in prose &mdash; ask it to <em>write</em> the CPU&rsquo;s program.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">Retrieval for Reasoning (RAG + Tools)</div><div class="cc-sub">When the bottleneck is facts, not logic</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Grounding Reasoning Steps</div><div class="cc-text">Many &ldquo;reasoning failures&rdquo; are actually <strong>knowledge gaps</strong>. <strong>Retrieval-augmented generation (RAG)</strong> supplies documents the model can cite while reasoning. In tool form, the model calls a search or vector DB tool, then continues CoT with excerpts. This helps <strong>multi-hop questions</strong> (where each hop needs a fact), <strong>domain workflows</strong> (policies, specs), and <strong>enterprise assistants</strong> grounded in internal wikis. Design tips: chunking, metadata filters, reranking, and <strong>attribution requirements</strong> (&ldquo;every claim must point to a source span&rdquo;). For reasoning evaluation, retrieval can also <strong>reduce spurious success</strong> from parametric memorization &mdash; but it introduces new failure modes: wrong document retrieved, contradictory sources, or over-trusting snippets.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Retrieval + CoT</div><div class="cc-code"><span class="hl-cmt">// Typical staged prompt</span>
+
+<span class="hl-key">Step A</span>: tool:retrieve(query)
+<span class="hl-key">Step B</span>: summarize relevant facts
+<span class="hl-key">Step C</span>: chain-of-thought using ONLY
+         facts from Step B
+<span class="hl-key">Step D</span>: final answer + citations
+
+<span class="hl-key">Failure modes</span>:
+  retrieval miss / wrong chunk
+  context stuffing → lost focus
+  fabricated citations
+  <span class="hl-cmt">// Mitigate with citations + checks</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Treat retrieval as a <strong>tool with its own error rate</strong>. Strong systems add a second pass: verify that cited text actually supports the conclusion.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">Calculators, CAS, and Domain Tools</div><div class="cc-sub">Precision and specialized engines</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond &ldquo;Plain Python&rdquo;</div><div class="cc-text">For numerical stability and advanced math, teams plug in <strong>arbitrary-precision calculators</strong>, linear algebra libraries, or <strong>computer algebra systems (CAS)</strong> APIs (e.g., symbolic integration). Scientific workflows may call <strong>simulators</strong>, <strong>SQL</strong> over warehouse tables, or <strong>geospatial</strong> services. The design principle is unchanged: choose a tool whose <strong>semantics are formal</strong>. The LLM supplies glue code and interpretation; the engine supplies truth for that subdomain. This is especially important when floating-point rounding matters or when problems exceed what informal chain-of-thought can reliably track.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">When to Use What</div><div class="cc-code"><span class="hl-key">Calculator / numpy</span>:
+  numeric word problems, stats
+<span class="hl-key">CAS / symbolic API</span>:
+  simplify expressions, integrals
+<span class="hl-key">SQL</span>:
+  counting, aggregation, joins
+<span class="hl-key">Simulator</span>:
+  physics/engineering what-if
+<span class="hl-cmt">// Pick the smallest correct tool</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Use the <strong>most specialized correct tool</strong>, not the most general. A giant Python sandbox is flexible; a SQL engine is often safer for structured counting.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">integration_instructions</span></div><div><div class="cc-title">Function Calling &amp; Tool Schemas</div><div class="cc-sub">How APIs look in modern LLM stacks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Production Integration</div><div class="cc-text">Today&rsquo;s stacks usually expose tools as <strong>JSON Schema</strong> (OpenAI-style function calling) or <strong>Model Context Protocol (MCP)</strong> servers: name, description, parameters, and safety metadata. Good schemas are <strong>narrow</strong> (avoid mega-tools), <strong>typed</strong>, and include <strong>examples</strong>. Host responsibilities: authentication, rate limits, idempotency for retries, and <strong>human-in-the-loop</strong> gates for sensitive actions (payments, deletes). Testing should include <strong>adversarial arguments</strong> (tool injection via user text) and <strong>fuzzing</strong> parameter ranges.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Schema Sketch</div><div class="cc-code">{
+  <span class="hl-str">"name"</span>: <span class="hl-str">"python_exec"</span>,
+  <span class="hl-str">"description"</span>: <span class="hl-str">"Run Python in sandbox"</span>,
+  <span class="hl-str">"parameters"</span>: {
+    <span class="hl-str">"type"</span>: <span class="hl-str">"object"</span>,
+    <span class="hl-str">"properties"</span>: {
+      <span class="hl-str">"code"</span>: {<span class="hl-str">"type"</span>: <span class="hl-str">"string"</span>}
+    },
+    <span class="hl-str">"required"</span>: [<span class="hl-str">"code"</span>]
+  }
+}</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Tooling is half <strong>ML</strong> and half <strong>backend engineering</strong>. The best models fail safely if the host enforces schemas, authz, and quotas.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Risks, Limits, and Failure Modes</div><div class="cc-sub">Tools are not free safety</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Can Still Go Wrong</div><div class="cc-text"><strong>Tool injection</strong>: malicious instructions hidden in web pages or user content that hijack tool calls. <strong>Over-tooling</strong>: latency and cost explode when the model thrashes between tools. <strong>Incorrect tool choice</strong>: right problem, wrong API. <strong>Fragile parsing</strong>: models emit almost-valid JSON or unsafe code. <strong>Security</strong>: sandbox escapes and SSRF if tools can fetch URLs. <strong>Evaluation skew</strong>: benchmarks that reward tool access may not reflect closed-book reasoning skill. Mitigations: allowlists, output validators, static analysis on code, separate <strong>policy models</strong>, and red teaming focused on tool misuse.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Checklist</div><div class="cc-code"><span class="hl-key">Safety</span>: authz, secrets, sandbox
+<span class="hl-key">Reliability</span>: schemas, retries, caps
+<span class="hl-key">Observability</span>: trace tool I/O
+<span class="hl-key">UX</span>: show tool steps when helpful
+<span class="hl-key">Eval</span>: with-tools vs without-tools
+<span class="hl-cmt">// Chapter 7: measure honestly</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Tools raise the <strong>ceiling</strong> on correctness but also expand the <strong>attack surface</strong>. Treat tool use as building a small autonomous system, not a single model call.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="05-verification-and-reward-models.html"><span class="material-symbols-rounded">arrow_back</span> Ch 5: Verification &amp; Reward Models</a>
+    <a class="ch-nav-btn next" href="07-benchmarks-and-evaluation.html">Ch 7: Benchmarks &amp; Evaluation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,1,2,3,4],3:[0,1,2],4:[0,1,2,3,5],5:[0,1,2,4],6:[0,2,3],7:[0,1,2],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Tools complement LLMs: models orchestrate language and plans; calculators, code, search, and DBs supply precision, execution, and fresh facts.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> ReAct-style loops interleave reasoning with tool calls. Sandboxed Python is standard for data and math — always cap time, memory, and network.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Toolformer (NeurIPS 2023): self-supervised learning of API calls — keep calls that reduce perplexity. A reference for scalable tool-use training.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> PAL (ICML 2023): generate Python programs, run them, read stdout. Offloads arithmetic and logic to the interpreter.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Retrieval tools ground multi-hop reasoning. Design for citations, reranking, and retrieval failure — wrong chunks cause confident wrong answers.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Use specialized engines when needed: CAS, SQL, simulators. Pick the smallest tool that is formally correct for the subdomain.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Function calling / MCP: narrow schemas, typed parameters, authz and quotas. Backend engineering matters as much as prompting.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Risks: tool injection, cost/latency thrash, fragile JSON, sandbox security. Next chapter: evaluate reasoning honestly across benchmarks.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

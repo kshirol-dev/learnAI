@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Reinforcement Learning — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone-bar{display:flex;border-bottom:1px solid var(--border-light);overflow-x:auto}.zone-tab{flex:1;min-width:120px;padding:8px 12px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;color:var(--text-3)}.zone-tab.active{color:var(--bg-white);border-bottom-color:transparent}
+.uth-body{display:flex;min-height:500px;position:relative;overflow:hidden}
+.flow-panel{flex:1;padding:28px 32px;position:relative;overflow-y:auto}.flow-panel .zone-title{font-size:11px;font-weight:800;letter-spacing:-.2px;margin-bottom:16px;display:flex;align-items:center;gap:8px}.zone-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:4px;color:#fff}
+.fnode{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:8px;border:1.5px solid var(--border);background:var(--bg-white);cursor:pointer;transition:all .25s}.fnode:hover{box-shadow:var(--shadow-sm)}.fnode .fn-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.fnode .fn-icon .material-symbols-rounded{font-size:15px;color:#fff}.fnode .fn-label{font-size:11px;font-weight:600;color:var(--text-1)}.fnode .fn-sub{font-size:9px;color:var(--text-3);margin-top:1px}
+.fnode.lit{border-color:currentColor;box-shadow:0 0 0 2px currentColor,var(--shadow-md)}.fnode.c-red .fn-icon{background:var(--red)}.fnode.c-red.lit{color:var(--red);border-color:var(--red)}.fnode.c-orange .fn-icon{background:var(--orange)}.fnode.c-orange.lit{color:var(--orange);border-color:var(--orange)}.fnode.c-pink .fn-icon{background:var(--pink)}.fnode.c-pink.lit{color:var(--pink);border-color:var(--pink)}.fnode.c-violet .fn-icon{background:var(--violet)}.fnode.c-violet.lit{color:var(--violet);border-color:var(--violet)}.fnode.c-blue .fn-icon{background:var(--blue)}.fnode.c-blue.lit{color:var(--blue);border-color:var(--blue)}.fnode.c-teal .fn-icon{background:var(--teal)}.fnode.c-teal.lit{color:var(--teal);border-color:var(--teal)}.fnode.c-amber .fn-icon{background:var(--amber)}.fnode.c-amber.lit{color:var(--amber);border-color:var(--amber)}.fnode.c-green .fn-icon{background:var(--green)}.fnode.c-green.lit{color:var(--green);border-color:var(--green)}
+.flow-arrow{display:flex;align-items:center;justify-content:center;padding:2px 0;color:var(--border)}.flow-arrow .material-symbols-rounded{font-size:16px}
+.step-badge{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:4px;color:#fff;margin-left:auto;flex-shrink:0}
+.detail-panel{width:420px;border-left:1px solid var(--border-light);background:var(--bg-muted);padding:24px;overflow-y:auto;display:none;animation:slideIn .3s ease}.detail-panel.open{display:block}@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.dp-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}.dp-title{font-size:14px;font-weight:800;letter-spacing:-.3px}.dp-close{width:28px;height:28px;border-radius:50%;border:none;background:var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:all .15s}.dp-close:hover{background:var(--text-3);color:#fff}.dp-close .material-symbols-rounded{font-size:16px}
+.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin:14px 0 6px}.dp-label:first-child{margin-top:0}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-white);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--blue);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}.dp-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.dp-note.n-pink strong{color:var(--pink)}.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.uth-body{flex-direction:column}.detail-panel{width:100%;border-left:none;border-top:1px solid var(--border-light)}.flow-panel{padding:20px 18px}.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Reinforcement Learning</h2><span class="tb-sub">Bellman equations, DQN internals, PPO clipping, MCTS, and RLHF math</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="12-reinforcement-learning-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the deep dive...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="zone-bar" id="zoneBar">
+    <div class="zone-tab" data-zone="A" style="background:var(--red-light);color:var(--red)">A &middot; Bellman &amp; Q-Learning</div>
+    <div class="zone-tab" data-zone="B" style="background:var(--orange-light);color:var(--orange)">B &middot; DQN Internals</div>
+    <div class="zone-tab" data-zone="C" style="background:var(--violet-light);color:var(--violet)">C &middot; Policy Gradient &amp; PPO</div>
+    <div class="zone-tab" data-zone="D" style="background:var(--blue-light);color:var(--blue)">D &middot; AlphaZero &amp; MCTS</div>
+    <div class="zone-tab" data-zone="E" style="background:var(--teal-light);color:var(--teal)">E &middot; RLHF Math</div>
+  </div>
+  <div class="uth-body">
+    <div class="flow-panel" id="flowPanel">
+
+      <!-- Zone A: Bellman & Q-Learning -->
+      <div class="zone-title"><span class="zone-badge" style="background:var(--red)">A</span> Bellman Equations &amp; Q-Learning</div>
+      <div class="fnode c-red" data-step="1" data-detail="1"><div class="fn-icon"><span class="material-symbols-rounded">functions</span></div><div><div class="fn-label">Bellman Optimality Equation</div><div class="fn-sub">V*(s), Q*(s,a), recursive value definition</div></div><span class="step-badge" style="background:var(--red)">S1</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-red" data-step="2" data-detail="2"><div class="fn-icon"><span class="material-symbols-rounded">grid_on</span></div><div><div class="fn-label">Q-Learning Algorithm</div><div class="fn-sub">TD update, convergence, worked example</div></div><span class="step-badge" style="background:var(--red)">S2</span></div>
+
+      <!-- Zone B: DQN Internals -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--orange)">B</span> DQN Internals</div>
+      <div class="fnode c-orange" data-step="3" data-detail="3"><div class="fn-icon"><span class="material-symbols-rounded">replay</span></div><div><div class="fn-label">Experience Replay &amp; Target Network</div><div class="fn-sub">Buffer sampling, target stabilization, loss function</div></div><span class="step-badge" style="background:var(--orange)">S3</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-orange" data-step="4" data-detail="4"><div class="fn-icon"><span class="material-symbols-rounded">upgrade</span></div><div><div class="fn-label">DQN Improvements</div><div class="fn-sub">Double DQN, Dueling DQN, Prioritized Replay, Rainbow</div></div><span class="step-badge" style="background:var(--orange)">S4</span></div>
+
+      <!-- Zone C: Policy Gradient & PPO -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--violet)">C</span> Policy Gradient &amp; PPO</div>
+      <div class="fnode c-violet" data-step="5" data-detail="5"><div class="fn-icon"><span class="material-symbols-rounded">trending_up</span></div><div><div class="fn-label">Policy Gradient Theorem</div><div class="fn-sub">REINFORCE, log-probability trick, variance reduction</div></div><span class="step-badge" style="background:var(--violet)">S5</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-violet" data-step="6" data-detail="6"><div class="fn-icon"><span class="material-symbols-rounded">tune</span></div><div><div class="fn-label">PPO Clipped Objective</div><div class="fn-sub">Probability ratio, clipping, GAE, full algorithm</div></div><span class="step-badge" style="background:var(--violet)">S6</span></div>
+
+      <!-- Zone D: AlphaZero & MCTS -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--blue)">D</span> AlphaZero &amp; MCTS</div>
+      <div class="fnode c-blue" data-step="7" data-detail="7"><div class="fn-icon"><span class="material-symbols-rounded">account_tree</span></div><div><div class="fn-label">Monte Carlo Tree Search</div><div class="fn-sub">UCB1, selection, expansion, simulation, backpropagation</div></div><span class="step-badge" style="background:var(--blue)">S7</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-blue" data-step="8"><div class="fn-icon"><span class="material-symbols-rounded">emoji_events</span></div><div><div class="fn-label">AlphaZero Training Loop</div><div class="fn-sub">Self-play, network targets, loss function</div></div><span class="step-badge" style="background:var(--blue)">S8</span></div>
+
+      <!-- Zone E: RLHF Math -->
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="zone-title" style="margin-top:12px"><span class="zone-badge" style="background:var(--teal)">E</span> RLHF Math</div>
+      <div class="fnode c-teal" data-step="9" data-detail="8"><div class="fn-icon"><span class="material-symbols-rounded">psychology</span></div><div><div class="fn-label">Reward Model &amp; RLHF Objective</div><div class="fn-sub">Bradley-Terry model, KL-constrained PPO</div></div><span class="step-badge" style="background:var(--teal)">S9</span></div>
+      <div class="flow-arrow"><span class="material-symbols-rounded">arrow_downward</span></div>
+      <div class="fnode c-teal" data-step="10" data-detail="9"><div class="fn-icon"><span class="material-symbols-rounded">bolt</span></div><div><div class="fn-label">DPO &amp; Modern Alternatives</div><div class="fn-sub">DPO derivation, GRPO, comparison</div></div><span class="step-badge" style="background:var(--teal)">S10</span></div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="dp-header"><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+      <div id="dpBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10,STEP_MS=7000;
+  const ZONE_MAP={1:'A',2:'A',3:'B',4:'B',5:'C',6:'C',7:'D',8:'D',9:'E',10:'E'};
+  const NARRATION={
+    1:{text:'<strong>Bellman optimality equation:</strong> V*(s) = max\u2090 \u2211 P(s\u2032|s,a)[r + \u03b3V*(s\u2032)]. The optimal value of a state equals the best action\u2019s expected reward plus discounted future value. Q*(s,a) = \u2211 P(s\u2032|s,a)[r + \u03b3 max\u2090\u2032 Q*(s\u2032,a\u2032)]. All of RL reduces to solving these recursive equations.',color:'#dc2626'},
+    2:{text:'<strong>Q-learning</strong> approximates Q* via temporal difference: Q(s,a) \u2190 Q(s,a) + \u03b1[r + \u03b3\u00b7max Q(s\u2032,a\u2032) \u2212 Q(s,a)]. The TD error \u03b4 = r + \u03b3\u00b7max Q(s\u2032,a\u2032) \u2212 Q(s,a) drives learning. Off-policy: learns optimal Q regardless of the behavior policy. Converges to Q* given sufficient exploration.',color:'#dc2626'},
+    3:{text:'<strong>DQN innovations:</strong> Experience replay stores (s,a,r,s\u2032) in a buffer and samples random mini-batches \u2014 breaks temporal correlations. Target network Q\u0302 is a frozen copy updated every C steps: L = (r + \u03b3\u00b7max Q\u0302(s\u2032,a\u2032) \u2212 Q(s,a))\u00b2. Without these, DQN diverges.',color:'#ea580c'},
+    4:{text:'<strong>DQN improvements:</strong> Double DQN decouples action selection from evaluation to fix overestimation. Dueling DQN splits Q into V(s) + A(s,a). Prioritized replay samples high-TD-error transitions more often. Rainbow combines all six improvements for 2\u20133x better performance.',color:'#ea580c'},
+    5:{text:'<strong>Policy gradient theorem:</strong> \u2207J(\u03b8) = E[\u2211 \u2207log \u03c0\u03b8(a|s) \u00b7 Q\u03c0(s,a)]. REINFORCE uses Monte Carlo returns G\u209c as Q estimate \u2014 unbiased but high variance. Subtract a baseline V(s) to get advantage A = Q \u2212 V. Actor-critic: actor = \u03c0\u03b8, critic = V\u03c6. Much lower variance.',color:'#7c3aed'},
+    6:{text:'<strong>PPO clipped objective:</strong> L = E[min(r\u209c(\u03b8)\u00c2\u209c, clip(r\u209c(\u03b8), 1\u2212\u03b5, 1+\u03b5)\u00c2\u209c)]. r\u209c = \u03c0\u03b8(a|s)/\u03c0\u03b8old(a|s) is the probability ratio. Clipping at \u03b5=0.2 prevents destructive policy updates. GAE: \u00c2\u209c = \u2211 (\u03b3\u03bb)\u02e1 \u03b4\u209c\u208a\u2097 balances bias and variance.',color:'#7c3aed'},
+    7:{text:'<strong>MCTS:</strong> Four phases per simulation: Select (UCB1 = Q/N + c\u221a(ln N\u209a/N)), Expand (add child node), Simulate (rollout or neural network evaluation), Backpropagate (update Q and N up the tree). AlphaZero replaces rollouts with the value network, making MCTS far more efficient.',color:'#2563eb'},
+    8:{text:'<strong>AlphaZero training:</strong> Self-play generates (s, \u03c0\u2098\u1d04\u209c\u209b, z) tuples. Network f\u03b8(s) = (p, v) predicts move probabilities and value. Loss = (z \u2212 v)\u00b2 \u2212 \u03c0\u1d40 log p + c||\u03b8||\u00b2. The network improves, self-play gets stronger, creating a virtuous cycle. No human data needed.',color:'#2563eb'},
+    9:{text:'<strong>RLHF objective:</strong> max E\u2093~\u03c0[RM(x,y)] \u2212 \u03b2\u00b7KL(\u03c0||\u03c0\u1d63\u1d49\u1da0). Reward model trained on Bradley-Terry: P(y\u2081\u227by\u2082) = \u03c3(RM(y\u2081) \u2212 RM(y\u2082)). PPO optimizes token-level actions with the RM score as episode reward. The KL penalty prevents reward hacking.',color:'#0d9488'},
+    10:{text:'<strong>DPO</strong> eliminates the reward model entirely: L = \u2212log \u03c3(\u03b2[log \u03c0\u03b8(y\u2081)/\u03c0\u1d63\u1d49\u1da0(y\u2081) \u2212 log \u03c0\u03b8(y\u2082)/\u03c0\u1d63\u1d49\u1da0(y\u2082)]). Derived by substituting the closed-form optimal policy into the RLHF objective. Simpler, stable, no PPO needed. GRPO uses group-relative rewards without any reference model.',color:'#0d9488'},
+  };
+  const DETAILS={
+    1:{title:'Bellman Equations: Full Derivation',color:'#dc2626',body:`
+<div class="dp-label">State-Value Function V\u03c0(s)</div>
+<div class="dp-code"><span class="hl-cmt">// Expected return starting from state s, following \u03c0</span>
+
+<span class="hl-key">V\u03c0(s)</span> = E\u03c0[\u2211 \u03b3\u1d57 r\u209c | s\u2080 = s]
+
+<span class="hl-cmt">// Recursive form (Bellman expectation equation):</span>
+<span class="hl-key">V\u03c0(s)</span> = \u2211\u2090 \u03c0(a|s) \u2211\u209b\u2032 P(s\u2032|s,a)[r(s,a,s\u2032) + \u03b3V\u03c0(s\u2032)]
+
+<span class="hl-cmt">// Optimal value function:</span>
+<span class="hl-key">V*(s)</span> = max\u2090 \u2211\u209b\u2032 P(s\u2032|s,a)[r + \u03b3V*(s\u2032)]</div>
+<div class="dp-label">Action-Value Function Q\u03c0(s,a)</div>
+<div class="dp-code"><span class="hl-cmt">// Expected return taking action a in state s, then following \u03c0</span>
+
+<span class="hl-key">Q\u03c0(s,a)</span> = E\u03c0[\u2211 \u03b3\u1d57 r\u209c | s\u2080=s, a\u2080=a]
+
+<span class="hl-cmt">// Bellman optimality for Q:</span>
+<span class="hl-key">Q*(s,a)</span> = \u2211\u209b\u2032 P(s\u2032|s,a)[r + \u03b3 max\u2090\u2032 Q*(s\u2032,a\u2032)]
+
+<span class="hl-cmt">// Relationship:</span>
+V*(s) = max\u2090 Q*(s,a)
+\u03c0*(s) = argmax\u2090 Q*(s,a)</div>
+<div class="dp-label">Discount Factor \u03b3</div>
+<div class="dp-code"><span class="hl-cmt">// \u03b3 \u2208 [0, 1) controls time horizon</span>
+
+<span class="hl-key">\u03b3 = 0:</span>    myopic, only immediate reward
+<span class="hl-key">\u03b3 = 0.9:</span>  reward 10 steps ahead worth <span class="hl-num">0.9\u00b9\u2070 = 0.349</span>
+<span class="hl-key">\u03b3 = 0.99:</span> reward 100 steps ahead worth <span class="hl-num">0.99\u00b9\u2070\u2070 = 0.366</span>
+<span class="hl-key">\u03b3 = 0.999:</span> effective horizon <span class="hl-num">~1000</span> steps
+
+<span class="hl-cmt">// Higher \u03b3 = more farsighted but harder to learn</span>
+<span class="hl-cmt">// Typical: 0.99 for games, 0.995 for robotics</span></div>
+<div class="dp-note n-red"><strong>Why recursive?</strong> The Bellman equation decomposes a multi-step problem into one-step decisions. Instead of computing returns over infinite horizons, we only need to look one step ahead and use the value of the next state. This is the foundation of dynamic programming, Q-learning, and all value-based RL.</div>`},
+    2:{title:'Q-Learning: Worked Example',color:'#dc2626',body:`
+<div class="dp-label">Q-Learning Update Rule</div>
+<div class="dp-code"><span class="hl-key">Q(s,a)</span> \u2190 Q(s,a) + \u03b1 \u00b7 \u03b4
+
+<span class="hl-key">TD error:</span> \u03b4 = r + \u03b3 \u00b7 max\u2090\u2032 Q(s\u2032,a\u2032) \u2212 Q(s,a)
+                <span class="hl-str">TD target</span>           <span class="hl-str">current estimate</span></div>
+<div class="dp-label">Grid World Example</div>
+<div class="dp-code"><span class="hl-cmt">// 3\u00d73 grid, goal at (2,2), reward +1 at goal, 0 elsewhere</span>
+<span class="hl-cmt">// \u03b1 = 0.5, \u03b3 = 0.9, all Q initialized to 0</span>
+
+<span class="hl-key">Episode 1, Step 1:</span>
+  State: (0,0), Action: RIGHT, Reward: 0, Next: (1,0)
+  \u03b4 = 0 + 0.9 \u00b7 max Q(1,0,\u00b7) \u2212 Q(0,0,R)
+    = 0 + 0.9 \u00b7 0 \u2212 0 = <span class="hl-num">0</span>
+  Q(0,0,R) = 0 + 0.5 \u00b7 0 = <span class="hl-num">0</span>
+
+<span class="hl-key">... agent reaches goal:</span>
+  State: (2,1), Action: DOWN, Reward: <span class="hl-ok">+1</span>, Next: (2,2)
+  \u03b4 = 1 + 0.9 \u00b7 0 \u2212 0 = <span class="hl-num">1.0</span>
+  Q(2,1,D) = 0 + 0.5 \u00b7 1.0 = <span class="hl-ok">0.5</span>
+
+<span class="hl-key">Episode 2:</span>
+  State: (2,0), Action: DOWN, Reward: 0, Next: (2,1)
+  max Q(2,1,\u00b7) = Q(2,1,D) = 0.5
+  \u03b4 = 0 + 0.9 \u00b7 0.5 \u2212 0 = <span class="hl-num">0.45</span>
+  Q(2,0,D) = 0 + 0.5 \u00b7 0.45 = <span class="hl-ok">0.225</span>
+
+<span class="hl-cmt">// Values propagate backward from goal</span>
+<span class="hl-cmt">// After many episodes, Q-table converges</span></div>
+<div class="dp-note n-red"><strong>Off-policy:</strong> Q-learning uses max\u2090\u2032 Q(s\u2032,a\u2032) regardless of what action the agent actually takes next. This means it learns the optimal policy even while following an exploratory \u03b5-greedy policy. SARSA (on-policy) uses Q(s\u2032,a\u2032) for the action actually taken \u2014 more conservative but safer.</div>`},
+    3:{title:'DQN: Experience Replay & Target Network',color:'#ea580c',body:`
+<div class="dp-label">Experience Replay Buffer</div>
+<div class="dp-code"><span class="hl-cmt">// Store transitions in circular buffer D</span>
+<span class="hl-key">D</span> = {(s\u2081,a\u2081,r\u2081,s\u2081\u2032), (s\u2082,a\u2082,r\u2082,s\u2082\u2032), ...}
+<span class="hl-key">Capacity:</span> <span class="hl-num">1,000,000</span> transitions (typical)
+
+<span class="hl-cmt">// Sample random mini-batch of 32 transitions</span>
+<span class="hl-key">batch</span> = random.sample(D, 32)
+
+<span class="hl-cmt">// Why random sampling?</span>
+<span class="hl-ok">1. Breaks temporal correlations</span>
+   (consecutive frames are nearly identical)
+<span class="hl-ok">2. Reuses rare experiences multiple times</span>
+<span class="hl-ok">3. Smooths over changes in data distribution</span></div>
+<div class="dp-label">Target Network</div>
+<div class="dp-code"><span class="hl-cmt">// Two networks: Q\u03b8 (online) and Q\u0302\u03b8\u207b (target)</span>
+
+<span class="hl-key">DQN Loss:</span>
+  L(\u03b8) = E[(r + \u03b3 \u00b7 max\u2090\u2032 <span class="hl-cmd">Q\u0302\u03b8\u207b</span>(s\u2032,a\u2032) \u2212 Q\u03b8(s,a))\u00b2]
+                        <span class="hl-str">frozen target</span>     <span class="hl-str">updated</span>
+
+<span class="hl-cmt">// Update target network every C = 10,000 steps:</span>
+<span class="hl-key">\u03b8\u207b</span> \u2190 \u03b8    <span class="hl-cmt">// hard copy</span>
+
+<span class="hl-cmt">// Or soft update (Polyak averaging):</span>
+<span class="hl-key">\u03b8\u207b</span> \u2190 \u03c4\u03b8 + (1\u2212\u03c4)\u03b8\u207b    <span class="hl-cmt">// \u03c4 = 0.005</span>
+
+<span class="hl-cmt">// Without target network:</span>
+<span class="hl-err">Both sides of the loss change simultaneously</span>
+<span class="hl-err">\u2192 chasing a moving target \u2192 divergence</span></div>
+<div class="dp-note n-orange"><strong>DQN hyperparameters (Atari):</strong> Buffer size 1M, batch size 32, target update every 10K steps, \u03b5 annealed from 1.0 to 0.1 over 1M frames, \u03b3 = 0.99, learning rate 2.5\u00d710\u207b\u2074, optimizer RMSProp. Training: 50M frames (~38 days of gameplay at 60fps).</div>`},
+    4:{title:'DQN Improvements: Double, Dueling, Rainbow',color:'#ea580c',body:`
+<div class="dp-label">Double DQN (van Hasselt, 2016)</div>
+<div class="dp-code"><span class="hl-cmt">// Problem: max\u2090 Q(s\u2032,a\u2032) overestimates values</span>
+<span class="hl-cmt">// Because max of noisy estimates > true max</span>
+
+<span class="hl-err">DQN:</span>     y = r + \u03b3 \u00b7 max\u2090\u2032 Q\u0302(s\u2032,a\u2032)
+                      <span class="hl-err">same network selects AND evaluates</span>
+
+<span class="hl-ok">Double:</span>  a* = argmax\u2090\u2032 <span class="hl-cmd">Q\u03b8</span>(s\u2032,a\u2032)  <span class="hl-cmt">// online selects</span>
+          y = r + \u03b3 \u00b7 <span class="hl-cmd">Q\u0302\u03b8\u207b</span>(s\u2032,a*)    <span class="hl-cmt">// target evaluates</span>
+          <span class="hl-ok">decouples selection from evaluation</span></div>
+<div class="dp-label">Dueling DQN (Wang, 2016)</div>
+<div class="dp-code"><span class="hl-cmt">// Split Q into value + advantage</span>
+
+<span class="hl-key">Q(s,a)</span> = V(s) + A(s,a) \u2212 mean\u2090 A(s,a)
+
+<span class="hl-key">V(s):</span>   how good is this state?
+<span class="hl-key">A(s,a):</span> how much better is action a than average?
+
+<span class="hl-cmt">// Benefit: V(s) can be learned from any action</span>
+<span class="hl-cmt">// Many states have similar value regardless of action</span>
+<span class="hl-cmt">// Faster learning when actions don't matter much</span></div>
+<div class="dp-label">Rainbow (Hessel, 2018)</div>
+<div class="dp-code"><span class="hl-key">Rainbow</span> = DQN + all six improvements:
+
+<span class="hl-num">1.</span> Double DQN       <span class="hl-cmt">// fix overestimation</span>
+<span class="hl-num">2.</span> Prioritized Replay <span class="hl-cmt">// sample high-error transitions</span>
+<span class="hl-num">3.</span> Dueling Networks  <span class="hl-cmt">// V + A decomposition</span>
+<span class="hl-num">4.</span> Multi-step Returns <span class="hl-cmt">// n-step TD (n=3 typical)</span>
+<span class="hl-num">5.</span> Distributional RL  <span class="hl-cmt">// learn return distribution</span>
+<span class="hl-num">6.</span> Noisy Networks     <span class="hl-cmt">// learned exploration</span>
+
+<span class="hl-ok">Result: 2\u20133x better than any single improvement</span>
+<span class="hl-ok">Superhuman on 40/57 Atari games</span></div>
+<div class="dp-note n-orange"><strong>Prioritized replay:</strong> Sample transitions proportional to |TD error|\u1d45 where \u03b1 \u2208 [0,1]. High-error transitions are replayed more often because they have the most to teach. Importance sampling weights correct the resulting bias: w\u1d62 = (N \u00b7 P(i))\u207b\u1d5d.</div>`},
+    5:{title:'Policy Gradient Theorem & REINFORCE',color:'#7c3aed',body:`
+<div class="dp-label">Policy Gradient Theorem</div>
+<div class="dp-code"><span class="hl-cmt">// Objective: maximize expected return</span>
+<span class="hl-key">J(\u03b8)</span> = E\u03c4~\u03c0\u03b8[R(\u03c4)]
+
+<span class="hl-cmt">// Gradient (the policy gradient theorem):</span>
+<span class="hl-key">\u2207J(\u03b8)</span> = E\u03c4[\u2211\u209c \u2207\u03b8 log \u03c0\u03b8(a\u209c|s\u209c) \u00b7 \u03a8\u209c]
+
+<span class="hl-cmt">// \u03a8\u209c can be:</span>
+<span class="hl-key">REINFORCE:</span>  \u03a8\u209c = G\u209c = \u2211\u2096\u2265\u209c \u03b3\u1d4f\u207b\u1d57 r\u2096
+<span class="hl-key">Baseline:</span>   \u03a8\u209c = G\u209c \u2212 V(s\u209c)
+<span class="hl-key">Advantage:</span>  \u03a8\u209c = A(s\u209c,a\u209c) = Q(s\u209c,a\u209c) \u2212 V(s\u209c)
+
+<span class="hl-cmt">// Log-probability trick:</span>
+\u2207 log \u03c0 = \u2207\u03c0 / \u03c0
+<span class="hl-cmt">// Allows gradient estimation from samples</span></div>
+<div class="dp-label">REINFORCE Algorithm</div>
+<div class="dp-code"><span class="hl-key">for</span> each episode:
+  1. Collect trajectory \u03c4 = (s\u2080,a\u2080,r\u2080,...,s\u209c,a\u209c,r\u209c)
+  2. <span class="hl-key">for</span> each step t:
+       G\u209c = \u2211\u2096\u2265\u209c \u03b3\u1d4f\u207b\u1d57 r\u2096   <span class="hl-cmt">// return from t</span>
+  3. \u03b8 \u2190 \u03b8 + \u03b1 \u2211\u209c \u2207log \u03c0\u03b8(a\u209c|s\u209c) \u00b7 G\u209c
+
+<span class="hl-cmt">// Intuition:</span>
+<span class="hl-ok">High return G\u209c \u2192 increase \u03c0(a\u209c|s\u209c)</span>
+<span class="hl-err">Low return G\u209c  \u2192 decrease \u03c0(a\u209c|s\u209c)</span>
+
+<span class="hl-cmt">// Problem: high variance because G\u209c</span>
+<span class="hl-cmt">// depends on all future randomness</span></div>
+<div class="dp-note n-violet"><strong>Variance reduction:</strong> Subtracting a baseline V(s) doesn\u2019t change the expected gradient (it\u2019s zero in expectation) but dramatically reduces variance. The advantage A = Q \u2212 V answers: \u201cwas this action better or worse than average?\u201d This is the foundation of all actor-critic methods.</div>`},
+    6:{title:'PPO: Full Algorithm',color:'#7c3aed',body:`
+<div class="dp-label">PPO-Clip Objective</div>
+<div class="dp-code"><span class="hl-key">r\u209c(\u03b8)</span> = \u03c0\u03b8(a\u209c|s\u209c) / \u03c0\u03b8old(a\u209c|s\u209c)   <span class="hl-cmt">// probability ratio</span>
+
+<span class="hl-key">L\u1d9c\u02e1\u1da6\u1d56</span> = E\u209c[min(
+    r\u209c(\u03b8) \u00b7 \u00c2\u209c,
+    clip(r\u209c(\u03b8), 1\u2212\u03b5, 1+\u03b5) \u00b7 \u00c2\u209c
+)]
+
+<span class="hl-cmt">// When \u00c2\u209c > 0 (good action):</span>
+<span class="hl-ok">  r\u209c can increase up to 1+\u03b5 = 1.2</span>
+<span class="hl-ok">  Beyond that, clipped (no extra incentive)</span>
+
+<span class="hl-cmt">// When \u00c2\u209c < 0 (bad action):</span>
+<span class="hl-err">  r\u209c can decrease down to 1\u2212\u03b5 = 0.8</span>
+<span class="hl-err">  Beyond that, clipped (no extra penalty)</span></div>
+<div class="dp-label">Generalized Advantage Estimation (GAE)</div>
+<div class="dp-code"><span class="hl-cmt">// TD error at step t:</span>
+<span class="hl-key">\u03b4\u209c</span> = r\u209c + \u03b3 V(s\u209c\u208a\u2081) \u2212 V(s\u209c)
+
+<span class="hl-cmt">// GAE: exponentially-weighted sum of TD errors</span>
+<span class="hl-key">\u00c2\u209c</span> = \u2211\u2097\u2080\u221e (\u03b3\u03bb)\u02e1 \u03b4\u209c\u208a\u2097
+
+<span class="hl-key">\u03bb = 0:</span>   \u00c2\u209c = \u03b4\u209c          <span class="hl-cmt">// 1-step TD (low variance, high bias)</span>
+<span class="hl-key">\u03bb = 1:</span>   \u00c2\u209c = G\u209c \u2212 V(s\u209c)  <span class="hl-cmt">// Monte Carlo (high variance, no bias)</span>
+<span class="hl-key">\u03bb = 0.95:</span> sweet spot       <span class="hl-cmt">// typical choice</span></div>
+<div class="dp-label">Full PPO Training Loop</div>
+<div class="dp-code"><span class="hl-key">for</span> iteration = 1, 2, ...:
+  1. Run policy \u03c0\u03b8old for T steps, collect {s,a,r,s\u2032}
+  2. Compute \u00c2\u209c via GAE
+  3. <span class="hl-key">for</span> epoch = 1..K (K=3\u20134):
+       <span class="hl-key">for</span> mini-batch in data:
+         Compute r\u209c(\u03b8) = \u03c0\u03b8/\u03c0\u03b8old
+         L = L\u1d9c\u02e1\u1da6\u1d56 \u2212 c\u2081\u00b7L\u1d5b\u1da0 + c\u2082\u00b7S[\u03c0\u03b8]
+         Update \u03b8 via Adam
+  4. \u03b8old \u2190 \u03b8
+
+<span class="hl-cmt">// L\u1d5b\u1da0 = (V\u03b8(s) \u2212 V\u209c\u1d43\u1d38\u1d33)\u00b2  (value loss)</span>
+<span class="hl-cmt">// S = entropy bonus (encourages exploration)</span></div>
+<div class="dp-note n-violet"><strong>Why PPO works:</strong> TRPO (Trust Region Policy Optimization) used a hard KL constraint, requiring expensive conjugate gradient computation. PPO\u2019s clipping achieves similar trust-region behavior with just a few lines of code. It\u2019s simpler, faster, and empirically matches or beats TRPO on nearly all benchmarks.</div>`},
+    7:{title:'MCTS: Selection to Backpropagation',color:'#2563eb',body:`
+<div class="dp-label">UCB1 Selection Formula</div>
+<div class="dp-code"><span class="hl-cmt">// Upper Confidence Bound for Trees</span>
+
+<span class="hl-key">UCB1(child)</span> = Q(child)/N(child) + c \u00b7 \u221a(ln N(parent) / N(child))
+               <span class="hl-str">exploitation</span>              <span class="hl-str">exploration</span>
+
+<span class="hl-key">Q(child):</span>  total value accumulated
+<span class="hl-key">N(child):</span>  visit count
+<span class="hl-key">c:</span>         exploration constant (\u221a2 typical)
+
+<span class="hl-cmt">// AlphaZero uses PUCT variant:</span>
+<span class="hl-key">PUCT(a)</span> = Q(a) + c\u209a\u1d64\u1d9c\u209c \u00b7 P(a) \u00b7 \u221a(N(parent)) / (1 + N(a))
+
+<span class="hl-key">P(a):</span> prior probability from policy network
+<span class="hl-cmt">// Neural network guides search toward promising moves</span></div>
+<div class="dp-label">Four MCTS Phases</div>
+<div class="dp-code"><span class="hl-key">1. SELECT:</span>
+   From root, follow UCB1/PUCT to reach a leaf
+   Always pick child with highest UCB score
+
+<span class="hl-key">2. EXPAND:</span>
+   Add one (or all) children of the leaf node
+   Initialize with P(a) from policy network
+
+<span class="hl-key">3. EVALUATE:</span>
+   <span class="hl-err">Classic MCTS:</span> random rollout to game end
+   <span class="hl-ok">AlphaZero:</span>   v = value_network(leaf_state)
+   (No rollout needed \u2014 much faster)
+
+<span class="hl-key">4. BACKPROPAGATE:</span>
+   Walk back to root, update each ancestor:
+   N(node) += 1
+   Q(node) += v  (or 1\u2212v for opponent nodes)</div>
+<div class="dp-label">AlphaZero: 800 Simulations per Move</div>
+<div class="dp-code"><span class="hl-cmt">// For each move in a game:</span>
+<span class="hl-key">for</span> sim = 1 to <span class="hl-num">800</span>:
+    Select leaf via PUCT
+    Evaluate with network: (p, v) = f\u03b8(state)
+    Expand children with priors p
+    Backpropagate v
+
+<span class="hl-cmt">// After 800 sims, choose move:</span>
+<span class="hl-key">\u03c0(a)</span> = N(a)\u00b9/\u1d40 / \u2211\u2090\u2032 N(a\u2032)\u00b9/\u1d40
+<span class="hl-cmt">// \u03c4 = temperature (high early, low late)</span>
+<span class="hl-cmt">// Proportional to visit count</span></div>
+<div class="dp-note n-blue"><strong>Why 800?</strong> AlphaZero uses 800 MCTS simulations per move, taking ~0.04s on 4 TPUs. More simulations = better play but slower. At competition time, 1600 simulations were used. The network evaluation replaces thousands of random rollouts, making each simulation far more informative.</div>`},
+    8:{title:'RLHF: Reward Model & KL-Constrained PPO',color:'#0d9488',body:`
+<div class="dp-label">Reward Model Training (Bradley-Terry)</div>
+<div class="dp-code"><span class="hl-cmt">// Human annotators compare pairs of responses</span>
+<span class="hl-cmt">// (y\u2081, y\u2082) for prompt x, label which is better</span>
+
+<span class="hl-key">P(y\u2081 \u227b y\u2082 | x)</span> = \u03c3(RM(x,y\u2081) \u2212 RM(x,y\u2082))
+
+<span class="hl-cmt">// Loss: negative log-likelihood of preferences</span>
+<span class="hl-key">L\u1d63\u2098</span> = \u2212E[\u2009log \u03c3(RM(x,y\u2096) \u2212 RM(x,y\u2c7c))\u2009]
+<span class="hl-cmt">// y\u2096 = preferred, y\u2c7c = rejected</span>
+
+<span class="hl-cmt">// RM architecture: LLM backbone + scalar head</span>
+<span class="hl-key">RM(x,y)</span> = Linear(last_hidden_state(x,y)) \u2208 \u211d</div>
+<div class="dp-label">RLHF Objective (KL-Constrained PPO)</div>
+<div class="dp-code"><span class="hl-key">max\u03c0</span> E\u2093~D, y~\u03c0[RM(x,y)] \u2212 \u03b2 \u00b7 KL(\u03c0 || \u03c0\u1d63\u1d49\u1da0)
+
+<span class="hl-cmt">// Per-token reward with KL penalty:</span>
+<span class="hl-key">r\u209c</span> = \u2212\u03b2 \u00b7 log(\u03c0(a\u209c|s\u209c) / \u03c0\u1d63\u1d49\u1da0(a\u209c|s\u209c))
+<span class="hl-key">r\u209c</span> += RM(x,y)  <span class="hl-cmt">// only at final token</span>
+
+<span class="hl-cmt">// \u03b2 controls the constraint strength:</span>
+<span class="hl-key">\u03b2 = 0.01\u20130.1:</span> weak constraint, more RM optimization
+<span class="hl-key">\u03b2 = 0.5\u20131.0:</span> strong constraint, stays near SFT
+
+<span class="hl-cmt">// Without KL penalty:</span>
+<span class="hl-err">Model finds degenerate outputs that hack the RM</span>
+<span class="hl-err">e.g., repeating phrases the RM likes</span></div>
+<div class="dp-note n-teal"><strong>Reward hacking:</strong> The reward model is an imperfect proxy for human preferences. Without the KL constraint, the policy exploits RM weaknesses \u2014 generating outputs that score high on the RM but are actually low quality. The KL penalty keeps the policy close to the SFT model, preventing this exploitation. Typical \u03b2 = 0.02\u20130.2.</div>`},
+    9:{title:'DPO: Direct Preference Optimization',color:'#0d9488',body:`
+<div class="dp-label">DPO Derivation</div>
+<div class="dp-code"><span class="hl-cmt">// Start from RLHF objective:</span>
+<span class="hl-key">max\u03c0</span> E[RM(y)] \u2212 \u03b2 \u00b7 KL(\u03c0||\u03c0\u1d63\u1d49\u1da0)
+
+<span class="hl-cmt">// Closed-form optimal policy:</span>
+<span class="hl-key">\u03c0*(y|x)</span> = \u03c0\u1d63\u1d49\u1da0(y|x) \u00b7 exp(RM(x,y)/\u03b2) / Z(x)
+
+<span class="hl-cmt">// Rearrange to express RM in terms of \u03c0:</span>
+<span class="hl-key">RM(x,y)</span> = \u03b2 \u00b7 log(\u03c0*(y|x) / \u03c0\u1d63\u1d49\u1da0(y|x)) + \u03b2 \u00b7 log Z(x)
+
+<span class="hl-cmt">// Substitute into Bradley-Terry (Z cancels!):</span>
+<span class="hl-key">L\u1d48\u1d56\u1d52</span> = \u2212E[log \u03c3(\u03b2 \u00b7 (
+    log \u03c0\u03b8(y\u2096|x)/\u03c0\u1d63\u1d49\u1da0(y\u2096|x) \u2212
+    log \u03c0\u03b8(y\u2c7c|x)/\u03c0\u1d63\u1d49\u1da0(y\u2c7c|x)
+  ))]</div>
+<div class="dp-label">DPO vs RLHF Comparison</div>
+<div class="dp-code"><span class="hl-key">RLHF Pipeline:</span>
+  1. SFT model          <span class="hl-cmt">// supervised fine-tune</span>
+  2. Train reward model  <span class="hl-cmt">// separate model</span>
+  3. PPO optimization    <span class="hl-cmt">// complex RL loop</span>
+  <span class="hl-err">4 models in memory: policy, ref, RM, critic</span>
+
+<span class="hl-key">DPO Pipeline:</span>
+  1. SFT model
+  2. DPO on preference pairs
+  <span class="hl-ok">2 models in memory: policy, ref</span>
+  <span class="hl-ok">No RM, no PPO, no critic</span>
+  <span class="hl-ok">Just supervised cross-entropy-like loss</span></div>
+<div class="dp-label">GRPO (DeepSeek, 2024)</div>
+<div class="dp-code"><span class="hl-cmt">// Group Relative Policy Optimization</span>
+<span class="hl-cmt">// Generate G responses per prompt</span>
+<span class="hl-cmt">// Score each with verifiable reward (math, code)</span>
+
+<span class="hl-key">\u00c2\u1d62</span> = (r\u1d62 \u2212 mean(r)) / std(r)
+<span class="hl-cmt">// Advantage = how much better than group average</span>
+
+<span class="hl-cmt">// No reward model, no reference model</span>
+<span class="hl-cmt">// Uses verifiable rewards (correct/incorrect)</span>
+<span class="hl-cmt">// Key innovation behind DeepSeek-R1</span></div>
+<div class="dp-note n-teal"><strong>The alignment landscape (2025):</strong> RLHF (PPO) remains the gold standard for complex alignment. DPO is simpler but can suffer from likelihood displacement. GRPO works brilliantly for verifiable tasks (math, code) but needs ground-truth rewards. The trend: combine multiple methods \u2014 SFT + DPO for general alignment, GRPO for reasoning.</div>`},
+  };
+  let current=0,playing=false,timer=null;const nodes=document.querySelectorAll('.fnode[data-step]');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');const detailPanel=document.getElementById('detailPanel');const dpTitle=document.getElementById('dpTitle');const dpBody=document.getElementById('dpBody');const dpClose=document.getElementById('dpClose');const zoneTabs=document.querySelectorAll('.zone-tab');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightNodes(step){nodes.forEach(n=>{const s=parseInt(n.dataset.step);n.classList.toggle('lit',s===step)});const zone=ZONE_MAP[step];zoneTabs.forEach(t=>{t.classList.toggle('active',t.dataset.zone===zone)})}
+  function showDetail(id){const d=DETAILS[id];if(!d)return;dpTitle.textContent=d.title;dpTitle.style.color=d.color;dpBody.innerHTML=d.body;detailPanel.classList.add('open')}
+  function hideDetail(){detailPanel.classList.remove('open')}
+  function activate(step){lightNodes(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}const activeNode=document.querySelector(`.fnode[data-step="${step}"]`);if(activeNode){activeNode.scrollIntoView({behavior:'smooth',block:'nearest'});const detailId=activeNode.dataset.detail;if(detailId)showDetail(parseInt(detailId));else hideDetail()}}
+  function showReset(){nodes.forEach(n=>n.classList.remove('lit'));zoneTabs.forEach(t=>t.classList.remove('active'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the deep dive...';hideDetail()}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);
+  nodes.forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.dataset.step);goTo(s)})});
+  dpClose.addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape')hideDetail()});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Zero-Shot vs Few-Shot — Prompt Engineering Mastery</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Zero-Shot vs Few-Shot</h2><span class="tb-sub">When to give examples, how many, and how to pick good ones &mdash; the most powerful formatting tool you have</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Foundations</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Why Examples</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Zero-Shot Fail</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">looks_one</span></div><span class="pipe-label">One-Shot</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">looks_3</span></div><span class="pipe-label">Three-Shot</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">email</span></div><span class="pipe-label">Real Domain</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">How Many?</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">rule</span></div><span class="pipe-label">Bad Examples</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Checklist</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why examples work -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why Examples Work: In-Context Learning</div><div class="cc-sub">The model doesn&rsquo;t learn from your examples &mdash; it pattern-matches them</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Mechanism</div><div class="cc-text">When you give an LLM examples in your prompt, you&rsquo;re <strong>not fine-tuning it</strong>. The model weights don&rsquo;t change. Instead, you&rsquo;re exploiting something called <strong>in-context learning</strong>: the model sees the pattern in your examples and continues it. Think of it like this &mdash; if you show someone three sentences where every answer is in the format &ldquo;CATEGORY: reason&rdquo;, the fourth answer will follow the same format. The model is a pattern-completion engine (recall Ch 1), and examples are the most direct way to set the pattern.</div></div>
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine you&rsquo;re training a new employee to categorize support tickets. You could <strong>describe the rules</strong> in a long document (&ldquo;If the customer mentions billing, tag it as BILLING. If they mention a bug, tag it as TECHNICAL...&rdquo;). Or you could <strong>show them 3 completed tickets</strong> and say &ldquo;do it like these.&rdquo; The second approach is faster, clearer, and less ambiguous. That&rsquo;s exactly what few-shot prompting does.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Zero-Shot vs Few-Shot &mdash; Defined</div><div class="cc-text"><strong>Zero-shot:</strong> You give the model only instructions, no examples. Works great for simple, well-defined tasks.<br><br><strong>One-shot:</strong> You provide 1 example. Often enough to lock in format.<br><br><strong>Few-shot:</strong> You provide 2&ndash;5 examples. Needed for complex classification, extraction, or when format consistency matters.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Few-shot examples don&rsquo;t teach the model new knowledge &mdash; it already knows how to classify sentiment or extract data. What examples do is <em>eliminate ambiguity about format and decision boundaries</em>. You&rsquo;re not teaching; you&rsquo;re calibrating.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Zero-shot failure -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Zero-Shot Problem: Inconsistent Output</div><div class="cc-sub">A real scenario &mdash; classifying customer support emails for a SaaS dashboard</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Scenario</div><div class="cc-text">You&rsquo;re building an internal tool that auto-classifies incoming customer support emails into categories: <strong>BILLING</strong>, <strong>TECHNICAL</strong>, <strong>FEATURE_REQUEST</strong>, or <strong>ACCOUNT</strong>. Your backend calls the LLM API and parses the response. If the format is inconsistent, your parser breaks.</div></div>
+          <div class="cc-block"><div class="cc-label">Zero-Shot Prompt</div><div class="cc-code">Classify this customer email into one of these categories:
+BILLING, TECHNICAL, FEATURE_REQUEST, ACCOUNT
+
+Email: "Hi, I was charged twice for my Pro plan
+this month. My card shows two $49 charges on
+March 3rd. Can you refund the duplicate? My
+account email is sarah@example.com"</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What You Get (Run 1)</div><div class="cc-code"><span class="hl-cmt">This email is about a billing issue. The
+customer was charged twice and is requesting
+a refund. I would classify this as BILLING.</span></div></div>
+          <div class="cc-block"><div class="cc-label">What You Get (Run 2)</div><div class="cc-code"><span class="hl-cmt">Category: Billing
+Reason: Duplicate charge on credit card</span></div></div>
+          <div class="cc-block"><div class="cc-label">What You Get (Run 3)</div><div class="cc-code"><span class="hl-cmt">BILLING</span></div></div>
+          <div class="cc-note n-red"><strong>The problem:</strong> The model gets the <em>answer</em> right every time (it&rsquo;s billing), but the <em>format</em> is different every time. Run 1 is a paragraph, Run 2 is &ldquo;Category: Billing&rdquo; (wrong case), Run 3 is what you actually want. Your <code>JSON.parse()</code> or regex will fail 2 out of 3 times.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: One-shot fix -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">looks_one</span></div><div><div class="cc-title">One-Shot: A Single Example Changes Everything</div><div class="cc-sub">One example locks in the format &mdash; the model mirrors what it sees</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">One-Shot Prompt</div><div class="cc-code">Classify customer emails into exactly one
+category. Reply with ONLY the category name.
+
+Categories: BILLING, TECHNICAL,
+FEATURE_REQUEST, ACCOUNT
+
+<span class="hl-key">Example:</span>
+Email: "I can't log in to my account. I've
+tried resetting my password three times but
+the reset email never arrives."
+Category: <span class="hl-str">ACCOUNT</span>
+
+<span class="hl-key">Now classify:</span>
+Email: "Hi, I was charged twice for my Pro
+plan this month. My card shows two $49
+charges on March 3rd. Can you refund the
+duplicate? My account email is
+sarah@example.com"
+Category:</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output (Consistent Across Runs)</div><div class="cc-code"><span class="hl-str">BILLING</span></div></div>
+          <div class="cc-block"><div class="cc-label">Why This Works</div><div class="cc-text">The example establishes three things simultaneously:<br><br><strong>1. Format:</strong> Just the category name, nothing else<br><strong>2. Case:</strong> ALL_CAPS, matching the category list<br><strong>3. Structure:</strong> &ldquo;Email: ... Category: ...&rdquo; pattern<br><br>The model sees the pattern and continues it. You didn&rsquo;t need to say &ldquo;respond with only one word&rdquo; or &ldquo;use uppercase&rdquo; &mdash; the example <em>showed</em> all of that implicitly.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> One example is often enough for format locking. The model is remarkably good at inferring &ldquo;oh, I should respond like <em>that</em>&rdquo; from a single demonstration. Save multi-shot for when the <em>decision logic</em> is ambiguous, not just the format.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Three-shot for ambiguous boundaries -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">looks_3</span></div><div><div class="cc-title">Three-Shot: Handling Ambiguous Boundaries</div><div class="cc-sub">When emails could belong to multiple categories, examples define the decision rules</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Ambiguity Problem</div><div class="cc-text">Consider this email: &ldquo;Your API keeps returning 500 errors when I try to upgrade my plan.&rdquo; Is that <strong>TECHNICAL</strong> (API error) or <strong>BILLING</strong> (plan upgrade)? Without examples showing how you want edge cases handled, the model guesses &mdash; and different runs give different answers.</div></div>
+          <div class="cc-block"><div class="cc-label">Three-Shot Prompt (Edge Cases)</div><div class="cc-code">Classify customer emails. Reply with ONLY
+the category name. When an email touches
+multiple areas, classify by the ROOT CAUSE.
+
+Categories: BILLING, TECHNICAL,
+FEATURE_REQUEST, ACCOUNT
+
+<span class="hl-key">Example 1:</span>
+Email: "I can't log in. Password reset emails
+never arrive."
+Category: <span class="hl-str">ACCOUNT</span>
+
+<span class="hl-key">Example 2:</span>
+Email: "The export feature crashes when I
+select more than 1000 rows."
+Category: <span class="hl-str">TECHNICAL</span>
+
+<span class="hl-key">Example 3:</span>
+Email: "I'm getting timeout errors when
+trying to change my subscription from
+monthly to annual."
+Category: <span class="hl-str">TECHNICAL</span>
+
+Now classify:
+Email: "Your API keeps returning 500 errors
+when I try to upgrade my plan."
+Category:</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Output</div><div class="cc-code"><span class="hl-str">TECHNICAL</span></div></div>
+          <div class="cc-block"><div class="cc-label">What the Examples Taught</div><div class="cc-text">Example 3 is the critical one. It shows a billing-adjacent situation (subscription change) that&rsquo;s classified as TECHNICAL because the <em>root cause</em> is a timeout error. The model now has a precedent: <strong>when a technical issue blocks a billing action, classify as TECHNICAL</strong>. Without Example 3, the model would flip between BILLING and TECHNICAL randomly.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Without Edge-Case Example</div><div class="cb-text">Run 1: BILLING<br>Run 2: TECHNICAL<br>Run 3: BILLING<br><br>Inconsistent &mdash; the model has no precedent for this boundary.</div></div>
+            <div class="compare-box good"><div class="cb-tag">With Edge-Case Example</div><div class="cb-text">Run 1: TECHNICAL<br>Run 2: TECHNICAL<br>Run 3: TECHNICAL<br><br>Consistent &mdash; Example 3 set the decision rule.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Real domain example — support email extraction -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">email</span></div><div><div class="cc-title">Domain Example: Extracting Data from Support Emails</div><div class="cc-sub">Zero-shot misses fields and invents formats &mdash; two examples fix everything</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Task</div><div class="cc-text">Your support team receives hundreds of emails daily. You need to extract structured data: <strong>customer name</strong>, <strong>product</strong>, <strong>issue type</strong>, and <strong>urgency</strong> (low/medium/high). This feeds into a Jira ticket creation pipeline.</div></div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Zero-Shot Attempt</div><div class="cb-text"><strong>Prompt:</strong> &ldquo;Extract the customer name, product, issue, and urgency from this email: [email text]&rdquo;<br><br><strong>Output:</strong><br>The customer is John Martinez. He&rsquo;s having trouble with the Analytics Dashboard &mdash; specifically, the real-time charts aren&rsquo;t updating. This seems moderately urgent since it&rsquo;s affecting their daily standups.<br><br><em>Problem: Prose format. No structured fields. &ldquo;moderately urgent&rdquo; instead of &ldquo;medium&rdquo;. Can&rsquo;t parse this.</em></div></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Two-Shot Prompt</div><div class="cc-code"><span class="hl-key">Extract structured data from support emails.
+Follow the exact format shown.</span>
+
+<span class="hl-key">Example 1:</span>
+Email: "Hi, this is Lisa Chen. Our team
+relies on the Reporting Module for weekly
+client updates, but PDF exports have been
+broken since Tuesday. This is blocking our
+Friday deliverable."
+---
+name: <span class="hl-str">Lisa Chen</span>
+product: <span class="hl-str">Reporting Module</span>
+issue: <span class="hl-str">PDF export broken since Tuesday</span>
+urgency: <span class="hl-str">high</span>
+
+<span class="hl-key">Example 2:</span>
+Email: "Hey, Mike here from Acme Corp. Just
+noticed the dark mode toggle in Settings
+doesn't save the preference. Minor thing but
+it resets every time I log in."
+---
+name: <span class="hl-str">Mike (Acme Corp)</span>
+product: <span class="hl-str">Settings</span>
+issue: <span class="hl-str">Dark mode preference not persisting</span>
+urgency: <span class="hl-str">low</span>
+
+<span class="hl-key">Now extract:</span>
+Email: "This is John Martinez. The real-time
+charts on our Analytics Dashboard stopped
+updating about 2 hours ago. Our team uses
+this for daily standups at 9am — we need
+this fixed before tomorrow morning."
+---</div></div>
+          <div class="cc-block"><div class="cc-label">Model Output</div><div class="cc-code">name: <span class="hl-str">John Martinez</span>
+product: <span class="hl-str">Analytics Dashboard</span>
+issue: <span class="hl-str">Real-time charts stopped updating</span>
+urgency: <span class="hl-str">high</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The examples taught the model five things without a single explicit instruction: (1) use the &ldquo;---&rdquo; separator, (2) use lowercase field names, (3) keep issue descriptions concise, (4) map urgency to exactly low/medium/high, (5) include company name in parentheses when available. Show, don&rsquo;t tell.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: How many examples? -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">How Many Examples Do You Actually Need?</div><div class="cc-sub">Research says 2&ndash;5 is the sweet spot &mdash; here&rsquo;s the decision framework</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Diminishing Returns Curve</div><div class="cc-text">Research on few-shot prompting consistently shows:<br><br><strong>0 → 1 example:</strong> Biggest jump. Format consistency improves dramatically.<br><strong>1 → 2 examples:</strong> Significant gain. Decision boundaries become clearer.<br><strong>2 → 3 examples:</strong> Moderate gain. Edge cases get covered.<br><strong>3 → 5 examples:</strong> Diminishing returns. Only helps for very complex classification.<br><strong>5+ examples:</strong> Rarely worth it. Token cost increases linearly while accuracy plateaus.</div></div>
+          <div class="cc-block"><div class="cc-label">The Decision Framework</div><div class="cc-code"><span class="hl-cmt"># How many examples do I need?</span>
+
+<span class="hl-key">Simple format locking</span> (JSON, CSV, etc.)
+→ <span class="hl-num">1 example</span> is usually enough
+
+<span class="hl-key">Classification with clear categories</span>
+→ <span class="hl-num">2 examples</span> (one per tricky category)
+
+<span class="hl-key">Classification with fuzzy boundaries</span>
+→ <span class="hl-num">3 examples</span> (include edge cases)
+
+<span class="hl-key">Complex extraction or transformation</span>
+→ <span class="hl-num">3-5 examples</span> (show variety)
+
+<span class="hl-key">Style/tone matching</span>
+→ <span class="hl-num">2-3 examples</span> of the target style</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Token Cost Reality Check</div><div class="cc-text">Each example adds ~50&ndash;200 tokens to your prompt. At GPT-4 pricing (~$10/M input tokens), 3 examples on every API call across 10,000 daily requests adds roughly <strong>$1.50&ndash;$6/day</strong>. That&rsquo;s almost nothing compared to the cost of inconsistent outputs breaking your pipeline.<br><br>However, if you&rsquo;re hitting context window limits (e.g., processing long documents), every token counts. In those cases, <strong>invest in 1 perfect example rather than 3 mediocre ones</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">Quality Over Quantity</div><div class="cc-text">One well-chosen example that covers an edge case is worth more than five examples of obvious cases. If all your examples are straightforward (&ldquo;I want a refund&rdquo; → BILLING), the model learns nothing it didn&rsquo;t already know. <strong>Pick examples that show the hard decisions.</strong></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The question isn&rsquo;t &ldquo;how many examples?&rdquo; &mdash; it&rsquo;s &ldquo;what do my examples teach that my instructions alone can&rsquo;t?&rdquo; If the answer is &ldquo;nothing,&rdquo; you don&rsquo;t need examples. If the answer is &ldquo;format + edge cases,&rdquo; you need 2&ndash;3.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Bad examples — what to avoid -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">rule</span></div><div><div class="cc-title">Bad Examples: What Poisons Your Few-Shot Prompt</div><div class="cc-sub">Common mistakes that make few-shot worse than zero-shot</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Mistake 1: Inconsistent Format Across Examples</div><div class="cc-code"><span class="hl-cmt">❌ BAD — format varies between examples</span>
+
+Example 1:
+Email: "Can't log in"
+→ Category: ACCOUNT, Urgency: high
+
+Example 2:
+Email: "Dark mode broken"
+→ <span class="hl-str">TECHNICAL</span> (low urgency)
+
+Example 3:
+Email: "Refund request"
+→ This is a billing issue. <span class="hl-str">BILLING</span>. Medium.</div></div>
+          <div class="cc-block"><div class="cc-text">The model sees three different output formats and has no idea which one to follow. It might pick any of them, or worse, invent a fourth format that blends all three. <strong>Every example must use the exact same structure.</strong></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Mistake 2: All Easy Cases, No Edge Cases</div><div class="cc-text">If every example is obvious (&ldquo;I want a refund&rdquo; → BILLING, &ldquo;app crashes&rdquo; → TECHNICAL), you&rsquo;re wasting tokens. The model already knows these. <strong>Include at least one example where the answer isn&rsquo;t obvious</strong> &mdash; that&rsquo;s where few-shot actually adds value.</div></div>
+          <div class="cc-block"><div class="cc-label">Mistake 3: Examples That Contradict Your Instructions</div><div class="cc-code"><span class="hl-cmt">❌ BAD — instruction says "one word" but
+example gives a sentence</span>
+
+Reply with ONLY the category name.
+
+Example:
+Email: "Can't export data"
+Category: This is a <span class="hl-str">TECHNICAL</span> issue
+because the export feature is broken.</div></div>
+          <div class="cc-block"><div class="cc-text">When instructions and examples conflict, <strong>the model follows the examples</strong>. Examples are stronger than instructions because they&rsquo;re concrete patterns, not abstract rules. Always make sure your examples perfectly demonstrate what your instructions describe.</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> If your few-shot prompt gives worse results than zero-shot, the problem is almost always one of these three: inconsistent format, trivial examples, or examples that contradict your instructions. Fix the examples before adding more.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Practical checklist -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">check_circle</span></div><div><div class="cc-title">The Few-Shot Checklist</div><div class="cc-sub">A practical decision tree for every prompt you write</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When to Use Zero-Shot</div><div class="cc-text"><strong>Use zero-shot when:</strong><br>• The task is simple and well-defined (summarize, translate, explain)<br>• Format doesn&rsquo;t matter (human will read the output)<br>• You&rsquo;re exploring / prototyping and don&rsquo;t need consistency yet<br>• Context window is tight and you can&rsquo;t afford extra tokens</div></div>
+          <div class="cc-block"><div class="cc-label">When to Use Few-Shot</div><div class="cc-text"><strong>Use few-shot when:</strong><br>• Output feeds into code (API responses, parsers, pipelines)<br>• Classification has ambiguous boundaries<br>• You need a specific tone, style, or format<br>• Zero-shot gives correct answers but inconsistent format<br>• The task involves domain-specific conventions the model might not default to</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Example Selection Checklist</div><div class="cc-code"><span class="hl-cmt"># Before adding examples, verify:</span>
+
+<span class="hl-key">□ Format consistency</span>
+  Every example uses identical structure
+
+<span class="hl-key">□ Diversity</span>
+  Examples cover different categories/cases
+
+<span class="hl-key">□ Edge cases included</span>
+  At least 1 example shows a hard decision
+
+<span class="hl-key">□ No contradictions</span>
+  Examples match your written instructions
+
+<span class="hl-key">□ Minimal but sufficient</span>
+  Start with 2, add more only if needed
+
+<span class="hl-key">□ Representative</span>
+  Examples look like real inputs, not toy data</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Few-shot prompting is the bridge between &ldquo;the model understands my task&rdquo; and &ldquo;the model does my task exactly how I need it done.&rdquo; Instructions tell the model <em>what</em> to do. Examples show it <em>how</em> you want it done. Master this distinction and you&rsquo;ll never fight with output format again.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-anatomy-of-a-prompt.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: Anatomy of a Prompt</a>
+    <a class="ch-nav-btn next" href="04-chain-of-thought.html">Ch 4: Chain-of-Thought <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Why examples work: in-context learning. The model doesn\'t learn from your examples — it pattern-matches them. Examples set the pattern; the model continues it.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> Zero-shot classification: the model gets the answer right but the format is different every time. Paragraph, "Category: ...", or just the word. Your parser breaks 2 out of 3 times.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> One example fixes format instantly. The model sees "Email: ... Category: ACCOUNT" and mirrors it. You didn\'t say "one word, uppercase" — the example showed it.',color:'#0d9488'},
+    4:{text:'<strong>Step 4:</strong> Three examples handle ambiguous boundaries. "API error during plan upgrade" — is that BILLING or TECHNICAL? Example 3 sets the precedent: root cause wins.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Real domain: extracting structured data from messy support emails. Zero-shot gives prose. Two examples give perfect key-value pairs every time.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> How many examples? 1 for format, 2-3 for classification, 3-5 for complex extraction. Quality beats quantity — pick examples that show hard decisions.',color:'#d97706'},
+    7:{text:'<strong>Step 7:</strong> Bad examples poison your prompt: inconsistent format, all easy cases, or examples that contradict instructions. Fix examples before adding more.',color:'#dc2626'},
+    8:{text:'<strong>Step 8:</strong> The checklist: use zero-shot for simple tasks, few-shot when output feeds code. Instructions say what; examples show how. Master this and you\'ll never fight format again.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Evaluation &amp; Benchmarks — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--blue)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--teal-light) 50%,var(--amber-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--teal),var(--amber),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{background:#1d4ed8;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Evaluation &amp; Benchmarks</h2><span class="tb-sub">MMLU, HumanEval, MT-Bench, Chatbot Arena, Open LLM Leaderboard, custom evaluation, and human evaluation</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="09-evaluation-benchmarks-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Why Eval</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">quiz</span></div><span class="pipe-label">Benchmarks</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Code Eval</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">gavel</span></div><span class="pipe-label">LLM Judge</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">stadium</span></div><span class="pipe-label">Arena</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">leaderboard</span></div><span class="pipe-label">Leaderboard</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Custom Eval</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why Evaluation Matters -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">help</span></div><div><div class="cc-title">Why Evaluation Matters</div><div class="cc-sub">Training loss is not enough &mdash; you need to measure real-world capability</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem with Loss Curves</div><div class="cc-text"><strong>Training loss goes down &mdash; is the model better?</strong> Not necessarily. Low training loss can mean overfitting, memorization, or reward hacking. A model can have perfect loss on your training data while performing worse on real tasks.<br><br><strong>The gap between loss and usefulness:</strong> Loss measures how well the model predicts the next token on your specific dataset. It does not measure reasoning ability, factual accuracy, instruction following, safety, or whether users actually prefer the outputs.</div></div>
+          <div class="cc-block"><div class="cc-label">What Evaluation Actually Measures</div><div class="cc-text"><strong>Knowledge &amp; reasoning:</strong> Can the model answer questions across domains? (MMLU, ARC, GPQA)<br><br><strong>Code generation:</strong> Can it write working code? (HumanEval, MBPP)<br><br><strong>Math:</strong> Can it solve problems step-by-step? (GSM8K, MATH)<br><br><strong>Instruction following:</strong> Does it follow formatting and constraint instructions? (IFEval)<br><br><strong>Human preference:</strong> Do humans actually prefer its outputs? (Chatbot Arena, MT-Bench)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Evaluation Stack</div><div class="cc-text"><strong>Automated benchmarks:</strong> Standardized tests with known correct answers. Fast, reproducible, but can be gamed. Examples: MMLU, HumanEval, GSM8K.<br><br><strong>LLM-as-judge:</strong> Use a strong model (GPT-4) to evaluate outputs. Scalable, correlates well with humans (~80% agreement). Examples: MT-Bench, AlpacaEval.<br><br><strong>Human evaluation:</strong> Real humans rate outputs. Gold standard but expensive ($1-5 per comparison) and slow. Examples: Chatbot Arena, custom annotation.<br><br><strong>Best practice:</strong> Use all three. Automated benchmarks for quick iteration, LLM-as-judge for development, human evaluation for final validation.</div></div>
+          <div class="cc-note n-amber"><strong>The #1 mistake in fine-tuning:</strong> Only looking at training loss. You must evaluate on held-out data using task-relevant benchmarks. A model that scores well on MMLU but poorly on your specific task is useless for your use case. Always include custom evaluation on your actual task.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Standard Benchmarks -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">quiz</span></div><div><div class="cc-title">Standard Benchmarks</div><div class="cc-sub">The canonical tests for measuring LLM capabilities</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Knowledge &amp; Reasoning</div><div class="cc-text"><strong>MMLU</strong> (Massive Multitask Language Understanding, Hendrycks et al. 2021): 57 subjects from elementary to professional level. 14K multiple-choice questions. 5-shot evaluation. The most widely reported benchmark. <em>Limitation:</em> 4-choice format is easy to game; data contamination is widespread.<br><br><strong>MMLU-PRO</strong> (Wang et al. 2024): Harder version with 10 choices instead of 4, requiring more reasoning. Expert-reviewed to reduce noise. Used in Open LLM Leaderboard v2.<br><br><strong>ARC</strong> (AI2 Reasoning Challenge, Clark et al. 2018): Grade-school science questions. ARC-Easy and ARC-Challenge splits. Tests basic scientific reasoning.<br><br><strong>TruthfulQA</strong> (Lin et al. 2022): 817 questions designed to elicit common misconceptions. Measures whether the model gives truthful answers rather than popular but wrong ones.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reasoning &amp; Math</div><div class="cc-text"><strong>GSM8K</strong> (Cobbe et al. 2021): 8.5K grade-school math word problems. Tests multi-step arithmetic reasoning. Chain-of-thought prompting dramatically improves scores.<br><br><strong>MATH</strong> (Hendrycks et al. 2021): 12.5K competition-level math problems across 7 subjects. Levels 1-5 difficulty. MATH Lvl 5 (hardest) is used in Open LLM Leaderboard v2.<br><br><strong>BBH</strong> (Big Bench Hard, Suzgun et al. 2022): 23 challenging tasks from BIG-Bench where models previously failed. Covers multistep arithmetic, algorithmic reasoning, language understanding, and world knowledge.<br><br><strong>HellaSwag</strong> (Zellers et al. 2019): Sentence completion benchmark. Tests commonsense reasoning. Was hard when released but most modern models score &gt;95%.</div></div>
+          <div class="cc-note n-violet"><strong>Benchmark saturation is real.</strong> HellaSwag, ARC-Easy, and original MMLU are now too easy for frontier models. This is why the Open LLM Leaderboard moved to v2 with harder benchmarks (MMLU-PRO, GPQA, BBH, MATH Lvl 5, MuSR, IFEval). Always check if a benchmark still discriminates between models.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Code Benchmarks -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Code &amp; Instruction-Following Benchmarks</div><div class="cc-sub">Measuring functional correctness and constraint adherence</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Code Generation</div><div class="cc-text"><strong>HumanEval</strong> (Chen et al. 2021, OpenAI): 164 hand-crafted Python problems. Each has a function signature, docstring, and unit tests. The model generates code, which is <em>executed</em> against the tests. Measures functional correctness, not lexical similarity.<br><br><strong>Pass@k metric:</strong> Generate k samples per problem, report the fraction where at least one passes all tests. Pass@1 = single-shot accuracy. Pass@10 = probability with 10 attempts. Original Codex: 28.8% pass@1, 70.2% pass@100.<br><br><strong>MBPP</strong> (Austin et al. 2021, Google): 974 crowd-sourced Python problems. Simpler than HumanEval but larger. Also uses execution-based evaluation.<br><br><strong>HumanEval+</strong> (Liu et al. 2023): Extended version with 80x more test cases per problem. Catches models that pass original tests by coincidence.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Instruction Following</div><div class="cc-text"><strong>IFEval</strong> (Zhou et al. 2023): Tests whether models follow specific formatting instructions. Examples: &ldquo;Write exactly 3 paragraphs&rdquo;, &ldquo;Include the word &lsquo;therefore&rsquo; at least twice&rdquo;, &ldquo;Respond in JSON format&rdquo;. Uses strict and loose metrics. Used in Open LLM Leaderboard v2.<br><br><strong>GPQA</strong> (Rein et al. 2023): Graduate-level questions written by PhD experts in biology, physics, and chemistry. &ldquo;Google-proof&rdquo; &mdash; even domain experts with internet access struggle. Restricted access to prevent data contamination. Used in Open LLM Leaderboard v2.</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-blue"><strong>HumanEval</strong><br>164 Python problems<br>Execution-based<br>Pass@k metric<br>Chen et al. 2021</div>
+            <div class="compare-item ci-violet"><strong>MBPP</strong><br>974 Python problems<br>Execution-based<br>Simpler, larger<br>Austin et al. 2021</div>
+            <div class="compare-item ci-teal"><strong>IFEval</strong><br>Instruction following<br>Format constraints<br>Strict/loose metrics<br>Zhou et al. 2023</div>
+            <div class="compare-item ci-amber"><strong>GPQA</strong><br>PhD-level science<br>Google-proof<br>Restricted access<br>Rein et al. 2023</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: LLM-as-Judge -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">gavel</span></div><div><div class="cc-title">LLM-as-Judge Evaluation</div><div class="cc-sub">Using strong models to evaluate weaker ones</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">MT-Bench</div><div class="cc-text"><strong>MT-Bench</strong> (Zheng et al. 2023, LMSYS): 80 multi-turn questions across 8 categories: writing, roleplay, reasoning, math, coding, extraction, STEM, humanities. GPT-4 scores each response on a 1&ndash;10 scale with detailed explanations.<br><br><strong>Key innovation:</strong> Multi-turn evaluation. Turn 1 asks a question, Turn 2 follows up. This tests the model&rsquo;s ability to maintain context and handle follow-up instructions &mdash; closer to real conversations than single-turn benchmarks.<br><br><strong>Judge agreement:</strong> GPT-4 as judge achieves &gt;80% agreement with human preferences, matching inter-human agreement rates.</div></div>
+          <div class="cc-block"><div class="cc-label">AlpacaEval 2</div><div class="cc-text"><strong>AlpacaEval 2</strong> (Dubois et al. 2024, Stanford): 805 instructions from diverse sources. Compares model outputs against a reference model (GPT-4 Turbo). Reports <strong>length-controlled (LC) win rate</strong> to penalize models that win by being verbose rather than better.<br><br><strong>Why LC matters:</strong> Naive win rate rewards longer outputs (judges prefer verbose answers). LC win rate regresses out the length effect, giving a fairer comparison.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Arena-Hard</div><div class="cc-text"><strong>Arena-Hard</strong> (Li et al. 2024, LMSYS): 500 challenging user queries sourced from real Chatbot Arena conversations. Uses GPT-4 Turbo as judge. Designed to have high agreement with Chatbot Arena rankings (&gt;89% separability). Faster and cheaper than running a full arena.</div></div>
+          <div class="cc-block"><div class="cc-label">Strengths &amp; Limitations</div><div class="cc-text"><strong>Strengths:</strong> Scalable, reproducible, evaluates open-ended generation (not just multiple choice), correlates well with human preferences.<br><br><strong>Limitations:</strong> Judge bias (GPT-4 favors GPT-4-style outputs), position bias (first response preferred), verbosity bias (longer = better), self-enhancement bias (models rate their own outputs higher). Mitigations: swap positions, use LC metrics, use multiple judges.</div></div>
+          <div class="cc-note n-teal"><strong>LLM-as-judge is the practical sweet spot.</strong> It is 10-100x cheaper than human evaluation, 100x faster, and correlates at &gt;80% with human preferences. Use MT-Bench for multi-turn chat quality, AlpacaEval 2 LC for instruction following, and Arena-Hard for challenging real-world queries.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Chatbot Arena -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">stadium</span></div><div><div class="cc-title">Chatbot Arena &amp; Elo Ratings</div><div class="cc-sub">The gold standard for human preference evaluation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How Chatbot Arena Works</div><div class="cc-text"><strong>LMSYS Chatbot Arena</strong> (Zheng et al. 2023): An open platform where users chat with two anonymous models side-by-side and vote for the better response. The models are revealed only after voting. Over 800,000 votes collected across 90+ models since May 2023.<br><br><strong>Blind A/B testing:</strong> Users don&rsquo;t know which model they&rsquo;re talking to, eliminating brand bias. This is the closest thing to a controlled experiment for LLM quality.<br><br><strong>Elo rating system:</strong> Borrowed from chess. Each model starts with a baseline rating. Wins against strong opponents increase rating more than wins against weak ones. The rating converges to a stable ranking over thousands of votes.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Arena Matters</div><div class="cc-text"><strong>Real user queries:</strong> Unlike curated benchmarks, Arena tests models on whatever users actually ask &mdash; from creative writing to debugging code to explaining physics.<br><br><strong>Domain-specific rankings:</strong> Arena provides separate Elo scores for coding, math, hard prompts, and general conversation. A model can rank #1 in coding but #5 overall.<br><br><strong>The 1500 Elo barrier:</strong> As of early 2026, only a handful of frontier models exceed 1500 Elo, driven by test-time compute (&ldquo;thinking&rdquo;) approaches that spend more time reasoning before responding.</div></div>
+          <div class="cc-note n-pink"><strong>For fine-tuning evaluation:</strong> You probably won&rsquo;t submit your fine-tuned model to Chatbot Arena. But Arena rankings tell you which models are the strongest <em>judges</em> for LLM-as-judge evaluation. Use the top-ranked model as your judge. Arena also sets the ceiling &mdash; if your fine-tuned 8B model approaches the Arena score of a 70B model on your specific task, that&rsquo;s a major win.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Open LLM Leaderboard -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">leaderboard</span></div><div><div class="cc-title">Open LLM Leaderboard</div><div class="cc-sub">HuggingFace&rsquo;s standardized evaluation for open-source models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Leaderboard v1 (Retired)</div><div class="cc-text"><strong>Original benchmarks (2023&ndash;2024):</strong><br>- ARC (25-shot, science reasoning)<br>- HellaSwag (10-shot, commonsense)<br>- MMLU (5-shot, knowledge)<br>- TruthfulQA (0-shot, truthfulness)<br>- Winogrande (5-shot, coreference)<br>- GSM8K (5-shot, math)<br><br><strong>Why it was retired:</strong> Benchmarks became saturated. Top models scored &gt;95% on HellaSwag and ARC. Data contamination was rampant &mdash; models were trained on benchmark data. The leaderboard no longer discriminated between good and great models.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Leaderboard v2 (Current)</div><div class="cc-text"><strong>New benchmarks (launched mid-2024):</strong><br>- <strong>MMLU-PRO:</strong> 10 choices, reasoning-heavy<br>- <strong>GPQA:</strong> PhD-level science, Google-proof<br>- <strong>BBH:</strong> 23 hard tasks from BIG-Bench<br>- <strong>MATH Lvl 5:</strong> Competition math, hardest level<br>- <strong>MuSR:</strong> ~1000-word multi-step reasoning<br>- <strong>IFEval:</strong> Instruction-following compliance<br><br><strong>Key changes:</strong> All benchmarks are harder. Scores dropped significantly (average went from ~70% to ~30%). This restored the leaderboard&rsquo;s ability to differentiate models. All evaluations run through EleutherAI&rsquo;s lm-evaluation-harness for reproducibility.</div></div>
+          <div class="cc-note n-green"><strong>For your fine-tuned model:</strong> Run the same benchmarks locally using <code>lm-evaluation-harness</code>. Compare your fine-tuned model against the base model on the v2 suite. If your fine-tuned model drops significantly on general benchmarks, you may have catastrophic forgetting. If it improves on your target task without dropping elsewhere, you have a successful fine-tune.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Custom Evaluation -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Custom &amp; Human Evaluation</div><div class="cc-sub">Building evaluation that matches your actual use case</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Custom Evaluation Design</div><div class="cc-text"><strong>Step 1: Define success criteria.</strong> What does &ldquo;good&rdquo; mean for your task? Factual accuracy? Correct format? Appropriate tone? Specific domain knowledge?<br><br><strong>Step 2: Build a test set.</strong> 100&ndash;500 examples that represent your real use case. Include edge cases. Never use training data for evaluation. Have domain experts create or validate the test set.<br><br><strong>Step 3: Choose metrics.</strong> For classification: accuracy, F1, precision/recall. For generation: LLM-as-judge scores, ROUGE/BLEU (if reference answers exist), exact match (for structured output). For preference: win rate vs baseline model.<br><br><strong>Step 4: Automate.</strong> Run evaluation after every training run. Compare against the base model and your best previous fine-tune. Track metrics over time in WandB.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Human Evaluation</div><div class="cc-text"><strong>When to use:</strong> Final validation before deployment. When automated metrics don&rsquo;t capture what matters (tone, creativity, safety). When you need stakeholder buy-in.<br><br><strong>Design principles:</strong><br>- Blind comparison (A/B testing, evaluator doesn&rsquo;t know which model is which)<br>- Clear rubric (define exactly what &ldquo;better&rdquo; means)<br>- Multiple evaluators (at least 3 per example)<br>- Inter-annotator agreement (Cohen&rsquo;s kappa &gt; 0.6 is acceptable)<br>- Sufficient sample size (100+ comparisons for statistical significance)<br><br><strong>Cost:</strong> $1&ndash;5 per comparison. A 200-example evaluation with 3 annotators costs $600&ndash;3,000. Use LLM-as-judge for iteration, human evaluation for final decisions.</div></div>
+          <div class="cc-note n-orange"><strong>The complete evaluation recipe:</strong> (1) Run lm-evaluation-harness for general benchmarks &mdash; check for catastrophic forgetting. (2) Run your custom test set with LLM-as-judge &mdash; measure task-specific quality. (3) Do a small human evaluation (50&ndash;100 examples) &mdash; validate that LLM-judge scores match human preferences. (4) Deploy with monitoring &mdash; track real-world performance and user feedback.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Why evaluation matters:</strong> Training loss going down does not mean your model is better. Low loss can mean overfitting or memorization. You need to measure real capabilities: knowledge (MMLU), code (HumanEval), math (GSM8K), instruction following (IFEval), and human preference (Chatbot Arena). Use automated benchmarks for iteration, LLM-as-judge for development, and human evaluation for final validation.',color:'#d97706'},
+    2:{text:'<strong>Standard benchmarks:</strong> <strong>MMLU</strong> \u2014 57 subjects, 14K questions, the most widely reported. <strong>MMLU-PRO</strong> \u2014 harder version with 10 choices. <strong>GSM8K</strong> \u2014 grade-school math. <strong>MATH Lvl 5</strong> \u2014 competition math. <strong>BBH</strong> \u2014 23 hard reasoning tasks. <strong>HellaSwag</strong> \u2014 commonsense (now saturated). The Open LLM Leaderboard v2 uses MMLU-PRO, GPQA, BBH, MATH Lvl 5, MuSR, and IFEval.',color:'#7c3aed'},
+    3:{text:'<strong>Code &amp; instruction benchmarks:</strong> <strong>HumanEval</strong> \u2014 164 Python problems, execution-based, pass@k metric. <strong>MBPP</strong> \u2014 974 simpler problems. <strong>IFEval</strong> \u2014 tests format compliance (\u201cwrite exactly 3 paragraphs\u201d). <strong>GPQA</strong> \u2014 PhD-level science, Google-proof. These benchmarks test what multiple-choice tests cannot: can the model actually <em>do</em> things?',color:'#2563eb'},
+    4:{text:'<strong>LLM-as-judge:</strong> <strong>MT-Bench</strong> \u2014 80 multi-turn questions, GPT-4 scores 1\u201310, 8 categories. <strong>AlpacaEval 2</strong> \u2014 805 instructions, length-controlled win rate vs GPT-4 Turbo. <strong>Arena-Hard</strong> \u2014 500 hard queries from real Arena conversations. LLM judges achieve &gt;80% agreement with humans. The practical sweet spot: 10\u2013100x cheaper than human eval.',color:'#0d9488'},
+    5:{text:'<strong>Chatbot Arena:</strong> LMSYS\u2019s blind A/B testing platform. 800K+ votes, 90+ models. Users chat with two anonymous models and vote. Elo ratings from chess. Domain-specific scores for coding, math, hard prompts. The gold standard for human preference. As of early 2026, only a few frontier models exceed 1500 Elo, driven by test-time compute approaches.',color:'#db2777'},
+    6:{text:'<strong>Open LLM Leaderboard:</strong> v1 (retired) used MMLU, HellaSwag, ARC, TruthfulQA, GSM8K \u2014 became saturated. v2 (current) uses <strong>MMLU-PRO, GPQA, BBH, MATH Lvl 5, MuSR, IFEval</strong> \u2014 much harder, average scores dropped from ~70% to ~30%. All evaluations run through EleutherAI\u2019s <code>lm-evaluation-harness</code>. Run the same benchmarks locally to compare your fine-tuned model.',color:'#16a34a'},
+    7:{text:'<strong>Custom &amp; human evaluation:</strong> Build a test set of 100\u2013500 examples from your real use case. Use LLM-as-judge for fast iteration. Do blind A/B human evaluation (3+ annotators, Cohen\u2019s kappa &gt; 0.6) for final validation. The complete recipe: (1) general benchmarks for forgetting, (2) custom LLM-judge for task quality, (3) small human eval for validation, (4) deploy with monitoring.',color:'#ea580c'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--blue)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

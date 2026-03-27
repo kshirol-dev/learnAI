@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: Building an Eval Pipeline — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Building an Eval Pipeline</h2><span class="tb-sub">From ad-hoc testing to systematic, CI/CD-integrated evaluation that blocks bad deployments</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">dataset</span></div><span class="pipe-label">Dataset</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Metrics</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Baseline</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">rule</span></div><span class="pipe-label">CI/CD</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">history</span></div><span class="pipe-label">Regression</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">trending_up</span></div><span class="pipe-label">Maturity</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">dataset</span></div>
+        <div><div class="cc-title">Building Your Eval Dataset</div><div class="cc-sub">The foundation everything else depends on</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Golden Dataset</div>
+            <div class="cc-text">Your eval dataset is the <strong>single most important asset</strong> in your evaluation system. It&rsquo;s a curated collection of inputs paired with expected behaviors &mdash; the definition of what &ldquo;good&rdquo; looks like for your specific use case. Start with <strong>50&ndash;200 examples</strong> covering the full range of your system&rsquo;s expected inputs.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">What to Include</div>
+            <div class="cc-text">&bull; <strong>Happy path (40%):</strong> Common queries your system handles daily<br>&bull; <strong>Edge cases (20%):</strong> Unusual inputs, long queries, ambiguous requests<br>&bull; <strong>Adversarial (15%):</strong> Prompt injections, jailbreak attempts, deliberately confusing inputs<br>&bull; <strong>Out-of-scope (15%):</strong> Questions the system should refuse or redirect<br>&bull; <strong>Regression cases (10%):</strong> Previously-fixed bugs that must never recur</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Defining Expected Behavior</div>
+            <div class="cc-text">For each example, specify what &ldquo;correct&rdquo; means. This varies by task:<br><br>&bull; <strong>Exact match:</strong> The answer must be precisely X (factual QA)<br>&bull; <strong>Contains:</strong> Must include specific key points (summarization)<br>&bull; <strong>Quality criteria:</strong> Must score &ge;4 on helpfulness (chatbot)<br>&bull; <strong>Behavioral:</strong> Must refuse, cite sources, or ask for clarification (safety)</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Synthetic Augmentation</div>
+            <div class="cc-text">Don&rsquo;t have enough real data? Use an LLM to <strong>generate synthetic test cases</strong> from your existing examples. Provide 10 real examples and ask the model to generate 50 variations. Then <strong>human-review the synthetics</strong> to filter out low-quality ones. This gets you to 200 examples in a day instead of a month.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Start with 50 examples. A small, high-quality dataset you actually use beats a large dataset you never built. You can always grow it later from production failures.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">analytics</span></div>
+        <div><div class="cc-title">Choosing Your Metrics</div><div class="cc-sub">Match the metric to the task &mdash; no single metric rules them all</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Metric Stack</div>
+            <div class="cc-text">Every system needs at least <strong>three types of metrics</strong>:<br><br>1. <strong>Quality metrics:</strong> Is the output good? (accuracy, faithfulness, relevancy, helpfulness)<br>2. <strong>Safety metrics:</strong> Is the output safe? (toxicity rate, PII leakage, policy violations)<br>3. <strong>Operational metrics:</strong> Is it practical? (latency p95, cost per query, error rate)<br><br>Optimizing for a single metric is a trap. A system that&rsquo;s accurate but slow, or helpful but unsafe, fails in production.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Metric Selection by Use Case</div>
+            <div class="cc-code"><span class="hl-cmt">// Match metric to task</span>
+<span class="hl-key">Factual QA</span>      &rarr; Accuracy, F1, exact match
+<span class="hl-key">RAG system</span>      &rarr; Faithfulness, relevancy, recall
+<span class="hl-key">Chatbot</span>         &rarr; Helpfulness, safety, tone
+<span class="hl-key">Code generation</span> &rarr; pass@k, test pass rate
+<span class="hl-key">Agents</span>          &rarr; Task completion, cost/task
+<span class="hl-key">Summarization</span>   &rarr; Coverage, faithfulness, conciseness</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Deterministic vs LLM-Judged</div>
+            <div class="cc-text">Use <strong>deterministic metrics</strong> wherever possible &mdash; they&rsquo;re fast, free, and reproducible:<br><br>&bull; Format compliance (JSON schema validation)<br>&bull; Length constraints (token count)<br>&bull; Exact match / regex patterns<br>&bull; Code test pass rates<br><br>Reserve <strong>LLM-judged metrics</strong> for subjective dimensions: helpfulness, coherence, tone, and completeness. These cost $0.005&ndash;$0.02 per evaluation but capture nuance that deterministic checks cannot.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Don&rsquo;t over-engineer metrics at the start. Pick 3&ndash;5 metrics that cover quality, safety, and operations. You can always add more as you learn which dimensions matter most for your system.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Establishing Baselines</div><div class="cc-sub">Scores without context are meaningless</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Types of Baselines</div>
+            <div class="cc-text">&bull; <strong>Current production:</strong> The model and prompt currently serving users &mdash; the most important baseline<br>&bull; <strong>Previous version:</strong> Last known-good configuration for regression detection<br>&bull; <strong>Human performance:</strong> How well do humans do on the same task? Sets the ceiling<br>&bull; <strong>Random/naive:</strong> What does chance or a simple heuristic achieve? Sets the floor<br>&bull; <strong>Best known:</strong> Best score ever achieved on your eval set &mdash; the target to beat</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why Baselines Matter</div>
+            <div class="cc-text">&ldquo;82% accuracy&rdquo; means nothing alone. But <strong>&ldquo;82%, up from 76%, human baseline 91%&rdquo;</strong> tells a complete story: improving, room to grow, and a clear target. Baselines turn numbers into decisions. Without them, you&rsquo;re flying blind even with metrics.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Running Baselines Correctly</div>
+            <div class="cc-text">&bull; <strong>Always run baseline alongside candidate:</strong> Don&rsquo;t compare against cached scores from last month. Model providers update APIs without notice, and your data distribution shifts over time<br>&bull; <strong>Same eval set, same conditions:</strong> Temperature, system prompt, and retrieval configuration must be identical<br>&bull; <strong>Statistical significance:</strong> On small eval sets (50&ndash;100 examples), a 2% difference might be noise. Use bootstrap confidence intervals to know if a change is real</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Practical tip:</strong> Store every eval run with its full configuration (model version, prompt, temperature, eval set hash). When something breaks in production, you need to trace back to exactly what changed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">rule</span></div>
+        <div><div class="cc-title">CI/CD Integration</div><div class="cc-sub">Block bad deployments automatically</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Eval in Your Deployment Pipeline</div>
+            <div class="cc-text">The most impactful thing you can do is <strong>run your eval suite on every pull request</strong> that touches prompts, model configuration, or retrieval logic. The eval results are posted as a PR comment, and the merge is blocked if any metric drops below threshold. This catches regressions <strong>before they reach production</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The CI/CD Eval Flow</div>
+            <div class="cc-code"><span class="hl-cmt">// Triggered on: pull request</span>
+<span class="hl-key">1. Load eval dataset</span>
+   50-200 examples from version-controlled file
+
+<span class="hl-key">2. Run candidate</span>
+   Execute system with PR changes on all examples
+
+<span class="hl-key">3. Run baseline</span>
+   Execute current production config on same examples
+
+<span class="hl-key">4. Compare</span>
+   <span class="hl-cmd">BLOCK</span>  if any metric drops &gt;2%
+   <span class="hl-num">WARN</span>   if any metric drops &gt;1%
+   <span class="hl-str">PASS</span>   if all metrics stable or improved
+
+<span class="hl-key">5. Report</span>
+   Post results as PR comment with diffs</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Gate On</div>
+            <div class="cc-text">&bull; <strong>Hard gates (block merge):</strong> Safety score below threshold, hallucination rate above 5%, format compliance below 95%<br>&bull; <strong>Soft gates (require approval):</strong> Quality drop &gt;2%, cost increase &gt;20%<br>&bull; <strong>Informational (flag only):</strong> Latency increase &gt;10%, minor metric fluctuations<br><br>Start with <strong>soft gates</strong> until you trust your eval suite. Overly aggressive hard gates frustrate developers and get bypassed.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> A 5-minute eval run in CI/CD prevents days of production firefighting. The ROI is enormous. Teams with eval gates ship faster, not slower, because they catch problems early.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">history</span></div>
+        <div><div class="cc-title">Regression Testing</div><div class="cc-sub">Catching silent degradation before users notice</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Causes Regressions</div>
+            <div class="cc-text">&bull; <strong>Prompt changes:</strong> Improving one case inadvertently breaks another. The most common cause<br>&bull; <strong>Model updates:</strong> Provider silently updates the API &mdash; output format, tone, and accuracy can all shift<br>&bull; <strong>Data changes:</strong> New RAG documents introduce noise or contradictions<br>&bull; <strong>Dependency updates:</strong> New embedding model changes retrieval quality<br>&bull; <strong>Scale effects:</strong> Performance degrades under production load due to timeouts or truncation</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Bug Bank</div>
+            <div class="cc-text">Every production failure should become an eval example. When a user reports a bad response, add that input-output pair to your eval dataset with the correct expected behavior. Over time, your eval set becomes a <strong>comprehensive record of everything that&rsquo;s ever gone wrong</strong> &mdash; the ultimate regression test.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Detection Strategy</div>
+            <div class="cc-text">1. <strong>Pin your eval dataset:</strong> Same inputs, same expectations, version-controlled<br>2. <strong>Run after every change:</strong> Prompt edits, model swaps, config changes<br>3. <strong>Run weekly even without changes:</strong> Model providers update APIs silently<br>4. <strong>Compare to baseline:</strong> Flag any metric drop &gt;1%<br>5. <strong>Track trends:</strong> Plot weekly scores to catch gradual drift that per-run comparisons miss</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical:</strong> Run your eval suite weekly even when nothing has changed on your end. Model providers update their APIs without notice. A &ldquo;minor improvement&rdquo; to GPT-4o can change your system&rsquo;s behavior in ways that only your eval suite will catch.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">edit_note</span></div>
+        <div><div class="cc-title">Eval-Driven Development</div><div class="cc-sub">Write the eval first, then iterate &mdash; like TDD for AI</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The EDD Workflow</div>
+            <div class="cc-text">Eval-Driven Development (EDD) is the AI equivalent of Test-Driven Development:<br><br>1. <strong>Define the eval:</strong> Write 10&ndash;20 examples that define what success looks like<br>2. <strong>Run the eval:</strong> See where the current system fails<br>3. <strong>Iterate:</strong> Change prompts, models, or retrieval until the eval passes<br>4. <strong>Ship:</strong> Deploy with confidence because the eval proves it works<br>5. <strong>Monitor:</strong> Continue running the eval in production to catch drift</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why EDD Works</div>
+            <div class="cc-text">EDD forces you to <strong>define success before building</strong>. Without it, teams fall into endless prompt tweaking based on vibes &mdash; trying a few examples, eyeballing the output, and hoping for the best. With EDD, when the eval passes, you&rsquo;re done. When it doesn&rsquo;t, you know exactly what to fix.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">EDD in Practice</div>
+            <div class="cc-code"><span class="hl-cmt">// Example: Adding a new feature</span>
+
+<span class="hl-key">Day 1:</span> Write 15 eval examples
+  <span class="hl-str">5 happy path, 5 edge cases, 5 adversarial</span>
+  Time: <span class="hl-num">2 hours</span>
+
+<span class="hl-key">Day 2:</span> Run eval, see 40% pass rate
+  Iterate on prompt: 40% &rarr; 65% &rarr; 78%
+  Time: <span class="hl-num">4 hours</span>
+
+<span class="hl-key">Day 3:</span> Switch model, add guardrail
+  78% &rarr; 91% &mdash; meets threshold
+  Time: <span class="hl-num">3 hours</span>
+
+<span class="hl-key">Ship:</span> Confident deploy with eval proof
+<span class="hl-key">Total:</span> <span class="hl-num">~9 hours</span> vs days of vibes-tweaking</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Start every new LLM feature by writing 10 eval examples. It takes 30 minutes and saves days of undirected prompt tweaking. The examples also serve as documentation of expected behavior.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">trending_up</span></div>
+        <div><div class="cc-title">Pipeline Maturity Model</div><div class="cc-sub">Start small, grow systematically &mdash; Level 0 to Level 5</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Five Levels</div>
+            <div class="cc-code"><span class="hl-num">Level 0</span>: Vibes only
+  <span class="hl-cmt">No eval. "Looks good to me."</span>
+
+<span class="hl-num">Level 1</span>: Basic (1 day to set up)
+  50 examples, 3 metrics, manual run
+
+<span class="hl-num">Level 2</span>: Automated (1 week)
+  100 examples, 5 metrics, CI/CD
+
+<span class="hl-num">Level 3</span>: Gated (2-4 weeks)
+  200+ examples, eval gates block deploys
+
+<span class="hl-num">Level 4</span>: Monitored (1-2 months)
+  Continuous production monitoring + alerts
+
+<span class="hl-num">Level 5</span>: Eval-Driven (ongoing)
+  Eval-first development culture</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Where Most Teams Are</div>
+            <div class="cc-text">Research shows most AI teams are at <strong>Level 0&ndash;1</strong>. They know evaluation matters but haven&rsquo;t invested in systematic approaches. The teams shipping the best AI products are at <strong>Level 3+</strong>. The gap between Level 1 and Level 3 is often the difference between a demo and a product.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Getting Started Today</div>
+            <div class="cc-text">Go from Level 0 to Level 1 in <strong>one day</strong>:<br><br>1. Write 50 eval examples (2 hours)<br>2. Pick 3 metrics (30 minutes)<br>3. Write a script that runs them (2 hours)<br>4. Run it before your next deployment<br><br>That&rsquo;s it. You now have more evaluation rigor than 80% of AI teams.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The biggest jump in value is from Level 0 to Level 1. This takes one day and provides 80% of the benefit. Don&rsquo;t wait for the perfect eval system &mdash; start with 50 examples today.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">architecture</span></div>
+        <div><div class="cc-title">The Complete Pipeline Architecture</div><div class="cc-sub">Putting all the pieces together</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">End-to-End Flow</div>
+            <div class="cc-code"><span class="hl-cmt">// Development time</span>
+<span class="hl-key">1. EDD:</span> Write eval examples first
+<span class="hl-key">2. Iterate:</span> Prompt/model changes
+<span class="hl-key">3. Local eval:</span> Quick check before PR
+
+<span class="hl-cmt">// CI/CD time</span>
+<span class="hl-key">4. PR eval:</span> Full suite, compare baseline
+<span class="hl-key">5. Gate:</span> Block/warn/pass based on results
+<span class="hl-key">6. Deploy:</span> Ship with confidence
+
+<span class="hl-cmt">// Production time</span>
+<span class="hl-key">7. Monitor:</span> Continuous quality scoring
+<span class="hl-key">8. Alert:</span> Notify on degradation
+<span class="hl-key">9. Learn:</span> Failures &rarr; new eval examples</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Flywheel Effect</div>
+            <div class="cc-text">A well-built eval pipeline creates a <strong>virtuous cycle</strong>:<br><br>&bull; Production failures become eval examples<br>&bull; More eval examples catch more regressions<br>&bull; Fewer regressions mean higher quality<br>&bull; Higher quality means fewer production failures<br><br>Each cycle makes your system <strong>more robust</strong>. After 6 months, your eval dataset is a comprehensive record of every failure mode your system has ever encountered.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Next up:</strong> Chapter 8 surveys the eval tools landscape &mdash; RAGAS, DeepEval, Braintrust, LangSmith, Arize Phoenix, and Langfuse &mdash; and helps you choose the right tools for your stack.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-human-evaluation.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Human Evaluation</a>
+    <a class="ch-nav-btn next" href="08-eval-tools.html">Ch 8: Eval Tools Landscape <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[3,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Your eval dataset is the single most important asset. Start with 50\u2013200 examples covering happy path, edge cases, adversarial, and out-of-scope inputs.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Every system needs three metric types: quality (accuracy, faithfulness), safety (toxicity, PII), and operational (latency, cost). Pick 3\u20135 to start.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> Baselines turn numbers into decisions. \u201c82% accuracy\u201d means nothing alone. \u201c82%, up from 76%, human baseline 91%\u201d tells the full story.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Run eval on every PR that touches prompts or model config. Block merges if safety drops. Warn if quality drops >2%. Post results as PR comments.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Every production failure becomes an eval example. Run weekly even without changes \u2014 model providers update APIs silently.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Eval-Driven Development: write 10 eval examples before building, iterate until they pass, ship with confidence. Like TDD for AI.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Most teams are at Level 0\u20131. Go from Level 0 to Level 1 in one day: 50 examples, 3 metrics, one script. That\u2019s 80% of the value.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The flywheel: production failures become eval examples, which catch more regressions, which improve quality. Each cycle makes the system more robust.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

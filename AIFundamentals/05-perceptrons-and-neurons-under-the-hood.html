@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Perceptrons &amp; Neurons — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}.bg-slate{background:var(--slate)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--pink);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Perceptrons &amp; Neurons &mdash; Under the Hood</h2><span class="tb-sub">Perceptron math, learning rule derivation, activation function calculus, XOR solution, and MLP forward pass</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="05-perceptrons-and-neurons-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin. Click any node for deep-dive details...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: Perceptron Math (red) -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">Perceptron Internals</span><span class="zone-sub">Weighted sum &middot; step function &middot; learning rule &middot; convergence</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red dimmed" data-step="1"><span class="step-badge bg-red">1</span><div class="fnode-icon"><span class="material-symbols-rounded">calculate</span></div><span class="fnode-label">Weighted Sum</span><span class="fnode-sub">z = w&middot;x + b<br>dot product</span></div>
+      <div class="farr dimmed" data-step="1"></div>
+      <div class="fnode c-red dimmed" data-step="2"><span class="step-badge bg-red">2</span><div class="fnode-icon"><span class="material-symbols-rounded">school</span></div><span class="fnode-label">Learning Rule</span><span class="fnode-sub">w += &eta;&middot;error&middot;x<br>convergence proof</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange dimmed" data-step="3"><span class="step-badge bg-orange">3</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> From step function to smooth activations</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: Activation Functions Deep Dive (orange) -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Activation Functions Deep Dive</span><span class="zone-sub">Sigmoid &middot; tanh &middot; ReLU &middot; derivatives &middot; vanishing gradients</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange dimmed" data-step="3"><div class="fnode-icon"><span class="material-symbols-rounded">ssid_chart</span></div><span class="fnode-label">Sigmoid</span><span class="fnode-sub">&sigma;(z) = 1/(1+e\u207b\u1dbb)<br>derivative &amp; limits</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><span class="step-badge bg-orange">4</span><div class="fnode-icon"><span class="material-symbols-rounded">bolt</span></div><span class="fnode-label">ReLU Family</span><span class="fnode-sub">max(0,z), Leaky<br>GELU, Swish</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet dimmed" data-step="5"><span class="step-badge bg-violet">5</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> The XOR problem: why one layer fails</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: XOR & Linear Separability (violet) -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">XOR &amp; Linear Separability</span><span class="zone-sub">Geometric proof &middot; decision boundaries &middot; the impossibility</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="5"><div class="fnode-icon"><span class="material-symbols-rounded">close</span></div><span class="fnode-label">XOR Proof</span><span class="fnode-sub">Why no single line<br>can separate XOR</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><span class="step-badge bg-violet">6</span><div class="fnode-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="fnode-label">XOR Solution</span><span class="fnode-sub">Two hidden neurons<br>space transformation</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue dimmed" data-step="7"><span class="step-badge bg-blue">7</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> MLP forward pass: matrix multiplication in action</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: MLP Forward Pass (blue) -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">MLP Forward Pass</span><span class="zone-sub">Matrix multiplication &middot; layer-by-layer computation &middot; parameter counting</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="7"><div class="fnode-icon"><span class="material-symbols-rounded">grid_view</span></div><span class="fnode-label">Matrix Form</span><span class="fnode-sub">h = &sigma;(Wx + b)<br>vectorized ops</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><span class="step-badge bg-blue">8</span><div class="fnode-icon"><span class="material-symbols-rounded">tag</span></div><span class="fnode-label">Param Count</span><span class="fnode-sub">Weights + biases<br>per layer</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal dimmed" data-step="9"><span class="step-badge bg-teal">9</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Weight initialization &amp; the universal approximation theorem</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: Initialization & Theory (teal) -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Initialization &amp; Theory</span><span class="zone-sub">Xavier/He init &middot; universal approximation &middot; expressiveness</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="9"><div class="fnode-icon"><span class="material-symbols-rounded">shuffle</span></div><span class="fnode-label">Weight Init</span><span class="fnode-sub">Xavier, He, Kaiming<br>variance preservation</span></div>
+      <div class="farr dimmed" data-step="10"></div>
+      <div class="fnode c-teal dimmed" data-step="10"><span class="step-badge bg-green">10</span><div class="fnode-icon"><span class="material-symbols-rounded">all_inclusive</span></div><span class="fnode-label">Universal Approx</span><span class="fnode-sub">Any function<br>existence theorem</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head"><div class="dp-step" id="dpStep"></div><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10, STEP_MS=5000;
+  const NARRATION={
+    1:{text:'<strong>The perceptron computes a dot product:</strong> z = w\u2081x\u2081 + w\u2082x\u2082 + ... + w\u2099x\u2099 + b = w\u1d40x + b. This is a linear combination of inputs. The step function then thresholds: y = 1 if z \u2265 0, else y = 0. Geometrically, the weights define a hyperplane that splits the input space.',color:'#dc2626'},
+    2:{text:'<strong>The perceptron learning rule:</strong> w \u2190 w + \u03b7\u00b7(target \u2212 prediction)\u00b7x. If correct, no update. If wrong, nudge weights toward the correct answer. The convergence theorem (Novikoff, 1962) proves this terminates in at most (R/\u03b3)\u00b2 steps, where R is the data radius and \u03b3 is the margin.',color:'#dc2626'},
+    3:{text:'<strong>Sigmoid: \u03c3(z) = 1/(1+e\u207b\u1dbb).</strong> Smooth S-curve mapping any real number to (0,1). Derivative: \u03c3\u2032(z) = \u03c3(z)\u00b7(1\u2212\u03c3(z)). Maximum derivative is 0.25 at z=0. For |z| > 5, the gradient is nearly zero \u2014 this is the vanishing gradient problem.',color:'#ea580c'},
+    4:{text:'<strong>ReLU: f(z) = max(0, z).</strong> Derivative is 1 for z > 0, 0 for z < 0. No saturation for positive values \u2014 gradients flow freely. Leaky ReLU: f(z) = max(0.01z, z) fixes the "dying ReLU" problem. GELU (used in transformers): smooth approximation with probabilistic interpretation.',color:'#ea580c'},
+    5:{text:'<strong>XOR impossibility proof:</strong> For a perceptron to classify XOR, it needs w\u2081x\u2081 + w\u2082x\u2082 + b \u2265 0 for (0,1) and (1,0) but < 0 for (0,0) and (1,1). From (0,0): b < 0. From (0,1): w\u2082 + b \u2265 0. From (1,0): w\u2081 + b \u2265 0. From (1,1): w\u2081 + w\u2082 + b < 0. Adding the middle two: w\u2081 + w\u2082 + 2b \u2265 0, contradicting the last.',color:'#7c3aed'},
+    6:{text:'<strong>XOR solved with 2 hidden neurons.</strong> Hidden neuron h\u2081 computes AND(x\u2081, x\u2082). Hidden neuron h\u2082 computes OR(x\u2081, x\u2082). Output computes AND(NOT(h\u2081), h\u2082) = h\u2082 \u2212 h\u2081. The hidden layer transforms the space so XOR becomes linearly separable in the new coordinates.',color:'#7c3aed'},
+    7:{text:'<strong>MLP in matrix form:</strong> h = \u03c3(W\u2081x + b\u2081), y = softmax(W\u2082h + b\u2082). Each layer is a matrix multiplication followed by an activation. GPUs are optimized for matrix multiplication \u2014 this is why neural networks train fast on GPUs. Batch processing: X is a matrix of multiple inputs.',color:'#2563eb'},
+    8:{text:'<strong>Parameter counting:</strong> A layer with n inputs and m outputs has n\u00d7m weights + m biases = m(n+1) parameters. A 784\u219264\u219210 MLP has 784\u00d764 + 64 + 64\u00d710 + 10 = <strong>50,890</strong> parameters. GPT-3 has 175 billion. Each parameter is a floating-point number learned during training.',color:'#2563eb'},
+    9:{text:'<strong>Weight initialization matters.</strong> All zeros: every neuron computes the same thing (symmetry problem). Random too large: activations explode. Random too small: activations vanish. Xavier init: Var(w) = 1/n\u1d62\u2099. He init: Var(w) = 2/n\u1d62\u2099 (for ReLU). Proper init enables training of deep networks.',color:'#0d9488'},
+    10:{text:'<strong>Universal Approximation Theorem</strong> (Cybenko 1989, Hornik 1991): A single hidden layer with non-polynomial activation and enough neurons can approximate any continuous function on a compact set to arbitrary precision. An existence proof \u2014 it guarantees capability but not learnability or efficiency.',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    2:{title:'Perceptron Learning Rule: Worked Example',color:'#dc2626',body:`
+<div class="dp-label">Learning AND Gate from Scratch</div>
+<div class="dp-code"><span class="hl-cmt">// Initialize: w\u2081=0, w\u2082=0, b=0, \u03b7=1</span>
+<span class="hl-cmt">// Target: AND(x\u2081, x\u2082)</span>
+
+<span class="hl-key">Epoch 1:</span>
+(0,0) target=0: z=0\u22650 \u2192 pred=<span class="hl-err">1</span> \u2717
+  w=(0,0)+1\u00b7(0-1)\u00b7(0,0)=(0,0), b=0+(-1)=<span class="hl-num">-1</span>
+
+(0,1) target=0: z=0+0-1=-1<0 \u2192 pred=<span class="hl-ok">0</span> \u2713
+
+(1,0) target=0: z=0+0-1=-1<0 \u2192 pred=<span class="hl-ok">0</span> \u2713
+
+(1,1) target=1: z=0+0-1=-1<0 \u2192 pred=<span class="hl-err">0</span> \u2717
+  w=(0,0)+1\u00b7(1-0)\u00b7(1,1)=(<span class="hl-num">1,1</span>), b=-1+1=<span class="hl-num">0</span>
+
+<span class="hl-key">Epoch 2:</span>
+(0,0) target=0: z=0\u22650 \u2192 pred=<span class="hl-err">1</span> \u2717
+  w=(1,1)+1\u00b7(-1)\u00b7(0,0)=(1,1), b=0-1=<span class="hl-num">-1</span>
+
+(0,1) target=0: z=1-1=0\u22650 \u2192 pred=<span class="hl-err">1</span> \u2717
+  w=(1,1)+1\u00b7(-1)\u00b7(0,1)=(1,<span class="hl-num">0</span>), b=-1-1=<span class="hl-num">-2</span>
+
+(1,0) target=0: z=1-2=-1<0 \u2192 pred=<span class="hl-ok">0</span> \u2713
+
+(1,1) target=1: z=1+0-2=-1<0 \u2192 pred=<span class="hl-err">0</span> \u2717
+  w=(1,0)+1\u00b7(1)\u00b7(1,1)=(<span class="hl-num">2,1</span>), b=-2+1=<span class="hl-num">-1</span>
+
+<span class="hl-cmt">// ... continues until convergence</span>
+<span class="hl-key">Final:</span> w=(<span class="hl-num">2,1</span>), b=<span class="hl-num">-2</span>  (one valid solution)</div>
+<div class="dp-note n-red"><strong>Convergence bound:</strong> The Novikoff theorem guarantees convergence in at most (R/\u03b3)\u00b2 updates, where R = max||x|| (data radius) and \u03b3 = min margin (distance from closest point to the optimal boundary). Larger margins \u2192 faster convergence.</div>`},
+    4:{title:'Activation Functions: Formulas & Derivatives',color:'#ea580c',body:`
+<div class="dp-label">Sigmoid & Its Derivative</div>
+<div class="dp-code"><span class="hl-key">\u03c3(z)</span> = 1 / (1 + e\u207b\u1dbb)
+
+<span class="hl-key">\u03c3\u2032(z)</span> = \u03c3(z) \u00b7 (1 \u2212 \u03c3(z))
+
+<span class="hl-cmt">// At z=0:  \u03c3=0.5, \u03c3\u2032=0.25 (maximum)</span>
+<span class="hl-cmt">// At z=5:  \u03c3=0.993, \u03c3\u2032=0.007 (vanishing!)</span>
+<span class="hl-cmt">// At z=-5: \u03c3=0.007, \u03c3\u2032=0.007 (vanishing!)</span></div>
+<div class="dp-label">ReLU & Variants</div>
+<div class="dp-code"><span class="hl-key">ReLU:</span>       f(z) = max(0, z)
+             f\u2032(z) = 1 if z>0, else 0
+
+<span class="hl-key">Leaky ReLU:</span>  f(z) = max(\u03b1z, z)    <span class="hl-cmt">// \u03b1=0.01</span>
+             f\u2032(z) = 1 if z>0, else \u03b1
+
+<span class="hl-key">GELU:</span>        f(z) = z \u00b7 \u03a6(z)
+             <span class="hl-cmt">// \u03a6 = Gaussian CDF</span>
+             <span class="hl-cmt">// Smooth, used in BERT/GPT</span>
+
+<span class="hl-key">Swish:</span>       f(z) = z \u00b7 \u03c3(z)
+             <span class="hl-cmt">// Self-gated, smooth</span>
+             <span class="hl-cmt">// Used in EfficientNet</span></div>
+<div class="dp-note n-orange"><strong>Vanishing gradients in depth:</strong> With sigmoid, each layer multiplies the gradient by at most 0.25. After 10 layers: 0.25\u00b9\u2070 = 0.00000095. The gradient effectively disappears \u2014 early layers stop learning. ReLU\u2019s gradient of 1 for positive inputs means gradients pass through unchanged, enabling 100+ layer networks.</div>`},
+    6:{title:'XOR Solution: Step-by-Step Forward Pass',color:'#7c3aed',body:`
+<div class="dp-label">Network Architecture for XOR</div>
+<div class="dp-code"><span class="hl-cmt">// 2 inputs \u2192 2 hidden (ReLU) \u2192 1 output (sigmoid)</span>
+
+<span class="hl-key">Hidden layer weights:</span>
+  W\u2081 = [[ 1,  1],    b\u2081 = [-1.5, -0.5]
+        [ 1,  1]]
+
+<span class="hl-key">Output layer weights:</span>
+  W\u2082 = [-1, 1]       b\u2082 = [-0.5]</div>
+<div class="dp-label">Forward Pass for All XOR Inputs</div>
+<div class="dp-code"><span class="hl-key">Input (0,0):</span>
+  h\u2081 = ReLU(0+0-1.5) = ReLU(-1.5) = <span class="hl-num">0</span>
+  h\u2082 = ReLU(0+0-0.5) = ReLU(-0.5) = <span class="hl-num">0</span>
+  y  = sigmoid(-1\u00b70 + 1\u00b70 - 0.5) = \u03c3(-0.5) = <span class="hl-ok">0.38 \u2248 0</span> \u2713
+
+<span class="hl-key">Input (0,1):</span>
+  h\u2081 = ReLU(0+1-1.5) = ReLU(-0.5) = <span class="hl-num">0</span>
+  h\u2082 = ReLU(0+1-0.5) = ReLU(0.5)  = <span class="hl-num">0.5</span>
+  y  = sigmoid(-1\u00b70 + 1\u00b70.5 - 0.5) = \u03c3(0) = <span class="hl-ok">0.50 \u2248 1</span> \u2713
+
+<span class="hl-key">Input (1,0):</span>
+  h\u2081 = ReLU(1+0-1.5) = ReLU(-0.5) = <span class="hl-num">0</span>
+  h\u2082 = ReLU(1+0-0.5) = ReLU(0.5)  = <span class="hl-num">0.5</span>
+  y  = sigmoid(-1\u00b70 + 1\u00b70.5 - 0.5) = \u03c3(0) = <span class="hl-ok">0.50 \u2248 1</span> \u2713
+
+<span class="hl-key">Input (1,1):</span>
+  h\u2081 = ReLU(1+1-1.5) = ReLU(0.5)  = <span class="hl-num">0.5</span>
+  h\u2082 = ReLU(1+1-0.5) = ReLU(1.5)  = <span class="hl-num">1.5</span>
+  y  = sigmoid(-1\u00b70.5 + 1\u00b71.5 - 0.5) = \u03c3(0.5) = <span class="hl-ok">0.62 \u2248 1</span> <span class="hl-err">\u2717</span></div>
+<div class="dp-note n-violet"><strong>Note:</strong> This particular set of weights doesn\u2019t perfectly solve XOR \u2014 (1,1) gives 0.62 instead of near-0. In practice, backpropagation (Ch 6) finds better weights through iterative optimization. The point is that the architecture <em>can</em> represent XOR; training finds the right weights. With different weights (e.g., W\u2081=[[20,20],[20,20]], b\u2081=[-30,-10], W\u2082=[-20,20], b\u2082=[-10]), the outputs become near-perfect.</div>`},
+    8:{title:'Parameter Counting: Worked Examples',color:'#2563eb',body:`
+<div class="dp-label">Formula</div>
+<div class="dp-code"><span class="hl-cmt">// For a dense layer: inputs=n, outputs=m</span>
+<span class="hl-key">Parameters</span> = n \u00d7 m  (weights) + m  (biases)
+           = m \u00d7 (n + 1)</div>
+<div class="dp-label">Example 1: MNIST Classifier (784\u219264\u219210)</div>
+<div class="dp-code"><span class="hl-key">Layer 1:</span> 784 inputs \u2192 64 outputs
+  Weights: 784 \u00d7 64 = <span class="hl-num">50,176</span>
+  Biases:  64
+  Total:   <span class="hl-num">50,240</span>
+
+<span class="hl-key">Layer 2:</span> 64 inputs \u2192 10 outputs
+  Weights: 64 \u00d7 10 = <span class="hl-num">640</span>
+  Biases:  10
+  Total:   <span class="hl-num">650</span>
+
+<span class="hl-key">Network total:</span> 50,240 + 650 = <span class="hl-ok">50,890</span></div>
+<div class="dp-label">Example 2: Larger MLP (784\u2192512\u2192256\u2192128\u219210)</div>
+<div class="dp-code"><span class="hl-key">Layer 1:</span> 784\u2192512  = <span class="hl-num">401,920</span>
+<span class="hl-key">Layer 2:</span> 512\u2192256  = <span class="hl-num">131,328</span>
+<span class="hl-key">Layer 3:</span> 256\u2192128  = <span class="hl-num">32,896</span>
+<span class="hl-key">Layer 4:</span> 128\u219210   = <span class="hl-num">1,290</span>
+
+<span class="hl-key">Total:</span> <span class="hl-ok">567,434</span> parameters
+<span class="hl-cmt">// Each is a 32-bit float = 2.2 MB in memory</span></div>
+<div class="dp-note n-blue"><strong>Scale comparison:</strong> This 567K-parameter MLP fits in 2 MB. GPT-3 has 175 billion parameters = ~700 GB in float32. GPT-4 has an estimated 1.8 trillion parameters. The architecture is the same \u2014 weighted sum + activation \u2014 just at vastly different scales.</div>`},
+    9:{title:'Weight Initialization Strategies',color:'#0d9488',body:`
+<div class="dp-label">The Symmetry Problem</div>
+<div class="dp-code"><span class="hl-cmt">// If all weights = 0:</span>
+<span class="hl-err">Every neuron computes the same output</span>
+<span class="hl-err">Every gradient is the same</span>
+<span class="hl-err">All neurons learn the same thing forever</span>
+<span class="hl-cmt">// The network effectively has 1 neuron per layer</span></div>
+<div class="dp-label">Xavier/Glorot Initialization (2010)</div>
+<div class="dp-code"><span class="hl-cmt">// For sigmoid/tanh activations</span>
+<span class="hl-key">w ~ N(0, \u03c3\u00b2)</span>  where  <span class="hl-key">\u03c3\u00b2</span> = <span class="hl-num">2</span> / (n_in + n_out)
+
+<span class="hl-cmt">// Or uniform variant:</span>
+<span class="hl-key">w ~ U(-a, a)</span>  where  <span class="hl-key">a</span> = \u221a(6 / (n_in + n_out))
+
+<span class="hl-cmt">// Goal: keep variance of activations and</span>
+<span class="hl-cmt">// gradients roughly constant across layers</span></div>
+<div class="dp-label">He/Kaiming Initialization (2015)</div>
+<div class="dp-code"><span class="hl-cmt">// For ReLU activations (accounts for half</span>
+<span class="hl-cmt">// of inputs being zeroed out)</span>
+<span class="hl-key">w ~ N(0, \u03c3\u00b2)</span>  where  <span class="hl-key">\u03c3\u00b2</span> = <span class="hl-num">2</span> / n_in
+
+<span class="hl-cmt">// Example: layer with 512 inputs</span>
+<span class="hl-key">\u03c3</span> = \u221a(2/512) = <span class="hl-num">0.0625</span>
+<span class="hl-cmt">// Weights sampled from N(0, 0.0625\u00b2)</span></div>
+<div class="dp-note n-teal"><strong>Why this matters:</strong> Without proper initialization, deep networks either explode (activations grow exponentially per layer) or vanish (activations shrink to zero). Xavier and He initialization are designed to preserve the variance of signals flowing forward and gradients flowing backward. This is a prerequisite for training networks with 10+ layers.</div>`},
+  };
+
+  let current=0, playing=false, timer=null;
+  const allSteps=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    allSteps.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function showReset(){
+    allSteps.forEach(el=>el.classList.add('dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin. Click any node for deep-dive details...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    document.getElementById('dpStep').style.background=d.color;
+    document.getElementById('dpStep').textContent=step;
+    document.getElementById('dpTitle').textContent=d.title;
+    document.getElementById('dpBody').innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  document.querySelectorAll('.fnode').forEach(n=>{n.style.cursor='pointer';n.addEventListener('click',()=>{const s=parseInt(n.closest('[data-step]')?.dataset.step);if(s&&DETAILS[s])showDetail(s)})});
+  overlay.addEventListener('click',hideDetail);
+  document.getElementById('dpClose').addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDetail()});
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(overlay.classList.contains('visible'))return;if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

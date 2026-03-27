@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: Cloud vs On-Prem — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; Cloud vs On-Prem: The Build-or-Rent Decision</h2><span class="tb-sub">TCO analysis, cloud providers, pricing models, hidden costs, and hybrid strategies</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">Trade-offs</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">cloud</span></div><span class="pipe-label">Providers</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">sell</span></div><span class="pipe-label">Pricing</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">visibility_off</span></div><span class="pipe-label">Hidden Costs</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">home_work</span></div><span class="pipe-label">On-Prem</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">calculate</span></div><span class="pipe-label">TCO Math</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">merge</span></div><span class="pipe-label">Hybrid</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">decision</span></div><span class="pipe-label">Framework</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">balance</span></div><div><div class="cc-title">The Fundamental Trade-off</div><div class="cc-sub">Flexibility and speed vs cost and control</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cloud Advantages</div><div class="cc-text"><strong>Speed to deploy:</strong> Spin up 100 GPUs in minutes. No hardware procurement (3&ndash;6 month lead times), no data center build-out (12&ndash;24 months), no hiring infrastructure engineers.<br><br><strong>Elasticity:</strong> Scale up for training runs, scale down when done. Pay only for what you use. A 2-week training run on 1,000 GPUs doesn&rsquo;t require owning 1,000 GPUs year-round.<br><br><strong>Managed services:</strong> Networking, storage, monitoring, security &mdash; all handled by the provider. Your team focuses on ML, not infrastructure.<br><br><strong>Latest hardware:</strong> Access to newest GPUs (H200, B200) without capital commitment. Upgrade by changing an instance type, not replacing hardware.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">On-Prem Advantages</div><div class="cc-text"><strong>Cost at scale:</strong> Self-hosted inference can be <strong>18&times; cheaper</strong> than cloud APIs over 3 years (Lenovo 2026 analysis). Break-even arrives in <strong>3&ndash;6 months</strong> of production usage.<br><br><strong>Control:</strong> Full control over hardware configuration, network topology, security policies, and data residency. No vendor lock-in.<br><br><strong>Data sovereignty:</strong> Regulated industries (healthcare, finance, government) may require data to stay on-premises. GDPR, HIPAA, and sector-specific regulations often mandate physical data control.<br><br><strong>Predictable costs:</strong> After initial CAPEX, marginal cost per inference approaches zero &mdash; dominated only by electricity and maintenance. No surprise bills from egress fees or API rate changes.</div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> Cloud vs on-prem is like renting vs buying a house. Renting is flexible &mdash; move anytime, no maintenance headaches. Buying is cheaper long-term but requires a down payment, maintenance, and commitment. Most organizations should start renting (cloud) and buy (on-prem) only when they know exactly what they need.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">cloud</span></div><div><div class="cc-title">Cloud Provider Landscape</div><div class="cc-sub">Hyperscalers, GPU clouds, and marketplaces &mdash; each with different strengths</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hyperscalers</div><div class="cc-text"><strong>AWS</strong> &mdash; Largest GPU fleet. P5 instances (H100), P5e (H200), custom Trainium chips. Best ecosystem (SageMaker, EKS, S3). Highest on-demand prices but deepest reserved discounts. InfiniBand networking via EFA.<br><br><strong>Google Cloud (GCP)</strong> &mdash; TPU v5p/Trillium for training, H100/A3 instances for inference. Best for JAX/TensorFlow workloads. Competitive pricing. Strong Kubernetes (GKE) integration.<br><br><strong>Microsoft Azure</strong> &mdash; Tight OpenAI partnership. NC H100 v5 instances. Azure ML managed service. Strong enterprise integration (Active Directory, compliance). ND H200 v5 for latest hardware.</div></div>
+          <div class="cc-block"><div class="cc-label">GPU Clouds &amp; Marketplaces</div><div class="cc-text"><strong>CoreWeave</strong> &mdash; GPU-native cloud. H100 at $4.25&ndash;4.76/hr. InfiniBand networking. Kubernetes-first. Strong for training workloads. Backed by NVIDIA.<br><br><strong>Lambda Labs</strong> &mdash; Developer-friendly. H100 at $2.99/hr. Simple pricing, no hidden fees. Good for research and small teams.<br><br><strong>Vast.ai / RunPod</strong> &mdash; GPU marketplaces. H100 from $1.49&ndash;1.99/hr. Community GPUs (less reliable) and secure cloud options. Best for cost-sensitive batch workloads.<br><br><strong>Cudo Compute</strong> &mdash; Distributed GPU marketplace. H100 at ~$1.80/hr. Aggregates capacity from multiple providers.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">H100 Pricing Comparison (2026)</div><div class="cc-code"><span class="hl-key">Provider          On-Demand   Reserved(1yr)  Spot</span>
+──────────────────────────────────────────────────
+AWS (p5.48xlarge)  <span class="hl-num">$6.88/hr</span>*  <span class="hl-num">~$4.50/hr</span>    <span class="hl-num">~$2.10/hr</span>
+Azure (NC H100)    <span class="hl-num">$6.98/hr</span>*  <span class="hl-num">~$4.20/hr</span>    <span class="hl-num">~$2.80/hr</span>
+GCP (A3 High)      <span class="hl-num">~$3.50/hr</span>  <span class="hl-num">~$2.50/hr</span>    <span class="hl-num">~$1.40/hr</span>
+CoreWeave           <span class="hl-num">$4.76/hr</span>   <span class="hl-num">~$3.50/hr</span>    N/A
+Lambda Labs         <span class="hl-num">$2.99/hr</span>   N/A           N/A
+Vast.ai             <span class="hl-num">$1.49/hr</span>   N/A           N/A
+RunPod              <span class="hl-num">$1.99/hr</span>   N/A           N/A
+
+<span class="hl-cmt">* Per-GPU price (8-GPU node price / 8)</span>
+
+<span class="hl-key">Price range: 4.7× ($1.49 to $6.98)</span>
+<span class="hl-cmt">Same H100 hardware, vastly different prices.</span>
+<span class="hl-cmt">The premium buys: reliability, support,</span>
+<span class="hl-cmt">managed services, compliance, networking.</span></div></div>
+          <div class="cc-block"><div class="cc-note n-blue"><strong>Key insight:</strong> Cloud GPU pricing is like airline tickets &mdash; the same seat costs 4.7&times; more depending on where you buy it. Hyperscalers charge a premium for reliability, ecosystem, and enterprise support. GPU marketplaces offer bare-metal prices but less hand-holding. Choose based on what your team needs, not just the hourly rate.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">sell</span></div><div><div class="cc-title">Pricing Models: On-Demand, Reserved &amp; Spot</div><div class="cc-sub">How to pay 30&ndash;70% less for the same GPUs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">On-Demand</div><div class="cc-text">Pay by the second/hour with no commitment. Full price, full flexibility. Spin up and tear down instantly.<br><br><strong>Best for:</strong> Experimentation, prototyping, unpredictable workloads, short training runs (&lt;1 week).<br><br><strong>Cost:</strong> Highest per-hour rate. An 8&times; H100 node on AWS: ~$55/hr ($40K/month if running 24/7).</div></div>
+          <div class="cc-block"><div class="cc-label">Reserved Instances</div><div class="cc-text">Commit to 1&ndash;3 years of usage in exchange for <strong>30&ndash;50% discount</strong>. Pay whether you use the GPUs or not.<br><br><strong>Best for:</strong> Production inference (steady-state traffic), long training campaigns, known capacity needs.<br><br><strong>Risk:</strong> If your needs change (different GPU, less capacity), you&rsquo;re locked in. Some providers allow resale of unused reservations.<br><br><strong>AWS 3-year reserved:</strong> ~$2.97/hr per H100 (57% off on-demand). Requires upfront payment or monthly commitment.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Spot/Preemptible Instances</div><div class="cc-text">Use spare cloud capacity at <strong>60&ndash;80% discount</strong>. The catch: your instance can be terminated with 30&ndash;120 seconds notice when demand rises.<br><br><strong>Best for:</strong> Fault-tolerant training (with checkpointing), batch inference, hyperparameter sweeps, data preprocessing.<br><br><strong>Not suitable for:</strong> Production inference (SLA requirements), interactive workloads, jobs that can&rsquo;t checkpoint quickly.</div></div>
+          <div class="cc-block"><div class="cc-label">Pricing Strategy by Workload</div><div class="cc-code"><span class="hl-key">Workload              Best Pricing    Savings</span>
+──────────────────────────────────────────────────
+Experimentation       On-demand       <span class="hl-num">0%</span> (baseline)
+Training (&lt;1 week)    On-demand/Spot  <span class="hl-num">0-70%</span>
+Training (&gt;1 month)   Reserved        <span class="hl-num">30-50%</span>
+Prod inference        Reserved        <span class="hl-num">30-50%</span>
+Batch inference       Spot            <span class="hl-num">60-80%</span>
+Hyperparameter search Spot            <span class="hl-num">60-80%</span>
+
+<span class="hl-key">Optimization strategies:</span>
+  Per-second billing:  saves <span class="hl-num">15-30%</span> for bursty work
+  Right-sizing:        saves <span class="hl-num">10-20%</span> (don't over-provision)
+  Scheduling:          saves <span class="hl-num">10-15%</span> (off-peak hours)
+  Combined:            saves <span class="hl-num">30-60%</span> total
+
+<span class="hl-cmt"># Real example: $100K/month cloud GPU bill</span>
+<span class="hl-cmt"># After optimization: $40-60K/month</span>
+<span class="hl-cmt"># Savings: $480K-720K/year</span></div></div>
+          <div class="cc-block"><div class="cc-note n-green"><strong>Key insight:</strong> Cloud GPU pricing is like electricity rates &mdash; there&rsquo;s a peak rate, an off-peak rate, and a long-term contract rate. Nobody pays peak rate for everything. The teams that save 50%+ aren&rsquo;t using different hardware &mdash; they&rsquo;re using different pricing models for different workloads.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">visibility_off</span></div><div><div class="cc-title">Hidden Costs: What the Hourly Rate Doesn&rsquo;t Tell You</div><div class="cc-sub">Egress fees, storage, networking, and the 20&ndash;40% surcharge nobody budgets for</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Egress</div><div class="cc-text">Cloud providers charge for data leaving their network. AWS: <strong>$0.09/GB</strong> for inter-region or internet egress. Moving a 15 TB training dataset out of AWS costs <strong>$1,350</strong>. Downloading model checkpoints regularly adds up fast.<br><br>This creates vendor lock-in: the more data you store in a cloud, the more expensive it is to leave. Some providers (Cloudflare R2, GCP) offer free or reduced egress to compete.</div></div>
+          <div class="cc-block"><div class="cc-label">Storage Costs</div><div class="cc-text"><strong>Instance storage:</strong> Often included but ephemeral (lost on termination). Not suitable for persistent data.<br><br><strong>Block storage (EBS):</strong> $0.08&ndash;0.16/GB-month for SSD. An 8 TB volume for model weights: $640&ndash;1,280/month.<br><br><strong>Object storage (S3):</strong> $0.023/GB-month. Cheap for archival but slow for training.<br><br><strong>File systems (FSx):</strong> $0.14/GB-month for Lustre. A 10 TB training volume: $1,400/month.<br><br>Storage costs often surprise teams: a 1,000-GPU training run might need 50+ TB of fast storage, costing <strong>$7,000+/month</strong> on top of GPU costs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Full Cost Picture</div><div class="cc-code"><span class="hl-key">Advertised: 8× H100 on AWS = $55/hr</span>
+
+<span class="hl-key">Actual monthly cost (24/7 usage):</span>
+  GPU instances:     $55 × 730 = <span class="hl-num">$40,150</span>
+  EBS storage (8TB): <span class="hl-num">$1,280</span>
+  FSx Lustre (10TB): <span class="hl-num">$1,400</span>
+  S3 storage (50TB): <span class="hl-num">$1,150</span>
+  Data transfer:     <span class="hl-num">$500</span>
+  Networking (EFA):  <span class="hl-num">Included</span>
+  CloudWatch/logs:   <span class="hl-num">$200</span>
+  Load balancer:     <span class="hl-num">$150</span>
+  <span class="hl-key">Total:</span>             <span class="hl-num">$44,830</span>
+  <span class="hl-key">Hidden overhead:</span>   <span class="hl-num">~12%</span>
+
+<span class="hl-key">At larger scale (64× H100):</span>
+  GPU instances:     <span class="hl-num">$321,200</span>
+  Storage + network: <span class="hl-num">$25,000-40,000</span>
+  Hidden overhead:   <span class="hl-num">~8-12%</span>
+
+<span class="hl-key">Engineering overhead (not on the bill):</span>
+  DevOps/MLOps FTE:  <span class="hl-num">$150-250K/yr</span>
+  Monitoring tools:  <span class="hl-num">$5-20K/yr</span>
+  Security/compliance: <span class="hl-num">$10-50K/yr</span></div></div>
+          <div class="cc-block"><div class="cc-note n-red"><strong>Key insight:</strong> Cloud GPU pricing is like budget airline tickets. The base fare looks great, but then you add baggage (storage), seat selection (networking), food (egress), and priority boarding (support). The final bill is 20&ndash;40% higher than the advertised rate. Always budget for the total cost, not just the GPU hourly rate.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">home_work</span></div><div><div class="cc-title">On-Prem Economics: Building Your Own</div><div class="cc-sub">Hardware costs, colocation, staffing, and the true cost of ownership</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hardware Costs</div><div class="cc-code"><span class="hl-key">8-GPU H100 Node (DGX H100):</span>
+  GPUs (8× H100 SXM):    <span class="hl-num">~$200,000</span>
+  CPU, RAM, NVMe:         <span class="hl-num">~$30,000</span>
+  Networking (IB NDR):    <span class="hl-num">~$25,000</span>
+  Chassis, PSU, cooling:  <span class="hl-num">~$28,000</span>
+  <span class="hl-key">Total per node:</span>         <span class="hl-num">~$283,000</span>
+
+<span class="hl-key">16-GPU cluster (2 nodes):</span>
+  2× DGX H100:            <span class="hl-num">$566,000</span>
+  InfiniBand switch:      <span class="hl-num">$15,000</span>
+  ToR Ethernet switch:    <span class="hl-num">$8,000</span>
+  Storage (NAS, 50TB):    <span class="hl-num">$25,000</span>
+  Cabling + misc:         <span class="hl-num">$5,000</span>
+  <span class="hl-key">Total CAPEX:</span>            <span class="hl-num">~$619,000</span>
+
+<span class="hl-key">128-GPU cluster (16 nodes):</span>
+  16× DGX H100:           <span class="hl-num">$4,528,000</span>
+  IB fabric (leaf-spine):  <span class="hl-num">$180,000</span>
+  Storage (Lustre, 200TB): <span class="hl-num">$200,000</span>
+  <span class="hl-key">Total CAPEX:</span>            <span class="hl-num">~$4,908,000</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Operating Costs (Annual)</div><div class="cc-code"><span class="hl-key">8-GPU cluster (colocation):</span>
+  Colocation (10 kW):     <span class="hl-num">$24,000/yr</span>
+  Electricity ($0.10/kWh): <span class="hl-num">$8,760/yr</span>
+  Network (1 Gbps):       <span class="hl-num">$6,000/yr</span>
+  Support contract:       <span class="hl-num">$15,000/yr</span>
+  Part-time admin (0.2 FTE): <span class="hl-num">$40,000/yr</span>
+  <span class="hl-key">Total OPEX:</span>             <span class="hl-num">~$93,760/yr</span>
+
+<span class="hl-key">128-GPU cluster (colocation):</span>
+  Colocation (200 kW):    <span class="hl-num">$480,000/yr</span>
+  Electricity:            <span class="hl-num">$175,200/yr</span>
+  Network (100 Gbps):     <span class="hl-num">$60,000/yr</span>
+  Support contracts:      <span class="hl-num">$120,000/yr</span>
+  Staff (2 FTEs):         <span class="hl-num">$400,000/yr</span>
+  Spare parts/repairs:    <span class="hl-num">$50,000/yr</span>
+  <span class="hl-key">Total OPEX:</span>             <span class="hl-num">~$1,285,200/yr</span>
+
+<span class="hl-cmt"># Electricity is 25-40% of OPEX</span>
+<span class="hl-cmt"># Staff is 15-30% of OPEX</span></div></div>
+          <div class="cc-block"><div class="cc-note n-violet"><strong>Key insight:</strong> On-prem hardware is a depreciating asset. GPUs lose 30&ndash;50% of their value per year as new generations launch. An H100 bought for $25K in 2023 is worth ~$10K in 2025 with B200 available. Factor depreciation into your TCO &mdash; a 3-year amortization is standard, but the GPU may be obsolete in 2.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">TCO Comparison: Real Numbers</div><div class="cc-sub">Side-by-side analysis for training and inference workloads</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Inference TCO (3-Year, 8× H100)</div><div class="cc-code"><span class="hl-key">Cloud (AWS Reserved, 3yr):</span>
+  GPU: 8 × $2.97/hr × 8,760 × 3 = <span class="hl-num">$625,450</span>
+  Storage + network (12%):        <span class="hl-num">$75,054</span>
+  <span class="hl-key">Total 3-year:</span>                   <span class="hl-num">$700,504</span>
+  <span class="hl-key">Monthly:</span>                        <span class="hl-num">$19,458</span>
+
+<span class="hl-key">On-Prem (colocation):</span>
+  Hardware CAPEX:                 <span class="hl-num">$283,000</span>
+  OPEX (3 years):                <span class="hl-num">$281,280</span>
+  <span class="hl-key">Total 3-year:</span>                   <span class="hl-num">$564,280</span>
+  <span class="hl-key">Monthly:</span>                        <span class="hl-num">$15,674</span>
+
+<span class="hl-key">On-Prem savings: 19% ($136K over 3yr)</span>
+
+<span class="hl-cmt"># But on-prem requires:</span>
+<span class="hl-cmt"># - $283K upfront capital</span>
+<span class="hl-cmt"># - 3-6 month procurement lead time</span>
+<span class="hl-cmt"># - Staff to manage hardware</span>
+<span class="hl-cmt"># - Risk of GPU depreciation</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training TCO (Single 2-Week Run, 128 GPUs)</div><div class="cc-code"><span class="hl-key">Cloud (AWS On-Demand, 2 weeks):</span>
+  128 × $6.88/hr × 336 hrs = <span class="hl-num">$296,140</span>
+  Storage + network:          <span class="hl-num">$15,000</span>
+  <span class="hl-key">Total:</span>                      <span class="hl-num">$311,140</span>
+
+<span class="hl-key">Cloud (Spot, 2 weeks):</span>
+  128 × $2.10/hr × 336 hrs = <span class="hl-num">$90,317</span>
+  + Checkpoint overhead (~20%): <span class="hl-num">$18,063</span>
+  <span class="hl-key">Total:</span>                      <span class="hl-num">$123,380</span>
+
+<span class="hl-key">On-Prem (if you already own it):</span>
+  Electricity only:           <span class="hl-num">$5,400</span>
+  <span class="hl-key">Marginal cost:</span>              <span class="hl-num">$5,400</span>
+
+<span class="hl-key">On-Prem (amortized CAPEX + OPEX):</span>
+  2-week share of annual cost: <span class="hl-num">$237,800</span>
+  <span class="hl-cmt">(Only makes sense if cluster runs year-round)</span>
+
+<span class="hl-key">Verdict: Cloud wins for occasional training.</span>
+<span class="hl-key">On-prem wins if cluster is utilized &gt;60%.</span></div></div>
+          <div class="cc-block"><div class="cc-note n-teal"><strong>Key insight:</strong> The break-even between cloud and on-prem depends almost entirely on <strong>utilization</strong>. At 100% utilization, on-prem is 40&ndash;60% cheaper. At 30% utilization, cloud is cheaper because you only pay for what you use. The question isn&rsquo;t &ldquo;which is cheaper?&rdquo; but &ldquo;how consistently will you use the GPUs?&rdquo;</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">merge</span></div><div><div class="cc-title">The Hybrid Approach</div><div class="cc-sub">Own your baseline, rent your peaks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hybrid Strategy</div><div class="cc-text">Most mature AI organizations use a hybrid approach that combines the cost efficiency of on-prem with the flexibility of cloud:<br><br><strong>Own the baseline:</strong> Purchase enough GPUs to handle your steady-state workload (the minimum you&rsquo;ll always need). This is your inference fleet, your always-on training capacity.<br><br><strong>Rent the peaks:</strong> Use cloud GPUs for burst training runs, experimentation, new model evaluations, and traffic spikes. Pay on-demand or spot rates for temporary capacity.<br><br><strong>Cloud for dev, on-prem for prod:</strong> Develop and iterate on cloud (fast, flexible). Deploy proven models to on-prem (cheap, controlled). This separates the &ldquo;exploration&rdquo; budget from the &ldquo;exploitation&rdquo; budget.</div></div>
+          <div class="cc-block"><div class="cc-label">Hybrid Architecture Example</div><div class="cc-text"><strong>Scenario:</strong> AI company with 3 production models and active research.<br><br><strong>On-prem (colocation):</strong> 64 GPUs for production inference. Runs 24/7 at 70%+ utilization. Handles 90% of inference traffic.<br><br><strong>Cloud (reserved):</strong> 16 GPUs on GCP for overflow inference and A/B testing new models. Handles traffic spikes and canary deployments.<br><br><strong>Cloud (spot):</strong> 128&ndash;512 GPUs on AWS spot for training runs. Spun up for 1&ndash;4 weeks, then terminated. Checkpoints saved to S3.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hybrid Cost Savings</div><div class="cc-code"><span class="hl-key">All-Cloud approach (annual):</span>
+  Inference (64 GPU, reserved): <span class="hl-num">$1,400K</span>
+  Training (burst, on-demand):  <span class="hl-num">$600K</span>
+  Storage + egress:             <span class="hl-num">$200K</span>
+  <span class="hl-key">Total:</span>                        <span class="hl-num">$2,200K</span>
+
+<span class="hl-key">Hybrid approach (annual):</span>
+  On-prem inference (64 GPU):   <span class="hl-num">$750K</span>
+    (CAPEX amortized + OPEX)
+  Cloud training (spot):        <span class="hl-num">$200K</span>
+  Cloud overflow (16 GPU, res): <span class="hl-num">$220K</span>
+  Storage + egress:             <span class="hl-num">$80K</span>
+  <span class="hl-key">Total:</span>                        <span class="hl-num">$1,250K</span>
+
+<span class="hl-key">Savings: $950K/yr (43%)</span>
+
+<span class="hl-cmt"># The hybrid approach requires more engineering</span>
+<span class="hl-cmt"># effort (multi-cloud orchestration, data sync,</span>
+<span class="hl-cmt"># deployment pipelines) but the cost savings</span>
+<span class="hl-cmt"># justify 1-2 additional engineers.</span></div></div>
+          <div class="cc-block"><div class="cc-note n-orange"><strong>Key insight:</strong> Hybrid infrastructure is like owning a car and occasionally renting a truck. You drive your car daily (on-prem inference) because it&rsquo;s cheaper per mile. When you need to move furniture (training run), you rent a truck for the weekend. Owning a truck for occasional use would be wasteful; renting a car for daily commuting would be expensive.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">decision</span></div><div><div class="cc-title">Decision Framework: When to Use What</div><div class="cc-sub">A practical guide for choosing cloud, on-prem, or hybrid</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Tree</div><div class="cc-text"><strong>Start with cloud if:</strong><br>&bull; You&rsquo;re in the experimentation phase<br>&bull; Workloads are unpredictable or bursty<br>&bull; Team is &lt;5 ML engineers (no infra capacity)<br>&bull; Budget is OPEX-only (no CAPEX approval)<br>&bull; Need latest hardware immediately<br><br><strong>Move to on-prem when:</strong><br>&bull; GPU utilization consistently exceeds 60&ndash;70%<br>&bull; Monthly cloud bill exceeds $50K+ for 6+ months<br>&bull; Data sovereignty requirements mandate it<br>&bull; You have (or can hire) infrastructure expertise<br>&bull; Workloads are stable and predictable<br><br><strong>Go hybrid when:</strong><br>&bull; Steady-state + burst workloads coexist<br>&bull; Different workloads have different requirements<br>&bull; You want cost optimization without full commitment<br>&bull; Team has both ML and infra expertise</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quick Reference by Company Stage</div><div class="cc-code"><span class="hl-key">Stage          GPUs   Strategy     Monthly Cost</span>
+──────────────────────────────────────────────────
+Startup/POC    <span class="hl-num">1-8</span>    Cloud OD     <span class="hl-num">$2-10K</span>
+Growth         <span class="hl-num">8-64</span>   Cloud Res    <span class="hl-num">$10-80K</span>
+Scale          <span class="hl-num">64-256</span> Hybrid       <span class="hl-num">$50-200K</span>
+Enterprise     <span class="hl-num">256+</span>   On-prem+Cloud <span class="hl-num">$200K+</span>
+
+<span class="hl-key">Key metrics to track:</span>
+  GPU utilization:  Target <span class="hl-num">&gt;70%</span> for on-prem
+  Cost per token:   Compare cloud vs self-hosted
+  Time to deploy:   Cloud: minutes, On-prem: months
+  Engineering cost: <span class="hl-num">$150-250K/FTE/yr</span>
+
+<span class="hl-key">Red flags (time to reconsider):</span>
+  Cloud bill growing &gt;<span class="hl-num">20%/month</span> for 3+ months
+  GPU utilization &lt;<span class="hl-num">30%</span> on on-prem
+  Spending &gt;<span class="hl-num">$100K/month</span> on cloud with stable load
+  On-prem hardware &gt;<span class="hl-num">2 generations</span> behind</div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> The best infrastructure strategy evolves with your organization. Start on cloud (learn fast, fail cheap), migrate steady workloads to on-prem (optimize cost), and keep burst capacity on cloud (stay flexible). The companies that get this wrong either overspend on cloud or over-commit to on-prem too early. Review your strategy every 6 months.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-power-cooling-energy.html"><span class="material-symbols-rounded">arrow_back</span>Previous Chapter</a>
+    <a class="ch-nav-btn next" href="13-orchestration-scheduling.html">Next Chapter<span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="prevBtn"><span class="material-symbols-rounded">skip_previous</span></button>
+  <button class="ctrl-btn ctrl-play" id="playBtn"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button>
+  <button class="ctrl-btn" id="nextBtn"><span class="material-symbols-rounded">skip_next</span></button>
+</div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=12000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Cloud: deploy in minutes, pay by the hour, scale elastically. On-prem: 18× cheaper over 3 years, full control, but requires capital and expertise. Most start cloud, migrate to on-prem at scale.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> H100 pricing spans 4.7× — from $1.49/hr (Vast.ai) to $6.98/hr (Azure). The premium buys reliability, managed services, and enterprise support. Choose based on needs, not just price.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Reserved instances save 30–50%, spot saves 60–80%. Per-second billing + right-sizing + scheduling = 30–60% total savings. Nobody should pay full on-demand for steady workloads.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Hidden costs add 20–40% to the GPU hourly rate: egress ($0.09/GB), storage ($1,400/month for 10TB Lustre), monitoring, and engineering overhead. Budget for total cost, not just GPUs.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> An 8-GPU H100 node costs ~$283K. Annual OPEX: ~$94K (colocation + electricity + support). GPUs depreciate 30–50%/year. Factor depreciation into your 3-year TCO.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> At 100% utilization, on-prem is 40–60% cheaper than cloud. At 30% utilization, cloud wins. The break-even is 60–70% utilization. The real question: how consistently will you use the GPUs?',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Hybrid: own your baseline (on-prem inference), rent your peaks (cloud training). Saves 43% vs all-cloud in our example. Requires multi-cloud orchestration but justifies 1–2 extra engineers.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Start cloud (learn fast), migrate steady workloads to on-prem (optimize cost), keep burst on cloud (stay flexible). Review every 6 months. The right strategy evolves with your organization.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Insights — Anatomy of an LLM File</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:860px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:24px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--teal-light) 0%,var(--amber-light) 100%)}
+.title-bar .tb-icon{width:44px;height:44px;border-radius:12px;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}.title-bar .tb-icon .material-symbols-rounded{font-size:24px}
+.title-bar h1{font-size:20px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:12px;color:var(--text-2);margin-top:2px}
+.tb-nav{margin-left:auto}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;color:var(--text-3);background:var(--bg-muted)}.tb-nav a:hover{color:var(--text-1);background:var(--border)}
+.insight{padding:20px 36px;border-bottom:1px solid var(--border-light);display:flex;gap:14px;align-items:flex-start}
+.insight:last-child{border-bottom:none}
+.insight:hover{background:var(--teal-light)}
+.in-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px}
+.in-body{flex:1}.in-title{font-size:13px;font-weight:700;margin-bottom:4px}.in-text{font-size:11px;color:var(--text-2);line-height:1.7}
+.in-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--bg-muted);padding:1px 5px;border-radius:3px}
+.in-ch{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;color:var(--text-3);letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+.section-header{padding:14px 36px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);font-size:12px;font-weight:700;color:var(--text-1)}
+@media(max-width:600px){body{padding:16px 10px 48px}.title-bar,.insight,.section-header{padding-left:18px;padding-right:18px}.title-bar{flex-direction:column;align-items:flex-start;gap:8px}.tb-nav{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div class="tb-icon"><span class="material-symbols-rounded">lightbulb</span></div>
+    <div><h1>Key Insights</h1><div class="tb-sub">The most important takeaways from Anatomy of an LLM File</div></div>
+    <div class="tb-nav"><a href="index.html">Back to Index</a></div>
+  </div>
+
+  <div class="section-header">Mental Models</div>
+
+  <div class="insight"><div class="in-num" style="background:var(--teal)">1</div><div class="in-body"><div class="in-title">An LLM file is a ZIP of a brain</div><div class="in-text">Metadata is the skull shape (~0.2 MB), the tokenizer is the language center (~2 MB), and weights are the neurons (~16 GB). <strong>99.98% of what you download is learned numbers.</strong></div><div class="in-ch">Chapter 1</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--orange)">2</div><div class="in-body"><div class="in-title">The tensor name IS the architecture</div><div class="in-text"><code>model.layers.15.self_attn.k_proj.weight</code> tells you: model → layer 15 → self attention → key projection. You can reconstruct the entire architecture just from reading tensor names.</div><div class="in-ch">Chapter 1</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--violet)">3</div><div class="in-body"><div class="in-title">config.json is the DNA</div><div class="in-text">Every number in config.json determines a tensor dimension. Change <code>hidden_size</code> from 4096 to 8192 and every weight tensor doubles in width. You can calculate total parameters without opening any weight file.</div><div class="in-ch">Chapters 2 &amp; 8</div></div></div>
+
+  <div class="section-header">File Formats</div>
+
+  <div class="insight"><div class="in-num" style="background:var(--green)">4</div><div class="in-body"><div class="in-title">Safetensors for GPU, GGUF for laptop, avoid PyTorch .bin</div><div class="in-text">Safetensors = safe + fast mmap loading. GGUF = self-contained with native quantization. PyTorch .bin = pickle = arbitrary code execution risk. <strong>Loading an untrusted .bin is like running an untrusted script.</strong></div><div class="in-ch">Chapter 2</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--blue)">5</div><div class="in-body"><div class="in-title">You can identify any format from its first 4 bytes</div><div class="in-text">JSON brace after 8-byte header = Safetensors. <code>GGUF</code> magic = GGUF. <code>PK</code> or pickle header = PyTorch. Works even on misnamed files.</div><div class="in-ch">Chapter 2</div></div></div>
+
+  <div class="section-header">Weight Architecture</div>
+
+  <div class="insight"><div class="in-num" style="background:var(--red)">6</div><div class="in-body"><div class="in-title">FFN owns ~65% of all parameters, attention ~28%</div><div class="in-text">The MLP layers (gate/up/down_proj) are the largest tensors. Optimizing model size means optimizing the FFN. This is why MoE replaces the single MLP with a router + multiple expert MLPs.</div><div class="in-ch">Chapters 4 &amp; 5</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--pink)">7</div><div class="in-body"><div class="in-title">GQA saves 75% of KV memory with minimal quality loss</div><div class="in-text">Llama 3 uses 32 Q heads but only 8 KV heads. K/V projections shrink from [4096, 4096] to [1024, 4096]. This saves both file size AND inference memory (smaller KV cache).</div><div class="in-ch">Chapter 4</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--amber)">8</div><div class="in-body"><div class="in-title">Norm tensors are the smallest but most critical</div><div class="in-text">65 RMSNorm tensors total ~520 KB — less than 0.003% of the model. But removing any one causes training to diverge. They're the guardrails that keep values stable across 32 layers.</div><div class="in-ch">Chapter 6</div></div></div>
+
+  <div class="section-header">Tokenizer &amp; Runtime</div>
+
+  <div class="insight"><div class="in-num" style="background:var(--teal)">9</div><div class="in-body"><div class="in-title">Wrong tokenizer = garbage, even with perfect weights</div><div class="in-text">Tokenizer and weights are a matched pair — like a lock and key. Wrong vocab size → crash. Wrong merge rules → wrong embeddings. Wrong chat template → confused output. Always download both from the same repository.</div><div class="in-ch">Chapter 7</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--orange)">10</div><div class="in-body"><div class="in-title">The KV cache can consume more memory than the model</div><div class="in-text">Llama 3.1 8B: 128 KB per token in the KV cache. At 128K context, that's 16 GB — equaling the model weight size. Long-context serving needs significantly more GPU memory than the model file suggests.</div><div class="in-ch">Chapter 8</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--violet)">11</div><div class="in-body"><div class="in-title">Memory formula: params × bytes + KV cache + overhead</div><div class="in-text">Model RAM = params × bytes_per_param (BF16=2, Q4=0.5). KV cache = 2 × layers × kv_heads × head_dim × seq_len × bytes. Add ~1-2 GB for framework overhead. Total must fit in GPU VRAM.</div><div class="in-ch">Chapter 8</div></div></div>
+
+  <div class="insight"><div class="in-num" style="background:var(--green)">12</div><div class="in-body"><div class="in-title">rope_theta controls context length capability</div><div class="in-text"><code>rope_theta</code>=10,000 → ~4K context. <code>rope_theta</code>=500,000 → 128K context. Higher theta = slower frequency decay = model can distinguish positions across longer sequences. Computed at runtime, not stored as weights.</div><div class="in-ch">Chapter 6</div></div></div>
+
+</div>
+</body>
+</html>

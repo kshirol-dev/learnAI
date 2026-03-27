@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Context Protocol — Deep Dive Learning Path</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--slate:#64748b;--slate-light:#f1f5f9;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+  *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+  .canvas{width:100%;max-width:1100px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+  .title-bar{padding:28px 36px 24px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,var(--blue-light) 0%,var(--violet-light) 40%,var(--slate-light) 100%)}.title-bar .tb-icon{width:52px;height:52px;border-radius:14px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}.title-bar .tb-icon .material-symbols-rounded{font-size:28px}.title-bar h1{font-size:22px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:12px;color:var(--text-2);margin-top:3px;line-height:1.5}.title-bar .tb-author{font-size:10px;color:var(--text-3);margin-top:4px;font-style:italic}
+  .stack-bar{padding:12px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg-white)}.stack-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}.sp-1{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.sp-2{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.sp-3{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.sp-4{background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-border)}.stack-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-right:4px}
+  .start-bar{padding:16px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,var(--blue-light),var(--violet-light))}.start-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;color:#fff;background:var(--blue);transition:all .15s}.start-btn:hover{opacity:.9}.start-btn .material-symbols-rounded{font-size:16px}.start-meta{font-size:10px;color:var(--text-3);margin-left:auto}.start-meta strong{color:var(--text-2)}
+  .act-section{border-bottom:1px solid var(--border-light)}.act-header{padding:16px 36px 12px;display:flex;align-items:center;gap:12px}.act-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 14px;border-radius:6px}.act-info h3{font-size:14px;font-weight:800;letter-spacing:-.3px}.act-desc{font-size:10px;color:var(--text-3);margin-top:2px}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:12px 36px 20px;background:var(--bg-muted)}
+  .flash-card{background:#fff;border-radius:12px;padding:16px 14px 14px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit;transition:all .2s ease;position:relative;min-height:160px}.flash-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+  .fc-top{display:flex;align-items:center;justify-content:space-between}.fc-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}.fc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}.fc-icon .material-symbols-rounded{font-size:18px}.fc-title{font-size:12px;font-weight:800;letter-spacing:-.2px;line-height:1.3}.fc-hook{font-size:10px;line-height:1.5;flex:1}.fc-links{display:flex;gap:6px;margin-top:auto;padding-top:4px}.fc-learn,.fc-deep{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:9px;font-weight:700;text-decoration:none;border:1.5px solid;transition:all .15s}.fc-learn .material-symbols-rounded,.fc-deep .material-symbols-rounded{font-size:12px}
+  .act-blue .flash-card{background:#eef4ff;border:1.5px solid var(--blue-border)}.act-blue .fc-num{background:var(--blue)}.act-blue .fc-icon{background:rgba(37,99,235,.1)}.act-blue .fc-icon .material-symbols-rounded{color:var(--blue)}.act-blue .fc-title{color:var(--blue)}.act-blue .fc-hook{color:#1d4ed8}.act-blue .fc-learn{background:#fff;color:var(--blue);border-color:var(--blue-border)}.act-blue .fc-learn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}.act-blue .fc-deep{background:#fff;color:var(--violet);border-color:var(--violet-border)}.act-blue .fc-deep:hover{background:var(--violet);color:#fff;border-color:var(--violet)}.act-blue .act-badge{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}
+  .act-teal .flash-card{background:#eefbf8;border:1.5px solid var(--teal-border)}.act-teal .fc-num{background:var(--teal)}.act-teal .fc-icon{background:rgba(13,148,136,.1)}.act-teal .fc-icon .material-symbols-rounded{color:var(--teal)}.act-teal .fc-title{color:var(--teal)}.act-teal .fc-hook{color:#0f766e}.act-teal .fc-learn{background:#fff;color:var(--teal);border-color:var(--teal-border)}.act-teal .fc-learn:hover{background:var(--teal);color:#fff;border-color:var(--teal)}.act-teal .fc-deep{background:#fff;color:var(--violet);border-color:var(--violet-border)}.act-teal .fc-deep:hover{background:var(--violet);color:#fff;border-color:var(--violet)}.act-teal .act-badge{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}
+  .act-violet .flash-card{background:#f3edff;border:1.5px solid var(--violet-border)}.act-violet .fc-num{background:var(--violet)}.act-violet .fc-icon{background:rgba(124,58,237,.1)}.act-violet .fc-icon .material-symbols-rounded{color:var(--violet)}.act-violet .fc-title{color:var(--violet)}.act-violet .fc-hook{color:#6d28d9}.act-violet .fc-learn{background:#fff;color:var(--violet);border-color:var(--violet-border)}.act-violet .fc-learn:hover{background:var(--violet);color:#fff;border-color:var(--violet)}.act-violet .fc-deep{background:#fff;color:var(--blue);border-color:var(--blue-border)}.act-violet .fc-deep:hover{background:var(--blue);color:#fff;border-color:var(--blue)}.act-violet .act-badge{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}
+  .related-section{border-top:1px solid var(--border-light)}.related-header{padding:16px 36px 12px;display:flex;align-items:center;gap:10px;background:var(--bg-muted);border-bottom:1px solid var(--border-light)}.related-header .material-symbols-rounded{font-size:20px;color:var(--text-3)}.related-header h4{font-size:12px;font-weight:700;color:var(--text-2);letter-spacing:-.2px}.related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:14px 36px 18px;background:var(--bg-muted)}a.related-card{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-radius:10px;border:1.5px solid var(--border);text-decoration:none;color:inherit;transition:all .2s}a.related-card:hover{border-color:var(--teal-border);transform:translateY(-1px);box-shadow:var(--shadow-md)}.rc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--teal-light)}.rc-icon .material-symbols-rounded{font-size:17px;color:var(--teal)}.rc-title{font-size:11px;font-weight:700;color:var(--text-1);line-height:1.3}.rc-sub{font-size:9px;color:var(--text-3);margin-top:1px}
+  @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:10px}.related-grid{grid-template-columns:repeat(2,1fr);gap:8px;padding:10px 18px 14px}}@media(max-width:600px){body{padding:16px 10px 48px}.title-bar,.stack-bar,.start-bar,.act-header,.related-header{padding-left:18px;padding-right:18px}.title-bar{flex-direction:column;align-items:flex-start;gap:8px}.card-grid{grid-template-columns:1fr;gap:8px;padding:8px}.related-grid{grid-template-columns:1fr;gap:8px;padding:8px 18px 14px}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div class="tb-icon"><span class="material-symbols-rounded">hub</span></div>
+    <div>
+      <h1>Model Context Protocol &mdash; Deep Dive</h1>
+      <div class="tb-sub">From protocol basics to production MCP servers. Each chapter: high-level overview + under-the-hood deep dive.</div>
+      <div class="tb-author">Co-Created by Kiran Shirol and Claude</div>
+    </div>
+  </div>
+  <div class="stack-bar">
+    <span class="stack-label">Core Stack</span>
+    <span class="stack-pill sp-1">MCP</span>
+    <span class="stack-pill sp-2">JSON-RPC 2.0</span>
+    <span class="stack-pill sp-3">Python SDK</span>
+    <span class="stack-pill sp-4">TypeScript SDK</span>
+  </div>
+  <div class="start-bar">
+    <a class="start-btn" href="../index.html"><span class="material-symbols-rounded">home</span> Learning Portal</a>
+    <a class="start-btn" href="01-what-is-mcp-high-level.html"><span class="material-symbols-rounded">play_arrow</span> Start Learning</a>
+    <a class="start-btn" href="key-insights.html" style="background:var(--violet);color:#fff"><span class="material-symbols-rounded">summarize</span> Key Insights</a>
+    <a class="start-btn" href="glossary.html" style="background:var(--teal);color:#fff"><span class="material-symbols-rounded">dictionary</span> Glossary</a>
+    <span class="start-meta"><strong>10 chapters</strong> &middot; Each with High Level + Under the Hood</span>
+  </div>
+
+  <!-- ═══════════ PROTOCOL (Ch 1-3) ═══════════ -->
+  <div class="act-section act-blue">
+    <div class="act-header">
+      <span class="act-badge">Protocol</span>
+      <div class="act-info"><h3>Architecture &amp; Transports</h3><div class="act-desc">What MCP is, how it&rsquo;s structured, and how messages flow between hosts, clients, and servers.</div></div>
+    </div>
+    <div class="card-grid">
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">1</div><div class="fc-icon"><span class="material-symbols-rounded">lightbulb</span></div></div><div class="fc-title">What Is MCP &amp; Why It Exists</div><div class="fc-hook">The N&times;M integration problem and how MCP is the &ldquo;USB-C for AI.&rdquo;</div><div class="fc-links"><a class="fc-learn" href="01-what-is-mcp-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="01-what-is-mcp-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">2</div><div class="fc-icon"><span class="material-symbols-rounded">account_tree</span></div></div><div class="fc-title">Architecture: Hosts, Clients &amp; Servers</div><div class="fc-hook">The three-layer model, security isolation, and 1:N topology.</div><div class="fc-links"><a class="fc-learn" href="02-architecture-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="02-architecture-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">3</div><div class="fc-icon"><span class="material-symbols-rounded">swap_horiz</span></div></div><div class="fc-title">Transports: stdio &amp; Streamable HTTP</div><div class="fc-hook">Local vs. remote communication, SSE, session management, and reconnection.</div><div class="fc-links"><a class="fc-learn" href="03-transports-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="03-transports-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PRIMITIVES (Ch 4-7) ═══════════ -->
+  <div class="act-section act-teal">
+    <div class="act-header">
+      <span class="act-badge">Primitives</span>
+      <div class="act-info"><h3>Tools, Resources, Prompts &amp; Sampling</h3><div class="act-desc">The four core capabilities that MCP servers expose to AI applications.</div></div>
+    </div>
+    <div class="card-grid">
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">4</div><div class="fc-icon"><span class="material-symbols-rounded">build</span></div></div><div class="fc-title">Tools: Letting the Model Act</div><div class="fc-hook">Tool discovery, JSON Schema, annotations, progress reporting, and change notifications.</div><div class="fc-links"><a class="fc-learn" href="04-tools-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="04-tools-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">5</div><div class="fc-icon"><span class="material-symbols-rounded">folder_open</span></div></div><div class="fc-title">Resources &amp; Resource Templates</div><div class="fc-hook">URI-based data, text vs. binary, subscriptions, and embedded resources.</div><div class="fc-links"><a class="fc-learn" href="05-resources-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="05-resources-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">6</div><div class="fc-icon"><span class="material-symbols-rounded">chat</span></div></div><div class="fc-title">Prompts: Reusable Workflows</div><div class="fc-hook">Server-defined templates, multi-step workflows, and dynamic prompt generation.</div><div class="fc-links"><a class="fc-learn" href="06-prompts-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="06-prompts-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">7</div><div class="fc-icon"><span class="material-symbols-rounded">psychology</span></div></div><div class="fc-title">Sampling &amp; Elicitation</div><div class="fc-hook">Server-initiated LLM calls, human-in-the-loop via elicitation, and the trust model.</div><div class="fc-links"><a class="fc-learn" href="07-sampling-elicitation-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="07-sampling-elicitation-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PRODUCTION (Ch 8-10) ═══════════ -->
+  <div class="act-section act-violet">
+    <div class="act-header">
+      <span class="act-badge">Production</span>
+      <div class="act-info"><h3>Security, Building &amp; Ecosystem</h3><div class="act-desc">OAuth, building servers, and deploying MCP in production with agent frameworks.</div></div>
+    </div>
+    <div class="card-grid">
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">8</div><div class="fc-icon"><span class="material-symbols-rounded">shield</span></div></div><div class="fc-title">Security, Authorization &amp; OAuth</div><div class="fc-hook">OAuth 2.1 + PKCE, dynamic client registration, roots, and consent scoping.</div><div class="fc-links"><a class="fc-learn" href="08-security-oauth-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="08-security-oauth-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">9</div><div class="fc-icon"><span class="material-symbols-rounded">terminal</span></div></div><div class="fc-title">Building an MCP Server</div><div class="fc-hook">Python &amp; TypeScript SDKs, project structure, MCP Inspector, and IDE integration.</div><div class="fc-links"><a class="fc-learn" href="09-building-servers-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="09-building-servers-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+      <div class="flash-card"><div class="fc-top"><div class="fc-num">10</div><div class="fc-icon"><span class="material-symbols-rounded">rocket_launch</span></div></div><div class="fc-title">MCP in Production &amp; the Ecosystem</div><div class="fc-hook">Registry, multi-server composition, agent frameworks, gateways, and the 2026 roadmap.</div><div class="fc-links"><a class="fc-learn" href="10-production-ecosystem-high-level.html"><span class="material-symbols-rounded">visibility</span> High Level</a><a class="fc-deep" href="10-production-ecosystem-under-the-hood.html"><span class="material-symbols-rounded">code</span> Deep Dive</a></div></div>
+    </div>
+  </div>
+
+  <div class="related-section">
+    <div class="related-header"><span class="material-symbols-rounded">explore</span><h4>Explore Related Courses</h4></div>
+    <div class="related-grid">
+      <a class="related-card" href="../AgenticAI/index.html"><div class="rc-icon"><span class="material-symbols-rounded">psychology</span></div><div><div class="rc-title">Agentic AI</div><div class="rc-sub">Planning, Memory &amp; Tool Use</div></div></a>
+      <a class="related-card" href="../AISecurity/index.html"><div class="rc-icon"><span class="material-symbols-rounded">shield</span></div><div><div class="rc-title">AI Security</div><div class="rc-sub">Threats &amp; Defenses</div></div></a>
+      <a class="related-card" href="../AIAssistedCoding/index.html"><div class="rc-icon"><span class="material-symbols-rounded">code</span></div><div><div class="rc-title">AI-Assisted Coding</div><div class="rc-sub">From Completion to Agents</div></div></a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

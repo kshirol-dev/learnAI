@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 16: Evaluation for Multimodal &mdash; High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);padding:4px 12px;background:var(--pink-light);border:1px solid var(--pink-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--pink-border);background:var(--pink-light)}.pipe-stage.lit .pipe-icon{background:var(--pink);color:#fff}.pipe-stage.lit .pipe-label{color:var(--pink)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--pink)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--pink);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--pink);box-shadow:0 0 5px rgba(219,39,119,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--pink);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 16 &mdash; Evaluation for Multimodal</h2><span class="tb-sub">Benchmarks, metrics, human evaluation, and building eval pipelines for multimodal systems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">quiz</span></div><span class="pipe-label">What</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Metrics</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">leaderboard</span></div><span class="pipe-label">Bench</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">person</span></div><span class="pipe-label">Human</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">settings</span></div><span class="pipe-label">Pipeline</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Monitor</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">quiz</span></div><div><div class="cc-title">Why Multimodal Eval Is Hard</div><div class="cc-sub">Unique challenges in evaluating systems that see, hear, and generate</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Challenge</div><div class="cc-text">Multimodal evaluation is harder than text evaluation because:<br><br>&bull; <strong>Subjectivity:</strong> &ldquo;Is this generated image good?&rdquo; has no single right answer<br>&bull; <strong>Multiple dimensions:</strong> Accuracy, relevance, visual quality, safety, bias &mdash; all matter simultaneously<br>&bull; <strong>Cross-modal alignment:</strong> Does the text description match the image? How do you measure &ldquo;match&rdquo;?<br>&bull; <strong>Hallucination detection:</strong> Verifying visual claims requires looking at the image, not just reading text<br>&bull; <strong>Scale:</strong> Human evaluation of images/video is 10x more expensive than text</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Evaluate</div><div class="cc-code"><span class="hl-cmt">// Evaluation dimensions for multimodal AI</span>
+
+<span class="hl-key">Understanding</span>
+  Can the model correctly describe images?
+  Can it answer questions about visual content?
+  Does it understand spatial relationships?
+
+<span class="hl-key">Generation</span>
+  Is the generated image/video high quality?
+  Does it match the text prompt?
+  Is it free of artifacts and distortions?
+
+<span class="hl-key">Safety</span>
+  Does it refuse harmful requests?
+  Does it hallucinate visual content?
+  Is it biased across demographics?
+
+<span class="hl-key">Practical</span>
+  Latency, cost, throughput, reliability</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The biggest mistake in multimodal eval is only measuring accuracy. A model that&rsquo;s 95% accurate but hallucinates confidently on the other 5% is more dangerous than one that&rsquo;s 90% accurate but says &ldquo;I&rsquo;m not sure&rdquo; when uncertain.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">analytics</span></div><div><div class="cc-title">Metrics for Understanding</div><div class="cc-sub">Measuring how well models understand visual content</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">VLM Understanding Metrics</div><div class="cc-text">&bull; <strong>Accuracy:</strong> Correct answers on visual Q&amp;A (multiple choice or exact match)<br>&bull; <strong>BLEU/ROUGE/CIDEr:</strong> Text similarity between generated captions and reference captions. Useful but limited.<br>&bull; <strong>CLIPScore:</strong> CLIP similarity between generated text and image. Measures text-image alignment without reference.<br>&bull; <strong>Hallucination rate:</strong> % of responses containing objects/facts not present in the image<br>&bull; <strong>Spatial accuracy:</strong> Correct identification of positions, sizes, and relationships</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Metrics for Generation</div><div class="cc-text">&bull; <strong>FID (Fr&eacute;chet Inception Distance):</strong> Measures quality and diversity of generated images vs. real images. Lower is better.<br>&bull; <strong>CLIPScore:</strong> How well does the generated image match the text prompt?<br>&bull; <strong>Aesthetic score:</strong> Predicted human preference for visual quality<br>&bull; <strong>IS (Inception Score):</strong> Quality and diversity of generated images<br>&bull; <strong>Human preference:</strong> Side-by-side comparison rated by humans (gold standard)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Automated metrics (FID, CLIPScore) are useful for rapid iteration but don&rsquo;t fully capture human preferences. Always validate with human evaluation for high-stakes decisions. Use automated metrics for daily monitoring, human eval for milestone decisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">leaderboard</span></div><div><div class="cc-title">Key Benchmarks</div><div class="cc-sub">Standard benchmarks for multimodal model comparison</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">VLM Benchmarks</div><div class="cc-code"><span class="hl-cmt">// Major multimodal benchmarks</span>
+
+<span class="hl-key">MMMU</span>        College-level visual reasoning
+             30 subjects, 11.5K questions
+<span class="hl-key">MMBench</span>     Comprehensive VLM evaluation
+             3,000 questions, 20 abilities
+<span class="hl-key">DocVQA</span>      Document understanding
+             50K questions on real documents
+<span class="hl-key">ChartQA</span>     Chart and graph understanding
+<span class="hl-key">MathVista</span>   Math reasoning with visual inputs
+<span class="hl-key">RealWorldQA</span> Real-world spatial understanding
+<span class="hl-key">POPE</span>        Object hallucination detection
+<span class="hl-key">MM-Vet</span>      Integrated visual understanding</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Generation Benchmarks</div><div class="cc-text">&bull; <strong>GenEval:</strong> Compositional text-to-image generation (objects, attributes, relations)<br>&bull; <strong>T2I-CompBench:</strong> Compositional generation with attribute binding, spatial relations<br>&bull; <strong>DrawBench:</strong> Google&rsquo;s text-to-image benchmark with complex prompts<br>&bull; <strong>PartiPrompts:</strong> 1,600 prompts testing various generation capabilities<br>&bull; <strong>Chatbot Arena (Vision):</strong> Human preference ranking via blind comparisons</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Chatbot Arena (Vision) is the most reliable benchmark because it uses real users making blind comparisons. Public benchmarks are useful for initial screening but can be gamed. Always build a custom eval set for your specific use case.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">person</span></div><div><div class="cc-title">Human Evaluation</div><div class="cc-sub">The gold standard for multimodal quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Human Eval Approaches</div><div class="cc-text">&bull; <strong>Side-by-side comparison:</strong> Show outputs from two models, ask which is better. Most reliable for ranking models.<br>&bull; <strong>Likert scale rating:</strong> Rate quality on 1&ndash;5 scale across dimensions (accuracy, relevance, completeness). Good for tracking improvement.<br>&bull; <strong>Error annotation:</strong> Mark specific errors (hallucination, wrong object, spatial error). Best for understanding failure modes.<br>&bull; <strong>Task completion:</strong> Can a human complete a downstream task using the model&rsquo;s output? Most realistic.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Practical Setup</div><div class="cc-code"><span class="hl-cmt">// Human eval for multimodal systems</span>
+
+<span class="hl-key">Sample size:</span>  100-500 examples
+<span class="hl-key">Annotators:</span>  3 per example (majority vote)
+<span class="hl-key">Cost:</span>        $0.50-2.00 per judgment
+<span class="hl-key">Total:</span>       $150-3,000 per eval round
+
+<span class="hl-cmt">// Dimensions to rate</span>
+<span class="hl-key">Accuracy:</span>    Is the visual description correct?
+<span class="hl-key">Completeness:</span> Are all important details covered?
+<span class="hl-key">Hallucination:</span> Any fabricated visual claims?
+<span class="hl-key">Relevance:</span>   Does the response address the query?
+<span class="hl-key">Safety:</span>      Any harmful or biased content?</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Human evaluation for multimodal is 3&ndash;5x more expensive than for text because annotators must carefully examine images/videos. Invest in clear annotation guidelines and inter-annotator agreement metrics to ensure quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">Hallucination Detection</div><div class="cc-sub">Finding and measuring visual hallucinations</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Types of Visual Hallucination</div><div class="cc-text">&bull; <strong>Object hallucination:</strong> &ldquo;There is a cat on the table&rdquo; when there&rsquo;s no cat<br>&bull; <strong>Attribute hallucination:</strong> &ldquo;The red car&rdquo; when the car is blue<br>&bull; <strong>Relation hallucination:</strong> &ldquo;The cup is on the left&rdquo; when it&rsquo;s on the right<br>&bull; <strong>Count hallucination:</strong> &ldquo;Three people&rdquo; when there are five<br>&bull; <strong>Text hallucination:</strong> Misreading text in images (OCR errors presented as facts)<br>&bull; <strong>Fabrication:</strong> Inventing entire scenes or details not present</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Detection Methods</div><div class="cc-text">&bull; <strong>POPE benchmark:</strong> Yes/no questions about object presence. Simple but effective for object hallucination.<br>&bull; <strong>CHAIR metric:</strong> Caption Hallucination Assessment with Image Relevance. Measures % of caption objects not in the image.<br>&bull; <strong>VLM-as-judge:</strong> Use a stronger VLM to verify claims made by the model under test<br>&bull; <strong>Grounding verification:</strong> Ask model for bounding boxes, verify they contain the claimed objects<br>&bull; <strong>Consistency checks:</strong> Ask the same question multiple ways &mdash; inconsistent answers suggest hallucination</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Visual hallucination is the #1 reliability risk in VLM applications. Build hallucination detection into your eval pipeline from day one. The POPE benchmark + VLM-as-judge combination catches most hallucinations at low cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">settings</span></div><div><div class="cc-title">Building an Eval Pipeline</div><div class="cc-sub">Automated evaluation for continuous improvement</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pipeline Architecture</div><div class="cc-code"><span class="hl-cmt">// Multimodal eval pipeline</span>
+
+<span class="hl-key">1. Eval Dataset</span>
+   50-500 curated examples from your domain
+   Images + questions + expected answers
+   Tagged by difficulty, category, edge case
+
+<span class="hl-key">2. Automated Metrics</span>
+   Accuracy, CLIPScore, hallucination rate
+   Run on every model change (CI/CD)
+
+<span class="hl-key">3. VLM-as-Judge</span>
+   GPT-4o or Gemini rates quality 1-5
+   Cheaper than human eval, 80% correlation
+
+<span class="hl-key">4. Human Eval (periodic)</span>
+   Monthly deep eval on 100-200 examples
+   Calibrate automated metrics
+
+<span class="hl-key">5. Regression Tests</span>
+   Known failure cases that must pass
+   Grows over time as you find bugs</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Best Practices</div><div class="cc-text">&bull; <strong>Start with 50 examples:</strong> A small, high-quality eval set beats a large noisy one<br>&bull; <strong>Include edge cases:</strong> Low-light photos, handwritten text, complex charts, ambiguous images<br>&bull; <strong>Version your eval set:</strong> Track changes to eval data alongside model changes<br>&bull; <strong>Measure what matters:</strong> Align metrics with actual user satisfaction<br>&bull; <strong>Automate everything:</strong> Eval should run automatically on every deployment<br>&bull; <strong>Track trends:</strong> Dashboard showing metrics over time, not just point-in-time</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The eval pipeline is your most important infrastructure investment. Teams that build robust eval pipelines iterate 5x faster because they can confidently measure the impact of every change.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">Production Monitoring</div><div class="cc-sub">Continuous evaluation in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Monitor</div><div class="cc-text">&bull; <strong>Quality metrics:</strong> Sample 1&ndash;5% of production outputs for automated quality scoring<br>&bull; <strong>Hallucination rate:</strong> Track hallucination detection scores over time<br>&bull; <strong>User feedback:</strong> Thumbs up/down, explicit corrections, task completion rate<br>&bull; <strong>Latency:</strong> P50, P95, P99 by input type (image size, resolution mode)<br>&bull; <strong>Cost:</strong> Tokens per request, daily spend, cost per successful task<br>&bull; <strong>Error patterns:</strong> Cluster failures to identify systematic issues</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Alerting Rules</div><div class="cc-text">&bull; <strong>Quality drop:</strong> Alert if average quality score drops &gt;10% over 24 hours<br>&bull; <strong>Hallucination spike:</strong> Alert if hallucination rate exceeds baseline by 2x<br>&bull; <strong>Latency degradation:</strong> Alert if P95 latency exceeds SLA<br>&bull; <strong>Cost anomaly:</strong> Alert if daily cost exceeds budget by &gt;20%<br>&bull; <strong>New failure mode:</strong> Alert when a new cluster of similar failures appears</div></div>
+          <div class="cc-note n-violet"><strong>Pro tip:</strong> Build a &ldquo;data flywheel&rdquo;: log production inputs/outputs &rarr; identify failures &rarr; add to eval set &rarr; fix model &rarr; verify fix &rarr; deploy. This continuous improvement loop is how the best multimodal systems get better over time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div><div><div class="cc-title">Key Takeaways</div><div class="cc-sub">Evaluating multimodal AI systems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Essential Concepts</div><div class="cc-text">1. <strong>Multi-dimensional:</strong> Evaluate accuracy, hallucination, safety, bias, latency, and cost simultaneously<br><br>2. <strong>Automated + human:</strong> Use automated metrics for daily monitoring, human eval for milestone decisions<br><br>3. <strong>Hallucination is #1 risk:</strong> Build hallucination detection (POPE, VLM-as-judge) into your pipeline from day one<br><br>4. <strong>Custom eval &gt; benchmarks:</strong> 50 domain-specific examples beat any public benchmark<br><br>5. <strong>Data flywheel:</strong> Production failures become eval examples become model improvements</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quick Start</div><div class="cc-text">&bull; <strong>Day 1:</strong> Create 50 eval examples from your domain<br>&bull; <strong>Week 1:</strong> Add automated accuracy + hallucination metrics<br>&bull; <strong>Week 2:</strong> Set up VLM-as-judge for quality scoring<br>&bull; <strong>Month 1:</strong> First human eval round, calibrate automated metrics<br>&bull; <strong>Ongoing:</strong> Grow eval set from production failures, monitor trends</div></div>
+          <div class="cc-note n-pink"><strong>Next up:</strong> Chapter 17 looks ahead to the future of multimodal AI &mdash; where the technology is heading, what breakthroughs to expect, and how to prepare for what&rsquo;s coming.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="15-ethics-safety.html"><span class="material-symbols-rounded">arrow_back</span> Ch 15: Ethics &amp; Safety</a>
+    <a class="ch-nav-btn next" href="17-future.html">Ch 17: The Future of Multimodal AI <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[1,2],6:[3,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Multimodal eval is harder than text: subjectivity, multiple dimensions, cross-modal alignment, and 10x more expensive human evaluation.',color:'#db2777'},
+    2:{text:'<strong>Step 2:</strong> Key metrics: accuracy, CLIPScore, FID, hallucination rate, and human preference. Automated metrics for daily use, human eval for milestones.',color:'#db2777'},
+    3:{text:'<strong>Step 3:</strong> Benchmarks: MMMU (reasoning), DocVQA (documents), POPE (hallucination), Chatbot Arena Vision (human preference). Custom evals beat all.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Human evaluation: side-by-side comparisons, Likert ratings, error annotation. 3 annotators per example, $150-3,000 per round.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Visual hallucination is the #1 reliability risk. Use POPE + VLM-as-judge + grounding verification to catch hallucinations automatically.',color:'#2563eb'},
+    6:{text:'<strong>Step 6:</strong> Build an eval pipeline: curated dataset + automated metrics + VLM-as-judge + periodic human eval + regression tests. Run on every deployment.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Production monitoring: sample outputs for quality scoring, track hallucination rate, alert on quality drops and cost anomalies.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The data flywheel: production failures become eval examples become model improvements. Start with 50 examples, grow continuously.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

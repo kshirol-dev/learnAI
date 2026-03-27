@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Evaluation &amp; Metrics That Matter — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Evaluation &amp; Metrics That Matter</h2><span class="tb-sub">Accuracy is not enough. Precision, recall, F1 &mdash; what they mean in product terms.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">dangerous</span></div><span class="pipe-label">Accuracy Trap</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_on</span></div><span class="pipe-label">Confusion</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">target</span></div><span class="pipe-label">P / R / F1</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">LLM Eval</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">person</span></div><span class="pipe-label">Human</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">trending_up</span></div><span class="pipe-label">Business</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">dangerous</span></div><div><div class="cc-title">The Accuracy Trap</div><div class="cc-sub">Why the most intuitive metric is often the most misleading</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem with Accuracy</div><div class="cc-text"><strong>Accuracy</strong> = (correct predictions) / (total predictions). It&rsquo;s the first metric everyone asks about, and it&rsquo;s often the worst one to rely on.<br><br><strong>The classic example:</strong> Fraud occurs in 0.1% of transactions. A model that predicts &ldquo;not fraud&rdquo; for every single transaction achieves <strong>99.9% accuracy</strong>. It catches zero fraud. The metric looks perfect; the model is useless.<br><br>This happens whenever the classes are <strong>imbalanced</strong> &mdash; when one outcome is far more common than the other. Spam detection (95% of email is not spam), disease diagnosis (99% of patients don&rsquo;t have the disease), defect detection (99.5% of products pass inspection).<br><br>Accuracy hides the failures in the minority class &mdash; which is usually the class you care about most.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What to Use Instead</div><div class="cc-text">Accuracy is fine as a <strong>sanity check</strong> but should never be your primary metric. Instead, use metrics that separately measure performance on the things you care about:<br><br>&bull; <strong>Precision:</strong> When the model says &ldquo;yes,&rdquo; how often is it right?<br>&bull; <strong>Recall:</strong> Of all actual &ldquo;yes&rdquo; cases, how many did the model catch?<br>&bull; <strong>F1 Score:</strong> The balanced combination of precision and recall<br><br>These metrics force you to think about <strong>which types of errors matter</strong> rather than lumping all predictions together. They&rsquo;re the language of AI product quality.</div></div>
+          <div class="cc-note n-violet"><strong>PM rule:</strong> When someone reports &ldquo;95% accuracy,&rdquo; your first question should be: &ldquo;What&rsquo;s the class distribution?&rdquo; If one class is 95% of the data, 95% accuracy means the model may be doing nothing useful. Always ask for precision and recall alongside accuracy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">grid_on</span></div><div><div class="cc-title">The Confusion Matrix</div><div class="cc-sub">The foundation of all classification metrics &mdash; four numbers that tell the whole story</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Four Outcomes</div><div class="cc-text">Every prediction falls into one of four categories:<br><br><strong>True Positive (TP):</strong> Model said &ldquo;yes&rdquo; and the answer was yes.<br>&bull; Fraud detector correctly flags a fraudulent transaction.<br>&bull; Spam filter correctly catches a spam email.<br><br><strong>False Positive (FP):</strong> Model said &ldquo;yes&rdquo; but the answer was no. <em>(Type I error)</em><br>&bull; Fraud detector flags a legitimate transaction as fraud.<br>&bull; Spam filter sends a real email to the spam folder.<br><br><strong>True Negative (TN):</strong> Model said &ldquo;no&rdquo; and the answer was no.<br>&bull; Fraud detector correctly allows a legitimate transaction.<br><br><strong>False Negative (FN):</strong> Model said &ldquo;no&rdquo; but the answer was yes. <em>(Type II error)</em><br>&bull; Fraud detector misses an actual fraudulent transaction.<br>&bull; Spam filter lets spam through to the inbox.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Product Translation</div><div class="cc-text">Every AI product has its own version of these four outcomes. The PM&rsquo;s job is to translate them into business impact:<br><br><strong>Fraud detection:</strong><br>&bull; FP = Customer friction (blocked legitimate purchase) &rarr; lost revenue, angry customer<br>&bull; FN = Missed fraud &rarr; financial loss, regulatory risk<br><br><strong>Medical screening:</strong><br>&bull; FP = Healthy patient told they might be sick &rarr; unnecessary tests, anxiety<br>&bull; FN = Sick patient told they&rsquo;re healthy &rarr; delayed treatment, potential death<br><br><strong>Content moderation:</strong><br>&bull; FP = Legitimate content removed &rarr; user frustration, censorship complaints<br>&bull; FN = Harmful content allowed through &rarr; user safety risk, brand damage<br><br>For your product, <strong>which error is more expensive?</strong> This determines which metric you optimize.</div></div>
+          <div class="cc-note n-blue"><strong>The asymmetry decision:</strong> In almost every AI product, false positives and false negatives have different costs. The PM must quantify this asymmetry: &ldquo;A false positive costs us $X. A false negative costs us $Y.&rdquo; This single decision drives the model&rsquo;s threshold, the evaluation criteria, and the product design.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">target</span></div><div><div class="cc-title">Precision, Recall &amp; F1</div><div class="cc-sub">The three metrics every AI PM must understand cold</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Precision</div><div class="cc-text"><strong>Precision = TP / (TP + FP)</strong><br><br>&ldquo;When the model says &lsquo;yes,&rsquo; how often is it right?&rdquo;<br><br>High precision means <strong>few false alarms</strong>. When the model flags something, you can trust it.<br><br><strong>Optimize precision when false positives are expensive:</strong><br>&bull; Email spam filter &mdash; Sending a real email to spam is worse than letting some spam through<br>&bull; Content recommendations &mdash; Bad recommendations annoy users and erode trust<br>&bull; Automated actions &mdash; If the AI auto-deletes files it thinks are duplicates, false positives are catastrophic</div></div>
+          <div class="cc-block"><div class="cc-label">Recall</div><div class="cc-text"><strong>Recall = TP / (TP + FN)</strong><br><br>&ldquo;Of all actual positive cases, how many did the model catch?&rdquo;<br><br>High recall means <strong>few missed cases</strong>. The model catches most of what it should.<br><br><strong>Optimize recall when false negatives are expensive:</strong><br>&bull; Cancer screening &mdash; Missing a tumor is far worse than a false alarm<br>&bull; Fraud detection &mdash; Missing actual fraud costs more than investigating false flags<br>&bull; Security threats &mdash; Missing an intrusion is catastrophic; false alerts are annoying but survivable</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">F1 Score</div><div class="cc-text"><strong>F1 = 2 &times; (Precision &times; Recall) / (Precision + Recall)</strong><br><br>The <strong>harmonic mean</strong> of precision and recall. F1 is high only when <em>both</em> precision and recall are high. It penalizes models that sacrifice one for the other.<br><br><strong>Use F1 when:</strong><br>&bull; False positives and false negatives are roughly equally costly<br>&bull; You need a single number to compare models<br>&bull; The dataset is imbalanced (accuracy is misleading)</div></div>
+          <div class="cc-block"><div class="cc-label">The Precision-Recall Trade-Off</div><div class="cc-text">Precision and recall are in <strong>tension</strong>. Increasing one typically decreases the other:<br><br>&bull; Make the model more cautious (higher threshold) &rarr; precision goes up, recall goes down<br>&bull; Make the model more aggressive (lower threshold) &rarr; recall goes up, precision goes down<br><br>The PM sets the threshold based on error cost asymmetry. There is no universally &ldquo;right&rdquo; balance &mdash; it depends entirely on your product and users.</div></div>
+          <div class="cc-note n-teal"><strong>The PM cheat sheet:</strong> Precision = &ldquo;trust the alarm.&rdquo; Recall = &ldquo;catch everything.&rdquo; F1 = &ldquo;balance both.&rdquo; When someone says &ldquo;we improved F1 from 0.82 to 0.87,&rdquo; you should immediately ask: &ldquo;Did precision or recall improve? Which matters more for our users?&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">chat</span></div><div><div class="cc-title">Evaluating LLM Products</div><div class="cc-sub">When there&rsquo;s no single &ldquo;correct answer&rdquo; &mdash; how to measure quality for generative AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why LLM Evaluation Is Harder</div><div class="cc-text">Classification metrics work when there&rsquo;s a clear right/wrong answer. LLM products often don&rsquo;t have one:<br><br>&bull; &ldquo;Summarize this document&rdquo; &mdash; Many valid summaries exist<br>&bull; &ldquo;Write a marketing email&rdquo; &mdash; Quality is subjective<br>&bull; &ldquo;Answer this question&rdquo; &mdash; The answer might be correct but poorly worded, or well-worded but incomplete<br><br>You can&rsquo;t compute precision/recall on a generated paragraph. You need different evaluation approaches.</div></div>
+          <div class="cc-block"><div class="cc-label">Automated LLM Metrics</div><div class="cc-text"><strong>Reference-based metrics:</strong><br>&bull; <strong>BLEU / ROUGE:</strong> Compare generated text against reference texts. Useful for translation and summarization. Limited because they measure word overlap, not meaning.<br>&bull; <strong>Exact match:</strong> For factual Q&amp;A, does the answer match the expected answer exactly?<br><br><strong>LLM-as-judge:</strong><br>Use a stronger LLM to evaluate a weaker one. &ldquo;Rate this response on accuracy (1&ndash;5), helpfulness (1&ndash;5), and safety (1&ndash;5).&rdquo; Increasingly common but introduces its own biases (LLMs tend to prefer longer, more verbose responses).<br><br><strong>Factual grounding:</strong><br>For RAG products, measure whether the response is supported by the retrieved documents. Can the AI cite its sources? Are the citations accurate?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Evaluation Rubric</div><div class="cc-text">For LLM products, create a <strong>scoring rubric</strong> that evaluators (human or LLM) use consistently:<br><br><strong>Example rubric for a customer support bot:</strong><br><br><strong>Accuracy (1&ndash;5):</strong><br>5 = Factually correct, complete answer<br>3 = Mostly correct, minor omissions<br>1 = Incorrect or fabricated information<br><br><strong>Helpfulness (1&ndash;5):</strong><br>5 = Fully resolves the customer&rsquo;s issue<br>3 = Partially helpful, needs follow-up<br>1 = Unhelpful or irrelevant<br><br><strong>Safety (Pass/Fail):</strong><br>Pass = No harmful, biased, or inappropriate content<br>Fail = Contains any safety violation<br><br><strong>Tone (1&ndash;5):</strong><br>5 = Professional, empathetic, on-brand<br>3 = Acceptable but generic<br>1 = Rude, confusing, or off-brand</div></div>
+          <div class="cc-note n-amber"><strong>PM ownership:</strong> The evaluation rubric is a product artifact, not an engineering artifact. The PM defines what &ldquo;good&rdquo; looks like for the user. The ML team builds systems to measure it. If you don&rsquo;t own the rubric, you don&rsquo;t own the quality bar.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">person</span></div><div><div class="cc-title">Human Evaluation</div><div class="cc-sub">When automated metrics aren&rsquo;t enough &mdash; and they often aren&rsquo;t</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When You Need Human Evaluation</div><div class="cc-text">Automated metrics are fast and scalable but miss nuance. Human evaluation is slow and expensive but catches what metrics miss:<br><br>&bull; <strong>Tone and style:</strong> Is the response on-brand? Empathetic? Professional?<br>&bull; <strong>Factual accuracy:</strong> Is the information correct? (Automated metrics can&rsquo;t reliably check facts)<br>&bull; <strong>Harmful content:</strong> Is there subtle bias, toxicity, or inappropriate content?<br>&bull; <strong>User experience:</strong> Would a real user find this helpful? Confusing? Frustrating?<br>&bull; <strong>Edge cases:</strong> How does the model handle unusual or adversarial inputs?<br><br>For most AI products, you need <strong>both</strong>: automated metrics for continuous monitoring and human evaluation for periodic deep assessment.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Running Human Evaluation</div><div class="cc-text"><strong>Who evaluates:</strong><br>&bull; <strong>Domain experts</strong> for accuracy (doctors for medical AI, lawyers for legal AI)<br>&bull; <strong>Target users</strong> for helpfulness and usability<br>&bull; <strong>Red team</strong> for safety and adversarial robustness<br>&bull; <strong>Internal team</strong> for quick iteration during development<br><br><strong>How many evaluations:</strong><br>&bull; Minimum 200&ndash;500 examples per evaluation cycle<br>&bull; Each example rated by 2&ndash;3 evaluators (to measure agreement)<br>&bull; Include a mix of easy cases, hard cases, and edge cases<br><br><strong>Measuring agreement:</strong><br>If evaluators disagree frequently, either the rubric is ambiguous or the task is genuinely subjective. <strong>Inter-annotator agreement</strong> (Cohen&rsquo;s kappa or percentage agreement) tells you how reliable your evaluation is. Below 70% agreement, refine the rubric before trusting the results.</div></div>
+          <div class="cc-note n-pink"><strong>The evaluation cadence:</strong> Run human evaluation at three points: before launch (go/no-go decision), monthly after launch (quality tracking), and after every major model change (regression check). Between human evaluations, automated metrics provide continuous monitoring. This combination gives you both depth and coverage.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">Business Metrics</div><div class="cc-sub">Connecting model metrics to the numbers that matter to the business</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Metrics Gap</div><div class="cc-text">Model metrics (precision, recall, F1) measure <strong>how well the model performs</strong>. Business metrics measure <strong>how much value the model creates</strong>. They&rsquo;re related but not the same.<br><br>A model with 92% F1 that users ignore creates zero business value. A model with 78% F1 that saves users 2 hours per day is transformative.<br><br>The PM must bridge this gap by defining <strong>how model performance translates to business outcomes</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">Common Business Metrics for AI</div><div class="cc-text"><strong>Efficiency metrics:</strong><br>&bull; Time saved per task (AI drafts reduce writing time by 40%)<br>&bull; Automation rate (% of cases handled without human intervention)<br>&bull; Cost per resolution (AI support costs $0.50 vs. human at $12)<br><br><strong>Quality metrics:</strong><br>&bull; Task completion rate (% of users who achieve their goal with AI assistance)<br>&bull; Error escalation rate (% of AI outputs that require human correction)<br>&bull; User satisfaction (CSAT, NPS on AI-assisted interactions)<br><br><strong>Revenue metrics:</strong><br>&bull; Conversion lift (AI recommendations increase purchase rate by X%)<br>&bull; Retention impact (users with AI features retain X% better)<br>&bull; Revenue per AI interaction (direct monetization of AI features)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Metrics Stack</div><div class="cc-text">Build a <strong>three-layer metrics stack</strong> that connects model performance to business value:<br><br><strong>Layer 1: Model metrics</strong> (technical team tracks daily)<br>Precision, recall, F1, latency, cost per query, hallucination rate<br><br><strong>Layer 2: Product metrics</strong> (PM tracks weekly)<br>Task completion rate, user acceptance rate, escalation rate, regeneration rate, user satisfaction<br><br><strong>Layer 3: Business metrics</strong> (leadership tracks monthly/quarterly)<br>Revenue impact, cost savings, efficiency gains, retention impact, competitive differentiation<br><br>Each layer should have clear <strong>leading indicators</strong> that predict the layer above. If model precision drops (Layer 1), expect escalation rate to rise (Layer 2), which will increase support costs (Layer 3).</div></div>
+          <div class="cc-note n-green"><strong>The translation exercise:</strong> For every model metric improvement, articulate the business impact. &ldquo;We improved recall from 85% to 92%. This means we catch 7% more fraud, preventing an estimated $340K in annual losses.&rdquo; This translation is how you justify continued investment in AI to leadership.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">A/B Testing AI Products</div><div class="cc-sub">The gold standard for measuring real-world impact &mdash; with AI-specific complications</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why A/B Testing Matters for AI</div><div class="cc-text">Offline evaluation (test set metrics) tells you how the model performs on historical data. <strong>A/B testing tells you how it performs on real users</strong>. The gap can be significant:<br><br>&bull; A model with higher F1 might produce outputs that users find less helpful<br>&bull; A faster model with lower accuracy might have higher user satisfaction (speed matters)<br>&bull; A model that&rsquo;s technically better might confuse users who were accustomed to the old behavior<br><br>A/B testing measures what actually matters: <strong>does the new model make the product better for users?</strong></div></div>
+          <div class="cc-block"><div class="cc-label">AI-Specific A/B Challenges</div><div class="cc-text"><strong>Non-determinism:</strong> The same user might get different outputs from the same model, making it harder to attribute differences to the model vs. randomness.<br><br><strong>Learning effects:</strong> Users adapt to AI behavior over time. A model that seems worse initially might be better once users learn its patterns.<br><br><strong>Feedback contamination:</strong> If both variants feed into the same training pipeline, they can influence each other&rsquo;s future performance.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">A/B Testing Best Practices for AI</div><div class="cc-text"><strong>1. Test on business metrics, not model metrics.</strong><br>The A/B test should measure task completion rate, user satisfaction, or revenue &mdash; not F1 score. Model metrics are for offline evaluation.<br><br><strong>2. Run longer than traditional A/B tests.</strong><br>AI behavior varies more than deterministic features. Run for at least 2 weeks to capture variance and user adaptation.<br><br><strong>3. Segment results.</strong><br>The new model might be better for power users but worse for new users. Check performance across user segments, not just overall.<br><br><strong>4. Monitor safety metrics separately.</strong><br>Even if the new model wins on business metrics, check that safety metrics (hallucination rate, harmful content) haven&rsquo;t degraded.<br><br><strong>5. Have a rollback plan.</strong><br>If the new model causes unexpected issues, you need to switch back instantly. This requires infrastructure support.</div></div>
+          <div class="cc-note n-red"><strong>The A/B testing trap:</strong> Don&rsquo;t A/B test too early. If the model hasn&rsquo;t passed offline evaluation, it&rsquo;s not ready for real users. A/B testing is for comparing models that are both &ldquo;good enough&rdquo; &mdash; not for discovering that a model is broken. Use offline evaluation as the gate; use A/B testing as the tiebreaker.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">analytics</span></div><div><div class="cc-title">The Evaluation Playbook</div><div class="cc-sub">Putting it all together &mdash; a systematic approach to AI product evaluation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Evaluation Stack</div><div class="cc-text"><strong>Level 1: Automated metrics (continuous)</strong><br>Run on every model change. Precision, recall, F1 for classification. ROUGE, factual accuracy for generation. Latency, cost, safety scores. This is your first gate &mdash; if automated metrics regress, don&rsquo;t proceed.<br><br><strong>Level 2: Human evaluation (periodic)</strong><br>Run before launch, monthly after launch, and after major changes. Domain experts rate outputs using your rubric. 200&ndash;500 examples per cycle. This catches what automated metrics miss.<br><br><strong>Level 3: A/B testing (for major changes)</strong><br>Run when comparing meaningfully different models or approaches. Measure business metrics on real users. 2+ weeks duration. This is the final arbiter of real-world value.<br><br><strong>Level 4: User feedback (continuous)</strong><br>Thumbs up/down, corrections, satisfaction surveys. Low-cost, high-volume signal. Use to identify emerging issues and prioritize improvements.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The PM&rsquo;s Evaluation Checklist</div><div class="cc-text"><strong>&square; Primary metric defined</strong> &mdash; The one number that defines model quality for your product<br><br><strong>&square; Guardrail metrics defined</strong> &mdash; Metrics that must not degrade (safety, latency, cost)<br><br><strong>&square; Business metric linked</strong> &mdash; How model performance translates to business value<br><br><strong>&square; Evaluation dataset curated</strong> &mdash; 200&ndash;500 examples covering normal, hard, and edge cases<br><br><strong>&square; Rubric written</strong> &mdash; Clear scoring criteria for human evaluation<br><br><strong>&square; Automated pipeline built</strong> &mdash; Metrics computed on every model change<br><br><strong>&square; Human evaluation scheduled</strong> &mdash; Regular cadence with qualified evaluators<br><br><strong>&square; A/B testing infrastructure ready</strong> &mdash; Can split traffic and measure business metrics<br><br><strong>&square; Feedback mechanism live</strong> &mdash; Users can signal quality (thumbs up/down, corrections)</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> Evaluation is not a one-time activity &mdash; it&rsquo;s a continuous system. The PM who builds a robust evaluation stack has a superpower: they can measure quality, detect degradation, compare alternatives, and justify investment with data. Without evaluation, you&rsquo;re flying blind. With it, you&rsquo;re making informed product decisions at every stage.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-model-development-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 9: Model Development for PMs</a>
+    <a class="ch-nav-btn next" href="11-prompt-engineering-as-product-design-high-level.html">Ch 11: Prompt Engineering as Product Design <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[3],5:[3,4],6:[5],7:[2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>The accuracy trap.</strong> A fraud model predicting &ldquo;not fraud&rdquo; for everything achieves 99.9% accuracy and catches zero fraud. Accuracy hides failures in the minority class &mdash; which is usually what you care about. Always ask for precision and recall alongside accuracy.',color:'#7c3aed'},
+    2:{text:'<strong>The confusion matrix.</strong> Four outcomes: True Positive (correct alarm), False Positive (false alarm), True Negative (correct silence), False Negative (missed case). The PM&rsquo;s job: quantify the cost of each. &ldquo;A false positive costs $X. A false negative costs $Y.&rdquo; This drives every downstream decision.',color:'#2563eb'},
+    3:{text:'<strong>Precision, Recall, F1.</strong> Precision = &ldquo;trust the alarm&rdquo; (optimize when FPs are expensive). Recall = &ldquo;catch everything&rdquo; (optimize when FNs are expensive). F1 = balanced combination. They&rsquo;re in tension: more cautious = higher precision, lower recall. The PM sets the threshold based on error cost.',color:'#0d9488'},
+    4:{text:'<strong>LLM evaluation.</strong> No single &ldquo;correct answer&rdquo; for generated text. Use BLEU/ROUGE for reference comparison, LLM-as-judge for automated scoring, factual grounding for RAG. Build a scoring rubric (accuracy, helpfulness, safety, tone) &mdash; the PM owns this rubric.',color:'#d97706'},
+    5:{text:'<strong>Human evaluation.</strong> Automated metrics miss nuance. Use domain experts for accuracy, target users for helpfulness, red team for safety. Minimum 200&ndash;500 examples, 2&ndash;3 evaluators each. Measure inter-annotator agreement (&gt;70%). Run before launch, monthly after, and after major changes.',color:'#db2777'},
+    6:{text:'<strong>Business metrics.</strong> Model metrics measure performance; business metrics measure value. Build a three-layer stack: model metrics (daily), product metrics (weekly), business metrics (monthly). Translate every improvement: &ldquo;7% more recall = $340K less fraud annually.&rdquo;',color:'#16a34a'},
+    7:{text:'<strong>A/B testing AI.</strong> Test on business metrics, not model metrics. Run 2+ weeks (longer than traditional). Segment results by user type. Monitor safety separately. Have a rollback plan. Don&rsquo;t A/B test before passing offline evaluation &mdash; use A/B as the tiebreaker, not the discovery tool.',color:'#dc2626'},
+    8:{text:'<strong>The evaluation playbook:</strong> Four levels. Automated metrics (continuous, first gate). Human evaluation (periodic, catches nuance). A/B testing (major changes, real-world arbiter). User feedback (continuous, emerging issues). Build this stack and you can measure, detect, compare, and justify at every stage.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

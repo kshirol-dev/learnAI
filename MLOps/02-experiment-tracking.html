@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Experiment Tracking — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Experiment Tracking</h2><span class="tb-sub">MLflow, Weights &amp; Biases, experiment logging, hyperparameter tracking, and reproducibility</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Why Track</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">What to Log</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">MLflow</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">W&amp;B</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Compare</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Reproduce</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">help</span></div><div><div class="cc-title">Why Track Experiments?</div><div class="cc-sub">The spreadsheet-of-results anti-pattern</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Every data scientist has been here: you run 50 training experiments over two weeks. You tweak learning rates, architectures, data preprocessing. Results go into a spreadsheet, a Slack message, or worse &mdash; nowhere. Three months later, your manager asks: <strong>&ldquo;Can you reproduce the model we shipped?&rdquo;</strong> And you can&rsquo;t. You don&rsquo;t remember which hyperparameters, which data version, which code commit produced that model. Experiment tracking solves this by <strong>automatically logging every training run</strong> with its parameters, metrics, code version, data version, and output artifacts.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Without vs With Tracking</div><div class="cc-code"><span class="hl-cmt">// Without experiment tracking</span>
+<span class="hl-key">Run 1</span>: lr=0.01, acc=0.82 <span class="hl-cmt">// in Slack</span>
+<span class="hl-key">Run 2</span>: lr=0.001, acc=0.87 <span class="hl-cmt">// in notebook</span>
+<span class="hl-key">Run 3</span>: lr=???, acc=0.91 <span class="hl-cmt">// lost</span>
+<span class="hl-cmt">// 3 months later: "which was Run 3?"</span>
+
+<span class="hl-cmt">// With experiment tracking</span>
+<span class="hl-key">Run 3</span>:
+  params: {lr: <span class="hl-num">0.0005</span>, batch: <span class="hl-num">64</span>, epochs: <span class="hl-num">50</span>}
+  metrics: {acc: <span class="hl-num">0.91</span>, loss: <span class="hl-num">0.23</span>, f1: <span class="hl-num">0.89</span>}
+  code: git commit <span class="hl-str">a3f7b2c</span>
+  data: <span class="hl-str">v2.3</span> (DVC hash: <span class="hl-str">8e4f...</span>)
+  artifact: <span class="hl-str">model.pt</span> (sha256: <span class="hl-str">c9d1...</span>)
+  env: Python <span class="hl-num">3.11</span>, PyTorch <span class="hl-num">2.3</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Experiment tracking is the foundation of reproducibility. If you can&rsquo;t reproduce a result, you can&rsquo;t debug it, improve it, or trust it. It&rsquo;s the single most impactful MLOps practice to adopt first.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">edit_note</span></div><div><div class="cc-title">What to Log</div><div class="cc-sub">The five pillars of experiment metadata</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Five Pillars</div><div class="cc-text">A complete experiment record captures five things: (1) <strong>Parameters</strong> &mdash; hyperparameters, model architecture choices, preprocessing settings. (2) <strong>Metrics</strong> &mdash; training loss, validation accuracy, F1, latency, throughput &mdash; logged over time, not just final values. (3) <strong>Artifacts</strong> &mdash; model weights, plots, confusion matrices, sample predictions. (4) <strong>Code version</strong> &mdash; the exact Git commit (or notebook snapshot) that produced the run. (5) <strong>Environment</strong> &mdash; Python version, library versions, hardware (GPU type, memory). Missing any one of these makes reproduction unreliable.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Logging Checklist</div><div class="cc-code"><span class="hl-cmt">// What to log for every experiment</span>
+
+<span class="hl-key">1. Parameters</span>:
+   learning_rate, batch_size, epochs,
+   model_type, hidden_dim, dropout,
+   optimizer, scheduler, seed
+
+<span class="hl-key">2. Metrics</span> (over time):
+   train_loss, val_loss, val_accuracy,
+   val_f1, val_auc, inference_latency_ms
+
+<span class="hl-key">3. Artifacts</span>:
+   model.pt, confusion_matrix.png,
+   predictions_sample.csv, training_curves.png
+
+<span class="hl-key">4. Code</span>:
+   git_commit_hash, git_branch, git_diff
+
+<span class="hl-key">5. Environment</span>:
+   python_version, torch_version,
+   cuda_version, gpu_type, requirements.txt</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Log metrics <strong>over time</strong> (every epoch or every N steps), not just the final value. Training curves reveal overfitting, learning rate issues, and convergence problems that a single number hides.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">MLflow</div><div class="cc-sub">The open-source standard for experiment tracking</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Overview</div><div class="cc-text"><strong>MLflow</strong> (by Databricks) is the most widely adopted open-source experiment tracking platform. It has four components: <strong>MLflow Tracking</strong> (log parameters, metrics, artifacts), <strong>MLflow Projects</strong> (package code for reproducibility), <strong>MLflow Models</strong> (standard model packaging format), and <strong>MLflow Model Registry</strong> (stage and promote models). MLflow is free, self-hostable, and integrates with every major ML framework. Its API is straightforward: <code>mlflow.log_param()</code>, <code>mlflow.log_metric()</code>, <code>mlflow.log_artifact()</code>. The UI is functional but basic compared to W&amp;B.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">MLflow Example</div><div class="cc-code"><span class="hl-key">import</span> mlflow
+
+mlflow.set_experiment(<span class="hl-str">"fraud-detection"</span>)
+
+<span class="hl-key">with</span> mlflow.start_run():
+    <span class="hl-cmt"># Log parameters</span>
+    mlflow.log_param(<span class="hl-str">"lr"</span>, <span class="hl-num">0.001</span>)
+    mlflow.log_param(<span class="hl-str">"batch_size"</span>, <span class="hl-num">64</span>)
+    mlflow.log_param(<span class="hl-str">"model"</span>, <span class="hl-str">"resnet50"</span>)
+
+    <span class="hl-cmt"># Log metrics over time</span>
+    <span class="hl-key">for</span> epoch <span class="hl-key">in</span> range(<span class="hl-num">50</span>):
+        train(model)
+        loss, acc = evaluate(model)
+        mlflow.log_metric(<span class="hl-str">"val_loss"</span>, loss, step=epoch)
+        mlflow.log_metric(<span class="hl-str">"val_acc"</span>, acc, step=epoch)
+
+    <span class="hl-cmt"># Log model artifact</span>
+    mlflow.pytorch.log_model(model, <span class="hl-str">"model"</span>)
+
+    <span class="hl-cmt"># Auto-log git commit</span>
+    mlflow.set_tag(<span class="hl-str">"mlflow.source.git.commit"</span>, sha)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> MLflow&rsquo;s <code>autolog()</code> feature can automatically capture parameters and metrics for PyTorch, TensorFlow, scikit-learn, and XGBoost with a single line: <code>mlflow.autolog()</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">Weights &amp; Biases (W&amp;B)</div><div class="cc-sub">Best-in-class visualization and collaboration</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Overview</div><div class="cc-text"><strong>Weights &amp; Biases</strong> is a SaaS-first experiment tracking platform with the best visualization UI in the industry. Key features: <strong>real-time dashboards</strong> with automatic training curve plots, <strong>W&amp;B Sweeps</strong> for hyperparameter optimization (grid, random, Bayesian), <strong>W&amp;B Tables</strong> for logging and comparing model predictions alongside inputs and ground truth, and <strong>W&amp;B Artifacts</strong> for dataset and model versioning with full lineage tracking. The free tier is generous for individuals and small teams. The trade-off: it&rsquo;s SaaS-first, so your data goes to W&amp;B servers (a self-hosted option exists but requires significant infrastructure).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">W&amp;B Example</div><div class="cc-code"><span class="hl-key">import</span> wandb
+
+wandb.init(
+    project=<span class="hl-str">"fraud-detection"</span>,
+    config={
+        <span class="hl-str">"lr"</span>: <span class="hl-num">0.001</span>,
+        <span class="hl-str">"batch_size"</span>: <span class="hl-num">64</span>,
+        <span class="hl-str">"model"</span>: <span class="hl-str">"resnet50"</span>,
+    }
+)
+
+<span class="hl-key">for</span> epoch <span class="hl-key">in</span> range(<span class="hl-num">50</span>):
+    train(model)
+    loss, acc = evaluate(model)
+    wandb.log({
+        <span class="hl-str">"val_loss"</span>: loss,
+        <span class="hl-str">"val_acc"</span>: acc,
+        <span class="hl-str">"epoch"</span>: epoch,
+    })
+
+<span class="hl-cmt"># Log predictions table</span>
+table = wandb.Table(columns=[<span class="hl-str">"input"</span>, <span class="hl-str">"pred"</span>, <span class="hl-str">"true"</span>])
+wandb.log({<span class="hl-str">"predictions"</span>: table})
+
+wandb.finish()</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> W&amp;B&rsquo;s killer feature is <strong>W&amp;B Sweeps</strong> &mdash; define a search space in YAML, and W&amp;B will launch and coordinate hyperparameter searches across multiple machines using Bayesian optimization.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">MLflow vs. W&amp;B: Choosing</div><div class="cc-sub">Open-source flexibility vs. SaaS polish</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Decision Framework</div><div class="cc-text">Choose <strong>MLflow</strong> if: you need self-hosting for data privacy, you&rsquo;re in the Databricks ecosystem, you want full control over infrastructure, or budget is a hard constraint. Choose <strong>W&amp;B</strong> if: you prioritize visualization and team collaboration, you want hyperparameter sweeps built in, you&rsquo;re comfortable with SaaS, or you want minimal setup. Other options: <strong>Neptune.ai</strong> (strong metadata management), <strong>Comet ML</strong> (good code diffing), <strong>ClearML</strong> (open-source with orchestration). Many teams use <strong>both</strong> &mdash; MLflow for the model registry and W&amp;B for visualization.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Comparison</div><div class="cc-code"><span class="hl-cmt">// MLflow vs W&amp;B</span>
+
+                <span class="hl-key">MLflow</span>        <span class="hl-key">W&amp;B</span>
+License:     Open-source   Freemium SaaS
+Hosting:     Self-hosted   Cloud (+ self)
+UI:          Functional    Best-in-class
+Sweeps:      No            Yes (Bayesian)
+Tables:      No            Yes
+Autolog:     Yes           Yes
+Registry:    Yes           Yes (Artifacts)
+Cost:        Free          Free tier, paid
+Ecosystem:   Databricks    Framework-agnostic
+Setup:       Medium        Low</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The best experiment tracker is the one your team actually uses. Start with one tool, enforce it as a team standard, and don&rsquo;t let anyone go back to spreadsheets or Slack messages for tracking results.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Hyperparameter Optimization</div><div class="cc-sub">Systematic search beats random guessing</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Search Strategies</div><div class="cc-text">Hyperparameter tuning is a core part of experimentation. <strong>Grid search</strong> tries every combination &mdash; exhaustive but exponentially expensive. <strong>Random search</strong> (Bergstra &amp; Bengio, 2012) samples randomly and is surprisingly effective because most hyperparameters have low &ldquo;effective dimensionality&rdquo; &mdash; only 1&ndash;2 matter most. <strong>Bayesian optimization</strong> builds a probabilistic model of the objective function and intelligently picks the next point to evaluate. <strong>Optuna</strong> (open-source) and <strong>W&amp;B Sweeps</strong> are the most popular tools. For LLMs, hyperparameter tuning is less common &mdash; prompt engineering and RAG configuration are the new &ldquo;tuning.&rdquo;</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Optuna Example</div><div class="cc-code"><span class="hl-key">import</span> optuna
+
+<span class="hl-key">def</span> objective(trial):
+    lr = trial.suggest_float(<span class="hl-str">"lr"</span>, <span class="hl-num">1e-5</span>, <span class="hl-num">1e-1</span>, log=True)
+    batch = trial.suggest_categorical(
+        <span class="hl-str">"batch"</span>, [<span class="hl-num">16</span>, <span class="hl-num">32</span>, <span class="hl-num">64</span>, <span class="hl-num">128</span>]
+    )
+    dropout = trial.suggest_float(
+        <span class="hl-str">"dropout"</span>, <span class="hl-num">0.1</span>, <span class="hl-num">0.5</span>
+    )
+    model = build_model(lr, batch, dropout)
+    acc = train_and_evaluate(model)
+    <span class="hl-key">return</span> acc
+
+study = optuna.create_study(direction=<span class="hl-str">"maximize"</span>)
+study.optimize(objective, n_trials=<span class="hl-num">100</span>)
+
+print(study.best_params)
+<span class="hl-cmt"># {'lr': 0.00037, 'batch': 64, 'dropout': 0.2}</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Random search with 60 trials will find a configuration within the top 5% of the search space with 95% probability. Start with random search before investing in Bayesian optimization.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">replay</span></div><div><div class="cc-title">Reproducibility</div><div class="cc-sub">Making experiments deterministic and repeatable</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Reproducibility Checklist</div><div class="cc-text">Full reproducibility requires controlling <strong>five sources of randomness</strong>: (1) <strong>Random seeds</strong> &mdash; set seeds for Python, NumPy, PyTorch, and CUDA. (2) <strong>Data ordering</strong> &mdash; shuffle with a fixed seed; version the dataset. (3) <strong>Code version</strong> &mdash; pin to a Git commit. (4) <strong>Environment</strong> &mdash; use Docker or conda lock files to freeze all dependencies. (5) <strong>Hardware</strong> &mdash; GPU floating-point operations are non-deterministic by default; use <code>torch.use_deterministic_algorithms(True)</code> for exact reproducibility (at a performance cost). In practice, &ldquo;close enough&rdquo; reproducibility (within 0.1% of metrics) is usually sufficient.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reproducibility Setup</div><div class="cc-code"><span class="hl-key">import</span> random, numpy, torch
+
+<span class="hl-key">def</span> set_seed(seed=<span class="hl-num">42</span>):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    <span class="hl-cmt"># For exact reproducibility (slower)</span>
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = False
+
+<span class="hl-cmt"># Pin environment</span>
+<span class="hl-cmt"># pip freeze &gt; requirements.txt</span>
+<span class="hl-cmt"># OR use conda-lock / poetry.lock</span>
+<span class="hl-cmt"># OR use Docker with pinned base image</span>
+
+<span class="hl-cmt"># Version data</span>
+<span class="hl-cmt"># dvc add data/train.csv</span>
+<span class="hl-cmt"># git add data/train.csv.dvc</span>
+<span class="hl-cmt"># git commit -m "data v2.3"</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Perfect bit-for-bit reproducibility across different GPUs is nearly impossible due to non-deterministic CUDA operations. Aim for &ldquo;statistical reproducibility&rdquo; &mdash; results within a small tolerance across runs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Experiment Tracking Best Practices</div><div class="cc-sub">Lessons from teams that do it well</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Best Practices</div><div class="cc-text"><strong>1. Track from day one</strong> &mdash; don&rsquo;t wait until you have &ldquo;real&rdquo; experiments. <strong>2. Use autologging</strong> &mdash; MLflow and W&amp;B both support automatic parameter/metric capture. <strong>3. Tag experiments</strong> &mdash; add tags like &ldquo;baseline,&rdquo; &ldquo;production,&rdquo; &ldquo;ablation&rdquo; for easy filtering. <strong>4. Log negative results</strong> &mdash; failed experiments are valuable data; they prevent others from repeating mistakes. <strong>5. Review as a team</strong> &mdash; weekly experiment review meetings where the team looks at the tracking dashboard together. <strong>6. Connect to CI</strong> &mdash; automated training runs should log to the same tracker as manual experiments.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Team Workflow</div><div class="cc-code"><span class="hl-cmt">// Experiment tracking team workflow</span>
+
+<span class="hl-key">1. Naming Convention</span>:
+   {project}/{experiment}/{run_name}
+   fraud/baseline/lr-sweep-v2
+
+<span class="hl-key">2. Required Tags</span>:
+   type: [baseline|ablation|sweep|prod]
+   owner: [name]
+   dataset_version: [v2.3]
+
+<span class="hl-key">3. Weekly Review</span>:
+   Dashboard walkthrough (15 min)
+   Top 3 runs → discuss
+   Failed runs → document why
+
+<span class="hl-key">4. Promotion Flow</span>:
+   Experiment → best run → register model
+   → staging → validation → production</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The experiment tracker becomes the team&rsquo;s &ldquo;lab notebook.&rdquo; When a new team member joins, they can browse the full history of what was tried, what worked, and what didn&rsquo;t &mdash; invaluable institutional knowledge.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-why-mlops-matters.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: Why MLOps Matters</a>
+    <a class="ch-nav-btn next" href="03-model-registry-and-versioning.html">Ch 3: Model Registry &amp; Versioning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[2,3,4],6:[1,2,3],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Without experiment tracking, results live in spreadsheets and Slack. Three months later, no one can reproduce the model that shipped.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Log five things for every run: parameters, metrics (over time), artifacts, code version, and environment. Missing any one breaks reproducibility.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> MLflow — open-source, self-hostable, integrates with everything. Four components: Tracking, Projects, Models, and Model Registry.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Weights & Biases — best-in-class visualization, real-time dashboards, Sweeps for hyperparameter optimization, Tables for prediction analysis.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> MLflow for control and privacy; W&B for visualization and collaboration. Many teams use both. The best tool is the one your team actually uses.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Hyperparameter optimization: random search is surprisingly effective. Optuna and W&B Sweeps add Bayesian optimization for smarter search.',color:'#2563eb'},
+    7:{text:'<strong>Step 7:</strong> Reproducibility requires controlling 5 sources of randomness: seeds, data ordering, code version, environment, and hardware determinism.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Best practices: track from day one, use autologging, tag experiments, log failures, review as a team, and connect to CI.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

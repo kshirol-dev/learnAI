@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: Orchestration &amp; Scheduling — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; Orchestration &amp; Scheduling: Managing GPU Fleets</h2><span class="tb-sub">Kubernetes, Slurm, Ray, GPU utilization, multi-tenancy, and autoscaling</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Why Orch.</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">cloud_circle</span></div><span class="pipe-label">Kubernetes</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">terminal</span></div><span class="pipe-label">Slurm</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Ray</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Utilization</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">groups</span></div><span class="pipe-label">Multi-Tenant</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">auto_mode</span></div><span class="pipe-label">Autoscale</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">architecture</span></div><span class="pipe-label">Platform</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">help</span></div><div><div class="cc-title">Why Orchestration Matters</div><div class="cc-sub">GPUs are too expensive to waste &mdash; scheduling is the difference between 30% and 90% utilization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Utilization Crisis</div><div class="cc-text">Industry-average GPU utilization is <strong>30&ndash;50%</strong>. That means on a 1,000-GPU cluster costing $21.9M/year, <strong>$11&ndash;15M of compute sits idle</strong>. The GPUs aren&rsquo;t broken &mdash; they&rsquo;re waiting. Waiting for jobs to be scheduled, for data to load, for other jobs to finish, for someone to notice they&rsquo;re free.<br><br>Well-managed clusters achieve <strong>85&ndash;95% utilization</strong>. The difference is orchestration: the software that decides which job runs on which GPU, when, and for how long.<br><br><strong>The scheduling problem:</strong> Multiple teams want GPUs simultaneously. Training jobs need many GPUs for days. Inference needs few GPUs but with strict latency SLAs. Experimentation needs GPUs for hours. How do you allocate a shared, expensive resource fairly and efficiently?</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What an Orchestrator Does</div><div class="cc-code"><span class="hl-key">Core responsibilities:</span>
+
+<span class="hl-num">1.</span> <span class="hl-key">Resource allocation:</span>
+   Match GPU requests to available hardware
+   Respect topology (NVLink, same-node, same-rack)
+
+<span class="hl-num">2.</span> <span class="hl-key">Job scheduling:</span>
+   Queue, prioritize, preempt, and gang-schedule
+   Ensure fairness across teams/users
+
+<span class="hl-num">3.</span> <span class="hl-key">Lifecycle management:</span>
+   Start, monitor, restart, and clean up jobs
+   Handle failures (GPU errors, OOM, timeouts)
+
+<span class="hl-num">4.</span> <span class="hl-key">Multi-tenancy:</span>
+   Isolate workloads (security, resource limits)
+   Quota management per team/project
+
+<span class="hl-num">5.</span> <span class="hl-key">Autoscaling:</span>
+   Add/remove nodes based on demand
+   Scale inference replicas on traffic
+
+<span class="hl-key">Cost of bad scheduling (1,000 GPUs):</span>
+  30% utilization: <span class="hl-num">$15.3M/yr wasted</span>
+  85% utilization: <span class="hl-num">$3.3M/yr wasted</span>
+  Difference:      <span class="hl-num">$12M/yr</span></div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> GPU orchestration is like air traffic control. Without it, planes (jobs) circle the runway (wait in queue) while gates (GPUs) sit empty. A good controller lands planes faster, uses every gate, and prevents collisions. The difference between a busy airport and an efficient one isn&rsquo;t more runways &mdash; it&rsquo;s better scheduling.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">cloud_circle</span></div><div><div class="cc-title">Kubernetes for GPU Workloads</div><div class="cc-sub">The cloud-native approach to GPU orchestration</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How K8s Manages GPUs</div><div class="cc-text">Kubernetes treats GPUs as <strong>extended resources</strong> via the NVIDIA Device Plugin. The plugin discovers GPUs on each node and registers them with the kubelet. Pods request GPUs in their resource spec, and the scheduler places them on nodes with available GPUs.<br><br><strong>Key components:</strong><br>&bull; <strong>NVIDIA Device Plugin:</strong> Exposes GPUs as `nvidia.com/gpu` resources<br>&bull; <strong>NVIDIA GPU Operator:</strong> Automates driver, toolkit, and plugin installation<br>&bull; <strong>Node selectors/affinity:</strong> Target specific GPU types (H100 vs A100)<br>&bull; <strong>Topology-aware scheduling:</strong> Place multi-GPU jobs on the same node for NVLink<br>&bull; <strong>MIG support:</strong> Partition A100/H100 into smaller GPU instances</div></div>
+          <div class="cc-block"><div class="cc-label">K8s GPU Pod Example</div><div class="cc-code"><span class="hl-cmt"># Request 4 GPUs for a training job</span>
+<span class="hl-key">apiVersion:</span> batch/v1
+<span class="hl-key">kind:</span> Job
+<span class="hl-key">metadata:</span>
+  <span class="hl-key">name:</span> llama-finetune
+<span class="hl-key">spec:</span>
+  <span class="hl-key">template:</span>
+    <span class="hl-key">spec:</span>
+      <span class="hl-key">containers:</span>
+      - <span class="hl-key">name:</span> trainer
+        <span class="hl-key">image:</span> <span class="hl-str">nvcr.io/nvidia/pytorch:24.03-py3</span>
+        <span class="hl-key">resources:</span>
+          <span class="hl-key">limits:</span>
+            <span class="hl-key">nvidia.com/gpu:</span> <span class="hl-num">4</span>
+            <span class="hl-key">memory:</span> <span class="hl-str">"256Gi"</span>
+        <span class="hl-key">nodeSelector:</span>
+          <span class="hl-key">gpu-type:</span> <span class="hl-str">"h100"</span>
+      <span class="hl-key">restartPolicy:</span> OnFailure</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">K8s Strengths &amp; Limitations for AI</div><div class="cc-text"><strong>Strengths:</strong><br>&bull; Ecosystem: Helm charts, operators, monitoring (Prometheus/Grafana)<br>&bull; Multi-tenancy: Namespaces, RBAC, resource quotas<br>&bull; Autoscaling: HPA for inference, Karpenter for node provisioning<br>&bull; Portability: Same manifests across cloud providers<br>&bull; Service mesh: Load balancing, traffic routing for inference<br><br><strong>Limitations:</strong><br>&bull; No native gang scheduling (need KAI Scheduler or Volcano)<br>&bull; GPU topology-unaware by default (need custom schedulers)<br>&bull; No built-in job queuing with fair-share policies<br>&bull; Complex networking for multi-node training (MPI, NCCL)<br>&bull; Overhead: etcd, API server, controller manager add latency</div></div>
+          <div class="cc-block"><div class="cc-label">KAI Scheduler (NVIDIA, 2025)</div><div class="cc-text">NVIDIA&rsquo;s KAI Scheduler adds AI-native scheduling to Kubernetes:<br><br>&bull; <strong>Gang scheduling:</strong> All pods in a training job start together or not at all<br>&bull; <strong>GPU sharing:</strong> Multiple small jobs on one GPU<br>&bull; <strong>Hierarchical queues:</strong> Fair-share with DRF (Dominant Resource Fairness)<br>&bull; <strong>Topology-aware:</strong> Respects NVLink, NVSwitch, and rack locality<br>&bull; <strong>Preemption:</strong> Low-priority jobs yield to high-priority training</div></div>
+          <div class="cc-block"><div class="cc-note n-blue"><strong>Key insight:</strong> Kubernetes is the Swiss Army knife of orchestration &mdash; it does everything, but nothing perfectly for AI out of the box. You need additional tools (KAI Scheduler, GPU Operator, custom metrics) to make it AI-native. The ecosystem is converging fast, but expect 3&ndash;6 months of setup to get K8s right for GPU workloads.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">terminal</span></div><div><div class="cc-title">Slurm: The HPC Workhorse</div><div class="cc-sub">Battle-tested job scheduling for large-scale GPU clusters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is Slurm?</div><div class="cc-text"><strong>Slurm</strong> (Simple Linux Utility for Resource Management) is the dominant job scheduler in HPC and AI research. It manages job queues, allocates resources, and handles multi-node job execution. Meta, NVIDIA, and most national labs use Slurm for training clusters.<br><br><strong>Key concepts:</strong><br>&bull; <strong>Partitions:</strong> Groups of nodes (e.g., `gpu-h100`, `gpu-a100`, `cpu-only`)<br>&bull; <strong>Jobs:</strong> Submitted via `sbatch` scripts with resource requests<br>&bull; <strong>Accounts:</strong> Organizational units with quotas and priorities<br>&bull; <strong>Fair-share:</strong> Balances GPU time across accounts based on allocation<br>&bull; <strong>GRES (Generic Resources):</strong> GPU-aware scheduling (`--gres=gpu:h100:8`)</div></div>
+          <div class="cc-block"><div class="cc-label">Slurm Job Example</div><div class="cc-code"><span class="hl-cmt">#!/bin/bash</span>
+<span class="hl-cmt">#SBATCH --job-name=llama-train</span>
+<span class="hl-cmt">#SBATCH --partition=gpu-h100</span>
+<span class="hl-cmt">#SBATCH --nodes=4</span>
+<span class="hl-cmt">#SBATCH --ntasks-per-node=8</span>
+<span class="hl-cmt">#SBATCH --gres=gpu:h100:8</span>
+<span class="hl-cmt">#SBATCH --time=72:00:00</span>
+<span class="hl-cmt">#SBATCH --account=ml-research</span>
+
+module load cuda/12.4 nccl/2.21
+srun torchrun --nproc_per_node=<span class="hl-num">8</span> \
+  --nnodes=<span class="hl-num">4</span> \
+  --rdzv_backend=c10d \
+  train.py --model llama-70b \
+  --batch_size <span class="hl-num">32</span> --lr <span class="hl-num">1e-4</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Slurm vs Kubernetes for AI</div><div class="cc-code"><span class="hl-key">Feature          Slurm              Kubernetes</span>
+──────────────────────────────────────────────────
+Primary use      HPC/Training       Cloud-native/Inference
+Gang scheduling  <span class="hl-str">Native</span>             Needs plugin
+Fair-share       <span class="hl-str">Built-in</span>           Needs plugin
+Multi-node MPI   <span class="hl-str">Native (srun)</span>      Complex (MPI Operator)
+GPU topology     <span class="hl-str">GRES + topology</span>    Needs custom scheduler
+Autoscaling      Limited            <span class="hl-str">Native (HPA/Karpenter)</span>
+Service mesh     None               <span class="hl-str">Istio/Envoy</span>
+Containerization Optional           <span class="hl-str">Required</span>
+Learning curve   Moderate           Steep
+Ecosystem        HPC tools          Cloud-native tools</div></div>
+          <div class="cc-block"><div class="cc-label">Project Slinky: Slurm on Kubernetes</div><div class="cc-text"><strong>Project Slinky</strong> (2025) bridges the two worlds by running Slurm jobs on Kubernetes infrastructure. Users submit familiar `sbatch` scripts, but execution happens in Kubernetes pods. This gives HPC users their preferred interface while leveraging K8s infrastructure, autoscaling, and cloud integration.<br><br>Rafay&rsquo;s GPU PaaS extends this with self-service, multi-tenant Slurm clusters on Kubernetes &mdash; each user gets an isolated Slurm environment backed by shared GPU infrastructure.</div></div>
+          <div class="cc-block"><div class="cc-note n-green"><strong>Key insight:</strong> Slurm and Kubernetes aren&rsquo;t competitors &mdash; they&rsquo;re complementary. Slurm excels at batch training jobs (gang scheduling, fair-share, MPI). Kubernetes excels at serving workloads (autoscaling, service mesh, rolling updates). The trend is convergence: Slurm on Kubernetes gives you both.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">scatter_plot</span></div><div><div class="cc-title">Ray: Distributed AI Framework</div><div class="cc-sub">From training to serving to data processing &mdash; one framework for the full AI pipeline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is Ray?</div><div class="cc-text"><strong>Ray</strong> is an open-source framework for building distributed AI applications. Unlike Slurm (job scheduler) or Kubernetes (container orchestrator), Ray is a <em>programming framework</em> that handles distribution transparently.<br><br><strong>Ray ecosystem:</strong><br>&bull; <strong>Ray Train:</strong> Distributed training (wraps PyTorch DDP, FSDP, DeepSpeed)<br>&bull; <strong>Ray Serve:</strong> Model serving with autoscaling and traffic routing<br>&bull; <strong>Ray Data:</strong> Distributed data preprocessing and loading<br>&bull; <strong>Ray Tune:</strong> Hyperparameter optimization at scale<br>&bull; <strong>RayCluster (K8s):</strong> Deploy Ray on Kubernetes with auto-scaling<br><br>Ray runs <em>on top of</em> Kubernetes or Slurm. It doesn&rsquo;t replace them &mdash; it provides a higher-level abstraction for AI workloads.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Ray Train Example</div><div class="cc-code"><span class="hl-key">import</span> ray
+<span class="hl-key">from</span> ray.train.torch <span class="hl-key">import</span> TorchTrainer
+<span class="hl-key">from</span> ray.train <span class="hl-key">import</span> ScalingConfig
+
+<span class="hl-key">def</span> train_func():
+    <span class="hl-cmt"># Standard PyTorch training code</span>
+    model = LlamaForCausalLM.from_pretrained(...)
+    model = ray.train.torch.prepare_model(model)
+    <span class="hl-cmt"># Training loop...</span>
+
+trainer = TorchTrainer(
+    train_func,
+    scaling_config=ScalingConfig(
+        num_workers=<span class="hl-num">32</span>,
+        use_gpu=<span class="hl-num">True</span>,
+        resources_per_worker={<span class="hl-str">"GPU"</span>: <span class="hl-num">1</span>}
+    )
+)
+result = trainer.fit()
+
+<span class="hl-cmt"># Ray handles: distribution, fault tolerance,</span>
+<span class="hl-cmt"># checkpointing, and resource management.</span>
+<span class="hl-cmt"># Same code runs on laptop (1 GPU) or</span>
+<span class="hl-cmt"># cluster (1,000 GPUs).</span></div></div>
+          <div class="cc-block"><div class="cc-label">When to Use Ray</div><div class="cc-text"><strong>Use Ray when:</strong> You need a unified framework for training + serving + data processing. When your team is Python-first and wants to avoid YAML/infrastructure complexity. When you need elastic training (add/remove GPUs mid-job).<br><br><strong>Skip Ray when:</strong> You only need batch job scheduling (use Slurm). When you need fine-grained infrastructure control. When your team already has deep K8s/Slurm expertise.</div></div>
+          <div class="cc-block"><div class="cc-note n-red"><strong>Key insight:</strong> Ray is to distributed AI what React is to web development &mdash; a framework that handles the hard parts (distribution, state management, scaling) so you can focus on the logic. You still need infrastructure underneath (K8s, Slurm), but Ray makes the distributed parts feel like writing single-machine code.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">GPU Utilization: Measuring and Improving</div><div class="cc-sub">The metrics that matter and the levers that move them</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Utilization Metrics</div><div class="cc-text"><strong>GPU Compute Utilization:</strong> Percentage of time the GPU&rsquo;s SMs are active. Reported by `nvidia-smi`. Can be misleading &mdash; a GPU at 100% utilization might be running a poorly optimized kernel that uses 10% of peak FLOPS.<br><br><strong>GPU Memory Utilization:</strong> Percentage of HBM in use. High memory utilization with low compute utilization indicates memory-bound workloads (common in inference).<br><br><strong>SM Occupancy:</strong> Percentage of warps active on SMs. Better indicator of actual compute efficiency than utilization percentage.<br><br><strong>MFU (Model FLOPS Utilization):</strong> Actual FLOPS achieved divided by theoretical peak. The gold standard for training efficiency. Good training runs achieve <strong>40&ndash;60% MFU</strong>. World-class: <strong>55&ndash;65%</strong>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Utilization Killers</div><div class="cc-code"><span class="hl-key">Problem                    Impact    Fix</span>
+──────────────────────────────────────────────────
+Job queue gaps             <span class="hl-num">10-30%</span>   Better scheduling
+Data loading stalls        <span class="hl-num">5-20%</span>    Prefetch, local NVMe
+Communication overhead     <span class="hl-num">10-25%</span>   Overlap compute+comm
+Unbalanced parallelism     <span class="hl-num">5-15%</span>    Tune TP/PP/DP ratios
+Memory fragmentation       <span class="hl-num">5-10%</span>    PagedAttention, GC
+Cold start / model loading <span class="hl-num">5-15%</span>    Pre-pull, warm pools
+Checkpointing stalls       <span class="hl-num">2-10%</span>    Async checkpointing
+Debugging / idle sessions  <span class="hl-num">10-30%</span>   Timeout policies
+
+<span class="hl-key">Monitoring stack:</span>
+  nvidia-smi / DCGM:  GPU metrics
+  Prometheus:          Time-series collection
+  Grafana:             Dashboards
+  Custom exporters:    MFU, queue depth, wait time
+
+<span class="hl-key">Target utilization by workload:</span>
+  Training (large):  <span class="hl-num">85-95%</span> (well-scheduled)
+  Training (small):  <span class="hl-num">60-80%</span> (queue gaps)
+  Inference:         <span class="hl-num">40-70%</span> (traffic-dependent)
+  Development:       <span class="hl-num">20-40%</span> (interactive use)</div></div>
+          <div class="cc-block"><div class="cc-note n-violet"><strong>Key insight:</strong> GPU utilization is like a restaurant&rsquo;s table turnover rate. A full restaurant (100% utilization) doesn&rsquo;t mean every table is profitable &mdash; some might have campers nursing one coffee for hours. The real metric is revenue per table-hour (MFU): how much useful work each GPU does per unit time, not just whether it&rsquo;s busy.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">groups</span></div><div><div class="cc-title">Multi-Tenancy: Sharing GPUs Fairly</div><div class="cc-sub">Quotas, priorities, fair-share, and isolation for shared GPU clusters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Sharing Problem</div><div class="cc-text">Most organizations have multiple teams competing for GPU resources: research wants GPUs for experiments, production needs GPUs for inference, data science needs GPUs for fine-tuning. Without governance, the loudest team gets the most GPUs.<br><br><strong>Fair-share scheduling</strong> allocates GPU time proportionally to each team&rsquo;s quota. If Team A has a 60% quota and Team B has 40%, over time they&rsquo;ll receive roughly that ratio of GPU-hours &mdash; even if demand fluctuates.</div></div>
+          <div class="cc-block"><div class="cc-label">Multi-Tenancy Patterns</div><div class="cc-text"><strong>1. Namespace isolation (K8s):</strong> Each team gets a namespace with resource quotas. Simple but coarse-grained &mdash; can&rsquo;t share unused quota across teams.<br><br><strong>2. Hierarchical queues (Slurm/KAI):</strong> Organization &rarr; Department &rarr; Team &rarr; User. Unused quota cascades up and can be borrowed by other teams. Reclaimed when the owner needs it (preemption).<br><br><strong>3. Priority classes:</strong> Critical (production inference), High (training deadlines), Normal (research), Low (experimentation). Higher priority preempts lower priority with configurable grace periods.<br><br><strong>4. GPU time banking:</strong> Teams accumulate &ldquo;credits&rdquo; for unused allocation. Can spend credits on burst usage later. Prevents use-it-or-lose-it hoarding.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Fair-Share Configuration Example</div><div class="cc-code"><span class="hl-cmt"># Slurm fair-share configuration</span>
+<span class="hl-key">Organization:</span> AI Company (1,000 GPUs)
+
+<span class="hl-key">Account Hierarchy:</span>
+  research/        <span class="hl-num">40%</span> share (400 GPUs)
+    ├── nlp/       <span class="hl-num">50%</span> of research (200 GPUs)
+    ├── vision/    <span class="hl-num">30%</span> of research (120 GPUs)
+    └── speech/    <span class="hl-num">20%</span> of research (80 GPUs)
+  production/      <span class="hl-num">40%</span> share (400 GPUs)
+    ├── inference/  <span class="hl-num">70%</span> of prod (280 GPUs)
+    └── training/   <span class="hl-num">30%</span> of prod (120 GPUs)
+  exploration/     <span class="hl-num">20%</span> share (200 GPUs)
+
+<span class="hl-key">Preemption policy:</span>
+  production &gt; research &gt; exploration
+  Grace period: <span class="hl-num">5 min</span> (checkpoint + exit)
+
+<span class="hl-key">Borrowing:</span>
+  If research is idle, production can use
+  its GPUs. Reclaimed within <span class="hl-num">5 min</span> when
+  research submits a job.</div></div>
+          <div class="cc-block"><div class="cc-note n-teal"><strong>Key insight:</strong> Multi-tenancy for GPUs is like managing a shared kitchen in a co-living space. Without rules, one person monopolizes the stove all evening. Fair-share is a sign-up sheet: everyone gets their time slot, but if you don&rsquo;t show up, others can use your slot. Preemption is the rule that dinner prep takes priority over midnight snacks.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">auto_mode</span></div><div><div class="cc-title">Autoscaling: Matching Capacity to Demand</div><div class="cc-sub">Scaling inference replicas, training workers, and infrastructure nodes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Levels of Autoscaling</div><div class="cc-text"><strong>1. Pod autoscaling (HPA):</strong> Scale inference replicas based on metrics (request rate, latency, GPU utilization). Kubernetes HPA with custom metrics from the inference engine. Reacts in seconds.<br><br><strong>2. Node autoscaling (Karpenter/CA):</strong> Add or remove GPU nodes based on pending pods. Karpenter provisions the right instance type (H100 vs A100) based on pod requirements. Reacts in minutes (cloud) or not at all (on-prem).<br><br><strong>3. Cluster autoscaling:</strong> Scale entire clusters or regions based on aggregate demand. Used by hyperscalers to shift workloads between data centers. Reacts in hours.</div></div>
+          <div class="cc-block"><div class="cc-label">Inference Autoscaling Example</div><div class="cc-code"><span class="hl-cmt"># K8s HPA for vLLM inference</span>
+<span class="hl-key">apiVersion:</span> autoscaling/v2
+<span class="hl-key">kind:</span> HorizontalPodAutoscaler
+<span class="hl-key">metadata:</span>
+  <span class="hl-key">name:</span> llama-inference-hpa
+<span class="hl-key">spec:</span>
+  <span class="hl-key">scaleTargetRef:</span>
+    <span class="hl-key">name:</span> llama-inference
+  <span class="hl-key">minReplicas:</span> <span class="hl-num">2</span>
+  <span class="hl-key">maxReplicas:</span> <span class="hl-num">16</span>
+  <span class="hl-key">metrics:</span>
+  - <span class="hl-key">type:</span> Pods
+    <span class="hl-key">pods:</span>
+      <span class="hl-key">metric:</span>
+        <span class="hl-key">name:</span> vllm_pending_requests
+      <span class="hl-key">target:</span>
+        <span class="hl-key">type:</span> AverageValue
+        <span class="hl-key">averageValue:</span> <span class="hl-num">10</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Autoscaling Challenges</div><div class="cc-text"><strong>Cold start latency:</strong> Loading a 70B model takes 30&ndash;120 seconds. New replicas can&rsquo;t serve traffic during loading. Mitigation: keep warm spare replicas, use predictive scaling.<br><br><strong>GPU node provisioning:</strong> Cloud GPU nodes take 2&ndash;5 minutes to provision (vs seconds for CPU). Plan for this lag in scaling policies.<br><br><strong>Cost spikes:</strong> Aggressive autoscaling can cause unexpected cost spikes. Set hard limits on maximum replicas and implement cost alerts.<br><br><strong>Scale-to-zero:</strong> Unloading models when traffic drops to zero saves cost but introduces cold start on the next request. Acceptable for internal tools, not for customer-facing APIs.</div></div>
+          <div class="cc-block"><div class="cc-label">Scaling Strategies by Workload</div><div class="cc-code"><span class="hl-key">Workload          Scaling Metric     Target</span>
+──────────────────────────────────────────────────
+Chat inference    Pending requests   <span class="hl-num">&lt;10 per replica</span>
+Batch inference   Queue depth        <span class="hl-num">&lt;100 pending</span>
+Training          Not autoscaled     <span class="hl-str">Fixed allocation</span>
+Fine-tuning       Job queue length   <span class="hl-num">&lt;5 waiting jobs</span>
+
+<span class="hl-key">Predictive scaling:</span>
+  Use historical traffic patterns
+  Pre-scale 15 min before expected peak
+  Reduces cold starts by <span class="hl-num">80-90%</span></div></div>
+          <div class="cc-block"><div class="cc-note n-orange"><strong>Key insight:</strong> Autoscaling GPUs is like staffing a restaurant. You need enough chefs (replicas) for the dinner rush but don&rsquo;t want to pay them during the 3 PM lull. The trick is predicting the rush: look at yesterday&rsquo;s reservations (historical traffic) and start prepping (pre-scaling) before the first customer arrives.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">architecture</span></div><div><div class="cc-title">Building an AI Platform</div><div class="cc-sub">Putting it all together: the reference architecture for GPU orchestration</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reference Platform Stack</div><div class="cc-code"><span class="hl-key">Layer 5: User Interface</span>
+  JupyterHub, CLI, Web UI, API
+  Job submission, monitoring, model registry
+
+<span class="hl-key">Layer 4: AI Frameworks</span>
+  Ray Train/Serve, DeepSpeed, Megatron-LM
+  vLLM, TensorRT-LLM, SGLang
+
+<span class="hl-key">Layer 3: Orchestration</span>
+  Kubernetes + KAI Scheduler (inference)
+  Slurm or Project Slinky (training)
+  Karpenter (node autoscaling)
+
+<span class="hl-key">Layer 2: Infrastructure</span>
+  NVIDIA GPU Operator, Device Plugin
+  InfiniBand / RoCEv2 networking
+  Lustre / GPFS storage, S3
+
+<span class="hl-key">Layer 1: Hardware</span>
+  DGX H100/H200, GB200 NVL72
+  InfiniBand switches, NVMe storage
+  Power, cooling, physical security</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Platform Maturity Levels</div><div class="cc-code"><span class="hl-key">Level 1 — Manual (most startups):</span>
+  SSH into GPU machines, run scripts
+  No scheduling, no monitoring
+  Utilization: <span class="hl-num">20-30%</span>
+
+<span class="hl-key">Level 2 — Basic Orchestration:</span>
+  Kubernetes + GPU plugin, or Slurm
+  Basic job queuing, manual scaling
+  Utilization: <span class="hl-num">40-60%</span>
+
+<span class="hl-key">Level 3 — Managed Platform:</span>
+  Fair-share scheduling, autoscaling
+  Monitoring dashboards, cost tracking
+  Multi-tenancy with quotas
+  Utilization: <span class="hl-num">60-80%</span>
+
+<span class="hl-key">Level 4 — Optimized Platform:</span>
+  Topology-aware scheduling
+  Predictive autoscaling
+  Automated failure recovery
+  Cost optimization (spot, preemption)
+  Utilization: <span class="hl-num">80-95%</span>
+
+<span class="hl-key">Each level requires ~6 months and 1-2 FTEs</span></div></div>
+          <div class="cc-block"><div class="cc-note n-amber"><strong>Key insight:</strong> An AI platform is never &ldquo;done&rdquo; &mdash; it&rsquo;s a living system that evolves with your organization. Start at Level 1 (just get GPUs working), invest in Level 2 when you hit 10+ GPUs, and build toward Level 3&ndash;4 as your fleet grows. The ROI of each level is clear: every 10% utilization improvement on 100 GPUs saves ~$200K/year.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="12-cloud-vs-onprem.html"><span class="material-symbols-rounded">arrow_back</span>Previous Chapter</a>
+    <a class="ch-nav-btn next" href="14-future-infrastructure.html">Next Chapter<span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="prevBtn"><span class="material-symbols-rounded">skip_previous</span></button>
+  <button class="ctrl-btn ctrl-play" id="playBtn"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button>
+  <button class="ctrl-btn" id="nextBtn"><span class="material-symbols-rounded">skip_next</span></button>
+</div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=12000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Industry-average GPU utilization: 30–50%. Well-managed clusters: 85–95%. On 1,000 GPUs, the difference is $12M/year. Orchestration is the software that closes that gap.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Kubernetes treats GPUs as extended resources via NVIDIA Device Plugin. Add KAI Scheduler for gang scheduling, GPU sharing, and topology-aware placement. Expect 3–6 months to get K8s right for AI.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Slurm dominates HPC training: native gang scheduling, fair-share, MPI support. Project Slinky (2025) bridges Slurm and Kubernetes — submit sbatch scripts, execute in K8s pods.',color:'#16a34a'},
+    4:{text:'<strong>Step 4:</strong> Ray provides a Python-first framework for distributed training, serving, and data processing. Runs on top of K8s or Slurm. Same code scales from 1 GPU to 1,000 GPUs.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> MFU (Model FLOPS Utilization) is the gold standard metric: actual FLOPS / peak FLOPS. Good training: 40–60% MFU. Top killers: queue gaps (10–30%), communication overhead (10–25%), data loading (5–20%).',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Fair-share scheduling allocates GPU time proportionally to team quotas. Hierarchical queues allow borrowing unused quota. Preemption ensures production always gets priority over research.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Three autoscaling levels: pod (seconds, HPA), node (minutes, Karpenter), cluster (hours). Cold start is the enemy — 70B model loading takes 30–120s. Predictive scaling reduces cold starts by 80–90%.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Platform maturity: Level 1 (SSH, 20% util) → Level 2 (basic K8s/Slurm, 50%) → Level 3 (managed, 70%) → Level 4 (optimized, 90%). Each level: ~6 months, 1–2 FTEs, and clear ROI.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

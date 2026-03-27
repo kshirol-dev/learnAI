@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: AI Governance & Compliance — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--pink);background:var(--pink-light);border:1px solid var(--pink-border)}.tb-nav a.nav-alt:hover{background:var(--pink);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--pink-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--violet),var(--blue),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--pink-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--pink-light);color:var(--pink);border:1px solid var(--pink-border)}.zone-a .zone-title{color:var(--pink)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:pointer;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-pink .fnode-icon{background:var(--pink-light);color:var(--pink)}.fnode.c-pink .fnode-label{color:var(--pink)}.fnode.c-pink{border-color:var(--pink-border)}.fnode.c-pink.active{box-shadow:0 0 0 3px rgba(219,39,119,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--pink-light);border-color:var(--pink-border);color:var(--pink)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}.bg-slate{background:var(--slate)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--pink);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.dp-note.n-pink strong{color:var(--pink)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; AI Governance &amp; Compliance &mdash; Under the Hood</h2><span class="tb-sub">EU AI Act, NIST AI RMF, ISO 42001, model cards, AI BOM, audit pipelines</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="12-governance-compliance-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin. Click any node for deep-dive details...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: EU AI ACT -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">EU AI Act: Risk Classification &amp; Penalties</span><span class="zone-sub">Four risk tiers, phased enforcement through Aug 2027</span></div>
+    <div class="flow-row">
+      <div class="fnode c-pink dimmed" data-step="1"><span class="step-badge bg-pink">1</span><div class="fnode-icon"><span class="material-symbols-rounded">category</span></div><span class="fnode-label">Risk Tiers</span><span class="fnode-sub">Prohibited, High<br>Limited, Minimal</span></div>
+      <div class="farr dimmed" data-step="1"></div>
+      <div class="fnode c-pink dimmed" data-step="1"><div class="fnode-icon"><span class="material-symbols-rounded">schedule</span></div><span class="fnode-label">Timeline</span><span class="fnode-sub">Feb 2025 → Aug 2027<br>phased rollout</span></div>
+      <div class="farr dimmed" data-step="2"></div>
+      <div class="fnode c-pink dimmed" data-step="2"><span class="step-badge bg-pink">2</span><div class="fnode-icon"><span class="material-symbols-rounded">gavel</span></div><span class="fnode-label">Penalties</span><span class="fnode-sub">Up to 7% global<br>annual revenue</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange dimmed" data-step="3"><span class="step-badge bg-orange">3</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> NIST AI RMF &amp; GenAI profile alignment</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: NIST AI RMF -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">NIST AI RMF 1.0 &amp; AI 600-1</span><span class="zone-sub">Govern, Map, Measure, Manage &mdash; GenAI profile Jul 2024</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange dimmed" data-step="3"><div class="fnode-icon"><span class="material-symbols-rounded">account_balance</span></div><span class="fnode-label">AI RMF 1.0</span><span class="fnode-sub">Four functions<br>voluntary framework</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><span class="step-badge bg-orange">4</span><div class="fnode-icon"><span class="material-symbols-rounded">description</span></div><span class="fnode-label">AI 600-1</span><span class="fnode-sub">GenAI profile<br>13 risks, 400+ actions</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><div class="fnode-icon"><span class="material-symbols-rounded">science</span></div><span class="fnode-label">ARIA Program</span><span class="fnode-sub">Public evaluation<br>methodology</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet dimmed" data-step="5"><span class="step-badge bg-violet">5</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> ISO 42001 certification &amp; model cards</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: ISO 42001 & MODEL CARDS -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">ISO 42001 &amp; Model Documentation</span><span class="zone-sub">AI management system, model cards, AI BOM</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="5"><div class="fnode-icon"><span class="material-symbols-rounded">verified</span></div><span class="fnode-label">ISO 42001</span><span class="fnode-sub">AIMS certification<br>Dec 2023 standard</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><span class="step-badge bg-violet">6</span><div class="fnode-icon"><span class="material-symbols-rounded">badge</span></div><span class="fnode-label">Model Cards</span><span class="fnode-sub">Mitchell et al. 2019<br>standardized docs</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><div class="fnode-icon"><span class="material-symbols-rounded">inventory_2</span></div><span class="fnode-label">AI BOM</span><span class="fnode-sub">Bill of materials<br>supply chain tracking</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue dimmed" data-step="7"><span class="step-badge bg-blue">7</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Automated compliance &amp; audit pipelines</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: AUDIT PIPELINES -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Automated Compliance &amp; Audit Pipelines</span><span class="zone-sub">Continuous monitoring, evidence collection, drift detection</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="7"><div class="fnode-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="fnode-label">Continuous Audit</span><span class="fnode-sub">Automated evidence<br>collection pipeline</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><span class="step-badge bg-blue">8</span><div class="fnode-icon"><span class="material-symbols-rounded">trending_down</span></div><span class="fnode-label">Drift Detection</span><span class="fnode-sub">Model &amp; data drift<br>compliance triggers</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal dimmed" data-step="9"><span class="step-badge bg-teal">9</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Complete governance architecture</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: GOVERNANCE ARCHITECTURE -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Governance Architecture</span><span class="zone-sub">End-to-end compliance program</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="9"><div class="fnode-icon"><span class="material-symbols-rounded">groups</span></div><span class="fnode-label">AI Board</span><span class="fnode-sub">Cross-functional<br>governance body</span></div>
+      <div class="farr dimmed" data-step="10"></div>
+      <div class="fnode c-teal dimmed" data-step="10"><span class="step-badge bg-green">10</span><div class="fnode-icon"><span class="material-symbols-rounded">layers</span></div><span class="fnode-label">Governance Stack</span><span class="fnode-sub">Full compliance<br>program</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head"><div class="dp-step" id="dpStep"></div><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10, STEP_MS=5000;
+  const NARRATION={
+    1:{text:'<strong>EU AI Act risk classification:</strong> Four tiers — <strong>Prohibited</strong> (social scoring, predictive policing, real-time biometric surveillance), <strong>High-risk</strong> (credit scoring, medical diagnostics, employment decisions), <strong>Limited</strong> (chatbots, deepfake generators, emotion recognition), <strong>Minimal</strong> (video game AI, spam filters). Each tier has different compliance obligations.',color:'#db2777'},
+    2:{text:'<strong>EU AI Act penalties:</strong> Prohibited violations — up to <strong>7% of global annual revenue</strong> or &euro;35M. High-risk violations — up to 3% or &euro;15M. Limited-risk violations — up to 1.5% or &euro;7.5M. Timeline: Feb 2025 (prohibitions) &rarr; Aug 2025 (GPAI rules) &rarr; Aug 2026 (high-risk) &rarr; Aug 2027 (embedded products).',color:'#db2777'},
+    3:{text:'<strong>NIST AI RMF 1.0:</strong> Four core functions — <strong>Govern</strong> (policies, roles, culture), <strong>Map</strong> (context, risks, stakeholders), <strong>Measure</strong> (metrics, testing, monitoring), <strong>Manage</strong> (prioritize, respond, communicate). Voluntary framework, but increasingly referenced in US procurement and regulation.',color:'#ea580c'},
+    4:{text:'<strong>NIST AI 600-1</strong> (Jul 2024): GenAI-specific companion to AI RMF. Identifies <strong>13 risks</strong> unique to generative AI and provides <strong>400+ actions</strong> to manage them. Developed with ~2,500 public participants. Covers: CBRN, confabulation, data privacy, environmental impact, harmful bias, IP, obscene content, information security, and more.',color:'#ea580c'},
+    5:{text:'<strong>ISO/IEC 42001:2023:</strong> World\'s first international standard for AI Management Systems (AIMS). Published Dec 2023. Follows harmonized ISO structure (Clauses 4-10). Covers: AI policy, risk assessment, data quality, transparency, accountability, lifecycle monitoring. Certification by accredited bodies. Aligns with EU AI Act compliance.',color:'#7c3aed'},
+    6:{text:'<strong>Model cards</strong> (Mitchell et al., 2019): Standardized documentation for ML models. Sections: model details, intended use, factors, metrics, evaluation data, training data, ethical considerations, caveats. <strong>AI BOM</strong> (Bill of Materials): Track every component — base model, fine-tuning data, adapters, tools, dependencies — like SBOM for software.',color:'#7c3aed'},
+    7:{text:'<strong>Automated compliance pipeline:</strong> Every model deployment triggers evidence collection — model card generation, bias metrics, red team results (Ch 11), guardrail configs (Ch 6), access control policies. Store in immutable audit log. Map evidence to regulatory requirements (EU AI Act Article → evidence artifact).',color:'#2563eb'},
+    8:{text:'<strong>Drift detection:</strong> Monitor model performance over time. <strong>Data drift</strong> — input distribution shifts from training data. <strong>Model drift</strong> — output quality degrades. <strong>Concept drift</strong> — the relationship between inputs and correct outputs changes. Drift triggers compliance review: is the model still within its approved operating envelope?',color:'#2563eb'},
+    9:{text:'<strong>AI Governance Board:</strong> Cross-functional body — legal, security, ML engineering, product, ethics. Reviews all high-risk AI deployments. Approves model cards and risk assessments. Sets organizational AI policy. Meets regularly and has authority to halt deployments.',color:'#0d9488'},
+    10:{text:'<strong>Governance stack:</strong> AI policy &amp; board (top) &rarr; risk classification (EU AI Act tiers) &rarr; NIST AI RMF alignment &rarr; ISO 42001 management system &rarr; model cards &amp; AI BOM &rarr; automated audit pipeline &rarr; drift monitoring &rarr; incident response. Eight layers from policy to operations.',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    1:{title:'EU AI Act: Risk Classification Deep Dive',color:'#db2777',body:`
+<div class="dp-label">Four Risk Tiers</div>
+<div class="dp-code"><span class="hl-err">PROHIBITED (enforced Feb 2, 2025)</span>
+  Penalty: 7% global revenue or €35M
+  ─────────────────────────────────────
+  • Social scoring by governments
+  • Predictive policing (individual risk)
+  • Real-time remote biometric identification
+    in public spaces (law enforcement)
+  • Manipulation of vulnerable groups
+  • Emotion recognition in workplace/education
+  • Untargeted facial image scraping
+
+<span class="hl-cmd">HIGH-RISK (enforced Aug 2, 2026)</span>
+  Penalty: 3% global revenue or €15M
+  ─────────────────────────────────────
+  • Credit scoring & financial assessment
+  • Medical diagnostics & triage
+  • Employment screening & recruitment
+  • Educational assessment & grading
+  • Critical infrastructure management
+  • Law enforcement (non-prohibited uses)
+  • Immigration & border control
+  Requirements: conformity assessment,
+  risk management, data governance,
+  transparency, human oversight, logging
+
+<span class="hl-key">LIMITED RISK (enforced Aug 2, 2025)</span>
+  Penalty: 1.5% global revenue or €7.5M
+  ─────────────────────────────────────
+  • Chatbots (must disclose AI)
+  • Deepfake generators (must label)
+  • Emotion recognition systems
+  • Biometric categorization
+  Requirements: transparency obligations
+
+<span class="hl-ok">MINIMAL RISK (no specific deadline)</span>
+  No penalties for AI-specific violations
+  ─────────────────────────────────────
+  • Spam filters, video game AI
+  • Inventory management
+  • Recommendation engines
+  Requirements: voluntary codes of conduct</div>
+<div class="dp-note n-pink"><strong>GPAI obligations</strong> (Aug 2025): General-Purpose AI models (like GPT-4, Claude, Gemini) have separate obligations regardless of risk tier: technical documentation, copyright compliance, training data summaries. <strong>Systemic risk</strong> GPAI (models trained with &gt;10²⁵ FLOPs) face additional requirements: adversarial testing, incident reporting, cybersecurity measures. Source: EU AI Act, Regulation (EU) 2024/1689.</div>`},
+    3:{title:'NIST AI RMF 1.0: Four Functions',color:'#ea580c',body:`
+<div class="dp-label">Framework Structure</div>
+<div class="dp-code"><span class="hl-key">GOVERN</span> — Establish AI governance
+  GV-1: Policies and procedures
+  GV-2: Accountability structures
+  GV-3: Workforce diversity & expertise
+  GV-4: Organizational culture
+  GV-5: Stakeholder engagement
+  GV-6: Risk management integration
+
+<span class="hl-key">MAP</span> — Understand context & risks
+  MP-1: Intended purpose & context
+  MP-2: Interdependencies & impacts
+  MP-3: AI-specific risks identified
+  MP-4: Risk prioritization
+  MP-5: Stakeholder impacts mapped
+
+<span class="hl-key">MEASURE</span> — Analyze & assess risks
+  MS-1: Appropriate metrics selected
+  MS-2: AI systems evaluated & tested
+  MS-3: Mechanisms for tracking risks
+  MS-4: Feedback from stakeholders
+
+<span class="hl-key">MANAGE</span> — Prioritize & act on risks
+  MG-1: Risk treatment plans
+  MG-2: Risk response implemented
+  MG-3: Post-deployment monitoring
+  MG-4: Risk communication</div>
+<div class="dp-label">Mapping NIST AI RMF to EU AI Act</div>
+<div class="dp-code"><span class="hl-key">NIST Function   EU AI Act Requirement</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GOVERN       →  Art. 9 Risk Management System
+MAP          →  Art. 9(2) Risk Identification
+MEASURE      →  Art. 9(7) Testing & Validation
+MANAGE       →  Art. 9(8) Residual Risk Mgmt
+GOVERN       →  Art. 17 Quality Management
+MAP          →  Art. 10 Data Governance
+MEASURE      →  Art. 15 Accuracy & Robustness
+MANAGE       →  Art. 72 Post-Market Monitoring</div>
+<div class="dp-note n-orange"><strong>Practical value:</strong> NIST AI RMF is voluntary but increasingly referenced in US federal procurement (OMB M-24-10 requires agencies to use it). Organizations operating in both US and EU can use NIST AI RMF as the operational framework and map outputs to EU AI Act requirements. The mapping above shows how one framework satisfies both jurisdictions.</div>`},
+    5:{title:'ISO/IEC 42001:2023 — AI Management System',color:'#7c3aed',body:`
+<div class="dp-label">Standard Structure (Clauses 4-10)</div>
+<div class="dp-code"><span class="hl-key">Clause 4: Context of the Organization</span>
+  • Define scope of AIMS
+  • Identify interested parties
+  • Determine AI system inventory
+
+<span class="hl-key">Clause 5: Leadership</span>
+  • Top management commitment
+  • Establish AI policy
+  • Assign roles & responsibilities
+
+<span class="hl-key">Clause 6: Planning</span>
+  • AI risk assessment process
+  • AI impact assessment process
+  • AI objectives and plans to achieve them
+
+<span class="hl-key">Clause 7: Support</span>
+  • Resources, competence, awareness
+  • Communication protocols
+  • Documented information management
+
+<span class="hl-key">Clause 8: Operation</span>
+  • AI system lifecycle controls
+  • Data management for AI
+  • Third-party & supplier management
+  • AI system impact assessment execution
+
+<span class="hl-key">Clause 9: Performance Evaluation</span>
+  • Monitoring, measurement, analysis
+  • Internal audit program
+  • Management review
+
+<span class="hl-key">Clause 10: Improvement</span>
+  • Nonconformity & corrective action
+  • Continual improvement</div>
+<div class="dp-note n-violet"><strong>Certification path:</strong> ISO 42001 certification is conducted by accredited third-party certification bodies (not ISO itself). The process: <strong>1.</strong> Gap analysis against the standard. <strong>2.</strong> Implement AIMS (policies, procedures, controls). <strong>3.</strong> Stage 1 audit (documentation review). <strong>4.</strong> Stage 2 audit (implementation verification). <strong>5.</strong> Certification issued (valid 3 years). <strong>6.</strong> Annual surveillance audits. Organizations already ISO 27001 certified have a head start — the management system structure is harmonized.</div>`},
+    6:{title:'Model Cards & AI Bill of Materials',color:'#7c3aed',body:`
+<div class="dp-label">Model Card Template (Mitchell et al., 2019)</div>
+<div class="dp-code"><span class="hl-key">model_card</span>:
+  <span class="hl-key">model_details</span>:
+    name: <span class="hl-str">"Customer Support Assistant v2.1"</span>
+    version: <span class="hl-str">"2.1.0"</span>
+    type: <span class="hl-str">"Fine-tuned LLM (GPT-4 base)"</span>
+    owner: <span class="hl-str">"AI Platform Team"</span>
+    date: <span class="hl-str">"2026-01-15"</span>
+
+  <span class="hl-key">intended_use</span>:
+    primary: <span class="hl-str">"Answer customer support queries"</span>
+    out_of_scope: <span class="hl-str">"Medical, legal, financial advice"</span>
+    users: <span class="hl-str">"Customer-facing chatbot"</span>
+
+  <span class="hl-key">training_data</span>:
+    sources: <span class="hl-str">"Internal support tickets (2M)"</span>
+    preprocessing: <span class="hl-str">"PII scrubbed via Presidio"</span>
+    bias_mitigation: <span class="hl-str">"Demographic parity checked"</span>
+
+  <span class="hl-key">evaluation</span>:
+    metrics: <span class="hl-str">"Accuracy 94.2%, F1 0.91"</span>
+    bias_audit: <span class="hl-str">"Equalized odds across groups"</span>
+    red_team: <span class="hl-str">"Garak ASR < 3% all categories"</span>
+    guardrails: <span class="hl-str">"NeMo + LLM Guard configured"</span>
+
+  <span class="hl-key">ethical_considerations</span>:
+    risks: <span class="hl-str">"Hallucination on edge cases"</span>
+    mitigations: <span class="hl-str">"Human escalation for low-conf"</span>
+
+  <span class="hl-key">eu_ai_act</span>:
+    risk_tier: <span class="hl-str">"Limited (chatbot disclosure)"</span>
+    conformity: <span class="hl-str">"Self-assessment completed"</span></div>
+<div class="dp-label">AI Bill of Materials (AI BOM)</div>
+<div class="dp-code"><span class="hl-key">ai_bom</span>:
+  <span class="hl-key">base_model</span>: <span class="hl-str">"openai/gpt-4-0125"</span>
+  <span class="hl-key">fine_tuning</span>:
+    dataset: <span class="hl-str">"s3://data/support-v2.1.jsonl"</span>
+    hash: <span class="hl-str">"sha256:a1b2c3..."</span>
+  <span class="hl-key">adapters</span>:
+    - <span class="hl-str">"lora-support-v2.1 (safetensors)"</span>
+  <span class="hl-key">guardrails</span>:
+    - <span class="hl-str">"nemo-guardrails v0.9.1"</span>
+    - <span class="hl-str">"llm-guard v0.3.14"</span>
+  <span class="hl-key">tools</span>:
+    - <span class="hl-str">"ticket-lookup-api v3.2"</span>
+    - <span class="hl-str">"knowledge-base-rag v1.5"</span>
+  <span class="hl-key">dependencies</span>:
+    - <span class="hl-str">"langchain v0.2.x"</span>
+    - <span class="hl-str">"pinecone-client v3.x"</span></div>
+<div class="dp-note n-violet"><strong>Why AI BOM matters:</strong> Like SBOM (Software Bill of Materials) for software supply chain security, AI BOM tracks every component in your AI system. When a vulnerability is discovered in a base model, adapter, or dependency, you can immediately identify which deployed systems are affected. This is essential for EU AI Act Article 17 (quality management) and incident response.</div>`},
+    8:{title:'Drift Detection & Compliance Triggers',color:'#2563eb',body:`
+<div class="dp-label">Three Types of Drift</div>
+<div class="dp-code"><span class="hl-err">DATA DRIFT (covariate shift)</span>
+  Input distribution changes from training data.
+  Example: Customer support model trained on
+  English queries starts receiving Spanish.
+
+  Detection: statistical tests on input features
+  • KS test (Kolmogorov-Smirnov)
+  • PSI (Population Stability Index)
+  • Jensen-Shannon divergence
+
+<span class="hl-cmd">MODEL DRIFT (performance degradation)</span>
+  Output quality degrades over time.
+  Example: Accuracy drops from 94% to 82%
+  as the world changes but model doesn't.
+
+  Detection: monitor evaluation metrics
+  • Track accuracy, F1, latency over time
+  • Set alerting thresholds (e.g., >5% drop)
+  • Compare against baseline model card metrics
+
+<span class="hl-key">CONCEPT DRIFT</span>
+  The relationship between inputs and correct
+  outputs changes.
+  Example: "What's your return policy?" now has
+  a different correct answer after policy change.
+
+  Detection: monitor ground-truth labels
+  • Compare predictions to human labels
+  • Track label distribution shifts
+  • Requires feedback loop from users/reviewers</div>
+<div class="dp-label">Compliance Trigger Pipeline</div>
+<div class="dp-code"><span class="hl-cmt"># When drift exceeds thresholds:</span>
+
+<span class="hl-ok">1. Alert</span> → Notify AI governance board
+<span class="hl-ok">2. Assess</span> → Is model still within approved
+              operating envelope?
+<span class="hl-ok">3. Decide</span> → Retrain, rollback, or accept risk
+<span class="hl-ok">4. Document</span> → Update model card with findings
+<span class="hl-ok">5. Re-evaluate</span> → Run red team scan (Garak)
+                  on updated model
+<span class="hl-ok">6. Re-certify</span> → If high-risk (EU AI Act),
+                  update conformity assessment</div>
+<div class="dp-note n-blue"><strong>Continuous compliance:</strong> Compliance is not a one-time event. The EU AI Act Article 72 requires post-market monitoring for high-risk AI. Drift detection is the technical mechanism that triggers compliance reviews. Without it, you're compliant on day one and potentially non-compliant on day two.</div>`},
+    10:{title:'Complete AI Governance Architecture',color:'#16a34a',body:`
+<div class="dp-label">Eight-Layer Governance Stack</div>
+<div class="dp-code"><span class="hl-cmt"># ORGANIZATIONAL</span>
+
+<span class="hl-ok">Layer 1: AI Policy & Governance Board</span>
+  Cross-functional: legal, security, ML, product
+  Authority to approve/halt AI deployments
+  Sets acceptable risk thresholds per tier
+  Meets monthly, emergency convene for incidents
+
+<span class="hl-ok">Layer 2: Risk Classification</span>
+  Classify every AI system by EU AI Act tier
+  Prohibited → block. High → full compliance.
+  Limited → transparency. Minimal → voluntary.
+  Maintain AI system inventory (ISO 42001 Cl.4)
+
+<span class="hl-cmt"># FRAMEWORK ALIGNMENT</span>
+
+<span class="hl-ok">Layer 3: NIST AI RMF Alignment</span>
+  Map Govern/Map/Measure/Manage to operations
+  Use AI 600-1 for GenAI-specific risks
+  Cross-reference to EU AI Act articles
+
+<span class="hl-ok">Layer 4: ISO 42001 Management System</span>
+  Implement AIMS per Clauses 4-10
+  Annual internal audits + surveillance
+  Certification by accredited body
+
+<span class="hl-cmt"># DOCUMENTATION</span>
+
+<span class="hl-ok">Layer 5: Model Cards & AI BOM</span>
+  Every deployed model has a model card
+  AI BOM tracks all components & dependencies
+  Version-controlled, immutable audit trail
+
+<span class="hl-cmt"># OPERATIONS</span>
+
+<span class="hl-ok">Layer 6: Automated Audit Pipeline</span>
+  Deployment triggers evidence collection
+  Red team results, bias metrics, guardrail config
+  Map artifacts to regulatory requirements
+
+<span class="hl-ok">Layer 7: Drift Monitoring</span>
+  Continuous data/model/concept drift detection
+  Drift triggers compliance review cycle
+  Automated alerts to governance board
+
+<span class="hl-ok">Layer 8: Incident Response</span>
+  AI-specific incident response plan
+  EU AI Act: serious incidents reported within
+  72 hours to national authority
+  Post-incident: update model card, re-certify</div>
+<div class="dp-note n-green"><strong>Regulatory convergence:</strong> The EU AI Act, NIST AI RMF, and ISO 42001 are converging. ISO 42001 provides the management system structure. NIST AI RMF provides the risk management methodology. EU AI Act provides the legal requirements. Organizations that implement all three have a defensible compliance posture across jurisdictions. The governance stack above integrates all three into a single operational program.</div>`},
+  };
+
+  let current=0, playing=false, timer=null;
+  const allSteps=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    allSteps.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function showReset(){
+    allSteps.forEach(el=>el.classList.add('dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin. Click any node for deep-dive details...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    document.getElementById('dpStep').style.background=d.color;
+    document.getElementById('dpStep').textContent=step;
+    document.getElementById('dpTitle').textContent=d.title;
+    document.getElementById('dpBody').innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  document.querySelectorAll('.fnode').forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.closest('[data-step]')?.dataset.step);if(s&&DETAILS[s])showDetail(s)})});
+  overlay.addEventListener('click',hideDetail);
+  document.getElementById('dpClose').addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDetail()});
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(overlay.classList.contains('visible'))return;if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

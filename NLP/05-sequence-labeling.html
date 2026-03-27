@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Sequence Labeling — Natural Language Processing</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet),var(--teal),var(--green));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red)}.cc-code .hl-ok{color:var(--green)}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Sequence Labeling</h2><span class="tb-sub">POS tagging, named entity recognition, and assigning labels to every token</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Tokens</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Embed</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Encode</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">CRF</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">sell</span></div><span class="pipe-label">Tags</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Evaluate</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">data_array</span></div><div><div class="cc-title">What Is Sequence Labeling?</div><div class="cc-sub">One label per token &mdash; a fundamentally different task from classification</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Task</div><div class="cc-text">While text classification assigns <strong>one label per document</strong>, sequence labeling assigns <strong>one label per token</strong>. Given a sentence, predict a tag for every word. The three core sequence labeling tasks are: <strong>Part-of-Speech (POS) tagging</strong> &mdash; is each word a noun, verb, adjective, etc.? <strong>Named Entity Recognition (NER)</strong> &mdash; which words are person names, organizations, locations, dates? <strong>Chunking</strong> &mdash; which words form noun phrases, verb phrases, etc.? Sequence labeling is the backbone of information extraction. Every time a search engine highlights a person's name, a chatbot extracts a date from your message, or a medical system identifies drug names in clinical notes, sequence labeling is at work. The key challenge: <strong>labels depend on neighboring labels</strong>. In "New York City", "York" is part of a location only because "New" precedes it.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Sequence Labeling Tasks</div><div class="cc-code"><span class="hl-key">POS Tagging</span>:
+  "The   cat  sat  on  the  mat"
+   DET  NOUN VERB ADP  DET NOUN
+
+<span class="hl-key">Named Entity Recognition</span>:
+  "Barack Obama visited New York"
+   B-PER  I-PER   O    B-LOC I-LOC
+
+<span class="hl-key">Chunking</span>:
+  "[The cat] [sat] [on the mat]"
+    NP       VP     PP
+
+<span class="hl-str">Key difference from classification</span>:
+  Classification: 1 label per document
+  Sequence labeling: 1 label per token
+  Labels are <span class="hl-key">interdependent</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The critical difference from classification is <strong>label dependencies</strong>. A B-PER tag is very likely followed by I-PER, never by I-LOC. Models that ignore these dependencies (like independent per-token classifiers) produce incoherent tag sequences.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">sell</span></div><div><div class="cc-title">The IOB Tagging Format</div><div class="cc-sub">How to encode entity boundaries at the token level</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">IOB Encoding</div><div class="cc-text">Multi-word entities like "New York City" need a way to mark where entities <strong>begin</strong> and <strong>continue</strong>. The <strong>IOB format</strong> (Inside-Outside-Beginning) solves this: <strong>B-TYPE</strong> marks the first token of an entity, <strong>I-TYPE</strong> marks continuation tokens, and <strong>O</strong> marks tokens outside any entity. So "New York City" is tagged B-LOC I-LOC I-LOC. Without IOB, you can't distinguish "New York" (one entity) from "New" and "York" (two separate entities). The extended <strong>BIOES</strong> format adds S (single-token entity) and E (end of entity) for finer boundaries. IOB-2 (the most common variant) requires every entity to start with B, even if it's not adjacent to another entity of the same type. This format is the universal standard for NER annotation and evaluation.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">IOB Tagging Example</div><div class="cc-code"><span class="hl-key">IOB-2 format</span>:
+  "Barack Obama visited New York City"
+   B-PER  I-PER   O    B-LOC I-LOC I-LOC
+
+<span class="hl-key">B</span> = Beginning of entity
+<span class="hl-key">I</span> = Inside (continuation)
+<span class="hl-key">O</span> = Outside (not an entity)
+
+<span class="hl-str">Why IOB matters</span>:
+  "John Smith met Jane Doe"
+   B-PER I-PER O  B-PER I-PER
+  Without B: can't tell 2 people apart
+
+<span class="hl-key">BIOES variant</span>:
+  B = Begin, I = Inside, O = Outside
+  E = End, S = Single token entity
+  "in London" &rarr; O S-LOC
+  "in New York" &rarr; O B-LOC E-LOC</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> IOB tagging converts a <strong>span-level problem</strong> (find entity boundaries) into a <strong>token-level problem</strong> (classify each token). This is what makes sequence labeling models applicable to entity recognition.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">Hidden Markov Models (HMMs)</div><div class="cc-sub">The first probabilistic sequence labeler &mdash; still conceptually important</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How HMMs Work</div><div class="cc-text"><strong>Hidden Markov Models</strong> were the dominant approach to POS tagging and NER before neural methods. An HMM models two probability distributions: <strong>transition probabilities</strong> &mdash; the probability of one tag following another (P(NOUN | DET) is high, P(DET | DET) is low), and <strong>emission probabilities</strong> &mdash; the probability of a word given a tag (P("cat" | NOUN) is high, P("cat" | VERB) is low). The "hidden" states are the tags (unobserved), and the "observations" are the words. The <strong>Viterbi algorithm</strong> efficiently finds the most likely tag sequence by dynamic programming, avoiding the exponential cost of checking all possible sequences. HMMs dominated POS tagging for decades, achieving ~96% accuracy. Their limitation: they only look at the <strong>current word and previous tag</strong>, missing longer-range context.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">HMM Components</div><div class="cc-code"><span class="hl-key">Transition probabilities</span>:
+  P(NOUN | DET)  = 0.45  <span class="hl-ok">high</span>
+  P(VERB | NOUN) = 0.25
+  P(DET  | DET)  = 0.01  <span class="hl-err">low</span>
+
+<span class="hl-key">Emission probabilities</span>:
+  P("cat" | NOUN) = 0.003
+  P("cat" | VERB) = 0.0001
+  P("the" | DET)  = 0.15
+
+<span class="hl-key">Viterbi algorithm</span>:
+  Find: argmax P(tags | words)
+  Dynamic programming: O(T &times; N&sup2;)
+  T = sentence length, N = tag count
+
+<span class="hl-ok">POS tagging accuracy</span>: ~96%
+<span class="hl-err">Limitation</span>: only sees current word
+  + previous tag (Markov assumption)</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> HMMs introduced the core idea that <strong>tag sequences have structure</strong> &mdash; some tag transitions are likely, others are nearly impossible. Every modern sequence labeling model builds on this insight, even if they use different mechanisms.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">link</span></div><div><div class="cc-title">Conditional Random Fields (CRFs)</div><div class="cc-sub">The discriminative upgrade &mdash; richer features, better accuracy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">CRFs vs HMMs</div><div class="cc-text"><strong>Conditional Random Fields</strong> (Lafferty et al., 2001) improved on HMMs by modeling P(tags | words) <strong>directly</strong> (discriminative) rather than modeling the joint P(tags, words) (generative). This seemingly small change has a huge practical impact: CRFs can use <strong>arbitrary overlapping features</strong> without worrying about independence assumptions. You can include features like "is the word capitalized?", "does it end in -ing?", "is the previous word 'the'?", "does it appear in a gazetteer?" all simultaneously. CRFs also model the <strong>entire tag sequence</strong> jointly, not just pairwise transitions. They became the standard for NER, achieving F1 scores of 85&ndash;90% on the CoNLL-2003 benchmark. CRFs remain important today as the <strong>output layer</strong> in neural sequence labeling models (BiLSTM-CRF).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">CRF Features</div><div class="cc-code"><span class="hl-key">Feature functions for NER</span>:
+  f1: word is capitalized &amp; tag = B-PER
+  f2: previous tag = B-PER &amp; tag = I-PER
+  f3: word in person gazetteer &amp; tag = B-PER
+  f4: word ends in "-tion" &amp; tag = O
+  f5: word is all digits &amp; tag = B-DATE
+  f6: previous word = "Mr." &amp; tag = B-PER
+
+<span class="hl-ok">CRF advantages over HMM</span>:
+  Discriminative (model P(tags|words))
+  Arbitrary overlapping features
+  No independence assumptions
+  Global sequence optimization
+
+<span class="hl-str">CoNLL-2003 NER F1 scores</span>:
+  HMM:  ~85%
+  CRF:  ~89%
+  CRF + gazetteers: ~91%</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> CRFs showed that <strong>feature engineering + global sequence modeling</strong> is a powerful combination. The CRF's ability to enforce valid tag sequences (no I-PER after B-LOC) is so valuable that it survives as a layer in neural models.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">BiLSTM-CRF</div><div class="cc-sub">The neural architecture that dominated NER for five years</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-text">The <strong>BiLSTM-CRF</strong> (Huang et al., 2015) combines the best of neural and structured prediction. A <strong>bidirectional LSTM</strong> reads the sentence in both directions, producing context-rich representations for each token that capture both left and right context. These representations are fed into a <strong>CRF layer</strong> that models tag dependencies and produces the globally optimal tag sequence. The BiLSTM replaces hand-crafted features with learned representations, while the CRF ensures valid tag sequences. Adding <strong>character-level CNNs</strong> (BiLSTM-CNN-CRF) captures morphological patterns like capitalization and suffixes, achieving 91.18% F1 on CoNLL-2003 NER without any hand-crafted features. This architecture was the <strong>state of the art</strong> from 2015 to 2018, when BERT-based models surpassed it.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">BiLSTM-CRF Architecture</div><div class="cc-code"><span class="hl-key">Input</span>: "Barack Obama visited London"
+
+<span class="hl-str">Layer 1: Embeddings</span>
+  Word embeddings (GloVe/Word2Vec)
+  + Character CNN embeddings
+
+<span class="hl-str">Layer 2: BiLSTM</span>
+  Forward LSTM:  &rarr; &rarr; &rarr; &rarr;
+  Backward LSTM: &larr; &larr; &larr; &larr;
+  Concatenate: [forward; backward]
+
+<span class="hl-str">Layer 3: CRF</span>
+  Score all possible tag sequences
+  Pick the best one (Viterbi)
+
+<span class="hl-key">Output</span>: B-PER I-PER O B-LOC
+
+<span class="hl-ok">CoNLL-2003 F1</span>: 91.18%
+  (no hand-crafted features!)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> BiLSTM-CRF demonstrated that <strong>neural feature learning + structured prediction</strong> is strictly better than either alone. The BiLSTM learns what features matter; the CRF ensures the output is coherent.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Transformer-Based Sequence Labeling</div><div class="cc-sub">BERT for NER &mdash; pre-trained representations meet token classification</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">BERT for NER</div><div class="cc-text"><strong>BERT-based NER</strong> fine-tunes a pre-trained transformer for token classification. Each token's contextual representation from BERT is passed through a linear classification layer that predicts the IOB tag. Some implementations add a CRF layer on top for sequence coherence. BERT's advantage is its <strong>deep bidirectional context</strong> &mdash; it considers the entire sentence when representing each token, capturing long-range dependencies that BiLSTMs struggle with. On CoNLL-2003, BERT-based models achieve <strong>92&ndash;93% F1</strong>, surpassing BiLSTM-CRF. For domain-specific NER (biomedical, legal, financial), domain-adapted models like <strong>BioBERT</strong>, <strong>LegalBERT</strong>, and <strong>FinBERT</strong> further improve performance by pre-training on domain text. The trade-off: BERT models are 10&ndash;100x more expensive to train and run than BiLSTM-CRF.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">BERT NER Pipeline</div><div class="cc-code"><span class="hl-key">Architecture</span>:
+  Input tokens &rarr; BERT encoder
+  &rarr; token representations (768-dim)
+  &rarr; linear layer (768 &rarr; num_tags)
+  &rarr; (optional) CRF layer
+  &rarr; IOB tag predictions
+
+<span class="hl-str">CoNLL-2003 F1 progression</span>:
+  CRF (2003):          ~89%
+  BiLSTM-CRF (2015):   ~91%
+  BERT (2018):         ~92.8%
+  RoBERTa (2019):      ~93.2%
+
+<span class="hl-key">Domain-specific models</span>:
+  BioBERT: biomedical NER
+  SciBERT: scientific text
+  LegalBERT: legal documents
+  FinBERT: financial text
+
+<span class="hl-err">Cost</span>: 10-100x more than BiLSTM-CRF</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> For NER, the jump from BiLSTM-CRF to BERT is <strong>smaller than the jump from CRF to BiLSTM-CRF</strong>. Pre-trained transformers help most when labeled data is scarce &mdash; their general language knowledge compensates for limited task-specific examples.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">analytics</span></div><div><div class="cc-title">Evaluation: Entity-Level F1</div><div class="cc-sub">Why token-level accuracy is misleading for NER</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Entity-Level vs Token-Level</div><div class="cc-text">Evaluating sequence labeling requires care. <strong>Token-level accuracy</strong> is misleading because most tokens are O (outside any entity) &mdash; a model that tags everything as O gets 80%+ accuracy on typical NER data. The standard metric is <strong>entity-level F1</strong>: an entity is correct only if <strong>both the span boundaries and the entity type match exactly</strong>. If the gold standard says "New York City" is B-LOC I-LOC I-LOC, predicting B-LOC I-LOC O is <strong>completely wrong</strong> at the entity level, even though 2 of 3 tokens are correct. <strong>Precision</strong> measures what fraction of predicted entities are correct. <strong>Recall</strong> measures what fraction of gold entities are found. <strong>F1</strong> is their harmonic mean. The <code>seqeval</code> library is the standard tool for computing these metrics.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evaluation Example</div><div class="cc-code"><span class="hl-key">Gold</span>:    B-PER I-PER O    B-LOC I-LOC I-LOC
+<span class="hl-str">Pred</span>:    B-PER I-PER O    B-LOC I-LOC O
+
+<span class="hl-ok">Token accuracy</span>: 5/6 = 83% (misleading)
+
+<span class="hl-key">Entity-level evaluation</span>:
+  Gold entities: [Barack Obama/PER],
+                 [New York City/LOC]
+  Pred entities: [Barack Obama/PER],
+                 [New York/LOC]
+
+  "Barack Obama" &rarr; <span class="hl-ok">correct</span> (exact match)
+  "New York City" &rarr; <span class="hl-err">wrong</span> (boundary mismatch)
+
+  Precision: 1/2 = 50%
+  Recall:    1/2 = 50%
+  F1:        50%  (much lower than 83%!)</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Entity-level F1 is <strong>much stricter</strong> than token-level accuracy. A model with 95% token accuracy might only achieve 85% entity-level F1. Always report entity-level metrics for NER &mdash; they reflect real-world usefulness.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">Real-World NER Applications</div><div class="cc-sub">From search engines to medical records &mdash; where sequence labeling powers production systems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Applications</div><div class="cc-text">Sequence labeling powers critical production systems across industries. <strong>Search engines</strong> use NER to identify entities in queries ("flights to Paris" &rarr; LOC:Paris) for structured search. <strong>Healthcare</strong> extracts drug names, dosages, symptoms, and conditions from clinical notes for electronic health records. <strong>Finance</strong> identifies company names, monetary amounts, and dates in SEC filings and earnings calls. <strong>Legal</strong> extracts parties, dates, clauses, and obligations from contracts. <strong>Customer support</strong> identifies product names, issue types, and account numbers from tickets. The challenge in production is <strong>domain adaptation</strong>: a model trained on news text (CoNLL-2003) performs poorly on medical text because the entity types and vocabulary are completely different. Domain-specific training data and pre-trained models are essential for production NER.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Production NER</div><div class="cc-code"><span class="hl-key">Search</span>:
+  "flights to Paris" &rarr; LOC: Paris
+  "Tim Cook Apple news" &rarr; PER + ORG
+
+<span class="hl-key">Healthcare</span>:
+  "Patient takes 500mg Metformin daily"
+  &rarr; DRUG: Metformin, DOSE: 500mg
+
+<span class="hl-key">Finance</span>:
+  "Apple reported $94.8B revenue in Q1"
+  &rarr; ORG: Apple, MONEY: $94.8B, DATE: Q1
+
+<span class="hl-key">Legal</span>:
+  "Party A shall deliver by March 15"
+  &rarr; PARTY: Party A, DATE: March 15
+
+<span class="hl-err">Domain gap</span>:
+  News NER model on medical text: ~60% F1
+  Domain-adapted model: ~85% F1
+  <span class="hl-ok">Domain data is essential</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> In production, <strong>the entity types you need are rarely the standard ones</strong> (PER, ORG, LOC). Real applications need custom entities (drug names, product SKUs, legal clauses), which means custom training data and domain-specific models.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-text-classification.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Text Classification</a>
+    <a class="ch-nav-btn next" href="06-language-models.html">Ch 6: Language Models &amp; Generation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,4],2:[0,4],3:[0,1,2,4],4:[0,1,2,3,4],5:[0,1,2,3,4],6:[0,1,2,4],7:[4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Sequence labeling assigns one label per token: POS tags, named entities, chunks. Unlike classification, labels are interdependent &mdash; B-PER is likely followed by I-PER.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> IOB format encodes entity boundaries: B (begin), I (inside), O (outside). "New York City" = B-LOC I-LOC I-LOC. Without IOB, you can\'t distinguish multi-word entities.',color:'#16a34a'},
+    3:{text:'<strong>Step 3:</strong> HMMs model transition probabilities (tag &rarr; tag) and emission probabilities (tag &rarr; word). Viterbi finds the best sequence. ~96% POS accuracy but limited context.',color:'#d97706'},
+    4:{text:'<strong>Step 4:</strong> CRFs model P(tags|words) directly with arbitrary overlapping features. No independence assumptions. 89% F1 on CoNLL-2003 NER. Still used as output layers in neural models.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> BiLSTM-CRF: bidirectional LSTM learns features, CRF ensures valid sequences. 91% F1 on CoNLL-2003 with zero hand-crafted features. Dominated NER from 2015-2018.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> BERT for NER: fine-tune pre-trained transformer for token classification. 92-93% F1. Domain-specific variants (BioBERT, LegalBERT) for specialized text.',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> Entity-level F1 requires exact span + type match. Token accuracy is misleading &mdash; 95% token accuracy can mean only 85% entity F1. Always evaluate at entity level.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Production NER powers search, healthcare, finance, and legal systems. The main challenge is domain adaptation &mdash; standard models fail on specialized text without domain data.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

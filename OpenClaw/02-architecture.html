@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Architecture &mdash; The Three-Layer Design</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-next{color:var(--blue);background:var(--blue-light);border:1px solid var(--blue-border)}.tb-nav a.nav-next:hover{background:var(--blue);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--teal-light) 50%,var(--violet-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--teal),var(--violet),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-a .zone-title{color:var(--blue)}
+.zone-b{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-b .zone-title{color:var(--teal)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--amber-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-border)}.zone-d .zone-title{color:var(--amber)}
+.zone-e{background:linear-gradient(180deg,var(--green-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}.zone-e .zone-title{color:var(--green)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-amber .fnode-icon{background:var(--amber-light);color:var(--amber)}.fnode.c-amber .fnode-label{color:var(--amber)}.fnode.c-amber{border-color:var(--amber-border)}.fnode.c-amber.active{box-shadow:0 0 0 3px rgba(217,119,6,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.c-pink .fnode-icon{background:var(--pink-light);color:var(--pink)}.fnode.c-pink .fnode-label{color:var(--pink)}.fnode.c-pink{border-color:var(--pink-border)}.fnode.c-pink.active{box-shadow:0 0 0 3px rgba(219,39,119,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}.farr-label{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:500;color:var(--text-3);white-space:nowrap}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light)}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-amber.active .loop-pill{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber)}
+.loop-conn.c-green.active .loop-pill{background:var(--green-light);border-color:var(--green-border);color:var(--green)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-violet{background:var(--violet)}.bg-amber{background:var(--amber)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:700px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.dp-note.n-amber strong{color:var(--amber)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{background:#1d4ed8;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Architecture: The Three-Layer Design</h2><span class="tb-sub">Gateway, Channel, and LLM layers &mdash; plus the six-stage message flow pipeline</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-next" href="03-installation-configuration.html">Ch 3 &rarr;</a></div>
+    <span class="tb-tag">Chapter 2</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: GATEWAY LAYER -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">Gateway Layer</span><span class="zone-sub">The central coordination hub</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue" data-step="1"><div class="step-badge bg-blue">1</div><div class="fnode-icon"><span class="material-symbols-rounded">dns</span></div><div class="fnode-label">Node.js Daemon</div><div class="fnode-sub">Port 18789</div></div>
+      <div class="farr" data-step="1"><span class="farr-label">manages</span></div>
+      <div class="fnode c-blue" data-step="2"><div class="step-badge bg-blue">2</div><div class="fnode-icon"><span class="material-symbols-rounded">sync_alt</span></div><div class="fnode-label">Sessions</div><div class="fnode-sub">Routing &amp; queuing</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal" data-step="3"><div class="loop-dash"></div><div class="step-badge bg-teal">3</div><div class="loop-pill"><span class="material-symbols-rounded">swap_horiz</span>Channel adapters normalize messages from 13+ platforms</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: CHANNEL LAYER -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Channel Layer</span><span class="zone-sub">Platform adapters for messaging apps</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal" data-step="3"><div class="step-badge bg-teal">3</div><div class="fnode-icon"><span class="material-symbols-rounded">chat</span></div><div class="fnode-label">Telegram</div><div class="fnode-sub">Bot API</div></div>
+      <div class="farr" data-step="3"></div>
+      <div class="fnode c-teal" data-step="3"><div class="step-badge bg-teal">3</div><div class="fnode-icon"><span class="material-symbols-rounded">forum</span></div><div class="fnode-label">WhatsApp</div><div class="fnode-sub">Web bridge</div></div>
+      <div class="farr" data-step="3"></div>
+      <div class="fnode c-teal" data-step="3"><div class="step-badge bg-teal">3</div><div class="fnode-icon"><span class="material-symbols-rounded">tag</span></div><div class="fnode-label">Discord</div><div class="fnode-sub">Bot token</div></div>
+      <div class="farr" data-step="3"></div>
+      <div class="fnode c-teal" data-step="4"><div class="step-badge bg-teal">4</div><div class="fnode-icon"><span class="material-symbols-rounded">more_horiz</span></div><div class="fnode-label">10+ More</div><div class="fnode-sub">Slack, Signal...</div></div>
+    </div>
+  </div>
+
+  <!-- ZONE C: LLM LAYER -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">LLM Layer</span><span class="zone-sub">Unified interface for multiple AI providers</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet" data-step="5"><div class="step-badge bg-violet">5</div><div class="fnode-icon"><span class="material-symbols-rounded">psychology</span></div><div class="fnode-label">Multi-Provider</div><div class="fnode-sub">14 built-in</div></div>
+      <div class="farr" data-step="5"><span class="farr-label">tools</span></div>
+      <div class="fnode c-violet" data-step="5"><div class="step-badge bg-violet">5</div><div class="fnode-icon"><span class="material-symbols-rounded">hub</span></div><div class="fnode-label">MCP Servers</div><div class="fnode-sub">Tool calling</div></div>
+      <div class="farr" data-step="5"><span class="farr-label">stream</span></div>
+      <div class="fnode c-violet" data-step="5"><div class="step-badge bg-violet">5</div><div class="fnode-icon"><span class="material-symbols-rounded">swap_vert</span></div><div class="fnode-label">Failover</div><div class="fnode-sub">Auto-fallback</div></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-amber" data-step="6"><div class="loop-dash"></div><div class="step-badge bg-amber">6</div><div class="loop-pill"><span class="material-symbols-rounded">route</span>Six-stage message flow: intake \u2192 gateway \u2192 agent \u2192 LLM \u2192 tools \u2192 response</div><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: MESSAGE FLOW -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Message Flow Pipeline</span><span class="zone-sub">Six stages from message to action</span></div>
+    <div class="flow-row">
+      <div class="fnode c-amber" data-step="6"><div class="step-badge bg-amber">6</div><div class="fnode-icon"><span class="material-symbols-rounded">input</span></div><div class="fnode-label">Intake</div><div class="fnode-sub">Normalize msg</div></div>
+      <div class="farr" data-step="6"></div>
+      <div class="fnode c-amber" data-step="6"><div class="step-badge bg-amber">6</div><div class="fnode-icon"><span class="material-symbols-rounded">memory</span></div><div class="fnode-label">Context</div><div class="fnode-sub">Assemble prompt</div></div>
+      <div class="farr" data-step="7"></div>
+      <div class="fnode c-amber" data-step="7"><div class="step-badge bg-amber">7</div><div class="fnode-icon"><span class="material-symbols-rounded">neurology</span></div><div class="fnode-label">Inference</div><div class="fnode-sub">LLM call</div></div>
+      <div class="farr" data-step="7"></div>
+      <div class="fnode c-amber" data-step="7"><div class="step-badge bg-amber">7</div><div class="fnode-icon"><span class="material-symbols-rounded">build</span></div><div class="fnode-label">Tool Loop</div><div class="fnode-sub">Execute actions</div></div>
+    </div>
+  </div>
+
+  <!-- ZONE E: PI AGENT FRAMEWORK -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Pi Agent Framework</span><span class="zone-sub">The internal engine powering OpenClaw</span></div>
+    <div class="flow-row">
+      <div class="fnode c-green" data-step="8"><div class="step-badge bg-green">8</div><div class="fnode-icon"><span class="material-symbols-rounded">package_2</span></div><div class="fnode-label">pi-agent-core</div><div class="fnode-sub">Base interfaces</div></div>
+      <div class="farr" data-step="8"></div>
+      <div class="fnode c-green" data-step="8"><div class="step-badge bg-green">8</div><div class="fnode-icon"><span class="material-symbols-rounded">code</span></div><div class="fnode-label">pi-coding-agent</div><div class="fnode-sub">Session manager</div></div>
+      <div class="farr" data-step="8"></div>
+      <div class="fnode c-green" data-step="8"><div class="step-badge bg-green">8</div><div class="fnode-icon"><span class="material-symbols-rounded">smart_toy</span></div><div class="fnode-label">pi-ai</div><div class="fnode-sub">Model interaction</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel"><div class="dp-head"><div class="dp-step" id="dpStep">1</div><div class="dp-title" id="dpTitle">Title</div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div><div class="dp-body" id="dpBody"></div></div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=4200;
+  const NARRATION={
+    1:{text:'<strong>Gateway Layer</strong> is the central coordination hub. It runs as a persistent Node.js daemon on <code>127.0.0.1:18789</code>. Manages WebSocket connections, session routing, message queuing, authentication, and the complete lifecycle of user sessions. Everything flows through the Gateway.',color:'#2563eb'},
+    2:{text:'<strong>Session management:</strong> The Gateway maintains persistent sessions per user/chat. Each session has its own state, transcript (JSONL format), memory context, and tool permissions. Sessions are serialized \u2014 only one agent run executes per session at a time to prevent race conditions.',color:'#2563eb'},
+    3:{text:'<strong>Channel Layer:</strong> Platform adapters that normalize messages from different services. Each channel handles its own event handling, routing rules, and format translation. Telegram uses the Bot API, WhatsApp uses a Web bridge with QR pairing, Discord uses bot tokens with OAuth2.',color:'#0d9488'},
+    4:{text:'<strong>13+ supported channels:</strong> Telegram, WhatsApp, Discord, Slack, Signal, iMessage, Teams, Matrix, Google Chat, Web, CLI, and more. Each channel can run simultaneously. Messages are routed per-chat, and you can pin specific models to specific channels.',color:'#0d9488'},
+    5:{text:'<strong>LLM Layer:</strong> Unified interface for 14 built-in providers \u2014 Anthropic, OpenAI, Google Gemini, Vertex AI, xAI, Groq, Cerebras, Mistral, OpenRouter, and more. Supports MCP server integration for tool calling, streaming responses, and automatic failover to fallback models.',color:'#7c3aed'},
+    6:{text:'<strong>Message flow (stages 1\u20133):</strong> (1) Channel Adapter receives and normalizes the incoming message. (2) Gateway Server routes to the correct session and manages queuing. (3) Agent Runner assembles the system prompt, loads memory (short-term, medium-term, long-term), and prepares the context window.',color:'#d97706'},
+    7:{text:'<strong>Message flow (stages 4\u20136):</strong> (4) LLM API processes the request with streaming support. (5) Agentic Loop executes tool calls \u2014 the model reasons, calls tools, gets results, and repeats until the task is complete. (6) Response Path streams results back to the user and persists the transcript.',color:'#d97706'},
+    8:{text:'<strong>Pi Agent framework:</strong> The internal engine. <strong>pi-agent-core</strong> defines base agent interfaces and tool execution contracts. <strong>pi-coding-agent</strong> implements the SessionManager and core agentic loop with streaming. <strong>pi-ai</strong> handles AI model interaction, supporting Claude, GPT, and Gemini APIs.',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    1:{title:'Gateway Layer: The Node.js Daemon',color:'#2563eb',body:'<div class="dp-label">GATEWAY ARCHITECTURE</div><div class="dp-code"><span class="hl-cmt">// Gateway runs as a persistent Node.js process</span>\n\nBind address:  <span class="hl-str">127.0.0.1:18789</span>\nProtocol:      WebSocket + HTTP\nRuntime:       Node.js >= 22\n\n<span class="hl-key">Responsibilities:</span>\n  \u2022 WebSocket connection management\n  \u2022 Session routing (per user/chat)\n  \u2022 Message queuing and serialization\n  \u2022 Authentication and access control\n  \u2022 Channel lifecycle management\n  \u2022 Heartbeat scheduling\n  \u2022 Cron job orchestration\n  \u2022 Sub-agent spawning\n\n<span class="hl-key">Entry points:</span>\n  CLI:     <span class="hl-str">openclaw agent</span> command\n  RPC:     <span class="hl-str">agent</span> and <span class="hl-str">agent.wait</span> methods\n  Gateway: Internal routing from channels</div><div class="dp-note n-blue"><strong>The Gateway is the single point of coordination.</strong> All messages from all channels flow through it. It ensures session isolation, prevents concurrent runs on the same session, and manages the complete lifecycle from message intake to response delivery.</div>'},
+    2:{title:'Session Management',color:'#2563eb',body:'<div class="dp-label">SESSION ARCHITECTURE</div><div class="dp-code"><span class="hl-cmt">// Session state and persistence</span>\n\n<span class="hl-key">Session ID format:</span>\n  <span class="hl-str">agent::main</span>           (primary session)\n  <span class="hl-str">agent::subagent:abc</span>   (sub-agent session)\n\n<span class="hl-key">Transcript format:</span> JSONL\n  Each line is a structured JSON event:\n  - User messages\n  - Assistant responses\n  - Tool calls and results\n  - System events\n\n<span class="hl-key">Serialization:</span>\n  Runs are serialized per session.\n  Only one agent run at a time per session.\n  Prevents tool/session race conditions.\n\n<span class="hl-key">State persistence:</span>\n  Transcripts saved to disk\n  Session state serialized between runs\n  Memory files loaded at session start</div><div class="dp-note n-blue"><strong>Serialization is critical for safety.</strong> If two messages arrive simultaneously for the same session, the second waits in a queue until the first completes. This prevents the agent from executing conflicting tool calls or corrupting session state.</div>'},
+    3:{title:'Channel Adapters',color:'#0d9488',body:'<div class="dp-label">HOW CHANNELS WORK</div><div class="dp-code"><span class="hl-cmt">// Each channel is a platform adapter</span>\n\n<span class="hl-key">Channel adapter responsibilities:</span>\n  \u2022 Connect to platform API\n  \u2022 Receive incoming messages\n  \u2022 Normalize to internal format\n  \u2022 Handle media (images, voice, files)\n  \u2022 Translate outgoing responses\n  \u2022 Manage platform-specific features\n\n<span class="hl-key">Telegram:</span>\n  Protocol: Bot API (polling or webhook)\n  Setup:    BotFather token\n  Features: Inline keyboards, voice notes\n\n<span class="hl-key">WhatsApp:</span>\n  Protocol: Web bridge (Baileys library)\n  Setup:    QR code pairing\n  Features: Voice messages, media sharing\n\n<span class="hl-key">Discord:</span>\n  Protocol: Gateway WebSocket + REST API\n  Setup:    Bot token + OAuth2\n  Features: Slash commands, threads, embeds</div><div class="dp-note n-teal"><strong>Message normalization is the key abstraction.</strong> Regardless of whether a message comes from Telegram, WhatsApp, or Discord, the channel adapter converts it into a unified internal format. The agent never needs to know which platform the user is on.</div>'},
+    4:{title:'Supported Channels',color:'#0d9488',body:'<div class="dp-label">ALL SUPPORTED PLATFORMS</div><div class="dp-code"><span class="hl-cmt">// 13+ messaging platforms</span>\n\n<span class="hl-key">Messaging:</span>\n  \u2022 Telegram       (Bot API)\n  \u2022 WhatsApp       (Web bridge)\n  \u2022 Discord        (Bot token)\n  \u2022 Slack          (Bolt SDK)\n  \u2022 Signal         (Signal CLI)\n  \u2022 iMessage       (macOS only)\n  \u2022 Microsoft Teams\n  \u2022 Matrix         (Element)\n  \u2022 Google Chat\n\n<span class="hl-key">Direct interfaces:</span>\n  \u2022 Web UI         (Canvas rendering)\n  \u2022 CLI            (terminal)\n  \u2022 Voice          (macOS/iOS/Android)\n\n<span class="hl-key">Access policies per channel:</span>\n  <span class="hl-str">pairing</span>    \u2014 require pairing code (default)\n  <span class="hl-str">allowlist</span>  \u2014 only approved users\n  <span class="hl-str">open</span>       \u2014 anyone can interact\n  <span class="hl-str">disabled</span>   \u2014 channel off</div><div class="dp-note n-teal"><strong>Multiple channels run simultaneously.</strong> You can have Telegram, Discord, and WhatsApp all active at once. Each channel routes messages independently, and you can even pin different LLM models to different channels for cost optimization.</div>'},
+    5:{title:'LLM Layer: Multi-Provider Support',color:'#7c3aed',body:'<div class="dp-label">BUILT-IN LLM PROVIDERS</div><div class="dp-code"><span class="hl-cmt">// 14 built-in providers</span>\n\n<span class="hl-key">Tier 1 (major):</span>\n  \u2022 Anthropic      (Claude 4.5, Sonnet, Haiku)\n  \u2022 OpenAI         (GPT-5, GPT-4o, o3)\n  \u2022 Google Gemini  (Gemini 2.5 Pro/Flash)\n  \u2022 Google Vertex  (enterprise Gemini)\n\n<span class="hl-key">Tier 2 (fast/cheap):</span>\n  \u2022 Groq           (ultra-fast inference)\n  \u2022 Cerebras       (wafer-scale inference)\n  \u2022 xAI            (Grok models)\n  \u2022 Mistral        (Mistral Large/Small)\n\n<span class="hl-key">Aggregators:</span>\n  \u2022 OpenRouter     (100+ models)\n  \u2022 Vercel AI Gateway\n  \u2022 GitHub Copilot\n\n<span class="hl-key">Features:</span>\n  \u2022 MCP server integration (tool calling)\n  \u2022 Streaming responses\n  \u2022 Automatic failover to fallback models\n  \u2022 Custom provider endpoints (OpenAI-compatible)</div><div class="dp-note n-violet"><strong>Model-agnostic by design.</strong> OpenClaw is not locked to any single provider. You can set a primary model with fallbacks for cost optimization, and even add custom providers via OpenAI-compatible or Anthropic-compatible endpoints.</div>'},
+    6:{title:'Message Flow: Stages 1-3',color:'#d97706',body:'<div class="dp-label">INTAKE, ROUTING, AND CONTEXT ASSEMBLY</div><div class="dp-code"><span class="hl-cmt">// Stage 1: Channel Adapter (Intake)</span>\nUser sends message on Telegram\n\u2192 Telegram adapter receives event\n\u2192 Normalizes to internal format:\n  {\n    <span class="hl-str">"from"</span>: <span class="hl-str">"user:telegram:12345"</span>,\n    <span class="hl-str">"text"</span>: <span class="hl-str">"Check my calendar for tomorrow"</span>,\n    <span class="hl-str">"media"</span>: null,\n    <span class="hl-str">"channel"</span>: <span class="hl-str">"telegram"</span>\n  }\n\n<span class="hl-cmt">// Stage 2: Gateway Server (Routing)</span>\n\u2192 Identifies session for this user/chat\n\u2192 Queues if another run is active\n\u2192 Acquires session lock\n\n<span class="hl-cmt">// Stage 3: Agent Runner (Context)</span>\n\u2192 Loads system prompt\n\u2192 Loads memory:\n   - MEMORY.md (long-term)\n   - Today/yesterday daily logs (medium-term)\n   - Recent conversation (short-term)\n\u2192 Loads available skills/tools\n\u2192 Assembles final prompt for LLM</div><div class="dp-note n-amber"><strong>Context assembly is where the magic happens.</strong> The Agent Runner combines the system prompt, memory layers, available tools, and conversation history into a single context window that the LLM can reason over. This is what makes OpenClaw feel like it "knows" you.</div>'},
+    7:{title:'Message Flow: Stages 4-6',color:'#d97706',body:'<div class="dp-label">INFERENCE, TOOL LOOP, AND RESPONSE</div><div class="dp-code"><span class="hl-cmt">// Stage 4: LLM API (Inference)</span>\n\u2192 Send assembled prompt to LLM\n\u2192 Stream response tokens back\n\u2192 LLM decides: text response or tool call?\n\n<span class="hl-cmt">// Stage 5: Agentic Loop (Tool Execution)</span>\n\u2192 If tool call requested:\n   \u2192 Execute tool (shell, file, API, etc.)\n   \u2192 Feed result back to LLM\n   \u2192 LLM reasons about result\n   \u2192 Repeat until task complete\n\n<span class="hl-cmt">// This loop is the core of agentic behavior:</span>\n<span class="hl-key">while</span> (model_wants_to_act) {\n  tool_call = model.next_action()\n  result = execute(tool_call)\n  model.feed_result(result)\n}\n\n<span class="hl-cmt">// Stage 6: Response Path</span>\n\u2192 Stream final text to user via channel\n\u2192 Persist transcript to disk (JSONL)\n\u2192 Update session state\n\u2192 Release session lock</div><div class="dp-note n-amber"><strong>The agentic loop is what makes OpenClaw an agent, not a chatbot.</strong> The LLM can call tools, observe results, reason about them, and call more tools \u2014 all in a single turn. This loop continues until the model decides the task is complete. It is entirely driven by the LLM\'s reasoning.</div>'},
+    8:{title:'Pi Agent Framework Internals',color:'#16a34a',body:'<div class="dp-label">THE ENGINE UNDER THE HOOD</div><div class="dp-code"><span class="hl-cmt">// Pi Agent: the internal framework</span>\n\n<span class="hl-key">pi-agent-core</span>\n  Base agent interfaces\n  Tool execution contracts\n  Session abstractions\n  Event system definitions\n\n<span class="hl-key">pi-coding-agent</span>\n  SessionManager implementation\n  Core agentic loop with streaming\n  Prompt assembly pipeline\n  Tool result handling\n  Sub-agent spawning logic\n  Sandbox management\n\n<span class="hl-key">pi-ai</span>\n  AI model interaction layer\n  Anthropic API client\n  OpenAI API client\n  Google Gemini API client\n  Streaming protocol handlers\n  Token counting and context management\n  Failover and retry logic</div><div class="dp-note n-green"><strong>Clean separation of concerns.</strong> The Pi Agent framework separates the "what" (agent interfaces) from the "how" (session management, model interaction). This makes it possible to swap LLM providers, add new channels, or modify the agentic loop without touching unrelated code. The TypeScript codebase (87.3% of the repo) is well-structured for contribution.</div>'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const els=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+  const dpStep=document.getElementById('dpStep');
+  const dpTitle=document.getElementById('dpTitle');
+  const dpBody=document.getElementById('dpBody');
+  const dpClose=document.getElementById('dpClose');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    els.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    const activeEl=document.querySelector(`[data-step="${step}"]`);
+    if(activeEl)activeEl.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  function showReset(){
+    els.forEach(el=>el.classList.remove('active','dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--blue)';
+    narText.innerHTML='Click play or press Space to begin...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    dpStep.textContent=step;dpStep.style.background=d.color;dpTitle.textContent=d.title;dpBody.innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  dpClose.addEventListener('click',hideDetail);
+  overlay.addEventListener('click',hideDetail);
+
+  els.forEach(el=>{el.style.cursor='pointer';el.addEventListener('click',()=>{const s=parseInt(el.dataset.step);if(current===s)showDetail(s);else goTo(s)})});
+
+  document.addEventListener('keydown',e=>{if(panel.classList.contains('visible')){if(e.key==='Escape')hideDetail();return}if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}else if(e.key==='Escape'){hideDetail()}});
+
+  reset();
+})();
+</script>
+</body>
+</html>

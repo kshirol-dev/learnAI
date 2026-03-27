@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Test-Time Compute Scaling — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Test-Time Compute Scaling</h2><span class="tb-sub">OpenAI o1/o3, thinking tokens, reinforcement learning for reasoning, and the new scaling paradigm</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">school</span></div><span class="pipe-label">Train</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Think</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">token</span></div><span class="pipe-label">Tokens</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Verify</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Scale</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">emoji_events</span></div><span class="pipe-label">Result</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">swap_vert</span></div><div><div class="cc-title">The Two Scaling Paradigms</div><div class="cc-sub">Train-time vs test-time compute</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Paradigm Shift</div><div class="cc-text">Since GPT-3, AI progress has been driven by <strong>train-time scaling</strong>: bigger models, more data, more training compute. This is captured by <strong>Chinchilla scaling laws</strong> (Hoffmann et al., 2022): performance improves predictably with model size and training tokens. But train-time scaling is hitting diminishing returns. Training GPT-4 cost an estimated $100M+. Each generation requires roughly 10x more compute for modest gains. Enter <strong>test-time compute scaling</strong>: instead of making the model bigger, let it <strong>think longer</strong> on each problem. A smaller model that spends 10 minutes reasoning can outperform a larger model that answers instantly. This is the insight behind OpenAI&rsquo;s o1 (September 2024): the model generates extended internal reasoning chains &mdash; sometimes thousands of tokens &mdash; before producing a final answer. More thinking tokens = better answers. Performance scales with inference compute, not just model size.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Two Scaling Laws</div><div class="cc-code"><span class="hl-cmt">// Train-time scaling (2020-2023)</span>
+
+<span class="hl-key">Performance</span> ∝ f(model_size, data, compute)
+  GPT-3: 175B params, $4.6M
+  GPT-4: ~1.8T params, $100M+
+  Each gen: ~10x compute, ~1.5x gain
+  <span class="hl-cmt">// Diminishing returns</span>
+
+<span class="hl-cmt">// Test-time scaling (2024+)</span>
+
+<span class="hl-key">Performance</span> ∝ f(thinking_tokens)
+  Same model, more inference compute
+  o1 on AIME: <span class="hl-num">83.3%</span> (vs GPT-4o: 13.4%)
+  o1 on GPQA: <span class="hl-num">77.3%</span> (PhD-level)
+  <span class="hl-cmt">// Spend compute at inference</span>
+
+<span class="hl-key">The Key Insight</span>:
+  Train-time: fixed cost, fast inference
+  Test-time: lower train cost, flexible
+  inference spend per problem
+
+  Easy question → few thinking tokens
+  Hard question → many thinking tokens
+  <span class="hl-cmt">// Adaptive compute allocation</span>
+
+<span class="hl-key">Analogy</span>:
+  Train-time = studying for an exam
+  Test-time = thinking during the exam
+  Both matter. o1 does both.</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Test-time compute scaling doesn&rsquo;t replace train-time scaling &mdash; it <strong>complements</strong> it. o1 is both a well-trained model AND one that thinks at inference. The breakthrough is that performance scales with inference compute, giving you a new knob to turn beyond model size.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">OpenAI o1: The First Reasoning Model</div><div class="cc-sub">September 2024 &mdash; &ldquo;Learning to Reason with LLMs&rdquo;</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How o1 Works</div><div class="cc-text">OpenAI released o1 in September 2024 with the tagline &ldquo;Learning to Reason with LLMs.&rdquo; The core mechanism: o1 is trained via <strong>large-scale reinforcement learning</strong> to generate an extended chain of reasoning (&ldquo;thinking tokens&rdquo;) before producing a final answer. Unlike CoT prompting (where we ask the model to reason), o1 has been <strong>trained</strong> to reason. The RL training teaches it: when to explore alternative approaches, how to recognize and recover from errors, when to try a different strategy, and how to break complex problems into sub-problems. The thinking tokens are hidden from the user &mdash; you only see a summary and the final answer. Internally, o1 may generate hundreds to thousands of thinking tokens. On the AIME 2024 math competition, o1 scored <strong>83.3%</strong> (top 500 US students), compared to GPT-4o&rsquo;s 13.4%. On GPQA Diamond (PhD-level science), o1 achieved <strong>77.3%</strong>, surpassing human PhD experts. On Codeforces, o1 reached the <strong>89th percentile</strong>.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">o1 Architecture</div><div class="cc-code"><span class="hl-cmt">// How o1 processes a question</span>
+
+<span class="hl-key">User</span>: "Prove that √2 is irrational."
+
+<span class="hl-key">o1 Internal Thinking</span> (hidden):
+  <span class="hl-str">"I need to prove √2 is irrational.
+  The classic approach is proof by
+  contradiction. Let me assume √2
+  is rational, so √2 = p/q where
+  p,q are integers with no common
+  factors...
+
+  Then 2 = p²/q², so p² = 2q².
+  This means p² is even, so p is
+  even. Let p = 2k...
+
+  Then (2k)² = 2q², so 4k² = 2q²,
+  so q² = 2k², meaning q is also
+  even. But we assumed p,q have no
+  common factors — contradiction!"</span>
+
+<span class="hl-key">o1 Output</span> (visible to user):
+  [Clean, structured proof]
+
+<span class="hl-key">Benchmarks</span>:
+  AIME 2024: <span class="hl-num">83.3%</span> (GPT-4o: 13.4%)
+  GPQA:      <span class="hl-num">77.3%</span> (PhD expert: 69.7%)
+  Codeforces: <span class="hl-num">89th</span> percentile
+  <span class="hl-cmt">// Trained to think, not just prompted</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The critical difference from CoT prompting: o1 was <strong>trained via RL</strong> to reason, not just prompted. The model has learned <em>when</em> to think harder, <em>how</em> to backtrack, and <em>what</em> strategies to try. This is internalized search, not external orchestration.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">token</span></div><div><div class="cc-title">Thinking Tokens: How They Work</div><div class="cc-sub">The mechanics of extended reasoning chains</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Mechanism</div><div class="cc-text"><strong>Thinking tokens</strong> are the internal reasoning tokens that o1 generates before producing a visible answer. They serve as the model&rsquo;s &ldquo;scratch paper.&rdquo; Key characteristics: <strong>Variable length</strong> &mdash; simple questions may generate 50 thinking tokens; hard problems can generate 10,000+. The model learns to allocate compute proportional to difficulty. <strong>Hidden from users</strong> &mdash; OpenAI shows a summary (&ldquo;Thinking for 12 seconds...&rdquo;) but not the full chain. This is partly for IP protection and partly because raw thinking can be messy. <strong>Self-correction</strong> &mdash; unlike standard CoT, thinking tokens include self-correction: &ldquo;Wait, that&rsquo;s wrong. Let me try a different approach...&rdquo; The model has learned to catch its own mistakes. <strong>Strategy switching</strong> &mdash; the model may try one approach, realize it&rsquo;s not working, and switch to a completely different strategy. This is the backtracking behavior that ToT achieves externally, but o1 does internally. <strong>Cost implication</strong> &mdash; you pay for thinking tokens. A problem that generates 5,000 thinking tokens costs significantly more than a standard GPT-4o call.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Thinking Token Patterns</div><div class="cc-code"><span class="hl-cmt">// Patterns in o1 thinking tokens</span>
+
+<span class="hl-key">1. Exploration</span>:
+  "Let me try approach A first..."
+  "Hmm, what if I use calculus here?"
+  <span class="hl-cmt">// Considers multiple strategies</span>
+
+<span class="hl-key">2. Self-Correction</span>:
+  "Wait, I made an error in step 3."
+  "Actually, that formula doesn't
+  apply here. Let me reconsider..."
+  <span class="hl-cmt">// Catches and fixes mistakes</span>
+
+<span class="hl-key">3. Strategy Switching</span>:
+  "This algebraic approach is getting
+  too complex. Let me try a geometric
+  argument instead..."
+  <span class="hl-cmt">// Backtracking (internalized ToT)</span>
+
+<span class="hl-key">4. Verification</span>:
+  "Let me check: if x = 3, then
+  3² + 2(3) = 15. Yes, that works."
+  <span class="hl-cmt">// Self-verification before answering</span>
+
+<span class="hl-key">Token Counts (approximate)</span>:
+  Simple question: ~<span class="hl-num">50</span> tokens
+  Medium problem: ~<span class="hl-num">500</span> tokens
+  Hard math: ~<span class="hl-num">5,000</span> tokens
+  Competition-level: ~<span class="hl-num">10,000+</span> tokens
+  <span class="hl-cmt">// Adaptive compute allocation</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Thinking tokens are the mechanism that makes test-time scaling work. The model <strong>adaptively allocates compute</strong>: easy questions get few tokens, hard questions get many. This is fundamentally more efficient than using the same model size for every question.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">RL Training for Reasoning</div><div class="cc-sub">How reinforcement learning teaches models to think</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Training Process</div><div class="cc-text">How do you train a model to reason? OpenAI uses <strong>large-scale reinforcement learning</strong>. The process (simplified): <strong>Step 1: Base model</strong> &mdash; start with a strong pre-trained LLM (likely GPT-4 class). <strong>Step 2: Generate reasoning traces</strong> &mdash; for math/code/science problems with known answers, have the model generate many reasoning attempts. <strong>Step 3: Reward signal</strong> &mdash; correct final answers get positive reward; incorrect get negative. Crucially, you can also reward <em>good reasoning steps</em> (process rewards) not just final answers (outcome rewards). <strong>Step 4: Policy optimization</strong> &mdash; use RL algorithms (likely PPO or similar) to update the model to generate reasoning traces that lead to correct answers. Over many iterations, the model learns: which reasoning strategies work, when to explore alternatives, how to self-correct, and how much to think for different difficulty levels. OpenAI reported that o1&rsquo;s performance improves consistently with both more training compute AND more test-time compute &mdash; two independent scaling axes.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">RL Training Pipeline</div><div class="cc-code"><span class="hl-cmt">// Simplified RL training for reasoning</span>
+
+<span class="hl-key">Step 1: Collect Problems</span>
+  Math: GSM8K, MATH, competition
+  Code: HumanEval, Codeforces
+  Science: GPQA, physics, chemistry
+  <span class="hl-cmt">// Problems with verifiable answers</span>
+
+<span class="hl-key">Step 2: Generate Traces</span>
+  For each problem, generate N
+  reasoning traces (thinking tokens)
+  Some reach correct answer, some don't
+
+<span class="hl-key">Step 3: Assign Rewards</span>
+  <span class="hl-str">Outcome reward</span>:
+    Correct answer → +1
+    Wrong answer → -1
+
+  <span class="hl-str">Process reward</span> (optional):
+    Good step → +0.1
+    Bad step → -0.1
+    <span class="hl-cmt">// Reward the journey, not just end</span>
+
+<span class="hl-key">Step 4: RL Update</span>
+  Policy gradient (PPO / GRPO):
+  Increase probability of traces
+  that led to correct answers
+  Decrease probability of bad traces
+
+<span class="hl-key">Step 5: Iterate</span>
+  Repeat thousands of times
+  Model learns reasoning strategies
+  <span class="hl-cmt">// Performance scales with RL compute</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The RL training is what separates o1 from CoT prompting. CoT relies on patterns the model learned during pre-training. RL <strong>explicitly optimizes</strong> the model to reason well. The model develops reasoning strategies that may not exist in the training data.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Reasoning Effort Levels</div><div class="cc-sub">o3-mini and compute-optimal inference</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Adaptive Reasoning</div><div class="cc-text">In January 2025, OpenAI released <strong>o3-mini</strong> with a key innovation: <strong>configurable reasoning effort</strong>. Users can choose low, medium, or high reasoning effort: <strong>Low</strong> &mdash; minimal thinking tokens, fast responses, cheap. Good for simple questions that don&rsquo;t need deep reasoning. <strong>Medium</strong> &mdash; moderate thinking, balanced cost/quality. Matches o1&rsquo;s performance on most tasks at lower cost. <strong>High</strong> &mdash; extensive thinking, maximum accuracy. Best for competition-level math and hard coding problems. This is <strong>compute-optimal inference</strong>: allocate exactly as much compute as the problem needs. Not every question deserves 10,000 thinking tokens. The practical implication: you can use the same model for both quick Q&amp;A and deep reasoning, just by adjusting the effort level. o3-mini with medium effort matches o1 on math, coding, and science benchmarks while being significantly faster and cheaper. With high effort, it exceeds o1 on many benchmarks.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reasoning Effort</div><div class="cc-code"><span class="hl-cmt">// o3-mini reasoning effort levels</span>
+
+<span class="hl-key">Low Effort</span>:
+  Thinking tokens: ~<span class="hl-num">50-200</span>
+  Latency: ~<span class="hl-num">1-3s</span>
+  Use: simple questions, chat
+  "What is the capital of France?"
+  <span class="hl-cmt">// Fast and cheap</span>
+
+<span class="hl-key">Medium Effort</span>:
+  Thinking tokens: ~<span class="hl-num">500-2000</span>
+  Latency: ~<span class="hl-num">5-15s</span>
+  Use: moderate reasoning, coding
+  "Write a binary search function"
+  <span class="hl-cmt">// Matches o1 at lower cost</span>
+
+<span class="hl-key">High Effort</span>:
+  Thinking tokens: ~<span class="hl-num">5000-20000</span>
+  Latency: ~<span class="hl-num">30-120s</span>
+  Use: competition math, hard proofs
+  "Solve this AIME problem"
+  <span class="hl-cmt">// Maximum accuracy</span>
+
+<span class="hl-key">API Usage</span>:
+  response = client.chat.completions
+    .create(
+    model=<span class="hl-str">"o3-mini"</span>,
+    reasoning_effort=<span class="hl-str">"medium"</span>,
+    messages=[...]
+  )
+  <span class="hl-cmt">// One model, flexible compute</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Configurable reasoning effort is the practical realization of test-time compute scaling. Instead of one-size-fits-all, you <strong>match compute to problem difficulty</strong>. This makes reasoning models economically viable for production use &mdash; you only pay for the thinking you need.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">query_stats</span></div><div><div class="cc-title">Benchmark Performance</div><div class="cc-sub">Where reasoning models excel &mdash; and where they don&rsquo;t</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Where Reasoning Models Shine</div><div class="cc-text">Reasoning models show dramatic improvements on tasks requiring multi-step reasoning: <strong>Mathematics</strong> &mdash; AIME 2024: o1 scored 83.3% vs GPT-4o&rsquo;s 13.4%. MATH benchmark: o1 achieved 94.8%. These are competition-level problems requiring multi-step proofs. <strong>Science</strong> &mdash; GPQA Diamond (PhD-level): o1 scored 77.3%, surpassing human PhD experts (69.7%). The model can reason through complex physics and chemistry problems. <strong>Coding</strong> &mdash; Codeforces: o1 reached 89th percentile. SWE-bench Verified: o3-mini solved 49.3% of real-world GitHub issues. <strong>Novel reasoning</strong> &mdash; ARC-AGI: o3 scored 87.5%, a benchmark designed to test genuine reasoning on novel tasks. <strong>Where they DON&rsquo;T help much</strong>: simple factual questions, creative writing, summarization, translation. These tasks don&rsquo;t benefit from extended reasoning. Using o1 for &ldquo;What year was the Eiffel Tower built?&rdquo; wastes compute.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Benchmark Comparison</div><div class="cc-code"><span class="hl-cmt">// Reasoning model benchmarks</span>
+
+<span class="hl-key">Mathematics</span>:
+  AIME 2024:
+    GPT-4o: <span class="hl-num">13.4%</span>
+    o1:     <span class="hl-num">83.3%</span> (+70%)
+  MATH:
+    GPT-4o: <span class="hl-num">76.6%</span>
+    o1:     <span class="hl-num">94.8%</span> (+18%)
+
+<span class="hl-key">Science</span>:
+  GPQA Diamond (PhD-level):
+    Human PhD: <span class="hl-num">69.7%</span>
+    GPT-4o:    <span class="hl-num">53.6%</span>
+    o1:        <span class="hl-num">77.3%</span>
+    <span class="hl-cmt">// Surpasses human experts</span>
+
+<span class="hl-key">Coding</span>:
+  Codeforces:
+    GPT-4o: <span class="hl-num">11th</span> percentile
+    o1:     <span class="hl-num">89th</span> percentile
+
+<span class="hl-key">Novel Reasoning</span>:
+  ARC-AGI:
+    GPT-4o: <span class="hl-num">5%</span>
+    o3:     <span class="hl-num">87.5%</span>
+
+<span class="hl-key">Where NOT to use</span>:
+  Simple facts, creative writing,
+  summarization, translation
+  <span class="hl-cmt">// No benefit from extra thinking</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Reasoning models are <strong>not universally better</strong>. They excel specifically on tasks requiring multi-step reasoning: math, science, coding, logic. For everything else, standard models are faster, cheaper, and equally good. Choose the right model for the task.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">open_in_new</span></div><div><div class="cc-title">Open-Source Reasoning: DeepSeek-R1</div><div class="cc-sub">Democratizing test-time compute scaling</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Open-Source Revolution</div><div class="cc-text">In January 2025, Chinese AI lab DeepSeek released <strong>DeepSeek-R1</strong>, an open-source reasoning model that matches o1&rsquo;s performance on many benchmarks. This was a watershed moment: <strong>Performance</strong> &mdash; R1 matches or approaches o1 on AIME (79.8%), MATH (97.3%), and coding benchmarks. On some benchmarks it exceeds o1. <strong>Open weights</strong> &mdash; unlike o1, R1&rsquo;s weights are publicly available. Researchers can study, fine-tune, and deploy it. <strong>Training recipe revealed</strong> &mdash; DeepSeek published their training approach: start with a base model, apply RL (using GRPO &mdash; Group Relative Policy Optimization), and the model learns to reason. Remarkably, they showed that RL alone (without supervised fine-tuning on reasoning traces) can produce reasoning behavior. <strong>Distillation</strong> &mdash; DeepSeek also released smaller distilled versions (1.5B, 7B, 14B, 32B, 70B) that retain much of R1&rsquo;s reasoning ability. The 32B distilled model outperforms o1-mini on several benchmarks. <strong>Cost</strong> &mdash; R1 API pricing is roughly 90% cheaper than o1.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">DeepSeek-R1</div><div class="cc-code"><span class="hl-cmt">// DeepSeek-R1 vs OpenAI o1</span>
+
+<span class="hl-key">Performance</span>:
+  AIME 2024:
+    o1:  <span class="hl-num">83.3%</span>
+    R1:  <span class="hl-num">79.8%</span>
+  MATH:
+    o1:  <span class="hl-num">94.8%</span>
+    R1:  <span class="hl-num">97.3%</span> (!)
+  Codeforces:
+    o1:  <span class="hl-num">89th</span> percentile
+    R1:  <span class="hl-num">96.3rd</span> percentile (!)
+
+<span class="hl-key">Training Recipe</span>:
+  1. Base model (DeepSeek-V3)
+  2. RL with GRPO algorithm
+  3. No supervised CoT data needed!
+  4. Model discovers reasoning itself
+  <span class="hl-cmt">// RL alone produces reasoning</span>
+
+<span class="hl-key">Distilled Versions</span>:
+  R1-1.5B, R1-7B, R1-14B,
+  R1-32B, R1-70B
+  R1-32B > o1-mini on many tasks
+  <span class="hl-cmt">// Small models can reason too</span>
+
+<span class="hl-key">Impact</span>:
+  Open weights → research access
+  90% cheaper than o1
+  Proves reasoning is not proprietary
+  <span class="hl-cmt">// Democratization of reasoning</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> DeepSeek-R1 proved that reasoning ability is not a proprietary secret. The recipe is straightforward: strong base model + RL training = reasoning. Open-source models now match frontier closed models, and distilled versions bring reasoning to smaller deployments.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">The Future of Test-Time Scaling</div><div class="cc-sub">Where this paradigm is heading</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What&rsquo;s Next</div><div class="cc-text">Test-time compute scaling is still in its early days. Key directions: <strong>Compute-optimal routing</strong> &mdash; automatically decide how much thinking each question needs. Route simple questions to fast models, hard questions to reasoning models. This is already happening with o3-mini&rsquo;s effort levels, but will become more granular. <strong>Specialized reasoning</strong> &mdash; models trained for specific domains: legal reasoning, medical diagnosis, financial analysis. Domain-specific RL training on domain-specific problems. <strong>Longer horizons</strong> &mdash; current reasoning models think for seconds to minutes. Future models may reason for hours on very hard problems (research-level math, complex engineering). <strong>Multi-modal reasoning</strong> &mdash; reasoning over images, diagrams, and code simultaneously. Thinking tokens that reference visual elements. <strong>Verification integration</strong> &mdash; tighter integration of reasoning and verification. The model generates a proof, then verifies each step, then revises. This is where process reward models (next chapter) become critical. <strong>Efficiency</strong> &mdash; making thinking tokens cheaper through distillation, quantization, and speculative decoding for reasoning chains.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Future Directions</div><div class="cc-code"><span class="hl-cmt">// The future of test-time scaling</span>
+
+<span class="hl-key">2024: Foundation</span>
+  o1: first reasoning model
+  Fixed thinking, hidden tokens
+  <span class="hl-cmt">// Proof of concept</span>
+
+<span class="hl-key">2025: Democratization</span>
+  o3-mini: configurable effort
+  DeepSeek-R1: open-source
+  Qwen QwQ: Chinese open-source
+  <span class="hl-cmt">// Everyone gets reasoning</span>
+
+<span class="hl-key">2025-2026: Optimization</span>
+  Compute-optimal routing
+  Speculative decoding for thinking
+  Distilled reasoning models
+  <span class="hl-cmt">// Making it cheaper and faster</span>
+
+<span class="hl-key">2026+: Frontier</span>
+  Hours-long reasoning sessions
+  Multi-modal reasoning
+  Domain-specific reasoning models
+  Reasoning + tool use + agents
+  <span class="hl-cmt">// Reasoning as infrastructure</span>
+
+<span class="hl-key">The Big Picture</span>:
+  Train-time scaling: hitting limits
+  Test-time scaling: just beginning
+  Both together: the path to AGI?
+  <span class="hl-cmt">// Two scaling laws, one goal</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> We&rsquo;re at the beginning of the test-time compute era. Train-time scaling gave us capable base models. Test-time scaling gives them the ability to <strong>think</strong>. The combination of both &mdash; well-trained models that think adaptively &mdash; is the current frontier of AI capability.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-tree-of-thought-and-search.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Tree-of-Thought &amp; Search</a>
+    <a class="ch-nav-btn next" href="05-verification-and-reward-models.html">Ch 5: Verification &amp; Reward Models <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[0,1,2],4:[0,1,2,3],5:[0,1,2,4],6:[0,1,2,3,4,5],7:[0,1,2],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Two scaling paradigms: train-time (bigger models) vs test-time (longer thinking). o1 proved that inference compute scales performance — a new knob beyond model size.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> OpenAI o1 (Sep 2024): trained via RL to generate thinking tokens. AIME: 83.3% (vs GPT-4o: 13.4%). GPQA: 77.3% (surpasses PhD experts). Codeforces: 89th percentile.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Thinking tokens = internal scratch paper. Variable length (50 to 10,000+), hidden from users. Include self-correction, strategy switching, and verification.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> RL training: generate reasoning traces → reward correct answers → policy optimization. The model learns WHEN to think harder and HOW to self-correct.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> o3-mini: configurable reasoning effort (low/medium/high). Match compute to problem difficulty. Medium effort matches o1 at lower cost. Compute-optimal inference.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Reasoning models excel at math, science, coding — NOT simple facts or creative writing. AIME +70%, GPQA surpasses PhD experts, ARC-AGI 87.5%. Use the right model for the task.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> DeepSeek-R1: open-source, matches o1, 90% cheaper. Training recipe: base model + RL (GRPO). Distilled versions (7B-70B) bring reasoning to smaller deployments.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The future: compute-optimal routing, specialized reasoning, hours-long thinking, multi-modal reasoning. Train-time scaling + test-time scaling = the path forward.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

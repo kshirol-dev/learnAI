@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Model Development for PMs — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Model Development for PMs</h2><span class="tb-sub">What happens between spec and model. What to ask in standups. When to push back.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Mindset</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">data_object</span></div><span class="pipe-label">Prep</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Train</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Tune</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Errors</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">forum</span></div><span class="pipe-label">Standups</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">The Experimental Mindset</div><div class="cc-sub">Model development is research, not construction &mdash; and that changes everything about how you manage it</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Research vs. Engineering</div><div class="cc-text">Traditional software development is <strong>engineering</strong>: you know the solution exists, you know roughly how to build it, and progress is roughly linear. More hours produce more features.<br><br>Model development is <strong>research</strong>: you don&rsquo;t know if the solution exists, you don&rsquo;t know which approach will work, and progress is non-linear. The team might spend two weeks trying an approach that produces zero improvement, then stumble on a data fix that jumps accuracy by 15 points overnight.<br><br>This fundamental difference means you cannot manage model development like a sprint backlog. There are no story points for &ldquo;improve accuracy from 82% to 88%.&rdquo; The team doesn&rsquo;t know how long it will take because <strong>nobody knows</strong> until they try.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What This Means for PMs</div><div class="cc-text"><strong>1. Plan in experiments, not features.</strong><br>&ldquo;This sprint, we&rsquo;ll run 3 experiments to improve recall&rdquo; is realistic. &ldquo;This sprint, we&rsquo;ll achieve 90% recall&rdquo; is a guess.<br><br><strong>2. Expect dead ends.</strong><br>50% of ML experiments fail. That&rsquo;s not wasted work &mdash; it&rsquo;s information. A failed experiment that eliminates an approach is valuable.<br><br><strong>3. Time-box, don&rsquo;t deadline.</strong><br>&ldquo;Spend 2 weeks exploring whether approach X can reach 85% accuracy. If not, we pivot.&rdquo; This prevents endless optimization without clear stopping criteria.<br><br><strong>4. Celebrate learning, not just results.</strong><br>&ldquo;We discovered that the model fails on transactions under $10 because they&rsquo;re underrepresented in training data&rdquo; is a valuable output even if accuracy didn&rsquo;t improve this week.</div></div>
+          <div class="cc-note n-violet"><strong>The PM trap:</strong> The biggest mistake PMs make during model development is treating it like feature development. They ask &ldquo;when will it be done?&rdquo; instead of &ldquo;what have we learned?&rdquo; They measure progress by accuracy numbers instead of by hypotheses tested. Shift your mindset from project management to experiment management.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">data_object</span></div><div><div class="cc-title">Stage 1: Data Preparation</div><div class="cc-sub">The stage that takes the longest and gets the least respect</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Happens</div><div class="cc-text">Before any model can be trained, the data must be prepared. This typically consumes <strong>60&ndash;80% of the total project time</strong>:<br><br><strong>Data cleaning:</strong> Removing duplicates, fixing errors, handling missing values, standardizing formats. A dataset with &ldquo;New York,&rdquo; &ldquo;NYC,&rdquo; &ldquo;new york,&rdquo; and &ldquo;NY&rdquo; needs normalization.<br><br><strong>Feature engineering:</strong> Transforming raw data into features the model can learn from. Raw timestamp &rarr; &ldquo;day of week,&rdquo; &ldquo;hour of day,&rdquo; &ldquo;is weekend.&rdquo; Raw transaction amount &rarr; &ldquo;ratio to average,&rdquo; &ldquo;deviation from pattern.&rdquo;<br><br><strong>Data splitting:</strong> Dividing data into training set (model learns from), validation set (model is tuned on), and test set (final evaluation). The test set must never be seen during training &mdash; it&rsquo;s the unbiased judge.<br><br><strong>For LLM products:</strong> Curating prompt examples, building evaluation datasets, preparing documents for RAG indexing.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PM Role During Data Prep</div><div class="cc-text"><strong>Don&rsquo;t:</strong><br>&bull; Rush this phase. Cutting data prep time directly reduces model quality.<br>&bull; Ignore it because it&rsquo;s &ldquo;technical.&rdquo; Data decisions are product decisions.<br>&bull; Assume the data team knows what features matter. You understand the user problem better.<br><br><strong>Do:</strong><br>&bull; <strong>Provide domain context.</strong> &ldquo;Transactions on weekends have different fraud patterns than weekdays&rdquo; &mdash; this insight drives feature engineering.<br>&bull; <strong>Review the data splits.</strong> Ensure the test set is representative of real-world usage, not just a random sample.<br>&bull; <strong>Own the labeling guidelines.</strong> Write clear, unambiguous instructions for human labelers. Ambiguous guidelines produce noisy labels.<br>&bull; <strong>Curate the evaluation set.</strong> Select 200&ndash;500 examples that cover normal cases, edge cases, and known hard cases. This is your quality benchmark.</div></div>
+          <div class="cc-note n-blue"><strong>The feature engineering conversation:</strong> Ask the ML team: &ldquo;What features are you using? What signals do you think would help but we don&rsquo;t have?&rdquo; Often the PM can unlock new data sources or provide domain insights that the ML team wouldn&rsquo;t discover on their own. This collaboration is where the biggest accuracy gains happen.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Stage 2: Model Selection &amp; Training</div><div class="cc-sub">Choosing the right approach and training the first baseline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Selection (What PMs Should Know)</div><div class="cc-text">The ML team will choose between different approaches. You don&rsquo;t need to make this decision, but you should understand the trade-offs:<br><br><strong>Classical ML</strong> (Random Forest, XGBoost, Logistic Regression)<br>Best for: Structured data, tabular data, classification, regression<br>Pros: Fast, cheap, interpretable, works with smaller datasets<br>Cons: Can&rsquo;t handle unstructured data (text, images) well<br><br><strong>Deep Learning</strong> (Neural Networks, CNNs, RNNs)<br>Best for: Images, audio, complex patterns in large datasets<br>Pros: Handles unstructured data, learns complex patterns<br>Cons: Needs large datasets, expensive to train, less interpretable<br><br><strong>Foundation Models</strong> (GPT, Claude, Llama + prompting/fine-tuning)<br>Best for: Text generation, understanding, reasoning, multimodal tasks<br>Pros: Works with minimal training data, general-purpose<br>Cons: Expensive per query, non-deterministic, hallucination risk</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Baseline</div><div class="cc-text">The first model trained is the <strong>baseline</strong>. It&rsquo;s intentionally simple &mdash; not the best possible model, but the starting point against which all improvements are measured.<br><br><strong>Why baselines matter:</strong><br>&bull; They establish whether the problem is solvable at all<br>&bull; They set a reference point for measuring improvement<br>&bull; They often perform surprisingly well (80% of the final model&rsquo;s accuracy with 20% of the effort)<br><br><strong>Common baselines:</strong><br>&bull; For classification: Logistic regression or a simple rule-based system<br>&bull; For LLM tasks: Zero-shot prompting with a foundation model<br>&bull; For recommendations: Most-popular-item or random recommendation<br><br>If the baseline already meets your launch threshold, you might not need a complex model at all. Some of the best AI products run on surprisingly simple models.</div></div>
+          <div class="cc-note n-teal"><strong>PM question to ask:</strong> &ldquo;What&rsquo;s the baseline performance? How much improvement do we expect from a more complex approach? Is the expected improvement worth the additional complexity, cost, and maintenance?&rdquo; Sometimes the answer is no &mdash; and shipping the simple model is the right product decision.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Stage 3: Iteration &amp; Optimization</div><div class="cc-sub">The cycle of hypothesize-experiment-evaluate that drives improvement</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Improvement Levers</div><div class="cc-text">Once the baseline is established, the team iterates to improve performance. There are four main levers, and the PM should understand which is being pulled:<br><br><strong>1. More/better data</strong><br>Often the highest-impact lever. Adding 50% more labeled data or fixing label quality can improve accuracy more than any model change. This is where PMs add the most value &mdash; prioritizing data collection and quality.<br><br><strong>2. Better features</strong><br>Engineering new input signals. Adding &ldquo;time since last purchase&rdquo; to a churn model. Including &ldquo;customer tenure&rdquo; in a support routing model. Domain knowledge from the PM drives this.<br><br><strong>3. Better model architecture</strong><br>Switching from logistic regression to a neural network. Trying a different foundation model. This is the ML team&rsquo;s domain.<br><br><strong>4. Hyperparameter tuning</strong><br>Adjusting the model&rsquo;s internal settings (learning rate, number of layers, regularization). Important but usually yields smaller improvements than the other three levers.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Diminishing Returns Curve</div><div class="cc-text">Model improvement follows a <strong>logarithmic curve</strong>: early gains are large and fast, later gains are small and slow.<br><br>&bull; <strong>Week 1&ndash;2:</strong> Baseline achieves 75%. Quick wins from data cleaning and obvious features push to 82%.<br>&bull; <strong>Week 3&ndash;4:</strong> Feature engineering and model tuning push to 87%. Progress slows.<br>&bull; <strong>Week 5&ndash;8:</strong> Intensive optimization pushes to 89%. Each percentage point takes longer.<br>&bull; <strong>Week 9+:</strong> Diminishing returns. Getting from 89% to 91% might take as long as getting from 75% to 87%.<br><br>The PM&rsquo;s job is to recognize where you are on this curve and decide when to <strong>stop optimizing and ship</strong>. Perfection is the enemy of shipping.</div></div>
+          <div class="cc-note n-amber"><strong>The &ldquo;good enough&rdquo; decision:</strong> Ask: &ldquo;If we ship at current performance, what&rsquo;s the user impact of the remaining errors? Is that acceptable?&rdquo; If the answer is yes, ship. You can continue improving in production with real user feedback, which is more valuable than lab optimization. The model that ships at 87% and improves with user data beats the model that reaches 92% in the lab six months later.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">Error Analysis: The PM&rsquo;s Superpower</div><div class="cc-sub">Understanding why the model fails is more valuable than knowing its accuracy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How to Do Error Analysis</div><div class="cc-text"><strong>Step 1: Collect the errors.</strong><br>Pull every example where the model was wrong from the evaluation set. Group them by type.<br><br><strong>Step 2: Categorize the failures.</strong><br>Look for patterns. Common categories:<br>&bull; <strong>Data gap:</strong> The model hasn&rsquo;t seen this type of input before<br>&bull; <strong>Label noise:</strong> The training data had wrong labels for this pattern<br>&bull; <strong>Ambiguous case:</strong> Even humans would disagree on the correct answer<br>&bull; <strong>Edge case:</strong> Unusual input that the model can&rsquo;t generalize to<br>&bull; <strong>Systematic bias:</strong> The model consistently fails on a specific subgroup<br><br><strong>Step 3: Prioritize by impact.</strong><br>Not all errors are equal. An error that affects 1% of users but causes $10K in damage is more important than an error that affects 10% of users but causes mild annoyance.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The PM&rsquo;s Role in Error Analysis</div><div class="cc-text">Error analysis is where the PM adds the most value during model development. The ML team sees the technical patterns; <strong>the PM sees the user impact</strong>.<br><br><strong>The ML team says:</strong> &ldquo;The model misclassifies 8% of inputs in category C.&rdquo;<br><strong>The PM adds:</strong> &ldquo;Category C is our enterprise customers. Each misclassification costs us $500 in support escalation. This is our #1 priority.&rdquo;<br><br><strong>The ML team says:</strong> &ldquo;We can improve overall accuracy by 2% or fix the category C errors.&rdquo;<br><strong>The PM decides:</strong> &ldquo;Fix category C. The business impact is 10x higher even though the overall accuracy gain is smaller.&rdquo;<br><br>This is product management applied to model development. You&rsquo;re not choosing the technical approach &mdash; you&rsquo;re choosing which errors matter most to the business.</div></div>
+          <div class="cc-note n-pink"><strong>The weekly error review:</strong> Every week, sit with the ML team and review the 20 worst errors. You provide business context. They provide technical context. Together, you prioritize what to fix next. This single ritual is the highest-ROI activity in AI product development. It keeps the model improving in the direction that matters most to users.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">splitscreen</span></div><div><div class="cc-title">Train/Val/Test: The Split That Matters</div><div class="cc-sub">Understanding why the ML team is so protective of the test set</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three Splits</div><div class="cc-text"><strong>Training set (70&ndash;80%):</strong> The data the model learns from. It sees these examples repeatedly during training and adjusts its internal parameters to perform well on them.<br><br><strong>Validation set (10&ndash;15%):</strong> Used during development to tune the model. The team checks performance on the validation set after each experiment to see if changes helped. The model doesn&rsquo;t learn from this data directly, but the team&rsquo;s decisions are influenced by it.<br><br><strong>Test set (10&ndash;15%):</strong> The <strong>final, unbiased judge</strong>. Used only once, at the end, to measure true performance. The model has never seen this data. The team has never optimized for it. It&rsquo;s the closest approximation to real-world performance.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why This Matters for PMs</div><div class="cc-text"><strong>Overfitting:</strong> If the model performs great on training data but poorly on the test set, it has <strong>memorized</strong> the training examples instead of learning general patterns. It&rsquo;s like a student who memorizes answers to practice tests but fails the real exam.<br><br><strong>The test set is sacred.</strong> If the team repeatedly evaluates on the test set and adjusts based on results, the test set becomes contaminated &mdash; it&rsquo;s no longer an unbiased measure. This is why ML teams are protective of it.<br><br><strong>PM implication:</strong> When the ML team reports &ldquo;92% accuracy,&rdquo; ask: &ldquo;On which set?&rdquo; Training accuracy is meaningless. Validation accuracy is useful but optimistic. <strong>Test accuracy is the number that matters</strong> &mdash; and it should only be run when you&rsquo;re ready to make a ship/no-ship decision.</div></div>
+          <div class="cc-note n-green"><strong>The real-world gap:</strong> Even test set performance is optimistic compared to production. The test set was sampled from the same distribution as the training data. Real users will send inputs the model has never seen. Expect production performance to be 2&ndash;5% lower than test performance. Plan for this gap in your launch threshold.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">When to Push Back</div><div class="cc-sub">Situations where the PM must challenge the ML team&rsquo;s direction</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Push Back When...</div><div class="cc-text"><strong>1. The team is optimizing the wrong metric.</strong><br>&ldquo;We improved overall accuracy by 3%!&rdquo; But accuracy on the highest-value user segment dropped. The team optimized for the average case at the expense of the most important case. Redirect to the metric that matters.<br><br><strong>2. The team wants more time but can&rsquo;t articulate why.</strong><br>&ldquo;We need two more weeks.&rdquo; For what specifically? What experiment will you run? What&rsquo;s the hypothesis? If they can&rsquo;t answer, they&rsquo;re grinding without direction. Help them define the next experiment clearly.<br><br><strong>3. The team is chasing marginal gains.</strong><br>Going from 89% to 90% when the launch threshold is 85%. The last 1% of accuracy may take as long as the first 15%. Ship now, improve in production.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Push Back When... (continued)</div><div class="cc-text"><strong>4. The model is great in the lab but untested on real data.</strong><br>&ldquo;We achieved 95% on the test set!&rdquo; Have you tested on data from the last month? On edge cases? On adversarial inputs? Lab performance is necessary but not sufficient.<br><br><strong>5. The team is building infrastructure instead of solving the problem.</strong><br>Spending 3 months building a custom training pipeline when a fine-tuned API would validate the concept in 2 weeks. Infrastructure should follow validation, not precede it.<br><br><strong>6. Nobody is looking at actual model outputs.</strong><br>The team is focused on metrics dashboards but hasn&rsquo;t manually reviewed 50 model outputs this week. Metrics tell you <em>how much</em> the model fails. Looking at outputs tells you <em>how</em> it fails. Both are essential.</div></div>
+          <div class="cc-note n-red"><strong>The PM&rsquo;s authority:</strong> You don&rsquo;t have authority over technical decisions (which model architecture, which hyperparameters). You <em>do</em> have authority over product decisions: which errors to prioritize, when to ship, what the quality bar is, and whether the team is solving the right problem. Exercise that authority. The ML team needs a PM who provides clear direction, not one who rubber-stamps everything.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">forum</span></div><div><div class="cc-title">The AI Standup Playbook</div><div class="cc-sub">Seven questions that make AI standups productive instead of performative</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Questions 1&ndash;4</div><div class="cc-text"><strong>1. &ldquo;What experiments did you run since last standup?&rdquo;</strong><br>Not &ldquo;what did you work on?&rdquo; Experiments have hypotheses and results. Work is vague.<br><br><strong>2. &ldquo;What did the results show?&rdquo;</strong><br>Positive results, negative results, and inconclusive results are all valuable. A failed experiment that eliminates an approach is progress.<br><br><strong>3. &ldquo;What&rsquo;s the current performance on the eval set?&rdquo;</strong><br>Track the primary metric and guardrail metrics. Plot them over time. Are we trending toward the launch threshold?<br><br><strong>4. &ldquo;What are the top 3 error categories right now?&rdquo;</strong><br>This keeps the team focused on the most impactful failures, not just overall metrics.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Questions 5&ndash;7</div><div class="cc-text"><strong>5. &ldquo;What&rsquo;s the next experiment and what&rsquo;s the hypothesis?&rdquo;</strong><br>&ldquo;We think adding customer tenure as a feature will improve recall on long-term customers by 5%.&rdquo; Clear hypothesis, testable, time-boxed.<br><br><strong>6. &ldquo;What&rsquo;s blocking progress?&rdquo;</strong><br>Often the answer is data-related: &ldquo;We need 500 more labeled examples of edge case X.&rdquo; The PM can unblock this faster than the ML team can.<br><br><strong>7. &ldquo;Are we still on track for the launch threshold?&rdquo;</strong><br>Not &ldquo;are we on schedule?&rdquo; (meaningless for research). Are we trending toward the performance bar we set? If not, what needs to change &mdash; the approach, the data, or the threshold itself?</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> You don&rsquo;t need to understand backpropagation or gradient descent. You need to understand what the team is trying, whether it&rsquo;s working, what the errors look like, and whether you&rsquo;re converging on the quality bar. Manage experiments, not tasks. Prioritize errors, not features. Ship when good enough, not when perfect. That&rsquo;s model development for PMs.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-writing-ai-specs-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 8: Writing AI Product Specs</a>
+    <a class="ch-nav-btn next" href="10-evaluation-metrics-high-level.html">Ch 10: Evaluation &amp; Metrics That Matter <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[1,2],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Model development is research, not construction.</strong> Progress is non-linear. 50% of experiments fail. Plan in experiments, not features. Time-box exploration. Celebrate learning, not just results. Ask &ldquo;what have we learned?&rdquo; not &ldquo;when will it be done?&rdquo;',color:'#7c3aed'},
+    2:{text:'<strong>Data preparation takes 60&ndash;80% of project time.</strong> Cleaning, feature engineering, splitting, labeling. The PM&rsquo;s role: provide domain context for feature engineering, own labeling guidelines, curate the evaluation set. Don&rsquo;t rush this phase &mdash; cutting data prep cuts model quality.',color:'#2563eb'},
+    3:{text:'<strong>Model selection and baseline.</strong> Classical ML for structured data (fast, cheap). Deep learning for images/audio (needs large data). Foundation models for text/reasoning (expensive per query). The baseline is intentionally simple &mdash; if it meets the launch threshold, you might not need complexity.',color:'#0d9488'},
+    4:{text:'<strong>Four improvement levers:</strong> More/better data (highest impact, PM-driven), better features (domain knowledge), better architecture (ML team), hyperparameter tuning (smallest gains). Improvement follows a logarithmic curve &mdash; early gains are fast, later gains are slow. Know when to stop optimizing and ship.',color:'#d97706'},
+    5:{text:'<strong>Error analysis is the PM&rsquo;s superpower.</strong> Categorize failures (data gap, label noise, ambiguous, edge case, bias). Prioritize by business impact, not frequency. The ML team sees technical patterns; you see user impact. Weekly error review with the ML team is the highest-ROI meeting.',color:'#db2777'},
+    6:{text:'<strong>Train/validation/test split.</strong> Training set: model learns. Validation set: team tunes. Test set: final unbiased judge (run once). Ask &ldquo;on which set?&rdquo; when the team reports accuracy. Test accuracy is the number that matters. Expect production to be 2&ndash;5% lower than test.',color:'#16a34a'},
+    7:{text:'<strong>When to push back:</strong> Wrong metric being optimized. Team wants time without a clear hypothesis. Chasing marginal gains past the launch threshold. Great lab results but untested on real data. Building infrastructure before validating the concept. Nobody looking at actual outputs.',color:'#dc2626'},
+    8:{text:'<strong>Seven standup questions:</strong> What experiments ran? What did results show? Current eval performance? Top 3 error categories? Next experiment and hypothesis? What&rsquo;s blocking? Are we trending toward launch threshold? Manage experiments, not tasks. Ship when good enough, not when perfect.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

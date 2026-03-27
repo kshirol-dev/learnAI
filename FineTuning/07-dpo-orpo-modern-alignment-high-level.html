@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: DPO, ORPO &amp; Modern Alignment — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--violet-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{background:#0f766e;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; DPO, ORPO &amp; Modern Alignment</h2><span class="tb-sub">Direct Preference Optimization, ORPO, SimPO, KTO, and the shift away from RLHF</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="07-dpo-orpo-modern-alignment-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">lightbulb</span></div><span class="pipe-label">Insight</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">functions</span></div><span class="pipe-label">DPO Math</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">DPO vs PPO</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">merge</span></div><span class="pipe-label">ORPO</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">auto_awesome</span></div><span class="pipe-label">SimPO/KTO</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">IPO/cDPO</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Choose</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: The Key Insight -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">The Key Insight Behind DPO</div><div class="cc-sub">Why we can skip the reward model and RL entirely</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The RLHF Problem</div><div class="cc-text">RLHF has three stages: SFT, reward model training, and PPO. The last two stages are complex, expensive, and unstable. PPO requires 4 models in memory and careful hyperparameter tuning.<br><br><strong>The question:</strong> Can we skip the reward model and RL, and directly optimize the policy on preference data?</div></div>
+          <div class="cc-block"><div class="cc-label">The DPO Insight</div><div class="cc-text"><strong>Rafailov et al. (2023, Stanford)</strong> showed that the optimal policy under the RLHF objective has a closed-form solution. The reward function can be expressed <em>implicitly</em> in terms of the policy itself:<br><br><strong>r(x, y) = beta * log(pi(y|x) / pi_ref(y|x)) + const</strong><br><br>This means: instead of training a separate reward model and then optimizing against it with RL, you can directly optimize the policy to increase the probability of chosen responses and decrease the probability of rejected responses, relative to a reference model.<br><br>The reward model is <strong>implicit</strong> in the policy itself.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What This Eliminates</div><div class="cc-text"><strong>No reward model:</strong> Don't need to train a separate model to score responses.<br><br><strong>No RL:</strong> No PPO, no value model, no advantage estimation, no clipping.<br><br><strong>No generation during training:</strong> DPO works on pre-collected preference pairs. No need to generate responses during training (which is the slowest part of PPO).<br><br><strong>Result:</strong> DPO reduces alignment from a complex 3-stage pipeline to a single supervised learning step on preference data.</div></div>
+          <div class="cc-note n-teal"><strong>DPO is to RLHF what SFT is to pre-training.</strong> Just as SFT simplified instruction-following from a complex RL problem to supervised learning, DPO simplifies alignment from RL to supervised learning. The key: finding the right loss function that implicitly captures what RLHF does explicitly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: DPO Math -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">functions</span></div><div><div class="cc-title">The DPO Loss Function</div><div class="cc-sub">A simple classification loss that replaces RLHF</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The DPO Objective</div><div class="cc-text">Given a prompt x, chosen response y_w, and rejected response y_l:<br><br><strong>L_DPO = -log sigmoid(beta * (log pi(y_w|x)/pi_ref(y_w|x) - log pi(y_l|x)/pi_ref(y_l|x)))</strong><br><br>In words: compute the log-probability ratio of chosen vs rejected responses under the policy, relative to the reference model. Push this ratio to be positive (chosen should be more likely than rejected).</div></div>
+          <div class="cc-block"><div class="cc-label">Breaking It Down</div><div class="cc-text"><strong>log pi(y_w|x) / pi_ref(y_w|x):</strong> How much more likely is the chosen response under the current policy vs the reference? This is the "implicit reward" for the chosen response.<br><br><strong>log pi(y_l|x) / pi_ref(y_l|x):</strong> Same for the rejected response.<br><br><strong>The difference:</strong> If the policy assigns relatively higher probability to chosen (vs reference) than to rejected (vs reference), the loss is low.<br><br><strong>beta:</strong> Controls the strength of the KL constraint. Higher beta = more conservative (stays closer to reference). Typical values: 0.1-0.5.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Intuition</div><div class="cc-text">DPO simultaneously does two things:<br><br><strong>1. Increases</strong> the probability of chosen responses (relative to the reference model)<br><br><strong>2. Decreases</strong> the probability of rejected responses (relative to the reference model)<br><br>The "relative to reference" part is crucial. It prevents the model from just increasing all probabilities (which would be meaningless) and acts as the implicit KL constraint.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># DPO loss in pseudocode</span>
+chosen_logps = policy.log_prob(chosen)
+rejected_logps = policy.log_prob(rejected)
+ref_chosen_logps = ref_model.log_prob(chosen)
+ref_rejected_logps = ref_model.log_prob(rejected)
+
+chosen_reward = beta * (chosen_logps - ref_chosen_logps)
+rejected_reward = beta * (rejected_logps - ref_rejected_logps)
+
+loss = -log_sigmoid(chosen_reward - rejected_reward)</div>
+          <div class="cc-note n-blue"><strong>This is just binary cross-entropy.</strong> DPO is essentially a classification problem: given two responses, classify which one is better. The "features" are the log-probability ratios. This makes DPO as simple to implement and train as SFT.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: DPO vs PPO -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">DPO vs PPO: Practical Comparison</div><div class="cc-sub">Cost, complexity, and quality trade-offs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="compare-box">
+            <div class="compare-item ci-teal"><strong>DPO</strong><br>2 models (policy + ref)<br>No generation during training<br>Simple loss function<br>1-2 A100s for 7B<br>Few hyperparams (beta, lr)<br>Stable training<br>Hours to train</div>
+            <div class="compare-item ci-violet"><strong>PPO</strong><br>4 models (policy + ref + RM + value)<br>Generation every step<br>Complex RL objective<br>4-8 A100s for 7B<br>Many hyperparams<br>Unstable, reward hacking<br>Days to train</div>
+          </div>
+          <div class="cc-block"><div class="cc-label">When DPO Wins</div><div class="cc-text"><strong>Most open-source alignment:</strong> Zephyr, Tulu 2, Neural Chat, OpenHermes, and most community models use DPO.<br><br><strong>Limited compute:</strong> DPO needs 2-4x less GPU memory than PPO.<br><br><strong>Rapid iteration:</strong> DPO trains in hours, PPO takes days. Better for experimentation.<br><br><strong>Stability:</strong> DPO rarely diverges. PPO requires careful monitoring.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When PPO Might Win</div><div class="cc-text"><strong>Frontier models:</strong> OpenAI, Anthropic, and Google still use PPO (or variants) for their flagship models. At massive scale with expert tuning, PPO can squeeze out extra quality.<br><br><strong>Online learning:</strong> PPO generates new responses during training, so it can explore and discover better responses. DPO only learns from pre-collected data (offline).<br><br><strong>Complex reward signals:</strong> PPO can optimize for any reward function (safety classifiers, factuality checkers, etc.). DPO is limited to pairwise preferences.</div></div>
+          <div class="cc-note n-violet"><strong>The consensus (2024-2025):</strong> DPO is the default choice for alignment. Use PPO only if you have the compute, expertise, and a specific reason (e.g., online learning, complex reward signals). For most practitioners, DPO gives 90-95% of PPO quality at 20-30% of the cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: ORPO -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">merge</span></div><div><div class="cc-title">ORPO: Odds Ratio Preference Optimization</div><div class="cc-sub">Combining SFT and alignment in a single step</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The ORPO Idea</div><div class="cc-text"><strong>Hong et al. (2024)</strong> observed that DPO still requires a separate SFT step first (to create the reference model). ORPO eliminates this by combining SFT and preference optimization into a single training step.<br><br><strong>How:</strong> ORPO adds a preference-aware penalty to the standard SFT loss. The SFT loss teaches the model to generate good responses, while the odds ratio penalty teaches it to prefer chosen over rejected.</div></div>
+          <div class="cc-block"><div class="cc-label">The ORPO Loss</div><div class="cc-text"><strong>L_ORPO = L_SFT + lambda * L_OR</strong><br><br>Where:<br>- L_SFT = standard cross-entropy on chosen responses<br>- L_OR = -log sigmoid(log(odds(chosen) / odds(rejected)))<br>- odds(y) = P(y) / (1 - P(y))<br>- lambda = weighting factor (typically 0.1-1.0)<br><br>The odds ratio naturally captures how much more likely one response is than another, without needing a reference model.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ORPO Advantages</div><div class="cc-text"><strong>No reference model:</strong> Unlike DPO, ORPO doesn't need a frozen reference model in memory. This halves the memory requirement.<br><br><strong>No SFT stage:</strong> ORPO combines SFT and alignment, saving one full training run.<br><br><strong>Simpler pipeline:</strong> Base model + preference data = aligned model. One step.</div></div>
+          <div class="compare-box">
+            <div class="compare-item ci-teal"><strong>DPO Pipeline</strong><br>1. SFT on demonstrations<br>2. DPO on preferences<br>Models: policy + reference<br>Two training runs</div>
+            <div class="compare-item ci-amber"><strong>ORPO Pipeline</strong><br>1. ORPO on preferences<br>(SFT is built in)<br>Models: policy only<br>One training run</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Trade-off:</strong> ORPO is simpler and cheaper, but DPO with a well-tuned SFT stage can sometimes produce better results. ORPO works best when you have good preference data that also serves as SFT data (the chosen responses are high quality demonstrations).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: SimPO & KTO -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">auto_awesome</span></div><div><div class="cc-title">SimPO &amp; KTO</div><div class="cc-sub">Further simplifications of preference optimization</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">SimPO: Simple Preference Optimization</div><div class="cc-text"><strong>Meng et al. (2024)</strong> simplified DPO further by removing the reference model entirely. Instead of comparing log-probabilities to a reference, SimPO uses the <strong>average log-probability</strong> of the response as the implicit reward:<br><br><strong>reward(y) = (1/|y|) * sum(log pi(y_t | y_&lt;t, x))</strong><br><br>This is just the average per-token log-probability, which naturally penalizes verbose responses (length normalization is built in).<br><br><strong>Key benefit:</strong> No reference model needed. Half the memory of DPO. And the length normalization addresses the verbosity problem that plagues DPO and PPO.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">KTO: Kahneman-Tversky Optimization</div><div class="cc-text"><strong>Ethayarajh et al. (2024)</strong> addressed a different problem: DPO requires <em>paired</em> preferences (chosen AND rejected for the same prompt). KTO works with <strong>unpaired binary feedback</strong>:<br><br>- "This response is good" (thumbs up)<br>- "This response is bad" (thumbs down)<br><br>No need to pair them. This is much easier to collect in production (users give thumbs up/down on individual responses).<br><br><strong>Based on:</strong> Kahneman-Tversky prospect theory from behavioral economics. Losses (bad responses) are weighted more heavily than gains (good responses), matching how humans perceive quality.</div></div>
+          <div class="cc-note n-pink"><strong>SimPO and KTO solve real practical problems.</strong> SimPO removes the reference model (memory savings) and fixes verbosity. KTO removes the need for paired data (easier data collection). Both achieve competitive quality with DPO. Choose based on your constraints: paired data available? Use DPO. Only binary feedback? Use KTO. Memory constrained? Use SimPO or ORPO.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: IPO & cDPO -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">IPO, cDPO &amp; Other Variants</div><div class="cc-sub">Addressing DPO's theoretical limitations</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">IPO: Identity Preference Optimization</div><div class="cc-text"><strong>Azar et al. (2024, Google DeepMind)</strong> identified a theoretical issue with DPO: it can overfit to the preference data because the sigmoid loss saturates. When the model becomes very confident, the gradients vanish and it stops learning.<br><br>IPO replaces the sigmoid loss with a squared loss that doesn't saturate:<br><br><strong>L_IPO = (log(pi(y_w)/pi_ref(y_w)) - log(pi(y_l)/pi_ref(y_l)) - 1/(2*beta))^2</strong><br><br>This keeps gradients flowing even when the model is confident, leading to better generalization.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">cDPO: Conservative DPO</div><div class="cc-text"><strong>Mitchell et al. (2023)</strong> addressed noisy preference labels. In real data, annotators disagree 25-35% of the time. Standard DPO treats all labels as correct, which can hurt when labels are wrong.<br><br>cDPO adds a label smoothing parameter that accounts for noise:<br><br><strong>L_cDPO uses P(chosen is actually better) = 1 - epsilon</strong><br><br>With epsilon = 0.1, the model doesn't fully trust any single preference label. This makes training more robust to annotation noise.</div></div>
+          <div class="cc-block"><div class="cc-label">Other Notable Variants</div><div class="cc-text"><strong>RSO (Statistical Rejection Sampling):</strong> Generates responses from the optimal policy (not the SFT model) for better DPO training data.<br><br><strong>SPIN (Self-Play):</strong> The model plays against itself to generate increasingly better preference data iteratively.<br><br><strong>Iterative DPO:</strong> Run DPO, generate new responses with the improved model, collect new preferences, run DPO again. Bridges the offline/online gap.</div></div>
+          <div class="cc-note n-orange"><strong>In practice:</strong> Standard DPO works well for most use cases. Use cDPO if your preference data is noisy. Use IPO if you see DPO overfitting. Use iterative DPO if you want to bridge the gap with online PPO. The variants are refinements, not replacements.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Decision Framework -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Choosing an Alignment Method</div><div class="cc-sub">Decision framework for practitioners</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decision Tree</div><div class="cc-text"><strong>Q: Do you have paired preference data?</strong><br>&rarr; No, only thumbs up/down: Use <strong>KTO</strong><br>&rarr; Yes: Continue below<br><br><strong>Q: Do you have a separate SFT dataset?</strong><br>&rarr; No (preference data is your only data): Use <strong>ORPO</strong><br>&rarr; Yes: Continue below<br><br><strong>Q: Is memory a constraint (single GPU)?</strong><br>&rarr; Yes: Use <strong>SimPO</strong> or <strong>ORPO</strong> (no reference model)<br>&rarr; No: Continue below<br><br><strong>Q: Is your preference data noisy?</strong><br>&rarr; Yes: Use <strong>cDPO</strong> or <strong>IPO</strong><br>&rarr; No: Use <strong>DPO</strong> (the default)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quick Reference</div><div class="cc-text"><strong>DPO:</strong> Default choice. Needs SFT first + reference model. Well-tested, widely used.<br><br><strong>ORPO:</strong> One-step alignment. No SFT stage, no reference model. Simplest pipeline.<br><br><strong>SimPO:</strong> Like DPO but no reference model. Built-in length normalization.<br><br><strong>KTO:</strong> Works with unpaired binary feedback. Easiest data collection.<br><br><strong>IPO:</strong> Better generalization than DPO. Use if DPO overfits.<br><br><strong>cDPO:</strong> Robust to noisy labels. Use with imperfect annotations.<br><br><strong>PPO:</strong> Maximum control. Use only at frontier scale with expert teams.</div></div>
+          <div class="cc-note n-green"><strong>The recommended starting point:</strong> SFT on your demonstration data, then DPO on your preference data. This is the most well-understood pipeline with the most community support. Only switch to alternatives if you have a specific constraint (no paired data, no SFT data, memory limits, noisy labels).</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>The DPO insight (Rafailov et al., 2023):</strong> The optimal RLHF policy has a closed-form solution. The reward function is implicit in the policy itself: r(x,y) = beta * log(pi/pi_ref) + const. This means we can skip the reward model and RL entirely, and directly optimize the policy on preference data. DPO reduces alignment from a 3-stage pipeline to a single supervised learning step.',color:'#0d9488'},
+    2:{text:'<strong>DPO loss:</strong> -log sigmoid(beta * (log_ratio_chosen - log_ratio_rejected)), where log_ratio = log(pi/pi_ref). This is binary cross-entropy: classify which response is better using log-probability ratios as features. Beta controls the KL constraint (0.1-0.5). Higher beta = more conservative. The reference model provides the implicit KL penalty.',color:'#2563eb'},
+    3:{text:'<strong>DPO vs PPO:</strong> DPO needs 2 models (policy + reference) vs PPO\u2019s 4. No generation during training. Trains in hours vs days. Few hyperparameters. Stable training. Used by Zephyr, Tulu 2, and most open-source models. PPO still used by frontier labs for maximum control. DPO gives 90-95% of PPO quality at 20-30% of the cost.',color:'#7c3aed'},
+    4:{text:'<strong>ORPO (Hong et al., 2024):</strong> Combines SFT and alignment in one step. No reference model needed. Loss = L_SFT + lambda * L_odds_ratio. The SFT component teaches generation, the odds ratio component teaches preference. One training run, one model in memory. Simplest possible alignment pipeline: base model + preference data = aligned model.',color:'#d97706'},
+    5:{text:'<strong>SimPO (Meng et al., 2024):</strong> Removes the reference model from DPO. Uses average log-probability as implicit reward, which naturally penalizes verbosity. Half the memory of DPO. <strong>KTO (Ethayarajh et al., 2024):</strong> Works with unpaired binary feedback (thumbs up/down), no need for paired comparisons. Based on Kahneman-Tversky prospect theory. Easiest data collection.',color:'#db2777'},
+    6:{text:'<strong>IPO (Azar et al., 2024, DeepMind):</strong> Replaces DPO\u2019s sigmoid with squared loss to prevent gradient saturation and overfitting. <strong>cDPO:</strong> Adds label smoothing for noisy preference data. <strong>Iterative DPO:</strong> Generate new responses, collect new preferences, repeat DPO. Bridges the offline/online gap. In practice: standard DPO works for most cases; use variants for specific issues.',color:'#ea580c'},
+    7:{text:'<strong>Decision framework:</strong> Default = SFT + DPO. No paired data \u2192 KTO. No SFT data \u2192 ORPO. Memory constrained \u2192 SimPO/ORPO. Noisy labels \u2192 cDPO/IPO. Frontier scale with expert team \u2192 PPO. Start with DPO, switch only if you have a specific constraint. The alignment landscape is converging on simplicity.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--teal)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

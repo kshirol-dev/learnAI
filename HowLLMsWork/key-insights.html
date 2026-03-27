@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Insights — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1100px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:24px 36px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,var(--violet-light) 0%,var(--blue-light) 40%,var(--teal-light) 100%)}
+.title-bar .tb-icon{width:48px;height:48px;border-radius:12px;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}.tb-icon .material-symbols-rounded{font-size:26px}
+.title-bar h1{font-size:20px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-2);margin-top:3px}
+.nav-bar{padding:12px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg-white)}
+.nav-link{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:7px;font-size:10px;font-weight:600;text-decoration:none;color:var(--text-3);background:var(--bg-muted);transition:all .15s}.nav-link:hover{color:var(--text-1);background:var(--border)}.nav-link .material-symbols-rounded{font-size:15px}
+
+.act-block{border-bottom:1px solid var(--border-light)}
+.act-head{padding:16px 36px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;transition:background .15s}.act-head:hover{background:var(--bg-muted)}
+.act-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;flex-shrink:0}
+.act-title{font-size:14px;font-weight:800;letter-spacing:-.3px}.act-subtitle{font-size:10px;color:var(--text-3);margin-top:1px}
+.act-toggle{margin-left:auto;color:var(--text-3);transition:transform .3s}.act-toggle.open{transform:rotate(180deg)}
+.act-body{padding:0 36px 20px;display:none}.act-body.open{display:block}
+
+.ch-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border-light)}.ch-row:last-child{border-bottom:none}
+.ch-num{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:800;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;margin-top:2px}
+.ch-content{flex:1;min-width:0}
+.ch-name{font-size:12px;font-weight:700;margin-bottom:4px}.ch-name a{color:inherit;text-decoration:none}.ch-name a:hover{text-decoration:underline}
+.ch-insight{font-size:11px;color:var(--text-2);line-height:1.6;margin-bottom:6px;font-style:italic}
+.ch-bullets{list-style:none;padding:0;margin:0}.ch-bullets li{font-size:11px;color:var(--text-2);line-height:1.6;padding-left:14px;position:relative;margin-bottom:2px}.ch-bullets li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%}
+.ch-bullets li strong{color:var(--text-1);font-weight:600}
+
+.bottom-line{font-size:11px;line-height:1.6;padding:12px 16px;border-radius:8px;margin-top:14px}.bottom-line strong{font-weight:700}
+
+.bl-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.bl-violet strong{color:var(--violet)}
+.bl-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.bl-blue strong{color:var(--blue)}
+.bl-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.bl-teal strong{color:var(--teal)}
+.bl-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.bl-orange strong{color:var(--orange)}
+.bl-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.bl-pink strong{color:var(--pink)}
+
+.act-violet .act-badge{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}
+.act-violet .ch-num{background:var(--violet)}
+.act-violet .ch-bullets li::before{background:var(--violet)}
+
+.act-blue .act-badge{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}
+.act-blue .ch-num{background:var(--blue)}
+.act-blue .ch-bullets li::before{background:var(--blue)}
+
+.act-teal .act-badge{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}
+.act-teal .ch-num{background:var(--teal)}
+.act-teal .ch-bullets li::before{background:var(--teal)}
+
+.act-orange .act-badge{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}
+.act-orange .ch-num{background:var(--orange)}
+.act-orange .ch-bullets li::before{background:var(--orange)}
+
+.act-pink .act-badge{background:var(--pink-light);color:var(--pink);border:1px solid var(--pink-border)}
+.act-pink .ch-num{background:var(--pink)}
+.act-pink .ch-bullets li::before{background:var(--pink)}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div class="tb-icon"><span class="material-symbols-rounded">summarize</span></div>
+    <div>
+      <h1>Key Insights &mdash; How LLMs Work</h1>
+      <div class="tb-sub">A high-level summary of the core concepts across all 14 chapters.</div>
+    </div>
+  </div>
+
+  <div class="nav-bar">
+    <a href="index.html" class="nav-link"><span class="material-symbols-rounded">arrow_back</span> Back to Course</a>
+    <a href="../index.html" class="nav-link"><span class="material-symbols-rounded">home</span> Learning Portal</a>
+    <a href="glossary.html" class="nav-link"><span class="material-symbols-rounded">dictionary</span> View Glossary</a>
+    <button class="nav-link" id="expand-all" style="margin-left:auto;border:none;cursor:pointer;"><span class="material-symbols-rounded">unfold_more</span> Expand All</button>
+  </div>
+
+  <!-- PART 1 -->
+  <div class="act-block act-violet">
+    <div class="act-head" onclick="toggleAct(this)">
+      <span class="act-badge">Part 1</span>
+      <div>
+        <div class="act-title">From Text to Numbers</div>
+        <div class="act-subtitle">Chapters 1-3</div>
+      </div>
+      <span class="material-symbols-rounded act-toggle">expand_more</span>
+    </div>
+    <div class="act-body">
+      
+      <div class="ch-row">
+        <div class="ch-num">1</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="01-text-to-tokens.html">Text to Tokens</a></div>
+          <div class="ch-insight">LLMs don't read words; they read numbers. Tokenization is the bridge between human language and machine math.</div>
+          <ul class="ch-bullets">
+            <li><strong>Subword Tokenization:</strong> Systems like BPE break rare words into smaller chunks rather than storing millions of unique words, balancing vocabulary size with sequence length.</li>
+            <li><strong>The "Strawberry" Problem:</strong> LLMs struggle with spelling tasks (like counting the 'r's in strawberry) because the tokenizer merges the word into a single opaque number before the model even sees it.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">2</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="02-embeddings.html">Embeddings: Meaning as Math</a></div>
+          <div class="ch-insight">Words are converted into high-dimensional coordinates where geometric distance equals semantic similarity.</div>
+          <ul class="ch-bullets">
+            <li><strong>Vector Space:</strong> If you plot words in 4,096 dimensions, "dog" and "cat" are close together. "Dog" and "car" are far apart.</li>
+            <li><strong>Context is Everything:</strong> Modern embeddings are dynamic. The word "bank" gets a different vector if it's next to "river" versus next to "money".</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">3</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="03-attention.html">Attention: The Core Innovation</a></div>
+          <div class="ch-insight">Attention allows the model to look at the entire sentence at once and figure out which words are relevant to each other.</div>
+          <ul class="ch-bullets">
+            <li><strong>Queries, Keys, and Values:</strong> Every token asks a question (Query), checks other tokens' labels (Keys), and extracts their meaning (Values) if there's a match.</li>
+            <li><strong>Self-Attention:</strong> The mechanism that allows the word "it" in "The animal didn't cross the street because it was too tired" to mathematically link to "animal" rather than "street".</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bottom-line bl-violet">
+        <strong>The Bottom Line:</strong> Before any "thinking" happens, text must be chunked into tokens, mapped to mathematical vectors, and mixed together using Attention so every word understands its context.
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 2 -->
+  <div class="act-block act-blue">
+    <div class="act-head" onclick="toggleAct(this)">
+      <span class="act-badge">Part 2</span>
+      <div>
+        <div class="act-title">The Transformer Architecture</div>
+        <div class="act-subtitle">Chapters 4-6</div>
+      </div>
+      <span class="material-symbols-rounded act-toggle">expand_more</span>
+    </div>
+    <div class="act-body">
+      
+      <div class="ch-row">
+        <div class="ch-num">4</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="04-transformer-block.html">The Transformer Block</a></div>
+          <div class="ch-insight">An LLM is just the same block of operations repeated dozens of times.</div>
+          <ul class="ch-bullets">
+            <li><strong>Two-Step Process:</strong> Each block does Attention (tokens talk to each other) followed by a Feed-Forward Network (tokens process what they just learned individually).</li>
+            <li><strong>Residual Connections:</strong> "Bypass lanes" that allow information to skip layers, preventing the signal from dying out in very deep networks.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">5</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="05-scaling-up.html">Scaling Up: From Transformer to LLM</a></div>
+          <div class="ch-insight">Intelligence in LLMs is an emergent property of massive scale.</div>
+          <ul class="ch-bullets">
+            <li><strong>Scaling Laws:</strong> Model performance predictably improves as you increase three variables: parameter count, dataset size, and compute.</li>
+            <li><strong>Mixture of Experts (MoE):</strong> A trick to make massive models faster by only activating a small subset of the neural network (the "experts") for any given token.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">6</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="06-training-recipe.html">The Training Recipe</a></div>
+          <div class="ch-insight">Pre-training is the most expensive and time-consuming part of creating an LLM.</div>
+          <ul class="ch-bullets">
+            <li><strong>Next-Token Prediction:</strong> The only objective during pre-training is guessing the next word in a sequence. By doing this across trillions of words, the model learns grammar, facts, and reasoning.</li>
+            <li><strong>Data Quality:</strong> The internet is full of garbage. Curating, deduplicating, and filtering the pre-training dataset is the most closely guarded secret of AI labs.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bottom-line bl-blue">
+        <strong>The Bottom Line:</strong> A base LLM is just a massive statistical engine trained on supercomputers for months to play the world's most advanced game of autocomplete.
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 3 -->
+  <div class="act-block act-teal">
+    <div class="act-head" onclick="toggleAct(this)">
+      <span class="act-badge">Part 3</span>
+      <div>
+        <div class="act-title">Training &amp; Alignment</div>
+        <div class="act-subtitle">Chapters 7-8</div>
+      </div>
+      <span class="material-symbols-rounded act-toggle">expand_more</span>
+    </div>
+    <div class="act-body">
+      
+      <div class="ch-row">
+        <div class="ch-num">7</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="07-fine-tuning.html">Fine-Tuning &amp; Instruction Following</a></div>
+          <div class="ch-insight">A base model just continues text. Fine-tuning turns it into an assistant that answers questions.</div>
+          <ul class="ch-bullets">
+            <li><strong>Supervised Fine-Tuning (SFT):</strong> Showing the model thousands of examples of high-quality Q&amp;A pairs so it learns the format of a helpful conversation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">8</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="08-rlhf-alignment.html">RLHF &amp; Alignment</a></div>
+          <div class="ch-insight">Alignment teaches the model human values: be helpful, honest, and harmless.</div>
+          <ul class="ch-bullets">
+            <li><strong>RLHF:</strong> Humans rate model outputs (A is better than B). A "Reward Model" learns these preferences, and then trains the main LLM to maximize that reward.</li>
+            <li><strong>The "ChatGPT" Moment:</strong> RLHF is the specific breakthrough that made LLMs accessible and safe enough for the general public.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bottom-line bl-teal">
+        <strong>The Bottom Line:</strong> Pre-training gives the model knowledge. Fine-tuning gives it a conversational interface. Alignment gives it a personality and safety boundaries.
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 4 -->
+  <div class="act-block act-orange">
+    <div class="act-head" onclick="toggleAct(this)">
+      <span class="act-badge">Part 4</span>
+      <div>
+        <div class="act-title">Inference &amp; Optimization</div>
+        <div class="act-subtitle">Chapters 9-11</div>
+      </div>
+      <span class="material-symbols-rounded act-toggle">expand_more</span>
+    </div>
+    <div class="act-body">
+      
+      <div class="ch-row">
+        <div class="ch-num">9</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="09-text-generation.html">How LLMs Generate Text</a></div>
+          <div class="ch-insight">Generation is an autoregressive loop: predict one token, add it to the input, repeat.</div>
+          <ul class="ch-bullets">
+            <li><strong>Temperature:</strong> Controls the randomness of the output. Temp 0 = always pick the most likely word (robotic/factual). Temp 1 = pick from a wider distribution (creative).</li>
+            <li><strong>Top-P / Top-K:</strong> Filtering techniques to prevent the model from ever picking completely nonsensical words during generation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">10</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="10-context-windows.html">Context Windows &amp; Memory</a></div>
+          <div class="ch-insight">LLMs have amnesia. They only "remember" what is currently inside their context window.</div>
+          <ul class="ch-bullets">
+            <li><strong>Quadratic Scaling:</strong> Doubling the context window requires 4x the compute during the attention phase, which is why infinite context is mathematically difficult.</li>
+            <li><strong>KV Cache:</strong> A crucial optimization that saves the mathematical state of previous tokens so the model doesn't have to re-read the entire prompt for every new word it generates.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">11</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="11-making-llms-fast.html">Making LLMs Fast</a></div>
+          <div class="ch-insight">Serving LLMs to millions of users requires extreme engineering to overcome the memory wall.</div>
+          <ul class="ch-bullets">
+            <li><strong>Quantization:</strong> Shrinking the precision of the model's weights (e.g., from 16-bit to 4-bit) to make it fit in smaller GPUs and run faster.</li>
+            <li><strong>Continuous Batching:</strong> Dynamically swapping user requests in and out of the GPU the millisecond they finish to maximize hardware utilization.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bottom-line bl-orange">
+        <strong>The Bottom Line:</strong> Generating text one token at a time is incredibly inefficient. The entire field of LLM engineering is dedicated to hacking the math and memory to make it faster.
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 5 -->
+  <div class="act-block act-pink">
+    <div class="act-head" onclick="toggleAct(this)">
+      <span class="act-badge">Part 5</span>
+      <div>
+        <div class="act-title">Frontiers &amp; Landscape</div>
+        <div class="act-subtitle">Chapters 12-14</div>
+      </div>
+      <span class="material-symbols-rounded act-toggle">expand_more</span>
+    </div>
+    <div class="act-body">
+      
+      <div class="ch-row">
+        <div class="ch-num">12</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="12-multimodal-llms.html">Multimodal LLMs</a></div>
+          <div class="ch-insight">Text is just another sequence. Modern models treat images and audio as just more tokens.</div>
+          <ul class="ch-bullets">
+            <li><strong>Vision Encoders:</strong> Models like CLIP convert images into the exact same mathematical embedding space as text, allowing the LLM to "read" the image.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">13</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="13-emergent-abilities.html">Emergent Abilities &amp; Limitations</a></div>
+          <div class="ch-insight">LLMs are brilliant pattern matchers, but they do not reason like humans.</div>
+          <ul class="ch-bullets">
+            <li><strong>In-Context Learning:</strong> The ability of a model to learn a new task just by seeing examples in the prompt, without changing its underlying weights.</li>
+            <li><strong>Hallucinations:</strong> Because LLMs are probabilistic text generators, they will confidently invent facts when they don't know the answer. It is a feature of the architecture, not a bug.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ch-row">
+        <div class="ch-num">14</div>
+        <div class="ch-content">
+          <div class="ch-name"><a href="14-llm-landscape.html">The LLM Landscape (Capstone)</a></div>
+          <div class="ch-insight">The market is split between massive closed models and highly capable open-weight models.</div>
+          <ul class="ch-bullets">
+            <li><strong>Closed vs Open:</strong> OpenAI and Anthropic lead the frontier via APIs, while Meta's Llama provides open-weight models that anyone can download and run locally.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="bottom-line bl-pink">
+        <strong>The Bottom Line:</strong> LLMs are the most capable general-purpose technology since the internet, but understanding their fundamental limitations (hallucinations, lack of true reasoning) is critical to using them effectively.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggleAct(el) {
+    const body = el.nextElementSibling;
+    const icon = el.querySelector('.act-toggle');
+    if (body.classList.contains('open')) {
+      body.classList.remove('open');
+      icon.classList.remove('open');
+    } else {
+      body.classList.add('open');
+      icon.classList.add('open');
+    }
+  }
+
+  document.getElementById('expand-all').addEventListener('click', function() {
+    const isExpanding = this.textContent.includes('Expand');
+    document.querySelectorAll('.act-body').forEach(b => isExpanding ? b.classList.add('open') : b.classList.remove('open'));
+    document.querySelectorAll('.act-toggle').forEach(i => isExpanding ? i.classList.add('open') : i.classList.remove('open'));
+    this.innerHTML = isExpanding ? '<span class="material-symbols-rounded">unfold_less</span> Collapse All' : '<span class="material-symbols-rounded">unfold_more</span> Expand All';
+  });
+
+  // Open first section by default
+  document.querySelector('.act-body').classList.add('open');
+  document.querySelector('.act-toggle').classList.add('open');
+</script>
+</body>
+</html>

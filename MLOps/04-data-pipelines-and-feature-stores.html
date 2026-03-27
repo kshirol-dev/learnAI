@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Data Pipelines & Feature Stores — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Data Pipelines &amp; Feature Stores</h2><span class="tb-sub">ETL for ML, Feast, Tecton, feature engineering at scale, and data quality checks</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">storage</span></div><span class="pipe-label">Raw Data</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">transform</span></div><span class="pipe-label">Transform</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Validate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">view_column</span></div><span class="pipe-label">Features</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">inventory_2</span></div><span class="pipe-label">Store</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">dns</span></div><span class="pipe-label">Serve</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">storage</span></div><div><div class="cc-title">Data Pipelines for ML</div><div class="cc-sub">ETL is different when the consumer is a model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ML-Specific ETL</div><div class="cc-text">Traditional ETL (Extract, Transform, Load) moves data for dashboards and reports. <strong>ML pipelines</strong> have different requirements: they need <strong>point-in-time correctness</strong> (features must reflect what was known at prediction time, not the future), <strong>reproducibility</strong> (same input → same features every time), <strong>dual serving</strong> (same features for training and inference), and <strong>freshness</strong> (real-time features for online predictions). Common orchestrators: <strong>Apache Airflow</strong> (the standard for batch pipelines), <strong>Prefect</strong> (modern Python-native alternative), <strong>Dagster</strong> (asset-based, great for data-aware orchestration). For streaming: <strong>Apache Kafka</strong> + <strong>Flink</strong> or <strong>Spark Structured Streaming</strong>.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ML Pipeline Architecture</div><div class="cc-code"><span class="hl-cmt">// ML data pipeline</span>
+
+<span class="hl-key">Sources</span>:
+  Databases (PostgreSQL, MongoDB)
+  APIs (REST, webhooks)
+  Streams (Kafka, Kinesis)
+  Files (S3, GCS)
+
+<span class="hl-key">Orchestrator</span>: Airflow / Prefect / Dagster
+  Schedule: daily, hourly, or event-triggered
+  DAG: extract → validate → transform → load
+
+<span class="hl-key">Transform</span>: dbt / Spark / Pandas
+  Raw → cleaned → features
+  Point-in-time joins (critical!)
+
+<span class="hl-key">Output</span>:
+  Offline store → training (Parquet/BigQuery)
+  Online store → serving (Redis/DynamoDB)</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The #1 ML pipeline bug is <strong>data leakage through time</strong>. If your training features include information from the future (relative to the prediction timestamp), your model will look great in testing but fail in production.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">error</span></div><div><div class="cc-title">Training-Serving Skew</div><div class="cc-sub">The silent killer of ML systems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text"><strong>Training-serving skew</strong> occurs when the features used during training differ from those used during inference. This happens when: training uses a Python script but serving uses a Java service (different implementations of the same logic), training uses historical data but serving uses real-time data (different data sources), or training computes features in batch but serving computes them on-the-fly (different computation paths). Even tiny differences &mdash; like a different rounding method or timezone handling &mdash; can cause significant prediction errors. Feature stores solve this by providing a <strong>single source of truth</strong> for features in both training and serving.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Skew Examples</div><div class="cc-code"><span class="hl-cmt">// Training-serving skew examples</span>
+
+<span class="hl-key">1. Code Skew</span>:
+   Training: Python → np.mean(values)
+   Serving:  Java → average(values)
+   <span class="hl-cmt">// Different NaN handling!</span>
+
+<span class="hl-key">2. Data Skew</span>:
+   Training: user_age from data warehouse
+   Serving:  user_age from user profile API
+   <span class="hl-cmt">// Warehouse updates daily, API is live</span>
+
+<span class="hl-key">3. Time Skew</span>:
+   Training: avg_spend_30d at batch time
+   Serving:  avg_spend_30d at request time
+   <span class="hl-cmt">// Different windows!</span>
+
+<span class="hl-key">Solution</span>: Feature store
+   One definition → offline + online
+   Same code, same data, same result</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Training-serving skew is insidious because the model still returns predictions &mdash; they&rsquo;re just wrong. There&rsquo;s no error message. The only way to catch it is monitoring prediction distributions and comparing them to training distributions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">view_column</span></div><div><div class="cc-title">What Is a Feature Store?</div><div class="cc-sub">A centralized system for managing ML features</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Store Architecture</div><div class="cc-text">A <strong>feature store</strong> is a centralized system that manages the lifecycle of ML features: definition, computation, storage, and serving. It has three layers: (1) <strong>Transformation layer</strong> &mdash; defines how features are computed from raw data (SQL, Spark, or Python). (2) <strong>Storage layer</strong> &mdash; an <strong>offline store</strong> (data warehouse/lake for training) and an <strong>online store</strong> (low-latency key-value store for serving). (3) <strong>Serving layer</strong> &mdash; APIs to retrieve features for both training (batch) and inference (real-time). The key guarantee: <strong>the same feature definition produces the same value</strong> in both training and serving, eliminating training-serving skew.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Store Architecture</div><div class="cc-code"><span class="hl-cmt">// Feature store architecture</span>
+
+┌──────────────────────────────┐
+│  <span class="hl-key">Feature Definitions</span>          │
+│  (SQL / Spark / Python)       │
+└──────────┬───────────────────┘
+           ▼
+┌──────────────────────────────┐
+│  <span class="hl-key">Offline Store</span>                 │
+│  BigQuery / Snowflake / S3    │
+│  → Training data (batch)      │
+├──────────────────────────────┤
+│  <span class="hl-key">Online Store</span>                  │
+│  Redis / DynamoDB / Cassandra │
+│  → Serving data (real-time)   │
+└──────────┬───────────────────┘
+           ▼
+┌──────────────────────────────┐
+│  <span class="hl-key">Serving API</span>                   │
+│  get_features(entity_id)      │
+│  → Same result, both paths    │
+└──────────────────────────────┘</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The offline store holds the full history (for training with point-in-time joins), while the online store holds only the latest values (for low-latency serving). Both are computed from the same feature definitions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">Feast: Open-Source Feature Store</div><div class="cc-sub">The most widely adopted open-source feature store</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feast Overview</div><div class="cc-text"><strong>Feast</strong> (Feature Store) is an open-source feature store originally developed at Gojek and now maintained by Tecton. It provides: <strong>feature definitions</strong> in Python (declarative), <strong>offline serving</strong> via point-in-time joins against your data warehouse, <strong>online serving</strong> via Redis/DynamoDB/SQLite for low-latency lookups, and <strong>materialization</strong> (syncing features from offline to online store). Feast is lightweight &mdash; it doesn&rsquo;t run its own compute; it integrates with your existing data infrastructure. You define features, Feast handles the rest: storage, serving, and consistency.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feast Example</div><div class="cc-code"><span class="hl-cmt"># feature_repo/features.py</span>
+<span class="hl-key">from</span> feast <span class="hl-key">import</span> Entity, FeatureView, Field
+<span class="hl-key">from</span> feast.types <span class="hl-key">import</span> Float32, Int64
+
+user = Entity(name=<span class="hl-str">"user_id"</span>, join_keys=[<span class="hl-str">"user_id"</span>])
+
+user_features = FeatureView(
+    name=<span class="hl-str">"user_features"</span>,
+    entities=[user],
+    schema=[
+        Field(name=<span class="hl-str">"avg_spend_30d"</span>, dtype=Float32),
+        Field(name=<span class="hl-str">"txn_count_7d"</span>, dtype=Int64),
+        Field(name=<span class="hl-str">"days_since_signup"</span>, dtype=Int64),
+    ],
+    source=bigquery_source,
+    ttl=timedelta(days=<span class="hl-num">1</span>),
+)
+
+<span class="hl-cmt"># Training: point-in-time join</span>
+training_df = store.get_historical_features(
+    entity_df=entities_with_timestamps,
+    features=[<span class="hl-str">"user_features:avg_spend_30d"</span>],
+).to_df()
+
+<span class="hl-cmt"># Serving: real-time lookup</span>
+features = store.get_online_features(
+    features=[<span class="hl-str">"user_features:avg_spend_30d"</span>],
+    entity_rows=[{<span class="hl-str">"user_id"</span>: <span class="hl-num">123</span>}],
+).to_dict()</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Feast&rsquo;s <code>get_historical_features()</code> performs point-in-time joins automatically &mdash; for each entity at each timestamp, it returns the feature values that were known at that time, preventing data leakage.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">business</span></div><div><div class="cc-title">Tecton: Managed Feature Platform</div><div class="cc-sub">Enterprise-grade feature store with built-in compute</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Tecton vs Feast</div><div class="cc-text"><strong>Tecton</strong> is a managed feature platform (commercial, founded by the creators of Feast) that goes beyond Feast in several ways: <strong>built-in compute</strong> (Tecton runs the transformations; Feast relies on external compute), <strong>real-time features</strong> (stream processing from Kafka/Kinesis with sub-second latency), <strong>aggregation engine</strong> (optimized time-windowed aggregations like &ldquo;average spend in last 30 days&rdquo;), and <strong>feature monitoring</strong> (drift detection on feature values). Tecton is the right choice for teams that need real-time streaming features, enterprise SLAs, and don&rsquo;t want to manage infrastructure. Feast is better for teams that want open-source flexibility and already have compute infrastructure.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feast vs Tecton</div><div class="cc-code"><span class="hl-cmt">// Feast vs Tecton</span>
+
+                <span class="hl-key">Feast</span>          <span class="hl-key">Tecton</span>
+License:     Open-source    Commercial
+Compute:     External       Built-in
+Streaming:   Limited        Native (Kafka)
+Aggregation: Manual         Optimized engine
+Monitoring:  No             Yes (drift)
+Infra:       Self-managed   Fully managed
+Cost:        Free           $$$ (enterprise)
+Best for:    Small teams    Enterprise ML
+
+<span class="hl-cmt">// Other options:</span>
+<span class="hl-cmt">// Databricks Feature Store (Databricks)</span>
+<span class="hl-cmt">// Vertex AI Feature Store (GCP)</span>
+<span class="hl-cmt">// SageMaker Feature Store (AWS)</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> If you&rsquo;re on a major cloud platform, consider their built-in feature store first (Databricks, Vertex AI, SageMaker). They integrate tightly with the rest of the ML stack and reduce operational overhead.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">Data Quality &amp; Validation</div><div class="cc-sub">Catching bad data before it reaches the model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Data Validation Tools</div><div class="cc-text">Bad data is the #1 cause of ML failures in production. <strong>Data validation</strong> catches issues before they reach the model: <strong>Great Expectations</strong> (the most popular open-source data validation framework &mdash; define &ldquo;expectations&rdquo; like &ldquo;column X should never be null&rdquo; or &ldquo;values should be between 0 and 1&rdquo;), <strong>Pandera</strong> (lightweight schema validation for Pandas DataFrames), <strong>TensorFlow Data Validation (TFDV)</strong> (detects anomalies and schema drift), and <strong>dbt tests</strong> (SQL-based data quality checks in your transformation pipeline). Run these checks at every stage: ingestion, transformation, and before training.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Great Expectations Example</div><div class="cc-code"><span class="hl-key">import</span> great_expectations <span class="hl-key">as</span> gx
+
+context = gx.get_context()
+ds = context.sources.add_pandas(<span class="hl-str">"train"</span>)
+asset = ds.add_dataframe_asset(<span class="hl-str">"data"</span>)
+
+<span class="hl-cmt"># Define expectations</span>
+suite = context.add_expectation_suite(<span class="hl-str">"train_suite"</span>)
+
+suite.add_expectation(
+    gx.expectations.ExpectColumnValuesToNotBeNull(
+        column=<span class="hl-str">"user_id"</span>
+    )
+)
+suite.add_expectation(
+    gx.expectations.ExpectColumnValuesToBeBetween(
+        column=<span class="hl-str">"age"</span>, min_value=<span class="hl-num">0</span>, max_value=<span class="hl-num">120</span>
+    )
+)
+suite.add_expectation(
+    gx.expectations.ExpectColumnMeanToBeBetween(
+        column=<span class="hl-str">"spend"</span>,
+        min_value=<span class="hl-num">10</span>, max_value=<span class="hl-num">500</span>
+    )
+)
+
+<span class="hl-cmt"># Run validation → pass/fail</span>
+result = context.run_checkpoint(<span class="hl-str">"train_check"</span>)
+<span class="hl-key">assert</span> result.success</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Add data validation as a <strong>gate</strong> in your pipeline. If validation fails, the pipeline stops and alerts the team. Never let unvalidated data reach the model &mdash; garbage in, garbage out.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Real-Time vs. Batch Features</div><div class="cc-sub">Choosing the right computation pattern</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Computation Patterns</div><div class="cc-text">Features fall into three categories by freshness: <strong>Batch features</strong> (computed daily/hourly from the data warehouse &mdash; e.g., &ldquo;average spend in last 30 days&rdquo;). <strong>Streaming features</strong> (computed in real-time from event streams &mdash; e.g., &ldquo;number of transactions in last 5 minutes&rdquo;). <strong>On-demand features</strong> (computed at request time from the input &mdash; e.g., &ldquo;is this IP address in a known VPN list?&rdquo;). Most ML systems use a mix: 80% batch features (cheap, easy) + 15% streaming features (for freshness-sensitive signals) + 5% on-demand features (for request-specific context). Start with batch; add streaming only when freshness is proven to improve model performance.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Types</div><div class="cc-code"><span class="hl-cmt">// Feature computation patterns</span>
+
+<span class="hl-key">Batch</span> (daily/hourly):
+  Source: Data warehouse (BigQuery, Snowflake)
+  Compute: Spark, dbt, SQL
+  Latency: hours
+  Example: avg_spend_30d, lifetime_value
+  Cost: $ (cheapest)
+
+<span class="hl-key">Streaming</span> (seconds/minutes):
+  Source: Kafka, Kinesis
+  Compute: Flink, Spark Streaming
+  Latency: seconds
+  Example: txn_count_5min, velocity_score
+  Cost: $$$ (expensive infra)
+
+<span class="hl-key">On-Demand</span> (at request time):
+  Source: Request payload + lookups
+  Compute: Application code
+  Latency: milliseconds
+  Example: is_vpn, device_fingerprint
+  Cost: $$ (per-request compute)</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Don&rsquo;t build streaming features unless you have evidence they improve model performance. Batch features cover 80% of use cases and are 10x cheaper to build and maintain.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">share</span></div><div><div class="cc-title">Feature Reuse &amp; Discovery</div><div class="cc-sub">The feature store as a shared asset</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Sharing</div><div class="cc-text">One of the biggest ROI drivers of a feature store is <strong>feature reuse</strong>. Without a feature store, every team independently computes &ldquo;average spend in last 30 days&rdquo; &mdash; with slightly different implementations. With a feature store, the feature is defined once, computed once, and shared across all models. This reduces: <strong>duplicated compute</strong> (one pipeline instead of five), <strong>inconsistency</strong> (one definition, one result), and <strong>onboarding time</strong> (new models can browse and reuse existing features). A <strong>feature catalog</strong> (like a data catalog but for features) lets data scientists search for existing features before building new ones.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Reuse Impact</div><div class="cc-code"><span class="hl-cmt">// Without feature store</span>
+<span class="hl-key">Fraud team</span>: avg_spend_30d (Python, daily)
+<span class="hl-key">Risk team</span>:  avg_spend_30d (SQL, hourly)
+<span class="hl-key">Marketing</span>: avg_spend_30d (Spark, weekly)
+<span class="hl-cmt">// 3 implementations, 3 different values!</span>
+
+<span class="hl-cmt">// With feature store</span>
+<span class="hl-key">Feature</span>: user_features:avg_spend_30d
+<span class="hl-key">Definition</span>: one SQL query
+<span class="hl-key">Compute</span>: once, daily
+<span class="hl-key">Used by</span>: fraud, risk, marketing models
+<span class="hl-cmt">// 1 implementation, 1 value, 3 consumers</span>
+
+<span class="hl-cmt">// Feature catalog:</span>
+<span class="hl-cmt">// "I need a user spending feature"</span>
+<span class="hl-cmt">// → Search → Found! Already exists</span>
+<span class="hl-cmt">// → Reuse instead of rebuild</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The feature store pays for itself when the second team reuses a feature. At scale, organizations report 60&ndash;80% of features in new models come from the existing feature store, dramatically reducing time-to-production.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-model-registry-and-versioning.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Model Registry &amp; Versioning</a>
+    <a class="ch-nav-btn next" href="05-cicd-for-machine-learning.html">Ch 5: CI/CD for Machine Learning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3],2:[3,4,5],3:[3,4,5],4:[0,1,3,4,5],5:[0,1,3,4,5],6:[0,1,2],7:[0,1,3,4,5],8:[3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> ML data pipelines need point-in-time correctness, reproducibility, and dual serving (training + inference). Orchestrate with Airflow, Prefect, or Dagster.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Training-serving skew — when training and serving features differ — is the silent killer. Different code, data sources, or time windows cause wrong predictions.',color:'#dc2626'},
+    3:{text:'<strong>Step 3:</strong> Feature stores solve skew with one definition serving both training (offline store) and inference (online store). Same code, same result.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Feast — open-source feature store with point-in-time joins, offline/online serving, and materialization. Lightweight, integrates with existing infra.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Tecton — managed feature platform with built-in compute, streaming features, aggregation engine, and monitoring. Enterprise-grade but costly.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Data validation (Great Expectations, Pandera) catches bad data before it reaches the model. Add validation gates at every pipeline stage.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Three feature types: batch (80%, cheap), streaming (15%, real-time), on-demand (5%, per-request). Start with batch; add streaming only when proven valuable.',color:'#2563eb'},
+    8:{text:'<strong>Step 8:</strong> Feature reuse is the biggest ROI driver. Define once, compute once, share across all models. A feature catalog enables discovery and prevents duplication.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

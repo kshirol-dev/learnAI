@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 13: Secure AI Architecture Patterns — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--slate-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-slate{background:var(--slate-light);border:1px solid var(--border)}.cc-note.n-slate strong{color:var(--slate)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 13 &mdash; Secure AI Architecture Patterns</h2><span class="tb-sub">Zero trust, LLM gateways, LLM firewalls, confidential computing, AI-SPM</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="13-secure-architecture-patterns-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">dns</span></div><span class="pipe-label">Gateway</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">lock</span></div><span class="pipe-label">Auth</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Rate Limit</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Model Layer</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Tool Layer</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Audit</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Zero Trust for AI — maps to "Gateway" -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">shield</span></div><div><div class="cc-title">Zero Trust Architecture for AI Systems</div><div class="cc-sub">Never trust, always verify &mdash; applied to LLMs and agents</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Zero Trust for AI</div><div class="cc-text">Traditional perimeter security assumes everything inside the network is trusted. <strong>Zero Trust rejects implicit trust in any user, asset, or request.</strong> For AI systems, this is critical because:<br><br><strong>Unpredictable outputs:</strong> LLMs generate dynamic requests that bypass traditional API validation<br><strong>Machine speed:</strong> Agents operate without human oversight, making real-time verification essential<br><strong>Multi-tenant risk:</strong> Shared model infrastructure means one compromised tenant can affect others<br><strong>Tool chaining:</strong> Agents call external tools that expand the attack surface with every hop</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Zero Trust Principles for LLMs</div><div class="cc-text"><strong>1. Continuous verification:</strong> Authenticate every request, not just the connection. Per-request token validation, not session-based auth.<br><br><strong>2. Least privilege:</strong> Grant minimum required permissions per tool call. Scope tokens to specific actions (Ch 8, Ch 9).<br><br><strong>3. Micro-segmentation:</strong> Isolate model, application, integration, and infrastructure layers. A compromised guardrail shouldn&rsquo;t expose the model weights.<br><br><strong>4. Assume breach:</strong> Design for the scenario where any single component is compromised. Layered defenses ensure no single failure is catastrophic.</div></div>
+          <div class="cc-note n-violet"><strong>CSA guidance:</strong> The Cloud Security Alliance published &ldquo;Using Zero Trust to Secure Enterprise Information in LLM Environments&rdquo; &mdash; the first industry framework specifically applying Zero Trust principles to LLM deployments.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: LLM Gateway — maps to "Gateway" -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">dns</span></div><div><div class="cc-title">The LLM Gateway Pattern</div><div class="cc-sub">A security proxy between your application and the model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What It Is</div><div class="cc-text">An <strong>LLM gateway</strong> sits between applications and LLM providers, enforcing security controls at a single chokepoint. It mirrors provider endpoints (e.g., OpenAI&rsquo;s <code>/v1/chat/completions</code>), so applications redirect traffic by changing only the base URL. All requests and responses pass through the gateway&rsquo;s security pipeline.</div></div>
+          <div class="cc-block"><div class="cc-label">8-Stage Security Pipeline</div><div class="cc-text"><strong>1. Authentication:</strong> Per-client API keys with 256-bit entropy<br><strong>2. Rate limiting:</strong> Token-based (not request-based) with sliding windows<br><strong>3. Model allowlist:</strong> Restrict which models clients can access<br><strong>4. Prompt injection detection:</strong> 20+ regex patterns with cumulative risk scoring<br><strong>5. PII scanning:</strong> SSN, credit cards, emails, phones &mdash; redact or block<br><strong>6. Response scanning:</strong> Same injection/PII checks on LLM output<br><strong>7. Provider routing:</strong> Load balance across OpenAI, Bedrock, etc.<br><strong>8. Audit logging:</strong> Structured JSON with latency, correlation IDs</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LLM Gateway: conceptual architecture</span>
+
+<span class="hl-cmt"># Application code — only change base URL</span>
+client = OpenAI(
+    base_url=<span class="hl-str">"https://llm-gateway.internal"</span>,
+    api_key=<span class="hl-str">"client-specific-key"</span>
+)
+
+<span class="hl-cmt"># Gateway pipeline (transparent to app):</span>
+<span class="hl-cmt"># ┌─────────────────────────────┐</span>
+<span class="hl-cmt"># │ 1. Authenticate client key  │</span>
+<span class="hl-cmt"># │ 2. Check token rate limit   │</span>
+<span class="hl-cmt"># │ 3. Verify model allowlist   │</span>
+<span class="hl-cmt"># │ 4. Scan for prompt injection│</span>
+<span class="hl-cmt"># │ 5. Scan/redact PII          │</span>
+<span class="hl-cmt"># │ 6. Forward to provider      │</span>
+<span class="hl-cmt"># │ 7. Scan response            │</span>
+<span class="hl-cmt"># │ 8. Log everything           │</span>
+<span class="hl-cmt"># └─────────────────────────────┘</span></div>
+          <div class="cc-note n-blue"><strong>Streaming challenge:</strong> Streaming responses complicate security &mdash; full response scanning for PII conflicts with real-time token delivery. Advanced gateways buffer selectively or use streaming-compatible scanners.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Auth & rate limiting — maps to "Auth" + "Rate Limit" -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">lock</span></div><div><div class="cc-title">Authentication &amp; Token-Based Rate Limiting</div><div class="cc-sub">OAuth2 scopes, token quotas, and abuse prevention</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Authentication Vulnerabilities</div><div class="cc-text">LLM API auth faces specific risks:<br><br><strong>Bearer token exposure:</strong> Keys leak via git history, browser network requests, mobile binaries, and client-side JavaScript<br><strong>Horizontal escalation:</strong> Accessing other users&rsquo; conversations<br><strong>Vertical escalation:</strong> Regular users accessing admin functions<br><strong>Parameter scope bypass:</strong> Clients overriding system prompts via API parameters<br><br>Replace static API keys with <strong>short-lived OAuth2 tokens</strong>, role-based scopes, and attribute-based access control.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Token-Based Rate Limiting</div><div class="cc-text">Traditional request-based rate limiting is insufficient for LLMs &mdash; identical HTTP requests can vary dramatically in resource cost (a 10-token prompt vs. a 10,000-token prompt). Modern approaches limit <strong>tokens consumed</strong>, not requests sent.<br><br><strong>Apache APISIX</strong> <code>ai-rate-limiting</code> plugin supports configurable token limits across sliding windows by token type (total, prompt, or completion tokens).<br><br>Enterprises need per-client limits, spike arrest, model failover, and fine-grained attribution &mdash; none of which provider defaults offer.</div></div>
+          <div class="cc-note n-teal"><strong>OWASP LLM10:2025 — Unbounded Consumption:</strong> Without token-based rate limiting, a single malicious or buggy client can exhaust your entire inference budget. Rate limit by tokens, not requests. Set per-client quotas. Alert on anomalous consumption patterns.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: LLM Firewalls — maps to "Model Layer" -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">local_fire_department</span></div><div><div class="cc-title">LLM Firewalls: WAF for the AI Era</div><div class="cc-sub">LlamaFirewall, Akamai, Cloudflare &mdash; real-time model protection</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What LLM Firewalls Do</div><div class="cc-text">An <strong>LLM firewall</strong> is a specialized security layer that protects LLM applications from AI-specific threats. Unlike traditional WAFs, these address prompt injection, unsafe code generation, agent misalignment, and goal hijacking. They operate as <strong>real-time, production-ready layers</strong> supporting high-throughput environments.</div></div>
+          <div class="cc-block"><div class="cc-label">LlamaFirewall (Meta, 2025)</div><div class="cc-text">Open-source guardrail framework with multiple specialized scanners:<br><br><strong>PromptGuard 2:</strong> Lightweight classifier detecting direct prompt injection with high precision and low latency<br><strong>AlignmentCheck:</strong> Chain-of-thought auditing that inspects agent reasoning for goal hijacking and indirect injection<br><strong>CodeShield:</strong> Static analysis preventing insecure code generation across 8 programming languages<br><strong>Custom scanners:</strong> Regex-based and LLM-prompt scanners for flexible threat detection</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Commercial LLM Firewalls</div><div class="cc-text"><strong>Akamai Firewall for AI:</strong> Enterprise LLM security for hybrid environments. Protects against prompt injection, data exfiltration, and model abuse at the edge.<br><br><strong>Cloudflare AI Security for Apps:</strong> Integrated into their WAF. Prompt injection detection, unsafe/custom topic detection, PII detection and prevention. Available on all Cloudflare plans.</div></div>
+          <div class="cc-note n-red"><strong>Key differentiator from guardrails (Ch 6):</strong> LLM firewalls focus on <em>system-level</em> defenses for agentic operations &mdash; code generation, tool orchestration, autonomous decision-making. Guardrails focus on content safety. Use both: guardrails for content, firewalls for system security.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Confidential computing — maps to "Tool Layer" -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">enhanced_encryption</span></div><div><div class="cc-title">Confidential Computing for AI Inference</div><div class="cc-sub">TEE-GPU architectures &mdash; encrypting data during processing</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Traditional encryption protects data <strong>at rest</strong> (stored) and <strong>in transit</strong> (network). But during inference, data must be decrypted for the GPU to process it &mdash; creating a window where sensitive data is exposed in memory. <strong>Confidential computing</strong> closes this gap by encrypting data <strong>during processing</strong> using hardware-level Trusted Execution Environments (TEEs).</div></div>
+          <div class="cc-block"><div class="cc-label">Current State (2025)</div><div class="cc-text"><strong>NVIDIA HGX B200 (Blackwell):</strong> Production-grade confidential computing with near-native performance. The historical 30&ndash;50% performance penalty has been eliminated.<br><br><strong>NVIDIA H100:</strong> GPU TEE with 4&ndash;8% throughput penalty that diminishes with larger batch sizes.<br><br><strong>CPU TEEs (Intel TDX/SGX):</strong> Under 10% throughput overhead and 20% latency overhead for full LLM inference pipelines.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Hybrid Architecture: SecureInfer</div><div class="cc-text"><strong>SecureInfer</strong> partitions LLM workloads strategically:<br><br>&bull; <strong>Security-sensitive components</strong> (attention projections, LoRA adapters) execute inside SGX enclaves<br>&bull; <strong>Compute-intensive operations</strong> (matrix multiplication) run on GPUs after encryption<br><br>This balances security with performance for models like LLaMA-2. Source: arxiv.org/abs/2510.19979</div></div>
+          <div class="cc-note n-amber"><strong>Who needs this:</strong> Finance, healthcare, and government sectors under GDPR, HIPAA, and financial regulations. If your compliance requires data protection during processing &mdash; not just storage and transit &mdash; confidential computing is the answer. Gartner projects AI infrastructure spending reaching $400B by 2027, with security as the top adoption barrier.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: AI-SPM — maps to "Audit" -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">visibility</span></div><div><div class="cc-title">AI Security Posture Management (AI-SPM)</div><div class="cc-sub">Wiz, Orca, Palo Alto, Microsoft Defender &mdash; visibility into AI deployments</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What AI-SPM Does</div><div class="cc-text"><strong>AI-SPM</strong> is a cloud security category that addresses the rapid, often uncontrolled expansion of AI deployments. Three core capabilities:<br><br><strong>1. Discovery &amp; visibility:</strong> Find all AI applications, models, and infrastructure &mdash; including shadow AI that bypasses security review<br><strong>2. Risk identification:</strong> Misconfiguration detection, vulnerability scanning, attack path analysis across AI pipelines<br><strong>3. Data protection:</strong> Monitor sensitive data in training datasets, detect data leakage paths</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Leading Solutions (2025)</div><div class="cc-text"><strong>Wiz:</strong> AI-BOM discovery, pipeline misconfiguration detection, attack path analysis extended to AI services<br><br><strong>Orca Security:</strong> Agentless visibility covering 50+ AI models and packages, DSPM for AI training data<br><br><strong>Palo Alto (Cortex Cloud):</strong> AI ecosystem visibility, model risk analysis, data classification across training pipelines<br><br><strong>Microsoft Defender for Cloud:</strong> Multicloud AI workload discovery (Azure, AWS, GCP) with AI-BOM generation</div></div>
+          <div class="cc-note n-pink"><strong>Why AI-SPM matters:</strong> You can&rsquo;t secure what you can&rsquo;t see. OWASP&rsquo;s GenAI Security Solutions Reference Guide (Q2&ndash;Q3 2025) identifies AI-SPM as an emerging technology category alongside LLM Firewalls and Guardrails. It&rsquo;s the governance layer (Ch 12) made operational.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Defense in depth — maps to "Audit" -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Defense in Depth: The Complete Stack</div><div class="cc-sub">OWASP GenAI Security &mdash; layered architecture for production AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Layered Architecture</div><div class="cc-text"><strong>Layer 1 &mdash; Edge (Gateway):</strong> LLM gateway with auth, rate limiting, model allowlists. Single security chokepoint for all AI traffic.<br><br><strong>Layer 2 &mdash; Input (Firewall):</strong> LLM firewall (LlamaFirewall, Cloudflare) for prompt injection detection, PII scanning, input validation.<br><br><strong>Layer 3 &mdash; Model (Isolation):</strong> Confidential computing (TEE-GPU), micro-segmentation, context window hygiene, memory isolation.<br><br><strong>Layer 4 &mdash; Tools (Sandbox):</strong> WASM/container sandboxing (Ch 8), least privilege, human-in-the-loop for high-stakes actions.<br><br><strong>Layer 5 &mdash; Output (Guardrails):</strong> Response scanning, output filtering (Ch 6), canary token detection.<br><br><strong>Layer 6 &mdash; Observability (AI-SPM):</strong> Shadow AI discovery, anomaly detection, audit logging, compliance monitoring.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">OWASP LLMSecOps Lifecycle</div><div class="cc-text">OWASP&rsquo;s GenAI Security Solutions Reference Guide (2025) defines a structured <strong>LLMSecOps lifecycle</strong> across four phases:<br><br><strong>Planning:</strong> Threat modeling (MITRE ATLAS), risk assessment (NIST AI RMF)<br><strong>Data handling:</strong> PII scanning, data governance, AI-BOM<br><strong>Deployment:</strong> Gateway, firewall, sandboxing, confidential computing<br><strong>Monitoring:</strong> AI-SPM, red teaming (Ch 11), incident response</div></div>
+          <div class="cc-note n-green"><strong>The architecture principle:</strong> No single layer is sufficient. Prompt injection bypasses guardrails? The firewall catches it. Firewall fails? The sandbox limits damage. Sandbox escapes? AI-SPM detects the anomaly. Each layer compensates for the others&rsquo; failures. This is defense in depth for the AI era.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=12000;
+  const PIPE_MAP={1:0, 2:0, 3:1, 4:3, 5:4, 6:5, 7:5};
+  const NARRATION={
+    1:{text:'<strong>Zero Trust for AI:</strong> Never trust, always verify. Continuous per-request authentication, least privilege per tool call, micro-segmentation across model/app/infra layers, assume breach. CSA published the first Zero Trust framework for LLM environments.',color:'#7c3aed'},
+    2:{text:'<strong>LLM Gateway:</strong> Security proxy between apps and providers. 8-stage pipeline: authenticate → rate limit → model allowlist → injection detection → PII scan → forward → response scan → audit log. Apps change only the base URL. Streaming complicates response scanning.',color:'#2563eb'},
+    3:{text:'<strong>Auth & Rate Limiting:</strong> Replace static API keys with short-lived OAuth2 tokens. Token-based rate limiting (not request-based) — identical requests vary dramatically in cost. Apache APISIX ai-rate-limiting plugin. OWASP LLM10: Unbounded Consumption.',color:'#0d9488'},
+    4:{text:'<strong>LLM Firewalls:</strong> WAF for AI. LlamaFirewall (Meta, 2025): PromptGuard 2, AlignmentCheck (chain-of-thought auditing), CodeShield (8 languages). Commercial: Akamai Firewall for AI, Cloudflare AI Security for Apps. System-level defense for agentic operations.',color:'#dc2626'},
+    5:{text:'<strong>Confidential Computing:</strong> Encrypts data during processing, not just at rest/in transit. NVIDIA HGX B200: near-native performance. H100: 4–8% overhead. SecureInfer: hybrid TEE-GPU partitioning for LLaMA-2. Required for GDPR/HIPAA/financial compliance.',color:'#d97706'},
+    6:{text:'<strong>AI-SPM:</strong> Discover shadow AI, scan for misconfigurations, monitor data leakage. Wiz, Orca, Palo Alto Cortex, Microsoft Defender. OWASP identifies AI-SPM as an emerging technology category alongside LLM Firewalls and Guardrails.',color:'#db2777'},
+    7:{text:'<strong>Defense in Depth:</strong> 6 layers — Edge (gateway) → Input (firewall) → Model (confidential computing) → Tools (sandbox) → Output (guardrails) → Observability (AI-SPM). OWASP LLMSecOps lifecycle: Plan → Data → Deploy → Monitor. No single layer is sufficient.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin the journey...';stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

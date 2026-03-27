@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: The YAML Header — Reading Model Cards</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--pink-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--pink),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; The YAML Header</h2><span class="tb-sub">Metadata that machines read &mdash; the 10 fields that define a model&rsquo;s identity</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Structure</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">badge</span></div><span class="pipe-label">Identity</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">category</span></div><span class="pipe-label">Task</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">account_tree</span></div><span class="pipe-label">Lineage</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">assessment</span></div><span class="pipe-label">Eval</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Discovery</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">code</span></div>
+        <div><div class="cc-title">The YAML Block</div><div class="cc-sub">Those three dashes at the top of README.md are the most important lines in the file</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Looks Like</div>
+            <div class="cc-text">Every model card on Hugging Face is a <code>README.md</code> file. At the very top, between two lines of <code>---</code>, sits a block of YAML (Yet Another Markup Language). This is the <strong>structured metadata</strong> that Hugging Face parses automatically. Everything below the second <code>---</code> is free-form Markdown for humans. The YAML block is what powers search, filtering, the inference widget, and the sidebar badges you see on every model page.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">A Real Example</div>
+            <div class="cc-code"><span class="hl-cmt">---</span>
+<span class="hl-key">license</span>: <span class="hl-str">apache-2.0</span>
+<span class="hl-key">language</span>:
+  - <span class="hl-str">en</span>
+<span class="hl-key">pipeline_tag</span>: <span class="hl-str">text-generation</span>
+<span class="hl-key">library_name</span>: <span class="hl-str">transformers</span>
+<span class="hl-key">base_model</span>: <span class="hl-str">meta-llama/Llama-3.1-8B</span>
+<span class="hl-key">datasets</span>:
+  - <span class="hl-str">HuggingFaceTB/cosmopedia</span>
+<span class="hl-key">tags</span>:
+  - <span class="hl-str">text-generation</span>
+  - <span class="hl-str">llm</span>
+<span class="hl-cmt">---</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> If the YAML is the model&rsquo;s passport, each field is a visa stamp. Without it, the model exists on the Hub but is essentially invisible to anyone searching or filtering.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">badge</span></div>
+        <div><div class="cc-title"><code>license</code> and <code>language</code></div><div class="cc-sub">The two fields that filter out 90% of models immediately</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">license</div>
+            <div class="cc-text">This field determines <strong>whether you can legally use the model</strong>. Common values: <code>apache-2.0</code> (fully permissive, commercial OK), <code>mit</code> (permissive), <code>llama3.1</code> (Meta&rsquo;s community license with usage restrictions above 700M monthly users), <code>gemma</code> (Google&rsquo;s terms with prohibited use cases), <code>cc-by-nc-4.0</code> (non-commercial only). If you&rsquo;re building a product, this is the <strong>first field to check</strong>. A model with <code>cc-by-nc-4.0</code> cannot be used commercially, period.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">language</div>
+            <div class="cc-text">Uses <strong>ISO 639-1 codes</strong>: <code>en</code> for English, <code>zh</code> for Chinese, <code>fr</code> for French. A model listing <code>[en, de, fr]</code> was trained on those languages. A model listing only <code>[en]</code> may produce garbage output in other languages, even if it technically generates text. Multilingual models typically list many codes or use <code>multilingual</code> as a tag.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> These two fields answer the two most fundamental questions: &ldquo;Am I allowed to use this?&rdquo; (license) and &ldquo;Does it speak my language?&rdquo; (language). If either answer is no, stop reading and move on.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">category</span></div>
+        <div><div class="cc-title"><code>pipeline_tag</code> and <code>library_name</code></div><div class="cc-sub">What task does this model do, and how do I load it?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">pipeline_tag</div>
+            <div class="cc-text">This tells you the model&rsquo;s <strong>primary task</strong>. Common values for LLMs: <code>text-generation</code> (autoregressive generation), <code>text2text-generation</code> (encoder-decoder like T5), <code>fill-mask</code> (BERT-style masked language modeling). For other modalities: <code>text-to-image</code> (Stable Diffusion), <code>automatic-speech-recognition</code> (Whisper), <code>image-classification</code>, <code>feature-extraction</code> (embedding models). The pipeline tag also <strong>powers the interactive widget</strong> on the model page &mdash; it tells HF what kind of input box to show.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">library_name</div>
+            <div class="cc-text">How to load the model in code. <code>transformers</code> (Hugging Face&rsquo;s main library), <code>diffusers</code> (for diffusion models), <code>sentence-transformers</code> (for embeddings), <code>peft</code> (for adapters/LoRA), <code>gguf</code> (for llama.cpp format). This tells you <strong>which import to use</strong>: a <code>transformers</code> model loads with <code>AutoModelForCausalLM.from_pretrained()</code>, while a <code>gguf</code> model loads with llama.cpp or Ollama.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> If you see <code>pipeline_tag: text-generation</code> and <code>library_name: transformers</code>, you know immediately: &ldquo;This is a standard LLM I can load with HF Transformers.&rdquo; If you see <code>library_name: gguf</code>, you know: &ldquo;This is for local inference with llama.cpp.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">account_tree</span></div>
+        <div><div class="cc-title"><code>base_model</code> &mdash; Tracing the Family Tree</div><div class="cc-sub">Where this model came from and why lineage matters</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Tells You</div>
+            <div class="cc-text">The <code>base_model</code> field links to the <strong>parent model</strong> this one was derived from. A fine-tuned model will point to its foundation model; a quantized variant will point to the full-precision original. Example: <code>base_model: meta-llama/Llama-3.1-8B</code> tells you this is a derivative of Meta&rsquo;s Llama 3.1 8B. You can click through to the base model to see its original card, benchmarks, and training data.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Following the Chain</div>
+            <div class="cc-text">Models often form a chain: <strong>Base &rarr; Fine-tune &rarr; Quantized</strong>. For example: <code>meta-llama/Llama-3.1-8B</code> (base) &rarr; <code>NousResearch/Hermes-3-Llama-3.1-8B</code> (fine-tune) &rarr; <code>bartowski/Hermes-3-Llama-3.1-8B-GGUF</code> (quantized). Each link in the chain inherits the upstream model&rsquo;s <strong>strengths, weaknesses, and license terms</strong>. A fine-tune of a Llama model still carries the Llama Community License, regardless of what license the fine-tuner claims.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Always follow the <code>base_model</code> chain to the root. The original model&rsquo;s license and training data disclosures apply to every downstream derivative. A model can&rsquo;t be &ldquo;MIT licensed&rdquo; if its base model has a more restrictive license.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">dataset</span></div>
+        <div><div class="cc-title"><code>datasets</code> and <code>tags</code></div><div class="cc-sub">What was it trained on, and how can you find it?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">datasets</div>
+            <div class="cc-text">Lists the <strong>Hugging Face dataset IDs</strong> used for training. Example: <code>datasets: [HuggingFaceTB/cosmopedia, allenai/dolma]</code>. This lets you click through to the actual training data and inspect it. For fine-tuned models, this usually lists the fine-tuning dataset, not the base model&rsquo;s pre-training data. Watch for models that <strong>don&rsquo;t list any datasets</strong> &mdash; either the data is proprietary or the model creator didn&rsquo;t document it.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">tags</div>
+            <div class="cc-text">Free-form labels that help with discovery. Common useful tags: <code>chat</code> (instruction-tuned for conversation), <code>code</code> (trained on code), <code>math</code> (math-focused), <code>gguf</code>, <code>4bit</code>, <code>lora</code>. Tags are <strong>not validated</strong> &mdash; anyone can add any tag. They&rsquo;re useful for broad filtering but should not be trusted as ground truth. Cross-check tags against the actual card content.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The <code>datasets</code> field is where transparency lives. A model that lists its training data lets you assess data quality, check for contamination (did they train on the benchmark test set?), and understand domain coverage. Opaque training data is a risk factor.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">assessment</span></div>
+        <div><div class="cc-title"><code>model-index</code> &mdash; Automated Evaluation Results</div><div class="cc-sub">Benchmark scores embedded directly in the YAML</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How It Works</div>
+            <div class="cc-text">The <code>model-index</code> field embeds <strong>benchmark results directly in the metadata</strong>. Hugging Face uses a decentralized evaluation system: results are stored as YAML files in an <code>.eval_results/</code> folder in the model repo. These results appear automatically on the model page with badges showing their provenance &mdash; &ldquo;verified&rdquo; (ran on HF infrastructure), &ldquo;community&rdquo; (submitted via PR), or &ldquo;leaderboard&rdquo; (from the Open LLM Leaderboard).</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Look For</div>
+            <div class="cc-text">Check the <strong>badge type</strong>: verified results are more trustworthy than self-reported ones. Check the <strong>benchmark names</strong>: do they cover the tasks you care about? And check whether the results are <strong>suspiciously high</strong> &mdash; if a 7B model claims 95% on MMLU, be skeptical. The evaluation results also link to the benchmark dataset&rsquo;s leaderboard, letting you compare this model against others on the same benchmark.</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Verified evaluation results (with the &ldquo;verified&rdquo; badge) are worth more than self-reported numbers. They were run on Hugging Face&rsquo;s infrastructure with reproducible configurations. Self-reported results may have been tested under favorable conditions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">search</span></div>
+        <div><div class="cc-title">How Metadata Powers Discovery</div><div class="cc-sub">Why good YAML makes models findable</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Filtering System</div>
+            <div class="cc-text">When you go to <strong>huggingface.co/models</strong> and use the filters on the left sidebar, every filter maps directly to a YAML field. Filter by &ldquo;Text Generation&rdquo;? That&rsquo;s <code>pipeline_tag</code>. Filter by &ldquo;English&rdquo;? That&rsquo;s <code>language</code>. Filter by &ldquo;Apache 2.0&rdquo;? That&rsquo;s <code>license</code>. Filter by &ldquo;transformers&rdquo;? That&rsquo;s <code>library_name</code>. A model with no YAML metadata is a model that doesn&rsquo;t appear in any filtered search.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Widget Connection</div>
+            <div class="cc-text">The interactive widget on the model page (the text box where you can type a prompt and see output) is <strong>powered by <code>pipeline_tag</code></strong>. If the tag says <code>text-generation</code>, you get a text input. If it says <code>text-to-image</code>, you get an image generation interface. If it says <code>automatic-speech-recognition</code>, you get a file upload for audio. No <code>pipeline_tag</code> = no widget = no way to test the model in-browser before downloading.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Well-filled YAML metadata is a quality signal in itself. A model with complete metadata (license, language, pipeline_tag, base_model, datasets) was created by someone who understands the ecosystem and cares about discoverability. Sparse metadata often correlates with sparse documentation everywhere else.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">checklist</span></div>
+        <div><div class="cc-title">Your YAML Reading Checklist</div><div class="cc-sub">The 30-second scan that tells you whether to keep reading</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Quick Scan</div>
+            <div class="cc-text">When you land on a model page, read the YAML in this order:<br><br><strong>1. <code>license</code></strong> &mdash; Can I use this? (If non-commercial and you need commercial, stop.)<br><strong>2. <code>pipeline_tag</code></strong> &mdash; Is this the right task type?<br><strong>3. <code>language</code></strong> &mdash; Does it support my language?<br><strong>4. <code>base_model</code></strong> &mdash; What family does it belong to?<br><strong>5. <code>library_name</code></strong> &mdash; Can I load it with my stack?<br><strong>6. <code>datasets</code></strong> &mdash; What was it trained on?<br><strong>7. <code>tags</code></strong> &mdash; Any useful context?</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">When to Go Deeper</div>
+            <div class="cc-text">If all 7 checks pass, you have a <strong>candidate worth investigating</strong>. Now you move beyond the YAML: read the prose description, check the benchmark tables (Chapter 4), look at the Files tab (Chapter 6), and scan the Community discussions. If any of the 7 checks fail, move on to the next model &mdash; there are over 2 million models on the Hub. Your time is better spent finding a model that fits than trying to make a misfit work.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The YAML header is the model&rsquo;s passport &mdash; 10 fields that determine whether it even shows up in search, what widget it gets, and whether you&rsquo;re legally allowed to use it. Master these fields and you can triage models in 30 seconds.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-what-is-a-model-card.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: What Is a Model Card</a>
+    <a class="ch-nav-btn next" href="03-architecture-parameters.html">Ch 3: Architecture &amp; Parameters <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[1,3],6:[4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>The YAML Block:</strong> Between two <code>---</code> lines at the top of README.md lies the structured metadata that powers Hugging Face search, filtering, and the model widget.',color:'#7c3aed'},
+    2:{text:'<strong>license &amp; language:</strong> The two fields that filter out 90% of models immediately. Can you use it? Does it speak your language?',color:'#0d9488'},
+    3:{text:'<strong>pipeline_tag &amp; library_name:</strong> What task does it do (text-generation, text-to-image) and how do you load it (transformers, gguf)?',color:'#2563eb'},
+    4:{text:'<strong>base_model lineage:</strong> Follow the chain &mdash; Base &rarr; Fine-tune &rarr; Quantized. The root model&rsquo;s license applies to all descendants.',color:'#ea580c'},
+    5:{text:'<strong>datasets &amp; tags:</strong> Training data transparency and free-form labels for discovery. Opaque training data is a risk factor.',color:'#16a34a'},
+    6:{text:'<strong>model-index:</strong> Benchmark results embedded in metadata with verified/community/leaderboard badges. Verified results are more trustworthy.',color:'#db2777'},
+    7:{text:'<strong>Discovery:</strong> Every sidebar filter maps to a YAML field. No metadata = invisible model. Complete metadata = quality signal.',color:'#d97706'},
+    8:{text:'<strong>Checklist:</strong> License &rarr; pipeline_tag &rarr; language &rarr; base_model &rarr; library_name &rarr; datasets &rarr; tags. Triage any model in 30 seconds.',color:'#dc2626'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

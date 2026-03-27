@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Large Language Models — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}.pipe-arrow.lit{color:var(--red)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Large Language Models</h2><span class="tb-sub">From GPT-1 to frontier models &mdash; pretraining, alignment, and emergent abilities</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="10-large-language-models-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">token</span></div><span class="pipe-label">Tokenize</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Pretrain</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">trending_up</span></div><span class="pipe-label">Scale</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Align</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">auto_awesome</span></div><span class="pipe-label">Emerge</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">token</span></div><div><div class="cc-title">Tokenization &amp; Vocabulary</div><div class="cc-sub">Turning text into numbers the model can process</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is Tokenization?</div><div class="cc-text">LLMs don&rsquo;t see words &mdash; they see <strong>tokens</strong>. Tokenization splits text into subword units using algorithms like Byte Pair Encoding (BPE). Common words become single tokens; rare words are split into pieces. Each token maps to an integer ID, which maps to a learned embedding vector.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># BPE tokenization example (GPT-4)</span>
+
+<span class="hl-key">"Hello world"</span>    &rarr; [<span class="hl-num">9906</span>, <span class="hl-num">1917</span>]     (2 tokens)
+<span class="hl-key">"unhappiness"</span>    &rarr; [<span class="hl-num">359</span>, <span class="hl-num">71</span>, <span class="hl-num">7907</span>]  (3: un+happ+iness)
+<span class="hl-key">"ChatGPT"</span>        &rarr; [<span class="hl-num">16047</span>, <span class="hl-num">38</span>, <span class="hl-num">2898</span>] (3: Chat+G+PT)
+<span class="hl-key">"&iexcl;Hola mundo!"</span> &rarr; [<span class="hl-num">...</span>]              (more tokens)
+
+<span class="hl-cmt"># ~1 token &asymp; 4 characters in English</span>
+<span class="hl-cmt"># Non-English text uses more tokens</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Vocabulary Sizes</div><div class="cc-code"><span class="hl-key">Model         Vocab Size  Method</span>
+GPT-2          50,257     BPE
+GPT-3          50,257     BPE
+GPT-4         100,277     BPE (cl100k)
+Llama 2        32,000     SentencePiece
+Llama 3       128,256     BPE (tiktoken)
+Gemini        256,000     SentencePiece
+
+<span class="hl-cmt"># Larger vocab = fewer tokens per text</span>
+<span class="hl-cmt"># = faster inference, but bigger embedding</span></div></div>
+          <div class="cc-note n-red"><strong>Why BPE?</strong> Character-level is too granular (sequences too long). Word-level can&rsquo;t handle unseen words. BPE finds the sweet spot: common words are single tokens, rare words decompose into known subwords. The vocabulary is built by iteratively merging the most frequent byte pairs in the training corpus.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">Pretraining: Next-Token Prediction</div><div class="cc-sub">The deceptively simple objective that powers all LLMs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Objective</div><div class="cc-text">Pretraining is self-supervised: given a sequence of tokens, predict the <strong>next token</strong>. No human labels needed. The model reads trillions of tokens from the internet &mdash; books, code, Wikipedia, forums &mdash; and learns to predict what comes next. This simple objective forces the model to learn grammar, facts, reasoning, and world knowledge.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Next-token prediction</span>
+
+<span class="hl-key">Input:</span>  "The capital of France is"
+<span class="hl-key">Target:</span> "Paris"
+
+<span class="hl-key">Loss:</span> -log P("Paris" | "The capital of France is")
+
+<span class="hl-cmt"># Minimize cross-entropy loss over all tokens</span>
+<span class="hl-cmt"># in trillions of training examples</span>
+
+<span class="hl-key">Training data scale:</span>
+  GPT-3:   300B tokens
+  Llama 2: 2T tokens
+  Llama 3: 15T tokens
+  GPT-4:   ~13T tokens (estimated)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What the Model Learns</div><div class="cc-text">To predict the next token well, the model must learn:<br><br><strong>Syntax:</strong> grammar rules, sentence structure<br><strong>Semantics:</strong> word meanings, relationships<br><strong>Facts:</strong> &ldquo;Paris is the capital of France&rdquo;<br><strong>Reasoning:</strong> &ldquo;If A &gt; B and B &gt; C, then A &gt; C&rdquo;<br><strong>Code:</strong> programming patterns, APIs<br><strong>Style:</strong> formal vs. casual, tone</div></div>
+          <div class="cc-note n-orange"><strong>The bitter lesson revisited:</strong> Next-token prediction seems too simple to produce intelligence. But at sufficient scale, this objective creates models that pass bar exams, write code, translate languages, and reason about novel problems. The simplicity of the objective is its strength &mdash; it scales without human bottlenecks.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">Scaling Laws</div><div class="cc-sub">Bigger models + more data + more compute = better performance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Discovery</div><div class="cc-text">Kaplan et al. (2020) at OpenAI discovered that LLM loss follows <strong>power laws</strong> in three variables: model parameters (N), dataset size (D), and compute (C). Double any one &rarr; predictable improvement. This means you can forecast model quality before training &mdash; enabling billion-dollar investment decisions.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Scaling laws (simplified)</span>
+
+<span class="hl-key">L(N)</span> &prop; N<sup>&minus;0.076</sup>   <span class="hl-cmt"># loss vs parameters</span>
+<span class="hl-key">L(D)</span> &prop; D<sup>&minus;0.095</sup>   <span class="hl-cmt"># loss vs data</span>
+<span class="hl-key">L(C)</span> &prop; C<sup>&minus;0.050</sup>   <span class="hl-cmt"># loss vs compute</span>
+
+<span class="hl-cmt"># Power laws = straight lines on log-log plots</span>
+<span class="hl-cmt"># No sign of plateauing yet</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Chinchilla &amp; Beyond</div><div class="cc-text">DeepMind&rsquo;s <strong>Chinchilla</strong> (2022) showed GPT-3 was undertrained: for the same compute, a 70B model on 1.3T tokens beats a 280B model on 300B tokens. The rule: scale parameters and tokens equally. But Llama 3 (8B on 15T tokens) showed that <strong>overtrained small models</strong> are cheaper to serve &mdash; inference cost matters too.</div></div>
+          <div class="cc-note n-pink"><strong>The compute frontier:</strong> GPT-3 cost ~$4.6M to train. GPT-4 is estimated at $100M+. Frontier models in 2025 cost $500M&ndash;$1B. Each generation uses ~10x more compute. The question: how long can this scaling continue before hitting data, energy, or economic limits?</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Alignment: From Base Model to Assistant</div><div class="cc-sub">Instruction tuning + RLHF + DPO</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Three-Stage Pipeline</div><div class="cc-text">A pretrained LLM is a next-token predictor &mdash; it completes text but doesn&rsquo;t follow instructions. <strong>Alignment</strong> transforms it into a helpful, harmless assistant through three stages:</div></div>
+          <div class="cc-code"><span class="hl-key">Stage 1: Supervised Fine-Tuning (SFT)</span>
+  Train on (instruction, response) pairs
+  ~10K&ndash;100K high-quality examples
+  Human-written or distilled from stronger models
+  Model learns to follow instructions
+
+<span class="hl-key">Stage 2: Reward Model Training</span>
+  Humans rank multiple model responses
+  Train a reward model to predict human preferences
+  RM(response) &rarr; scalar score
+
+<span class="hl-key">Stage 3: RLHF / DPO</span>
+  Optimize the LLM to maximize reward
+  RLHF: PPO reinforcement learning
+  DPO: direct preference optimization (simpler)
+  Model becomes helpful AND safe</div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">Base Model</div><div class="cb-text">&ldquo;Write a poem about cats&rdquo; &rarr; continues with random text, Wikipedia-style facts, or more instructions. No concept of &ldquo;following&rdquo; the request.</div></div>
+            <div class="compare-box good"><div class="cb-tag">Aligned Model</div><div class="cb-text">&ldquo;Write a poem about cats&rdquo; &rarr; produces a well-structured poem about cats. Refuses harmful requests. Admits uncertainty.</div></div>
+          </div>
+          <div class="cc-note n-violet"><strong>InstructGPT (2022)</strong> showed that a 1.3B aligned model was preferred over a 175B base model. Alignment is not just safety &mdash; it&rsquo;s what makes LLMs <em>useful</em>. The aligned model follows instructions, stays on topic, and produces the format users expect.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">auto_awesome</span></div><div><div class="cc-title">Emergent Abilities</div><div class="cc-sub">Capabilities that appear at scale without being explicitly trained</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Are Emergent Abilities?</div><div class="cc-text">Some capabilities appear <strong>only above a certain scale</strong> &mdash; they&rsquo;re absent in small models and suddenly present in large ones. These include multi-step reasoning, arithmetic, code generation, and following complex instructions. Whether these are truly &ldquo;emergent&rdquo; or just hard to measure at small scale is debated.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Abilities that improve with scale</span>
+
+<span class="hl-key">In-Context Learning (ICL):</span>
+  Show examples in the prompt &rarr; model learns
+  "cat:gato, dog:perro, house:" &rarr; "casa"
+  No weight updates needed!
+
+<span class="hl-key">Chain-of-Thought (CoT):</span>
+  "Let's think step by step..."
+  Breaks complex problems into sub-steps
+  Dramatically improves math/reasoning
+
+<span class="hl-key">Instruction Following:</span>
+  "Explain quantum physics to a 5-year-old"
+  Adapts tone, complexity, format</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The GPT Timeline</div><div class="cc-code"><span class="hl-key">GPT-1  (2018)</span>  117M params, 4.6GB data
+  Showed pretraining + fine-tuning works
+
+<span class="hl-key">GPT-2  (2019)</span>  1.5B params, 40GB data
+  Coherent paragraphs, "too dangerous"
+
+<span class="hl-key">GPT-3  (2020)</span>  175B params, 300B tokens
+  In-context learning, few-shot prompting
+
+<span class="hl-key">ChatGPT (2022)</span> GPT-3.5 + RLHF
+  100M users in 2 months
+
+<span class="hl-key">GPT-4  (2023)</span>  ~1.8T params (MoE, est.)
+  Passes bar exam, multimodal</div></div>
+          <div class="cc-note n-blue"><strong>The debate:</strong> Schaeffer et al. (2023) argued emergent abilities are a &ldquo;mirage&rdquo; caused by metric choice &mdash; switch to continuous metrics and the jump disappears. Others counter that some capabilities (like multi-digit multiplication) genuinely require a minimum model size. The truth likely lies between.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">How LLMs Generate Text</div><div class="cc-sub">Sampling, temperature, and decoding strategies</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Autoregressive Generation</div><div class="cc-text">LLMs generate text <strong>one token at a time</strong>. At each step, the model outputs a probability distribution over the entire vocabulary. A decoding strategy selects the next token. The chosen token is appended to the input, and the process repeats until a stop token or max length.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Generation process</span>
+
+<span class="hl-key">Input:</span>  "The best programming language is"
+<span class="hl-key">Step 1:</span> P(next) = {Python: 0.35, Java: 0.15,
+                    C: 0.08, Rust: 0.07, ...}
+<span class="hl-key">Pick:</span>  "Python" (sampled or greedy)
+<span class="hl-key">Step 2:</span> Input = "...language is Python"
+<span class="hl-key">Step 3:</span> P(next) = {because: 0.25, .: 0.15, ...}
+<span class="hl-cmt"># Repeat until &lt;EOS&gt; or max_tokens</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Decoding Strategies</div><div class="cc-code"><span class="hl-key">Greedy:</span> Always pick highest probability
+  Deterministic but repetitive
+
+<span class="hl-key">Temperature sampling:</span>
+  P&prime; = softmax(logits / T)
+  T=0: greedy  T=1: standard  T>1: creative
+  Lower T = more focused, higher T = more random
+
+<span class="hl-key">Top-k:</span> Sample from top k tokens only
+  k=50 is common
+
+<span class="hl-key">Top-p (nucleus):</span> Sample from smallest set
+  whose cumulative probability &ge; p
+  p=0.9 is common, adapts to context
+
+<span class="hl-key">Best practice:</span> top-p=0.9 + temperature=0.7</div></div>
+          <div class="cc-note n-teal"><strong>The same model, different outputs:</strong> Temperature=0 gives deterministic, factual responses. Temperature=1.0 gives creative, varied text. This is why the same LLM can be used for both code generation (low T) and creative writing (high T) &mdash; the decoding strategy controls the behavior.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">rocket_launch</span></div><div><div class="cc-title">The LLM Ecosystem</div><div class="cc-sub">Open vs. closed, fine-tuning, RAG, and agents</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">Closed-source (API access):</span>
+  GPT-4, Claude, Gemini
+  Best performance, no weight access
+  Pay per token, vendor lock-in
+
+<span class="hl-key">Open-weight:</span>
+  Llama 3, Mistral, Qwen, DeepSeek
+  Download and run locally
+  Fine-tune for your domain
+  Full control, privacy
+
+<span class="hl-key">Fine-tuning approaches:</span>
+  Full fine-tune: update all weights (expensive)
+  LoRA: update low-rank adapters (~1% params)
+  QLoRA: LoRA + 4-bit quantization (fits on 1 GPU)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Extending LLMs</div><div class="cc-code"><span class="hl-key">RAG (Retrieval-Augmented Generation):</span>
+  Query &rarr; search knowledge base &rarr; inject
+  relevant docs into prompt &rarr; generate
+  Reduces hallucination, adds fresh knowledge
+
+<span class="hl-key">Tool Use / Function Calling:</span>
+  LLM decides when to call external tools
+  Calculator, search, database, APIs
+  Grounds the model in real data
+
+<span class="hl-key">Agents:</span>
+  LLM + tools + planning + memory
+  Multi-step task execution
+  ReAct, AutoGPT, coding agents</div></div>
+          <div class="cc-note n-orange"><strong>The trend:</strong> LLMs are becoming platforms, not just models. RAG adds knowledge, tools add capabilities, agents add autonomy. The model is the reasoning engine; everything else is infrastructure around it.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Limitations &amp; Key Takeaways</div><div class="cc-sub">What LLMs can&rsquo;t do &mdash; and what they&rsquo;ve changed forever</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Known Limitations</div><div class="cc-text"><strong>Hallucination:</strong> Confidently generates false information. No reliable internal &ldquo;I don&rsquo;t know&rdquo; signal.<br><br><strong>Reasoning:</strong> Struggles with novel multi-step logic, especially math and planning.<br><br><strong>Knowledge cutoff:</strong> Training data has a date boundary. No real-time knowledge without RAG/tools.<br><br><strong>Context window:</strong> Limited input size (though growing: 128K&ndash;1M+ tokens).<br><br><strong>Cost:</strong> Frontier models cost millions to train and significant compute to serve.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Takeaways</div><div class="cc-text"><strong>1.</strong> LLMs are decoder-only transformers trained on next-token prediction<br><br><strong>2.</strong> Tokenization (BPE) converts text to subword tokens<br><br><strong>3.</strong> Scaling laws predict performance from compute budget<br><br><strong>4.</strong> Alignment (SFT + RLHF/DPO) transforms base models into assistants<br><br><strong>5.</strong> Emergent abilities appear at scale: ICL, CoT, instruction following<br><br><strong>6.</strong> Temperature and sampling control generation diversity<br><br><strong>7.</strong> RAG, tools, and agents extend LLM capabilities beyond the weights</div></div>
+          <div class="cc-note n-green"><strong>Coming up:</strong> Ch 11 explores Generative AI beyond text &mdash; image generation (diffusion models, DALL-E), video, audio, and the creative AI revolution.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Tokenization</strong> converts text into subword tokens via BPE. "unhappiness" becomes [un, happ, iness]. GPT-4 has a 100K vocabulary; Llama 3 has 128K. Larger vocabularies mean fewer tokens per text (faster inference) but bigger embedding tables. ~1 token \u2248 4 English characters.',color:'#dc2626'},
+    2:{text:'<strong>Pretraining:</strong> Predict the next token on trillions of tokens from the internet. No human labels needed. This deceptively simple objective forces the model to learn grammar, facts, reasoning, code, and world knowledge. GPT-3 trained on 300B tokens; Llama 3 on 15T tokens.',color:'#ea580c'},
+    3:{text:'<strong>Scaling laws:</strong> Loss follows power laws in parameters, data, and compute. Kaplan (2020) discovered this; Chinchilla (2022) showed models were undertrained. The rule: scale parameters and tokens equally. But inference cost matters too \u2014 Llama 3 overtrains small models for cheaper serving.',color:'#db2777'},
+    4:{text:'<strong>Alignment</strong> transforms a base model into an assistant. Stage 1: SFT on instruction-response pairs. Stage 2: train a reward model on human preferences. Stage 3: optimize with RLHF (PPO) or DPO. InstructGPT showed a 1.3B aligned model beats a 175B base model.',color:'#7c3aed'},
+    5:{text:'<strong>Emergent abilities:</strong> In-context learning (learn from examples in the prompt), chain-of-thought (step-by-step reasoning), and instruction following appear at scale. GPT-1 (117M) \u2192 GPT-2 (1.5B) \u2192 GPT-3 (175B) \u2192 GPT-4 (~1.8T) \u2014 each jump unlocked new capabilities.',color:'#2563eb'},
+    6:{text:'<strong>Text generation:</strong> One token at a time, autoregressively. Temperature controls randomness (0=greedy, 1=standard, >1=creative). Top-p nucleus sampling adapts to context. The same model produces factual answers (low T) or creative stories (high T) based on decoding strategy.',color:'#0d9488'},
+    7:{text:'<strong>The LLM ecosystem:</strong> Open-weight models (Llama, Mistral) vs. closed APIs (GPT-4, Claude). LoRA/QLoRA enable fine-tuning on a single GPU. RAG adds external knowledge. Tool use grounds models in real data. Agents combine LLMs with planning and multi-step execution.',color:'#d97706'},
+    8:{text:'<strong>LLMs have limitations:</strong> hallucination, reasoning gaps, knowledge cutoffs, context limits, and high cost. But they\u2019ve changed computing forever \u2014 natural language is now a programming interface. The key insight: next-token prediction at scale produces general-purpose reasoning engines.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

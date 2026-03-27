@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Tree-of-Thought & Search — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Tree-of-Thought &amp; Search</h2><span class="tb-sub">Yao et al. (2023), BFS/DFS over reasoning paths, Monte Carlo Tree Search for LLMs</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Problem</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">account_tree</span></div><span class="pipe-label">Branch</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Evaluate</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Search</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">undo</span></div><span class="pipe-label">Backtrack</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Solve</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">From Chain to Tree</div><div class="cc-sub">Why a single reasoning path isn&rsquo;t enough</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Limitation of Chains</div><div class="cc-text">Chain-of-thought generates a <strong>single linear path</strong> from question to answer. This works for problems with straightforward solutions, but many problems require <strong>exploration</strong>: trying different approaches, evaluating partial solutions, and backtracking when a path leads nowhere. Consider the &ldquo;Game of 24&rdquo;: given four numbers, use arithmetic operations to make 24. For example, with {4, 5, 6, 10}: one approach might try 4 &times; 6 = 24, but then you have unused numbers. Another might try 10 - 4 = 6, then 6 &times; 5 = 30, which doesn&rsquo;t work. You need to explore multiple paths. Standard CoT commits to one path and can&rsquo;t backtrack. <strong>Tree-of-Thought</strong> (Yao et al., NeurIPS 2023) solves this by treating reasoning as a <strong>search problem</strong>: generate multiple candidate &ldquo;thoughts&rdquo; at each step, evaluate them, and use search algorithms (BFS, DFS) to find the best path.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Chain vs Tree</div><div class="cc-code"><span class="hl-cmt">// Chain-of-Thought (linear)</span>
+
+<span class="hl-key">Input → Step 1 → Step 2 → Answer</span>
+  One path, no backtracking
+  If Step 1 is wrong, everything fails
+  <span class="hl-cmt">// Like walking a single road</span>
+
+<span class="hl-cmt">// Tree-of-Thought (branching)</span>
+
+<span class="hl-key">Input</span>
+  ├─ Thought A
+  │   ├─ Thought A1 → ✗ (dead end)
+  │   └─ Thought A2 → ✓ Answer!
+  ├─ Thought B
+  │   ├─ Thought B1 → ✗
+  │   └─ Thought B2 → ✗
+  └─ Thought C
+      └─ Thought C1 → ✓ Answer!
+
+  Multiple paths, can backtrack
+  Evaluate before committing
+  <span class="hl-cmt">// Like exploring a maze</span>
+
+<span class="hl-key">Game of 24 Results</span>:
+  CoT (GPT-4): <span class="hl-num">4%</span> success
+  ToT (GPT-4): <span class="hl-num">74%</span> success
+  <span class="hl-cmt">// 18.5x improvement!</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The jump from 4% to 74% on Game of 24 demonstrates that some problems are fundamentally unsolvable with linear reasoning. They require <strong>search</strong> &mdash; the ability to explore, evaluate, and backtrack. ToT brings classical AI search to LLM reasoning.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">The ToT Framework</div><div class="cc-sub">Four components: decompose, generate, evaluate, search</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Framework Components</div><div class="cc-text">Tree-of-Thought has four key components: <strong>1. Thought decomposition</strong> &mdash; define what constitutes a &ldquo;thought&rdquo; (a coherent unit of reasoning). For Game of 24, a thought is one arithmetic operation. For creative writing, it might be a paragraph plan. The granularity matters: too fine-grained creates too many branches; too coarse misses opportunities for correction. <strong>2. Thought generation</strong> &mdash; at each node, generate k candidate next thoughts. Use the LLM to propose multiple continuations (e.g., k = 5 candidates). <strong>3. State evaluation</strong> &mdash; use the LLM to evaluate each candidate thought: &ldquo;Is this partial solution promising? Rate it as sure/maybe/impossible.&rdquo; This is the heuristic that guides the search. <strong>4. Search algorithm</strong> &mdash; use BFS or DFS to traverse the tree, guided by the evaluations. BFS explores breadth-first (all options at each level); DFS goes deep first and backtracks.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ToT Components</div><div class="cc-code"><span class="hl-cmt">// Tree-of-Thought framework</span>
+
+<span class="hl-key">1. Thought Decomposition</span>:
+   Define granularity of each "thought"
+   Game of 24: one arithmetic operation
+   Writing: one paragraph plan
+   Crossword: one word placement
+   <span class="hl-cmt">// Task-specific design choice</span>
+
+<span class="hl-key">2. Thought Generation</span>:
+   At each node, generate k candidates
+   k = <span class="hl-num">5</span> (typical)
+   Use LLM: "Given [state], what are
+   possible next steps?"
+   <span class="hl-cmt">// LLM proposes, doesn't decide</span>
+
+<span class="hl-key">3. State Evaluation</span>:
+   LLM evaluates each candidate:
+   "Is this partial solution promising?"
+   → "sure" / "maybe" / "impossible"
+   <span class="hl-cmt">// LLM as heuristic function</span>
+
+<span class="hl-key">4. Search Algorithm</span>:
+   BFS: explore all options per level
+   DFS: go deep, backtrack on failure
+   Prune "impossible" branches early
+   <span class="hl-cmt">// Classical AI search + LLM</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> ToT uses the LLM for <strong>two roles</strong>: (1) generating candidate thoughts (the &ldquo;imagination&rdquo;) and (2) evaluating them (the &ldquo;judgment&rdquo;). This separation of generation and evaluation is a powerful pattern that recurs throughout reasoning AI.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">BFS vs DFS for Reasoning</div><div class="cc-sub">Choosing the right search strategy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Search Strategies</div><div class="cc-text"><strong>Breadth-First Search (BFS)</strong> explores all candidate thoughts at each level before going deeper. At each step, keep the top-b most promising thoughts (beam search). Best for problems where you need to compare multiple approaches at each stage. Used by Yao et al. for Game of 24 (b = 5). <strong>Depth-First Search (DFS)</strong> explores one path deeply before backtracking. Goes as far as possible along one branch, then backtracks when it hits a dead end or an &ldquo;impossible&rdquo; evaluation. Best for problems with deep solution paths where early pruning is effective. Used by Yao et al. for Creative Writing. <strong>When to use which</strong>: BFS when the solution space is wide but shallow (many options at each step, few steps). DFS when the solution space is narrow but deep (few options, many steps). In practice, BFS with beam search (keep top-b at each level) is the most common approach.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">BFS vs DFS</div><div class="cc-code"><span class="hl-cmt">// BFS (Breadth-First Search)</span>
+
+<span class="hl-key">Level 0</span>: [Problem]
+<span class="hl-key">Level 1</span>: [A] [B] [C] [D] [E]
+  Evaluate all → keep top b=<span class="hl-num">3</span>
+<span class="hl-key">Level 1'</span>: [A] [C] [E]
+<span class="hl-key">Level 2</span>: [A1][A2][C1][C2][E1][E2]
+  Evaluate all → keep top b=<span class="hl-num">3</span>
+  ... continue until solution
+<span class="hl-cmt">// Wide exploration, beam search</span>
+<span class="hl-cmt">// Best for: Game of 24, puzzles</span>
+
+<span class="hl-cmt">// DFS (Depth-First Search)</span>
+
+<span class="hl-key">Start</span>: [Problem]
+  → Try [A]
+    → Try [A1]
+      → Try [A1a] → ✗ dead end
+    → Backtrack to [A1]
+      → Try [A1b] → ✓ solution!
+<span class="hl-cmt">// Deep exploration, backtracking</span>
+<span class="hl-cmt">// Best for: writing, planning</span>
+
+<span class="hl-key">Comparison</span>:
+  BFS: more LLM calls per level
+  DFS: fewer calls, but may go deep
+  BFS: better for wide problems
+  DFS: better for deep problems</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The choice between BFS and DFS depends on the problem structure. For most reasoning tasks, BFS with beam search (keep top-b candidates at each level) is the default. DFS is better when you need deep exploration with early pruning.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">casino</span></div><div><div class="cc-title">Monte Carlo Tree Search (MCTS)</div><div class="cc-sub">The AlphaGo algorithm applied to LLM reasoning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">MCTS for LLMs</div><div class="cc-text"><strong>Monte Carlo Tree Search</strong> is the algorithm that powered AlphaGo&rsquo;s victory over Lee Sedol in 2016. It combines tree search with random sampling (rollouts) to efficiently explore large search spaces. Applied to LLM reasoning, MCTS works in four phases: <strong>Selection</strong> &mdash; traverse the tree from root to a leaf node, using UCB1 (Upper Confidence Bound) to balance exploration vs exploitation. <strong>Expansion</strong> &mdash; at the leaf, use the LLM to generate candidate next thoughts. <strong>Simulation</strong> (rollout) &mdash; from each candidate, use the LLM to quickly complete the reasoning to a final answer (possibly with greedy decoding). <strong>Backpropagation</strong> &mdash; update the value estimates of all nodes along the path based on whether the rollout reached a correct answer. MCTS is more compute-intensive than BFS/DFS but handles larger search spaces better. It&rsquo;s particularly effective when combined with a learned value function (like in AlphaGo).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">MCTS Algorithm</div><div class="cc-code"><span class="hl-cmt">// MCTS for LLM reasoning</span>
+
+<span class="hl-key">Repeat N iterations</span>:
+
+  <span class="hl-key">1. SELECT</span>:
+     Traverse tree using UCB1
+     UCB1 = value + c × √(ln(N)/n)
+     <span class="hl-cmt">// Balance exploit vs explore</span>
+
+  <span class="hl-key">2. EXPAND</span>:
+     At leaf node, LLM generates
+     k candidate next thoughts
+     <span class="hl-cmt">// LLM as thought generator</span>
+
+  <span class="hl-key">3. SIMULATE</span> (Rollout):
+     From each candidate, LLM completes
+     reasoning to final answer (greedy)
+     Check if answer is correct
+     <span class="hl-cmt">// Quick evaluation via completion</span>
+
+  <span class="hl-key">4. BACKPROPAGATE</span>:
+     Update value estimates along path
+     Correct answer → increase value
+     Wrong answer → decrease value
+     <span class="hl-cmt">// Learn which paths are promising</span>
+
+<span class="hl-key">vs BFS/DFS</span>:
+  More compute-intensive
+  Better for large search spaces
+  Naturally balances explore/exploit
+  <span class="hl-cmt">// The AlphaGo approach for reasoning</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> MCTS is the bridge between classical AI search and modern LLM reasoning. It&rsquo;s the same algorithm that beat the world Go champion, now applied to mathematical reasoning and code generation. OpenAI&rsquo;s o1 is believed to use MCTS-like search internally.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">extension</span></div><div><div class="cc-title">Game of 24: A Case Study</div><div class="cc-sub">How ToT achieves 74% where CoT gets 4%</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Task</div><div class="cc-text">The <strong>Game of 24</strong> is a mathematical puzzle: given four numbers, use +, &minus;, &times;, &divide; to make exactly 24. Example: {1, 2, 3, 4} &rarr; 1 &times; 2 &times; 3 &times; 4 = 24. This is a perfect test case for ToT because: (1) it requires <strong>search</strong> &mdash; there are many possible operation sequences, (2) it has <strong>verifiable answers</strong> &mdash; you can check if the result equals 24, (3) it requires <strong>backtracking</strong> &mdash; most paths don&rsquo;t lead to 24. Yao et al. used BFS with b = 5 (keep top 5 candidates at each level). Each &ldquo;thought&rdquo; is one arithmetic operation that combines two numbers. The LLM evaluates each partial state as &ldquo;sure&rdquo; (definitely solvable), &ldquo;maybe&rdquo; (possibly solvable), or &ldquo;impossible&rdquo; (can&rsquo;t reach 24). Results: GPT-4 with standard prompting solved 7.3%, CoT solved 4.0%, CoT + self-consistency (100 samples) solved 9.0%, and <strong>ToT solved 74%</strong>.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Game of 24 Example</div><div class="cc-code"><span class="hl-cmt">// Game of 24: {4, 5, 6, 10}</span>
+
+<span class="hl-key">Level 0</span>: {4, 5, 6, 10}
+
+<span class="hl-key">Level 1</span> (generate 5 thoughts):
+  A: 10 - 4 = 6 → {5, 6, 6}
+  B: 5 × 4 = 20 → {6, 10, 20}
+  C: 10 - 6 = 4 → {4, 4, 5}
+  D: 6 - 4 = 2 → {2, 5, 10}
+  E: 10 + 4 = 14 → {5, 6, 14}
+
+<span class="hl-key">Evaluate</span>: (LLM judges each)
+  A: "maybe" B: "maybe" C: "maybe"
+  D: "sure" E: "maybe"
+  Keep top b=<span class="hl-num">5</span>
+
+<span class="hl-key">Level 2</span> (from D: {2, 5, 10}):
+  D1: 2 × 10 = 20 → {5, 20}
+  D2: 5 × 2 = 10 → {10, 10}
+  D3: 10 / 2 = 5 → {5, 5}
+  ...
+
+<span class="hl-key">Level 3</span> (from D1: {5, 20}):
+  D1a: 20 + 5 = 25 → ✗
+  D1b: 20 - 5 = 15 → ✗
+  ...
+
+<span class="hl-key">From A: {5, 6, 6}</span>:
+  A1: 5 - 6 = -1 → ...
+  A2: 6 - 5 = 1 → {1, 6}
+  A2a: 6 / 1 ... no
+  <span class="hl-cmt">// Eventually finds: (6-4)×(10+5)... </span>
+  <span class="hl-cmt">// wait, that's 30. Keep searching!</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The Game of 24 result is the most dramatic demonstration of search vs. linear reasoning. Self-consistency with 100 samples (100x compute) only reached 9%. ToT with BFS reached 74%. More samples of the same approach (linear) can&rsquo;t match structured search.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">diversity_2</span></div><div><div class="cc-title">Graph-of-Thought &amp; Beyond</div><div class="cc-sub">Extensions that go beyond tree structures</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond Trees</div><div class="cc-text">Trees are just the beginning. Researchers have explored richer reasoning structures: <strong>Graph-of-Thought</strong> (Besta et al., 2023) &mdash; allows thoughts to merge and form cycles, not just branch. Two reasoning paths can converge when they reach the same intermediate conclusion. This models how humans reason: we combine insights from different angles. <strong>Algorithm-of-Thought</strong> (Sel et al., 2023) &mdash; teaches LLMs to mimic algorithmic search patterns (like DFS) within a single prompt, without actually running multiple LLM calls. <strong>Everything-of-Thought</strong> (Ding et al., 2023) &mdash; combines MCTS with an external &ldquo;thought library&rdquo; of reusable reasoning patterns. <strong>Buffer-of-Thought</strong> (Yang et al., 2024) &mdash; maintains a library of high-level &ldquo;thought templates&rdquo; that can be retrieved and adapted for new problems. The trend: increasingly sophisticated reasoning structures that combine LLM generation with classical AI search.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reasoning Structures</div><div class="cc-code"><span class="hl-cmt">// Evolution of reasoning structures</span>
+
+<span class="hl-key">Chain-of-Thought</span>:
+  A → B → C → D → Answer
+  Linear, no branching
+  <span class="hl-cmt">// Simplest</span>
+
+<span class="hl-key">Tree-of-Thought</span>:
+      ┌─ B1 ─ C1
+  A ──┤
+      └─ B2 ─ C2 → Answer
+  Branching, no merging
+  <span class="hl-cmt">// Search over branches</span>
+
+<span class="hl-key">Graph-of-Thought</span>:
+      ┌─ B1 ─┐
+  A ──┤      ├─ D → Answer
+      └─ B2 ─┘
+  Branching AND merging
+  <span class="hl-cmt">// Combine insights from paths</span>
+
+<span class="hl-key">Algorithm-of-Thought</span>:
+  Single prompt mimics DFS/BFS
+  No multiple LLM calls needed
+  <span class="hl-cmt">// Efficient but less powerful</span>
+
+<span class="hl-key">Practical Recommendation</span>:
+  Simple tasks: CoT
+  Search tasks: ToT with BFS
+  Complex tasks: MCTS
+  Research: Graph-of-Thought</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The field is converging on a common pattern: use LLMs for <strong>generation</strong> (proposing thoughts) and <strong>evaluation</strong> (judging quality), combined with classical AI <strong>search algorithms</strong> for exploration. The specific structure (chain, tree, graph) is a design choice based on the problem.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Cost &amp; Efficiency Trade-offs</div><div class="cc-sub">Search is powerful but expensive</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Cost of Search</div><div class="cc-text">Tree search dramatically improves reasoning but at significant computational cost: <strong>LLM calls multiply</strong> &mdash; ToT with BFS (b = 5, depth = 3) requires generating and evaluating 5 &times; 3 = 15 thoughts, plus 15 evaluation calls = ~30 LLM calls per problem. Compare to 1 call for standard prompting. <strong>Token generation</strong> &mdash; each thought generation and evaluation produces tokens. Total token count can be 50&ndash;100x standard prompting. <strong>Latency</strong> &mdash; sequential search (DFS) adds latency proportional to search depth. BFS can parallelize within a level but still requires multiple rounds. <strong>Diminishing returns</strong> &mdash; increasing beam width or search depth has diminishing returns. Going from b = 5 to b = 10 rarely doubles accuracy. <strong>Practical guidance</strong>: use search only when the problem genuinely requires exploration. For most reasoning tasks, CoT + self-consistency is sufficient. Reserve ToT/MCTS for search-heavy problems (puzzles, planning, code generation).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Cost Comparison</div><div class="cc-code"><span class="hl-cmt">// Compute cost comparison</span>
+
+<span class="hl-key">Standard Prompting</span>:
+  LLM calls: <span class="hl-num">1</span>
+  Tokens: ~100
+  Latency: ~1s
+  Cost: $<span class="hl-num">0.001</span>
+
+<span class="hl-key">CoT Prompting</span>:
+  LLM calls: <span class="hl-num">1</span>
+  Tokens: ~300 (reasoning + answer)
+  Latency: ~2s
+  Cost: $<span class="hl-num">0.003</span>
+
+<span class="hl-key">Self-Consistency (N=40)</span>:
+  LLM calls: <span class="hl-num">40</span>
+  Tokens: ~12,000
+  Latency: ~5s (parallel)
+  Cost: $<span class="hl-num">0.12</span>
+
+<span class="hl-key">ToT (BFS, b=5, depth=3)</span>:
+  LLM calls: ~<span class="hl-num">30</span>
+  Tokens: ~10,000
+  Latency: ~15s (sequential levels)
+  Cost: $<span class="hl-num">0.10</span>
+
+<span class="hl-key">MCTS (100 iterations)</span>:
+  LLM calls: ~<span class="hl-num">200</span>
+  Tokens: ~50,000
+  Latency: ~60s
+  Cost: $<span class="hl-num">0.50</span>
+
+<span class="hl-cmt">// Use the cheapest method that works</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The practical rule: start with the cheapest approach (CoT) and only escalate to search when accuracy demands it. For most applications, CoT + self-consistency (5&ndash;10 samples) provides the best cost-accuracy trade-off. Reserve ToT/MCTS for problems that genuinely require exploration.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">From External Search to Learned Search</div><div class="cc-sub">How ToT inspired o1 and built-in reasoning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Evolution</div><div class="cc-text">ToT demonstrated that search dramatically improves LLM reasoning. But running search externally (orchestrating multiple LLM calls) is expensive and complex. The natural next step: <strong>train the search into the model itself</strong>. This is exactly what OpenAI did with o1: <strong>External search (ToT)</strong> &mdash; an external program orchestrates multiple LLM calls, manages the tree, and runs the search algorithm. The LLM is a component. <strong>Learned search (o1/o3)</strong> &mdash; the model is trained via reinforcement learning to perform search-like reasoning internally. It generates &ldquo;thinking tokens&rdquo; that explore different approaches, evaluate them, and backtrack &mdash; all within a single generation. The model has <em>internalized</em> the search process. This is the key insight of Chapter 4 (Test-Time Compute Scaling): you can train a model to do what ToT does externally, but more efficiently and with learned heuristics rather than hand-designed search algorithms.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">External vs Learned Search</div><div class="cc-code"><span class="hl-cmt">// Evolution of search in reasoning</span>
+
+<span class="hl-key">2022: External Prompting</span>
+  CoT: linear reasoning via prompts
+  Self-consistency: sample + vote
+  <span class="hl-cmt">// No search, just sampling</span>
+
+<span class="hl-key">2023: External Search</span>
+  ToT: BFS/DFS over LLM-generated
+  thoughts, orchestrated externally
+  MCTS: Monte Carlo rollouts
+  <span class="hl-cmt">// Search algorithm outside the model</span>
+
+<span class="hl-key">2024: Learned Search</span>
+  o1: RL-trained to search internally
+  "Thinking tokens" = internalized ToT
+  Model learns when to explore,
+  evaluate, and backtrack
+  <span class="hl-cmt">// Search algorithm inside the model</span>
+
+<span class="hl-key">2025: Democratized</span>
+  DeepSeek-R1: open-source learned
+  search, matching o1 performance
+  <span class="hl-cmt">// Everyone gets internal search</span>
+
+<span class="hl-key">The Pattern</span>:
+  External technique → works well
+  → Train it into the model
+  → Model does it natively
+  <span class="hl-cmt">// Same pattern as CoT → o1</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The trajectory is clear: external search (ToT) proved the concept, then learned search (o1) made it practical. This is the same pattern as CoT: first we showed prompting works, then we trained it in. Next chapter: how test-time compute scaling makes this work.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-chain-of-thought-prompting.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: Chain-of-Thought Prompting</a>
+    <a class="ch-nav-btn next" href="04-test-time-compute-scaling.html">Ch 4: Test-Time Compute Scaling <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,1,2],3:[0,1,3],4:[0,1,3,4],5:[0,1,2,3],6:[0,1,2,3],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> CoT is linear — one path, no backtracking. ToT adds branching and search. Game of 24: CoT gets 4%, ToT gets 74%. Some problems require exploration.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> ToT has four components: decompose (define thoughts), generate (propose candidates), evaluate (judge quality), search (BFS/DFS). LLM plays two roles: generator and judge.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> BFS explores breadth-first (beam search, keep top-b). DFS goes deep and backtracks. BFS for wide problems (puzzles), DFS for deep problems (writing, planning).',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> MCTS: the AlphaGo algorithm for LLM reasoning. Select → Expand → Simulate → Backpropagate. More compute-intensive but handles larger search spaces.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Game of 24 case study: self-consistency (100 samples) = 9%. ToT (BFS, b=5) = 74%. More samples of linear reasoning can\'t match structured search.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Beyond trees: Graph-of-Thought (merging paths), Algorithm-of-Thought (single-prompt search), Buffer-of-Thought (reusable templates). The field keeps innovating.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Cost trade-offs: ToT = ~30 LLM calls vs 1 for standard. Start with CoT, escalate to search only when needed. Use the cheapest method that works.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The trajectory: external search (ToT) → learned search (o1). Train the search into the model itself. Next chapter: how test-time compute scaling makes this work.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

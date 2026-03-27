@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Verification & Reward Models — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Verification &amp; Reward Models</h2><span class="tb-sub">Process reward models (PRMs), outcome reward models (ORMs), step-level verification, and &ldquo;Let&rsquo;s Verify Step by Step&rdquo;</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Reason</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Steps</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">fact_check</span></div><span class="pipe-label">Verify</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Score</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Select</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Answer</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">The Verification Problem</div><div class="cc-sub">Why generating reasoning isn&rsquo;t enough</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Generation vs Verification</div><div class="cc-text">Chain-of-thought and test-time scaling let models generate reasoning. But how do you know the reasoning is <strong>correct</strong>? This is the verification problem. Consider: a model generates a 10-step math proof. Steps 1&ndash;7 are correct, step 8 has a subtle error, and steps 9&ndash;10 build on that error. The final answer is wrong, but the reasoning <em>looks</em> plausible. Self-consistency (majority vote) helps but is crude: it only checks the final answer, not the reasoning process. If most paths make the same error, majority vote fails. We need <strong>verification</strong>: a way to check each step of the reasoning, identify errors, and select the best reasoning path. This is where <strong>reward models</strong> come in. A reward model is a separate neural network trained to evaluate the quality of reasoning &mdash; either the final outcome (ORM) or each step (PRM). OpenAI&rsquo;s 2023 paper &ldquo;Let&rsquo;s Verify Step by Step&rdquo; showed that step-level verification dramatically outperforms outcome-only verification.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-code"><span class="hl-cmt">// Why verification matters</span>
+
+<span class="hl-key">Generated Reasoning</span>:
+  Step 1: x² + 5x + 6 = 0        ✓
+  Step 2: (x + 2)(x + 3) = 0      ✓
+  Step 3: x = -2 or x = -3        ✓
+  → Correct! Easy to verify.
+
+<span class="hl-key">Harder Problem</span>:
+  Step 1: ∫ sin²(x) dx            ✓
+  Step 2: = ∫ (1-cos(2x))/2 dx    ✓
+  Step 3: = x/2 - sin(x)/2        ✗
+  <span class="hl-cmt">// Should be x/2 - sin(2x)/4</span>
+  Step 4: + C                      ✓
+  → Wrong answer, plausible steps
+
+<span class="hl-key">Self-Consistency Failure</span>:
+  Path 1: ... → wrong (same error)
+  Path 2: ... → wrong (same error)
+  Path 3: ... → correct
+  Majority vote: wrong answer wins!
+  <span class="hl-cmt">// Systematic errors fool voting</span>
+
+<span class="hl-key">What We Need</span>:
+  Check EACH step independently
+  Catch errors at the step level
+  Select paths with correct reasoning
+  <span class="hl-cmt">// This is what reward models do</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> There&rsquo;s a fundamental asymmetry: <strong>generating</strong> a plausible reasoning chain is easier than <strong>verifying</strong> one is correct. This is why verification is a separate, critical capability. It&rsquo;s the difference between a student writing an answer and a teacher grading it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">emoji_events</span></div><div><div class="cc-title">Outcome Reward Models (ORMs)</div><div class="cc-sub">Judging the final answer only</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How ORMs Work</div><div class="cc-text">An <strong>Outcome Reward Model (ORM)</strong> is the simpler approach: it evaluates only the <strong>final answer</strong> of a reasoning chain. Training: collect many (problem, solution) pairs. For each, label whether the final answer is correct or incorrect. Train a neural network to predict correctness from the full solution text. Usage: generate N reasoning paths, score each with the ORM, select the highest-scored path. <strong>Advantages</strong>: easy to train (just need final answer labels), cheap to annotate (automated verification for math/code). <strong>Disadvantages</strong>: provides only a <strong>sparse reward signal</strong> &mdash; one score for the entire solution. Can&rsquo;t pinpoint where errors occur. A solution with 9 correct steps and 1 wrong step gets the same &ldquo;wrong&rdquo; label as a completely wrong solution. This makes RL training inefficient: the model doesn&rsquo;t know which steps to improve. ORMs also suffer from <strong>reward hacking</strong>: models learn to produce outputs that score well without actually reasoning correctly.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">ORM Pipeline</div><div class="cc-code"><span class="hl-cmt">// Outcome Reward Model</span>
+
+<span class="hl-key">Training</span>:
+  Input: full solution text
+  Output: P(correct) ∈ [0, 1]
+
+  Solution A (correct):
+    "Step 1... Step 2... Answer: 42"
+    Label: <span class="hl-num">1.0</span>
+
+  Solution B (wrong):
+    "Step 1... Step 2... Answer: 37"
+    Label: <span class="hl-num">0.0</span>
+
+<span class="hl-key">Usage (Best-of-N)</span>:
+  Generate N = <span class="hl-num">100</span> solutions
+  Score each with ORM
+  Select highest-scored solution
+
+  Solution 1: score <span class="hl-num">0.23</span>
+  Solution 2: score <span class="hl-num">0.91</span> ← select
+  Solution 3: score <span class="hl-num">0.45</span>
+  ...
+
+<span class="hl-key">Limitation</span>:
+  ORM says "wrong" but WHERE?
+  Step 1? Step 5? Step 9?
+  → No localization of errors
+  <span class="hl-cmt">// Sparse signal, no step feedback</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> ORMs are simple and effective for <strong>best-of-N selection</strong>: generate many solutions, pick the one the ORM scores highest. But they can&rsquo;t tell you <em>why</em> a solution is wrong or <em>where</em> the error is. For training better reasoners, we need step-level feedback.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">fact_check</span></div><div><div class="cc-title">Process Reward Models (PRMs)</div><div class="cc-sub">OpenAI&rsquo;s &ldquo;Let&rsquo;s Verify Step by Step&rdquo; (2023)</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Step-Level Verification</div><div class="cc-text">A <strong>Process Reward Model (PRM)</strong> evaluates <strong>each step</strong> of a reasoning chain independently. OpenAI&rsquo;s 2023 paper &ldquo;Let&rsquo;s Verify Step by Step&rdquo; (Lightman et al.) demonstrated the power of this approach. Training: human annotators label each step of a math solution as &ldquo;correct,&rdquo; &ldquo;incorrect,&rdquo; or &ldquo;neutral.&rdquo; OpenAI collected <strong>800,000 step-level labels</strong> across 75,000 solutions (the PRM800K dataset). The PRM is trained to predict the correctness of each step given all previous steps. Results on MATH benchmark: using a PRM to select among solutions solved <strong>78.2%</strong> of problems, significantly outperforming ORM-based selection. The PRM catches errors at the exact step where they occur, enabling: better solution selection, more targeted RL training (reward good steps, penalize bad ones), and interpretable feedback (you can see which step the model flagged).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">PRM in Action</div><div class="cc-code"><span class="hl-cmt">// Process Reward Model</span>
+
+<span class="hl-key">Input</span>: solution with step boundaries
+
+<span class="hl-key">PRM Scores Each Step</span>:
+  Step 1: "Let x = price per apple"
+  → Score: <span class="hl-num">0.98</span> ✓
+
+  Step 2: "Total cost = 5x + 3(2x)"
+  → Score: <span class="hl-num">0.95</span> ✓
+
+  Step 3: "5x + 6x = 11x"
+  → Score: <span class="hl-num">0.97</span> ✓
+
+  Step 4: "11x = 33, so x = 4"
+  → Score: <span class="hl-num">0.12</span> ✗ ← ERROR HERE
+  <span class="hl-cmt">// Should be x = 3 (33/11 = 3)</span>
+
+  Step 5: "Total = 11 × 4 = 44"
+  → Score: <span class="hl-num">0.08</span> ✗
+
+<span class="hl-key">PRM Output</span>:
+  Step scores: [.98, .95, .97, .12, .08]
+  First error: Step 4
+  Solution score: min = <span class="hl-num">0.08</span>
+
+<span class="hl-key">MATH Benchmark</span>:
+  ORM selection: <span class="hl-num">72.4%</span>
+  PRM selection: <span class="hl-num">78.2%</span> (+5.8%)
+  <span class="hl-cmt">// Step-level beats outcome-level</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> PRMs provide a <strong>dense reward signal</strong>: feedback at every step, not just the end. This is analogous to a teacher who marks each line of a proof vs. one who only marks the final answer. Dense feedback enables faster learning and better error localization.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">PRM vs ORM: Deep Comparison</div><div class="cc-sub">When to use which, and why PRMs win</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Head-to-Head</div><div class="cc-text"><strong>Reward signal density</strong>: ORM gives one score per solution (sparse). PRM gives one score per step (dense). Dense signals enable faster RL convergence and better credit assignment. <strong>Error localization</strong>: ORM says &ldquo;wrong.&rdquo; PRM says &ldquo;wrong at step 4.&rdquo; This enables targeted correction and interpretable feedback. <strong>Training cost</strong>: ORMs are cheap to train &mdash; just need (solution, correct/incorrect) pairs, which can be auto-generated for math and code. PRMs are expensive &mdash; need step-level annotations. OpenAI used human annotators for PRM800K. <strong>Annotation scalability</strong>: ORM labels can be automated (check final answer). PRM labels traditionally required humans, but recent work uses <strong>Monte Carlo estimation</strong>: for each step, complete the solution many times and check what fraction reach the correct answer. This automates PRM training. <strong>Alignment benefits</strong>: PRMs reward correct reasoning processes, not just correct answers. This mitigates &ldquo;reward hacking&rdquo; where models reach right answers via wrong reasoning. <strong>Compute efficiency</strong>: recent research (2024) shows PRMs achieve 1.5&ndash;5x better compute efficiency than ORMs when used for test-time search.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Comparison Table</div><div class="cc-code"><span class="hl-cmt">// PRM vs ORM comparison</span>
+
+<span class="hl-key">Feature          ORM        PRM</span>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Signal       Sparse     Dense
+             (1/soln)   (1/step)
+
+Error loc.   No         Yes
+             "wrong"    "step 4"
+
+Train cost   Low        High
+             auto       human/MC
+
+Accuracy     Good       Better
+  MATH:      <span class="hl-num">72.4%</span>      <span class="hl-num">78.2%</span>
+
+Compute      1x         1.5-5x
+efficiency              better
+
+Alignment    Weak       Strong
+             right ans  right
+             wrong way  process
+
+<span class="hl-key">When to Use</span>:
+  ORM: quick selection, auto-labels
+  PRM: RL training, high-stakes,
+       interpretability needed
+  Both: combine for best results
+  <span class="hl-cmt">// PRM for training, ORM for cheap eval</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> PRMs are strictly better for quality but more expensive to train. The practical approach: use <strong>Monte Carlo estimation</strong> to auto-generate PRM labels (complete each partial solution many times, measure success rate). This gives you PRM quality without human annotation cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">casino</span></div><div><div class="cc-title">Monte Carlo Estimation for PRMs</div><div class="cc-sub">Automating step-level labels without humans</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Automated Step Labels</div><div class="cc-text">The biggest bottleneck for PRMs is collecting step-level labels. Human annotation is expensive and slow (OpenAI&rsquo;s PRM800K required significant annotation effort). <strong>Monte Carlo estimation (MCE)</strong> automates this: for each step in a solution, complete the remaining solution many times (e.g., 64 completions) using the base model. The step&rsquo;s score = fraction of completions that reach the correct final answer. Intuition: if a step is correct, many completions from that point will succeed. If a step is wrong, few completions will succeed (they&rsquo;re building on a bad foundation). <strong>Advantages</strong>: fully automated, no human annotators needed. Scales to millions of labels. <strong>Limitations</strong>: labels are <strong>policy-dependent</strong> &mdash; they reflect the base model&rsquo;s ability, not ground truth. A step might be correct but the model can&rsquo;t solve the rest, giving a low score (false negative). Or a step might be wrong but the model &ldquo;recovers&rdquo; in later steps (false positive). Despite these limitations, MCE-trained PRMs approach human-annotated PRM performance in practice.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Monte Carlo Estimation</div><div class="cc-code"><span class="hl-cmt">// Monte Carlo step-level labels</span>
+
+<span class="hl-key">Problem</span>: "Solve 2x + 5 = 13"
+
+<span class="hl-key">Solution being evaluated</span>:
+  Step 1: "Subtract 5 from both sides"
+  Step 2: "2x = 8"
+  Step 3: "Divide by 2"
+  Step 4: "x = 4" ✓
+
+<span class="hl-key">Score Step 2</span> ("2x = 8"):
+  Complete from Step 2, N=<span class="hl-num">64</span> times:
+  Completion 1: "x = 4" ✓
+  Completion 2: "x = 4" ✓
+  ...
+  Completion 64: "x = 4" ✓
+  Score = <span class="hl-num">64/64</span> = <span class="hl-num">1.0</span>
+
+<span class="hl-key">Score a BAD Step 2</span> ("2x = 18"):
+  Complete from bad step, N=<span class="hl-num">64</span>:
+  Completion 1: "x = 9" ✗
+  Completion 2: "x = 9" ✗
+  ...
+  3 completions get lucky: "x = 4" ✓
+  Score = <span class="hl-num">3/64</span> = <span class="hl-num">0.047</span>
+  <span class="hl-cmt">// Low score → bad step detected</span>
+
+<span class="hl-key">Cost</span>:
+  N completions × S steps × P problems
+  <span class="hl-num">64</span> × <span class="hl-num">5</span> × <span class="hl-num">10,000</span> = 3.2M generations
+  <span class="hl-cmt">// Expensive but fully automated</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Monte Carlo estimation is the key that unlocked scalable PRM training. It trades compute for annotation: instead of paying humans to label steps, you pay for LLM completions. This makes PRMs practical at scale, which is why they&rsquo;re now central to reasoning model training.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">Verification-Guided Search</div><div class="cc-sub">Using reward models to guide reasoning at inference</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Search + Verification</div><div class="cc-text">Reward models aren&rsquo;t just for training &mdash; they&rsquo;re powerful at <strong>inference time</strong> too. The combination of search + verification is the core of modern reasoning systems: <strong>Best-of-N with PRM</strong> &mdash; generate N solutions, score each step with the PRM, select the solution with the highest minimum step score. More reliable than majority vote because it checks reasoning quality, not just answer agreement. <strong>Beam search with PRM</strong> &mdash; at each reasoning step, generate multiple candidates, score them with the PRM, keep the top-k. This is ToT (Chapter 3) but with a learned verifier instead of LLM-as-judge. <strong>Process Advantage Verifiers (PAVs)</strong> &mdash; a 2024 advance that scores each step relative to alternatives. Instead of &ldquo;is this step correct?&rdquo; it asks &ldquo;is this step <em>better</em> than alternatives?&rdquo; PAVs achieve 8%+ greater accuracy and 1.5&ndash;5x better compute efficiency than ORMs. <strong>MCTS + PRM</strong> &mdash; use the PRM as the value function in Monte Carlo Tree Search. The PRM evaluates partial solutions, guiding the search toward promising branches.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Verification-Guided Search</div><div class="cc-code"><span class="hl-cmt">// Using PRMs at inference time</span>
+
+<span class="hl-key">1. Best-of-N + PRM</span>:
+  Generate N=<span class="hl-num">100</span> solutions
+  PRM scores each step of each
+  Solution score = min(step scores)
+  Select highest-scored solution
+  <span class="hl-cmt">// Better than majority vote</span>
+
+<span class="hl-key">2. Beam Search + PRM</span>:
+  Step 1: generate 5 candidates
+  PRM scores: [.95, .88, .72, .91, .45]
+  Keep top 3: [.95, .91, .88]
+
+  Step 2: from each, generate 5 more
+  PRM scores all 15 candidates
+  Keep top 3 again
+  ... continue to solution
+  <span class="hl-cmt">// ToT with learned verifier</span>
+
+<span class="hl-key">3. MCTS + PRM</span>:
+  PRM = value function for MCTS
+  Guides exploration toward
+  high-quality reasoning paths
+  <span class="hl-cmt">// AlphaGo-style for reasoning</span>
+
+<span class="hl-key">Results (PAV, 2024)</span>:
+  vs ORM: +<span class="hl-num">8%</span> accuracy
+  Compute efficiency: <span class="hl-num">1.5-5x</span> better
+  <span class="hl-cmt">// Step-level verification wins</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The combination of <strong>generation + verification + search</strong> is the holy trinity of modern reasoning. The generator proposes, the verifier evaluates, and the search algorithm explores. This is exactly what o1 does internally &mdash; but you can also build it externally with open-source components.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">PRMs for RL Training</div><div class="cc-sub">Dense rewards make RL training more efficient</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Process Supervision in RL</div><div class="cc-text">PRMs play a dual role: inference-time verification AND training-time reward shaping. In RL training for reasoning (as in o1/R1), the reward signal determines what the model learns: <strong>Outcome supervision (ORM)</strong> &mdash; reward only the final answer. The model must figure out which steps were good or bad from a single signal. This is the <strong>credit assignment problem</strong>: with a 10-step solution, which steps deserve credit for the correct answer? RL with sparse rewards is notoriously slow. <strong>Process supervision (PRM)</strong> &mdash; reward each step individually. The model gets immediate feedback on every reasoning step. This solves credit assignment: good steps get positive reward, bad steps get negative reward. RL converges much faster. OpenAI&rsquo;s research showed process supervision is 5&ndash;6x more sample-efficient than outcome supervision. The model learns correct reasoning patterns faster because it knows exactly which steps to reinforce. This is believed to be a key component of o1&rsquo;s training: RL with process-level rewards, not just outcome rewards.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">RL with Process Rewards</div><div class="cc-code"><span class="hl-cmt">// Outcome vs Process supervision</span>
+
+<span class="hl-key">Outcome Supervision</span>:
+  Solution: [S1, S2, S3, S4, S5]
+  Final answer: correct
+  Reward: [?, ?, ?, ?, +1]
+  <span class="hl-cmt">// Which steps were good? Unknown!</span>
+
+  Solution: [S1, S2, S3, S4, S5]
+  Final answer: wrong
+  Reward: [?, ?, ?, ?, -1]
+  <span class="hl-cmt">// S1-S3 might be correct but</span>
+  <span class="hl-cmt">// all get penalized equally</span>
+
+<span class="hl-key">Process Supervision</span>:
+  Solution: [S1, S2, S3, S4, S5]
+  PRM scores: [+1, +1, +1, -1, -1]
+  <span class="hl-cmt">// Error at S4! Reinforce S1-S3,</span>
+  <span class="hl-cmt">// penalize S4-S5</span>
+
+<span class="hl-key">RL Efficiency</span>:
+  Outcome: ~<span class="hl-num">100K</span> episodes to converge
+  Process: ~<span class="hl-num">20K</span> episodes to converge
+  <span class="hl-cmt">// 5x more sample-efficient</span>
+
+<span class="hl-key">Alignment Benefit</span>:
+  Outcome: may reward wrong reasoning
+  that accidentally gets right answer
+  Process: rewards correct reasoning
+  regardless of final answer
+  <span class="hl-cmt">// Aligned with human values</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Process supervision solves the <strong>credit assignment problem</strong> in RL for reasoning. Instead of asking &ldquo;was the answer right?&rdquo; it asks &ldquo;was each step right?&rdquo; This is 5&ndash;6x more efficient and produces models that reason correctly, not just models that get lucky.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Open Challenges &amp; Future Directions</div><div class="cc-sub">What&rsquo;s still hard about verification</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Unsolved Problems</div><div class="cc-text">Verification is powerful but far from solved: <strong>Beyond math and code</strong> &mdash; PRMs work well for math (verifiable answers) and code (test cases). But how do you verify reasoning about ethics, strategy, or creative problems? There&rsquo;s no ground truth to check against. <strong>Verifier reliability</strong> &mdash; the verifier itself can be wrong. If the PRM has a blind spot, it will consistently miss certain errors. Quis custodiet ipsos custodes? (Who watches the watchmen?) <strong>Reward hacking</strong> &mdash; models can learn to produce outputs that score well on the PRM without actually reasoning correctly. The model &ldquo;games&rdquo; the verifier. This is an ongoing arms race. <strong>Generalization</strong> &mdash; PRMs trained on math problems may not generalize to science or coding. Domain-specific PRMs are needed, multiplying training costs. <strong>Step boundary detection</strong> &mdash; PRMs assume clear step boundaries. But natural reasoning doesn&rsquo;t always decompose into discrete steps. <strong>Scaling verification</strong> &mdash; as reasoning chains get longer (thousands of steps), verification becomes harder. Each step depends on all previous steps, creating compounding uncertainty.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Open Challenges</div><div class="cc-code"><span class="hl-cmt">// Unsolved verification challenges</span>
+
+<span class="hl-key">1. Non-Verifiable Domains</span>:
+  Math: check answer ✓
+  Code: run tests ✓
+  Ethics: ??? 
+  Strategy: ???
+  Creative: ???
+  <span class="hl-cmt">// No ground truth to verify against</span>
+
+<span class="hl-key">2. Verifier Errors</span>:
+  PRM says step is correct
+  But PRM is wrong!
+  → Cascading errors in selection
+  <span class="hl-cmt">// Who verifies the verifier?</span>
+
+<span class="hl-key">3. Reward Hacking</span>:
+  Model learns PRM's blind spots
+  Produces "PRM-pleasing" outputs
+  that aren't actually correct
+  <span class="hl-cmt">// Gaming the reward function</span>
+
+<span class="hl-key">4. Long-Chain Verification</span>:
+  10-step proof: manageable
+  100-step proof: hard
+  1000-step proof: ???
+  <span class="hl-cmt">// Compounding uncertainty</span>
+
+<span class="hl-key">Future Directions</span>:
+  Formal verification integration
+  Self-improving verifiers
+  Multi-verifier ensembles
+  Verifier-generator co-training
+  <span class="hl-cmt">// Verification is the bottleneck</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Verification is the <strong>bottleneck</strong> of AI reasoning. We can generate increasingly long reasoning chains, but verifying them gets harder as they get longer. The future of reasoning AI depends on solving verification &mdash; especially for domains beyond math and code.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-test-time-compute-scaling.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Test-Time Compute Scaling</a>
+    <a class="ch-nav-btn next" href="06-tool-augmented-reasoning.html">Ch 6: Tool-Augmented Reasoning <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,1,3,4,5],3:[0,1,2,3],4:[0,1,2,3],5:[0,1,2,3],6:[0,1,2,3,4,5],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Generating reasoning isn\'t enough — you need to VERIFY it. A plausible-looking chain can have subtle errors. Self-consistency only checks answers, not steps.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> ORMs score the final answer only (sparse signal). Simple to train but can\'t localize errors. Good for best-of-N selection, weak for RL training.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> PRMs score EACH step (dense signal). OpenAI\'s PRM800K: 800K step labels, 78.2% on MATH vs 72.4% for ORM. Step-level verification catches errors where they occur.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> PRM vs ORM: PRMs give dense rewards, localize errors, and are 1.5-5x more compute-efficient. ORMs are cheaper to train. Monte Carlo estimation bridges the gap.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Monte Carlo estimation automates PRM labels: complete from each step N times, measure success rate. Trades compute for annotation cost. Makes PRMs scalable.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Verification-guided search: best-of-N + PRM, beam search + PRM, MCTS + PRM. Generation + verification + search = the holy trinity of modern reasoning.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> PRMs for RL training: process supervision is 5-6x more sample-efficient than outcome supervision. Solves credit assignment — reward good steps, penalize bad ones.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Open challenges: non-verifiable domains, verifier errors, reward hacking, long-chain verification. Verification is the bottleneck of AI reasoning progress.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

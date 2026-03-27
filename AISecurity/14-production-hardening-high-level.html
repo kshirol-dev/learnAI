@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 14: Production Hardening & Security Operations — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--red)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--slate-light) 50%,var(--teal-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--amber),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-slate{background:var(--slate-light);border:1px solid var(--border)}.cc-note.n-slate strong{color:var(--slate)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 14 &mdash; Production Hardening &amp; Security Operations</h2><span class="tb-sub">Observability, drift detection, CI/CD security gates, incident response, AIID</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="14-production-hardening-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">input</span></div><span class="pipe-label">Input</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">shield</span></div><span class="pipe-label">Guardrails</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Model</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Tools</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Output Filter</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">receipt_long</span></div><span class="pipe-label">Audit Log</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: LLM Observability — maps to "Input" -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">monitoring</span></div><div><div class="cc-title">LLM Observability in Production</div><div class="cc-sub">Tracing, evaluation, and monitoring for non-deterministic systems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why LLM Monitoring Is Different</div><div class="cc-text">Traditional application monitoring tracks latency, error rates, and throughput. LLM observability adds dimensions that don&rsquo;t exist in conventional systems:<br><br><strong>Non-deterministic outputs:</strong> The same input can produce different outputs. You need quality scoring, not just uptime checks.<br><strong>Token cost tracking:</strong> Identical HTTP requests vary dramatically in cost. A 10-token prompt and a 10,000-token prompt look the same to traditional monitors.<br><strong>Safety monitoring:</strong> Every request must be scanned for prompt injection, PII leakage, hallucination, and jailbreaks &mdash; in real time.<br><strong>Multi-step tracing:</strong> Agent workflows span multiple LLM calls, tool invocations, and RAG retrievals. You need distributed tracing across the full chain.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Core Capabilities</div><div class="cc-text"><strong>Performance &amp; cost:</strong> Track latency, error rates, token usage, and cost anomalies per model, query, and client. Identify expensive prompts and inefficient API calls.<br><br><strong>Safety &amp; security:</strong> Deterministic and LLM-based detectors on every request. Audit trails for regulatory compliance.<br><br><strong>Distributed tracing:</strong> Capture complete request lifecycles across agent workflows, RAG pipelines, and tool integrations. Isolate bottlenecks and enable root-cause analysis.</div></div>
+          <div class="cc-note n-blue"><strong>Tools:</strong> Elastic LLM Monitoring, MLflow AI Gateway (unified tracing + evaluation + cost tracking), Weights &amp; Biases, and custom OpenTelemetry instrumentation. MLflow eliminates data silos by integrating gateway, tracing, and evaluation in one system.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Model drift — maps to "Guardrails" -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">trending_down</span></div><div><div class="cc-title">Model Drift &amp; Quality Degradation</div><div class="cc-sub">Data drift, concept drift, and training-serving skew</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Types of Drift</div><div class="cc-text"><strong>Data drift:</strong> Input feature distributions change over time &mdash; population shifts, seasonal variations, upstream pipeline changes. Detected with KS tests and PSI (Population Stability Index).<br><br><strong>Concept drift:</strong> The relationship between features and target variables changes &mdash; policy changes, market conditions, user behavior shifts. Detected through performance metrics and error rate monitoring.<br><br><strong>Training-serving skew:</strong> Production feature distributions differ from training data. Detectable from day one if training data isn&rsquo;t representative.<br><br><strong>Label drift:</strong> Target variable distribution changes from annotation errors or labeling criteria shifts.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Detection Methods</div><div class="cc-text"><strong>Statistical:</strong> KL Divergence, KS Test, Wasserstein Distance, PSI<br><strong>Data quality:</strong> Schema validation, cardinality changes, missing values<br><strong>Performance:</strong> Error rates, F1/AUC-ROC, latency degradation<br><strong>Business:</strong> Conversion rates, user engagement, A/B test results<br><strong>Anomaly:</strong> Isolation Forest for outlier detection</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Drift monitoring tools</span>
+
+<span class="hl-cmt"># Google Vertex AI Model Monitoring</span>
+<span class="hl-cmt"># Built-in data drift + feature skew</span>
+
+<span class="hl-cmt"># etsi-watchdog (open-source)</span>
+<span class="hl-cmt"># Plug-in architecture for custom drift</span>
+<span class="hl-cmt"># algorithms, rolling window monitoring,</span>
+<span class="hl-cmt"># Slack alerting</span>
+
+<span class="hl-cmt"># Key metrics to track:</span>
+<span class="hl-ok">PSI &lt; 0.1</span>  → No significant drift
+<span class="hl-amber">PSI 0.1-0.2</span> → Moderate drift, investigate
+<span class="hl-err">PSI &gt; 0.2</span>  → Significant drift, retrain</div>
+          <div class="cc-note n-amber"><strong>Not all drift requires action:</strong> Implement severity-based alerting focused on drift that impacts performance or business outcomes. A feature distribution shift that doesn&rsquo;t affect predictions is noise, not signal.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: CI/CD security gates — maps to "Model" -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">rule</span></div><div><div class="cc-title">CI/CD Security Gates for LLM Deployments</div><div class="cc-sub">Automated quality gates, red teaming in pipelines, progressive rollout</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Security Gates in the Pipeline</div><div class="cc-text">Every LLM deployment should pass through automated security gates before reaching production:<br><br><strong>1. Eval gate:</strong> Unit-style tests for LLM outputs &mdash; relevancy, hallucination, toxicity, latency scoring. Fail the build if thresholds aren&rsquo;t met.<br><strong>2. Red team gate:</strong> Automated vulnerability scanning (Garak, DeepTeam from Ch 11) integrated into CI/CD. Block deployment on critical findings.<br><strong>3. Compliance gate:</strong> Automated reports mapping to NIST AI RMF and ISO 42001 clauses (Ch 12).<br><strong>4. Cost gate:</strong> Track token usage and API spending over time. Alert on cost anomalies.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">2025 Baseline Thresholds</div><div class="cc-code"><span class="hl-cmt"># CI/CD quality gates (signed off by
+# product, compliance, and SRE teams)</span>
+
+<span class="hl-ok">Answer Relevancy  ≥ 0.8</span>
+<span class="hl-ok">Context Precision  ≥ 0.7</span>
+<span class="hl-ok">Toxicity           ≤ 0.2</span>
+<span class="hl-ok">p95 Latency        &lt; 3s</span>
+
+<span class="hl-cmt"># Fail build if thresholds breached:</span>
+<span class="hl-err">Faithfulness &lt; 0.8 → BLOCK DEPLOY</span>
+<span class="hl-err">Toxicity &gt; 0.2     → BLOCK DEPLOY</span>
+<span class="hl-err">Critical vuln found → BLOCK DEPLOY</span></div>
+          </div>
+          <div class="cc-block"><div class="cc-label">Progressive Rollout</div><div class="cc-text"><strong>Dark launch:</strong> Test with internal users first<br><strong>Canary:</strong> Route 1&ndash;5% of traffic to new version<br><strong>Gradual ramp:</strong> Increase traffic as metrics confirm safety<br><strong>Instant rollback:</strong> Feature flags enable rollback without redeployment (LaunchDarkly AI Configs)</div></div>
+          <div class="cc-note n-violet"><strong>Tools:</strong> Promptfoo (CI/CD eval + red teaming), Deepeval (unit tests for LLM outputs), Guardrails AI (CI/CD integration), LaunchDarkly (progressive rollout with AI configs).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Incident response — maps to "Tools" -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">emergency</span></div><div><div class="cc-title">AI Incident Response</div><div class="cc-sub">CoSAI Framework v1.0 &mdash; NIST-aligned playbooks for AI-specific incidents</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why AI Needs Dedicated IR</div><div class="cc-text">AI incidents surged <strong>56.4% from 2023 to 2024</strong> (233 documented cases). AI breaches take an average of <strong>277 days to detect</strong> &mdash; significantly longer than traditional breaches. <strong>83% of AI incidents involve data exposure.</strong><br><br>Traditional IR playbooks fail because AI has unique failure modes: model drift, adversarial attacks, data poisoning, bias incidents, hallucinations, jailbreaking, and context poisoning. Detection requires behavioral analysis, not traditional indicators of compromise.</div></div>
+          <div class="cc-block"><div class="cc-label">A Surprising Statistic</div><div class="cc-text"><strong>67% of AI incidents stem from model errors</strong> rather than adversarial attacks. Organizations disproportionately focus security budgets on external threats while the majority of incidents come from internal model failures &mdash; hallucinations, bias, drift, and misconfigurations.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CoSAI AI IR Framework v1.0 (Nov 2025)</div><div class="cc-text">The <strong>Coalition for Secure AI</strong> released the first dedicated AI Incident Response Framework, adapted from the NIST SP 800-61 lifecycle:<br><br><strong>Preparation:</strong> AI-specific runbooks for jailbreaking, model extraction, prompt injection, context poisoning<br><strong>Detection &amp; Analysis:</strong> Behavioral analysis and performance monitoring (not just IoCs)<br><strong>Containment, Eradication, Recovery:</strong> Specialized procedures for compromised AI systems &mdash; model rollback, prompt reversion, tool isolation<br><strong>Post-Incident:</strong> Build organizational knowledge to improve long-term AI security posture<br><br>Released alongside CoSAI&rsquo;s &ldquo;Signing ML Artifacts&rdquo; framework for supply chain security.</div></div>
+          <div class="cc-note n-red"><strong>EU AI Act Article 62:</strong> Requires reporting of serious AI incidents. Your IR plan must include regulatory notification procedures. The CoSAI framework aligns with both NIST and EU AI Act requirements.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: AI Incident Database — maps to "Output Filter" -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">database</span></div><div><div class="cc-title">The AI Incident Database (AIID)</div><div class="cc-sub">1,360+ documented incidents &mdash; learning from real-world AI failures</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What AIID Is</div><div class="cc-text">The <strong>AI Incident Database</strong> (incidentdatabase.ai) is a comprehensive tracking system documenting real-world AI incidents and failures. Over <strong>1,360 incident IDs</strong> as of early 2026, with new incidents continuously added. Run by the Partnership on AI, it serves as the collective memory of AI failures &mdash; so the industry doesn&rsquo;t repeat them.</div></div>
+          <div class="cc-block"><div class="cc-label">Major 2025 Incident Trends</div><div class="cc-text"><strong>Deepfake fraud:</strong> The largest recurring pattern &mdash; impersonation scams using synthetic media for investment fraud across multiple countries<br><br><strong>Security vulnerabilities:</strong> Platform regressions, data exposures, guardrail fragility. ~17% of analyzed OpenClaw AI skills exhibited malicious behavior<br><br><strong>State-directed threats:</strong> North Korean operatives used AI-generated resumes and chatbot-assisted techniques to infiltrate Western companies<br><br><strong>Government misuse:</strong> DOGE used unvetted ChatGPT outputs to cancel ~1,477 NEH grants ($100M+ in funding cuts)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How to Use AIID</div><div class="cc-text"><strong>Threat modeling:</strong> Search for incidents relevant to your AI use case. If you&rsquo;re building a chatbot, study chatbot incidents. If you&rsquo;re deploying in healthcare, study healthcare AI failures.<br><br><strong>Red team scenarios:</strong> Use real incidents as inspiration for red team exercises (Ch 11). Real-world attacks are more creative than synthetic test cases.<br><br><strong>Board reporting:</strong> Concrete incident examples make AI risk tangible for non-technical stakeholders.<br><br><strong>Post-incident learning:</strong> After your own incidents, compare with similar AIID entries to identify patterns you may have missed.</div></div>
+          <div class="cc-note n-orange"><strong>Mandatory reading:</strong> Review AIID quarterly roundups (published regularly at incidentdatabase.ai/blog). They categorize incidents by type, severity, and affected sector. This is the closest thing to a CVE database for AI failures.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: SOC transformation — maps to "Audit Log" -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">SOC Transformation for AI</div><div class="cc-sub">Dynamic playbooks, behavioral analysis, and AI-aware detection</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The SOC Challenge</div><div class="cc-text">Security Operations Centers built for traditional IT don&rsquo;t know how to handle AI incidents. Analysts trained on network intrusion and malware don&rsquo;t recognize prompt injection, model drift, or context poisoning. The detection gap is real: <strong>277 days average detection time</strong> for AI breaches.</div></div>
+          <div class="cc-block"><div class="cc-label">What Needs to Change</div><div class="cc-text"><strong>AI-specific detection rules:</strong> Monitor for anomalous token consumption, unusual prompt patterns, output quality degradation, and guardrail bypass attempts<br><br><strong>Behavioral analysis:</strong> AI incidents require performance monitoring and behavioral baselines, not just IoC matching<br><br><strong>MITRE ATLAS integration:</strong> Map AI threats to ATLAS TTPs (Ch 12) so analysts have a shared vocabulary for AI incidents<br><br><strong>Dynamic playbooks:</strong> By mid-2027, IDC projects 85% of detection and response playbooks will be generated dynamically at alert time, adapting to specific context</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">AI-Specific Alert Categories</div><div class="cc-code"><span class="hl-cmt"># SOC alert categories for AI systems</span>
+
+<span class="hl-err">CRITICAL:</span>
+  - Prompt injection detected (bypass)
+  - PII in model output
+  - Model extraction attempt
+  - Guardrail bypass confirmed
+
+<span class="hl-key">HIGH:</span>
+  - Anomalous token consumption (&gt;3σ)
+  - Output quality score drop &gt;20%
+  - Jailbreak attempt (blocked)
+  - Unauthorized model access
+
+<span class="hl-str">MEDIUM:</span>
+  - Data drift PSI &gt; 0.2
+  - Latency p95 &gt; SLA threshold
+  - Rate limit exceeded
+  - Shadow AI detected (AI-SPM)</div>
+          <div class="cc-note n-teal"><strong>Training gap:</strong> Your SOC analysts need AI security training. MITRE ATLAS, OWASP LLM Top 10, and the CoSAI IR framework should be part of analyst onboarding. An analyst who can&rsquo;t recognize a prompt injection is as blind as one who can&rsquo;t recognize a SQL injection.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Bringing it all together — maps to "Audit Log" -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">check_circle</span></div><div><div class="cc-title">The Complete Production Security Lifecycle</div><div class="cc-sub">From Chapters 1&ndash;14: everything connected</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Full Course in One Pipeline</div><div class="cc-text"><strong>Understand the threats</strong> (Ch 1&ndash;5): AI security landscape, prompt injection, jailbreaking, data poisoning, adversarial ML<br><br><strong>Build the defenses</strong> (Ch 6&ndash;9): Guardrails, RAG security, agent sandboxing, MCP security<br><br><strong>Protect the data</strong> (Ch 10): Privacy, PII detection, differential privacy, GDPR compliance<br><br><strong>Test continuously</strong> (Ch 11): Red teaming with Garak, PyRIT, DeepTeam<br><br><strong>Govern and comply</strong> (Ch 12): EU AI Act, NIST AI RMF, ISO 42001, MITRE ATLAS<br><br><strong>Architect for security</strong> (Ch 13): Zero trust, LLM gateways, LLM firewalls, confidential computing, AI-SPM<br><br><strong>Operate securely</strong> (Ch 14): Observability, drift detection, CI/CD gates, incident response, SOC transformation</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Production Checklist</div><div class="cc-text">&square; LLM gateway with 8-stage security pipeline<br>&square; Token-based rate limiting per client<br>&square; LLM firewall (LlamaFirewall or commercial)<br>&square; Input/output guardrails (NeMo, LLM Guard)<br>&square; PII scanning (Presidio) on both directions<br>&square; Tool sandboxing (WASM/containers)<br>&square; MCP server allowlisting and description pinning<br>&square; Distributed tracing across full request lifecycle<br>&square; Drift monitoring with severity-based alerting<br>&square; CI/CD security gates (eval + red team + compliance)<br>&square; Progressive rollout with instant rollback<br>&square; AI incident response plan (CoSAI framework)<br>&square; SOC training on MITRE ATLAS and OWASP LLM Top 10<br>&square; AI-SPM for shadow AI discovery<br>&square; AIID quarterly review for threat intelligence</div></div>
+          <div class="cc-note n-green"><strong>This is the end of the high-level journey.</strong> Every chapter&rsquo;s &ldquo;Under the Hood&rdquo; view contains code examples, architecture diagrams, and implementation patterns. AI security is not a destination &mdash; it&rsquo;s a continuous practice. The threat landscape evolves daily. Build the foundations from this course, then keep learning.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=12000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:5};
+  const NARRATION={
+    1:{text:'<strong>LLM Observability:</strong> Non-deterministic outputs need quality scoring, not just uptime. Track token costs, safety violations, and distributed traces across agent workflows. Tools: Elastic, MLflow AI Gateway, W&B, OpenTelemetry.',color:'#2563eb'},
+    2:{text:'<strong>Model Drift:</strong> Data drift (input distributions change), concept drift (feature-target relationships change), training-serving skew. Detect with KS tests, PSI, performance metrics. Not all drift requires action — focus on drift that impacts outcomes.',color:'#d97706'},
+    3:{text:'<strong>CI/CD Security Gates:</strong> Eval gate (relevancy ≥ 0.8, toxicity ≤ 0.2), red team gate (Garak/DeepTeam), compliance gate (NIST/ISO mapping), cost gate. Progressive rollout: dark launch → canary → gradual ramp → instant rollback.',color:'#7c3aed'},
+    4:{text:'<strong>AI Incident Response:</strong> Incidents surged 56.4% (2023→2024). 277 days average detection time. 67% from model errors, not attacks. CoSAI AI IR Framework v1.0 (Nov 2025): NIST SP 800-61 adapted for AI — jailbreaking, extraction, poisoning, context manipulation.',color:'#dc2626'},
+    5:{text:'<strong>AI Incident Database:</strong> 1,360+ documented incidents. 2025 trends: deepfake fraud, guardrail fragility, state-directed AI attacks, government misuse. Use for threat modeling, red team scenarios, board reporting, and post-incident learning.',color:'#ea580c'},
+    6:{text:'<strong>SOC Transformation:</strong> Traditional SOCs can\'t detect AI incidents. Need AI-specific detection rules, behavioral analysis, MITRE ATLAS integration, dynamic playbooks. IDC: 85% of playbooks will be AI-generated by mid-2027. Train analysts on ATLAS + OWASP LLM Top 10.',color:'#0d9488'},
+    7:{text:'<strong>The complete lifecycle:</strong> Understand threats (Ch 1–5) → Build defenses (Ch 6–9) → Protect data (Ch 10) → Test continuously (Ch 11) → Govern (Ch 12) → Architect (Ch 13) → Operate (Ch 14). AI security is a continuous practice, not a destination.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...';stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

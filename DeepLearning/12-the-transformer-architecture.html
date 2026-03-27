@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 12: The Transformer Architecture — Deep Learning Fundamentals</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 12 &mdash; The Transformer Architecture</h2><span class="tb-sub">Encoder-decoder, positional encoding, &ldquo;Attention Is All You Need,&rdquo; and the bridge to LLMs</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Tokens</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">pin_drop</span></div><span class="pipe-label">Position</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">center_focus_strong</span></div><span class="pipe-label">Self-Attn</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">FFN</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Stack N×</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">LLMs</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">article</span></div><div><div class="cc-title">&ldquo;Attention Is All You Need&rdquo;</div><div class="cc-sub">Vaswani et al. (NeurIPS 2017) &mdash; the paper that changed AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Radical Proposal</div><div class="cc-text">In June 2017, eight Google researchers published a paper with a provocative title: <strong>&ldquo;Attention Is All You Need.&rdquo;</strong> They proposed the <strong>Transformer</strong> &mdash; a sequence-to-sequence model built <strong>entirely from attention mechanisms</strong>, with no recurrence and no convolutions. It achieved 28.4 BLEU on English-to-German translation (a new state of the art) while training in just 3.5 days on 8 GPUs &mdash; far faster than RNN-based models. The Transformer&rsquo;s parallelism and scalability made it the foundation for every major AI breakthrough since: BERT, GPT, LLaMA, Gemini, Claude, and beyond.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Original Transformer</div><div class="cc-code"><span class="hl-cmt">// Transformer (Vaswani et al., 2017)</span>
+<span class="hl-key">Model dim</span>:    d_model = <span class="hl-num">512</span>
+<span class="hl-key">Heads</span>:        h = <span class="hl-num">8</span>
+<span class="hl-key">Layers</span>:       N = <span class="hl-num">6</span> (encoder) + <span class="hl-num">6</span> (decoder)
+<span class="hl-key">FFN dim</span>:      d_ff = <span class="hl-num">2048</span>
+<span class="hl-key">Parameters</span>:   ~65M
+
+<span class="hl-cmt">// Training:</span>
+<span class="hl-cmt">// 8× NVIDIA P100 GPUs, 3.5 days</span>
+<span class="hl-cmt">// AdamW, warmup + inverse sqrt decay</span>
+<span class="hl-cmt">// Label smoothing 0.1</span>
+<span class="hl-cmt">// Dropout 0.1</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The Transformer&rsquo;s 65M parameters seem tiny by today&rsquo;s standards (GPT-4 has ~1.8 trillion). But the architecture scaled perfectly &mdash; the same design works from 65M to 1.8T parameters, which is why it became universal.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">pin_drop</span></div><div><div class="cc-title">Positional Encoding</div><div class="cc-sub">Giving the Transformer a sense of order</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Position Problem</div><div class="cc-text">Self-attention is <strong>permutation-invariant</strong> &mdash; it treats &ldquo;cat sat mat&rdquo; and &ldquo;mat cat sat&rdquo; identically because it only computes pairwise similarities, not positions. But word order matters! <strong>Positional encodings</strong> add position information to the input embeddings. The original Transformer used <strong>sinusoidal encodings</strong>: each position gets a unique pattern of sine and cosine waves at different frequencies. Modern models (GPT, LLaMA) use <strong>learned positional embeddings</strong> or <strong>Rotary Position Embeddings (RoPE)</strong> which encode relative positions directly in the attention computation.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Positional Encoding</div><div class="cc-code"><span class="hl-cmt">// Sinusoidal positional encoding</span>
+PE(pos, 2i)   = sin(pos / <span class="hl-num">10000</span>^(2i/d))
+PE(pos, 2i+1) = cos(pos / <span class="hl-num">10000</span>^(2i/d))
+
+<span class="hl-cmt">// pos = position in sequence</span>
+<span class="hl-cmt">// i = dimension index</span>
+<span class="hl-cmt">// d = model dimension</span>
+
+<span class="hl-cmt">// Input = token_embedding + pos_encoding</span>
+
+<span class="hl-cmt">// Modern alternatives:</span>
+<span class="hl-key">Learned</span>:  trainable embedding per position
+<span class="hl-key">RoPE</span>:    rotates Q,K vectors by position
+          (relative position in attention)
+<span class="hl-key">ALiBi</span>:   adds linear bias to attention scores</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> RoPE (Su et al., 2021) encodes position by rotating query and key vectors, making attention scores naturally depend on relative distance. It generalizes better to longer sequences than absolute position embeddings and is used in LLaMA, Mistral, and most modern LLMs.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">view_in_ar</span></div><div><div class="cc-title">The Transformer Block</div><div class="cc-sub">The repeating unit: attention + feedforward + residuals</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Anatomy of a Layer</div><div class="cc-text">Each Transformer layer (block) has two sub-layers: <strong>multi-head self-attention</strong> and a <strong>position-wise feedforward network (FFN)</strong>. Each sub-layer has a <strong>residual connection</strong> (like ResNet&rsquo;s skip connections) and <strong>layer normalization</strong>. The FFN is a simple 2-layer MLP applied independently to each position: Linear(d_model → d_ff) → GELU → Linear(d_ff → d_model). The FFN is where the model stores &ldquo;knowledge&rdquo; &mdash; factual associations learned during training. The attention layers handle relationships between positions.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Transformer Block</div><div class="cc-code"><span class="hl-cmt">// Pre-norm Transformer block (modern)</span>
+<span class="hl-key">def</span> transformer_block(x):
+    <span class="hl-cmt">// Sub-layer 1: Multi-head attention</span>
+    x = x + MultiHeadAttn(LayerNorm(x))
+
+    <span class="hl-cmt">// Sub-layer 2: Feedforward network</span>
+    x = x + FFN(LayerNorm(x))
+
+    <span class="hl-key">return</span> x
+
+<span class="hl-cmt">// FFN (position-wise)</span>
+<span class="hl-key">def</span> FFN(x):
+    <span class="hl-key">return</span> Linear(GELU(Linear(x)))
+    <span class="hl-cmt">// d_model → 4×d_model → d_model</span>
+
+<span class="hl-cmt">// Stack N blocks: GPT-2 has 12-48</span>
+<span class="hl-cmt">// GPT-3 has 96, LLaMA-70B has 80</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The residual connections are critical &mdash; they create &ldquo;gradient highways&rdquo; that let gradients flow through 100+ layers without vanishing. This is the same principle as ResNet&rsquo;s skip connections, applied to sequence models.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">visibility_off</span></div><div><div class="cc-title">Causal Masking</div><div class="cc-sub">Preventing the model from seeing the future</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Autoregressive Constraint</div><div class="cc-text">In language generation, the model predicts one token at a time, left to right. When predicting token 5, it must not see tokens 6, 7, 8... This is enforced with a <strong>causal mask</strong> (also called an attention mask): a triangular matrix that sets attention scores to -&infin; for future positions, making their softmax weights zero. This ensures each position can only attend to itself and earlier positions. BERT uses <strong>no mask</strong> (bidirectional); GPT uses a <strong>causal mask</strong> (autoregressive). This is the fundamental difference between encoder-only and decoder-only architectures.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Causal Mask</div><div class="cc-code"><span class="hl-cmt">// Causal attention mask</span>
+<span class="hl-cmt">// 1 = can attend, 0 = masked (-∞)</span>
+
+     t₁  t₂  t₃  t₄
+t₁ [ <span class="hl-num">1</span>   <span class="hl-num">0</span>   <span class="hl-num">0</span>   <span class="hl-num">0</span> ]  <span class="hl-cmt">// sees only t₁</span>
+t₂ [ <span class="hl-num">1</span>   <span class="hl-num">1</span>   <span class="hl-num">0</span>   <span class="hl-num">0</span> ]  <span class="hl-cmt">// sees t₁, t₂</span>
+t₃ [ <span class="hl-num">1</span>   <span class="hl-num">1</span>   <span class="hl-num">1</span>   <span class="hl-num">0</span> ]  <span class="hl-cmt">// sees t₁-t₃</span>
+t₄ [ <span class="hl-num">1</span>   <span class="hl-num">1</span>   <span class="hl-num">1</span>   <span class="hl-num">1</span> ]  <span class="hl-cmt">// sees all</span>
+
+<span class="hl-cmt">// Applied before softmax:</span>
+<span class="hl-cmt">// scores[mask == 0] = -∞</span>
+<span class="hl-cmt">// softmax(-∞) = 0 → no attention</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Causal masking enables <strong>parallel training</strong> &mdash; all positions are computed simultaneously, but each only sees past context. During inference, tokens are generated one at a time (autoregressive), using KV caching to avoid recomputation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">architecture</span></div><div><div class="cc-title">Encoder-Only, Decoder-Only &amp; Encoder-Decoder</div><div class="cc-sub">Three Transformer variants for different tasks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Three Architectures</div><div class="cc-text"><strong>Encoder-only</strong> (BERT): bidirectional self-attention, no causal mask. Excels at understanding tasks (classification, NER, similarity). <strong>Decoder-only</strong> (GPT): causal self-attention, generates text left-to-right. Dominates language generation and has become the default for LLMs. <strong>Encoder-decoder</strong> (T5, original Transformer): encoder processes input bidirectionally, decoder generates output autoregressively with cross-attention to the encoder. Used for translation, summarization.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Architecture Comparison</div><div class="cc-code"><span class="hl-cmt">// Transformer variants</span>
+
+<span class="hl-key">Encoder-only</span> (BERT, RoBERTa):
+  Bidirectional attention (no mask)
+  → classification, NER, embeddings
+
+<span class="hl-key">Decoder-only</span> (GPT, LLaMA, Claude):
+  Causal attention (triangular mask)
+  → text generation, chat, reasoning
+
+<span class="hl-key">Encoder-decoder</span> (T5, BART, Whisper):
+  Encoder: bidirectional
+  Decoder: causal + cross-attention
+  → translation, summarization, ASR
+
+<span class="hl-cmt">// Decoder-only has won:</span>
+<span class="hl-cmt">// GPT-4, Claude, Gemini, LLaMA are all</span>
+<span class="hl-cmt">// decoder-only transformers</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The decoder-only architecture won because it&rsquo;s simpler (one stack of layers), scales better, and can handle both understanding and generation through in-context learning. GPT showed that a single architecture trained on next-token prediction can do almost anything.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">trending_up</span></div><div><div class="cc-title">Scaling Laws</div><div class="cc-sub">Why bigger Transformers keep getting better</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Scaling Hypothesis</div><div class="cc-text">Kaplan et al. (OpenAI, 2020) discovered that Transformer performance follows <strong>power laws</strong>: loss decreases predictably as you increase model size, dataset size, and compute. Double the parameters → predictable improvement. This means you can predict how well a model will perform before training it, enabling efficient resource allocation. The <strong>Chinchilla scaling laws</strong> (Hoffmann et al., 2022) refined this: for a given compute budget, there&rsquo;s an optimal ratio of model size to training tokens (~20 tokens per parameter).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Transformer Scale Over Time</div><div class="cc-code"><span class="hl-cmt">// Transformer model sizes</span>
+<span class="hl-key">Transformer</span>  (<span class="hl-num">2017</span>):     65M params
+<span class="hl-key">BERT-Large</span>   (<span class="hl-num">2018</span>):    340M params
+<span class="hl-key">GPT-2</span>        (<span class="hl-num">2019</span>):    1.5B params
+<span class="hl-key">GPT-3</span>        (<span class="hl-num">2020</span>):    175B params
+<span class="hl-key">PaLM</span>         (<span class="hl-num">2022</span>):    540B params
+<span class="hl-key">GPT-4</span>        (<span class="hl-num">2023</span>):   ~1.8T params (MoE)
+<span class="hl-key">LLaMA-3</span>      (<span class="hl-num">2024</span>):    405B params
+
+<span class="hl-cmt">// ~27,000× increase in 7 years</span>
+<span class="hl-cmt">// Same core architecture throughout</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The Transformer architecture has scaled from 65M to 1.8 trillion parameters with no fundamental changes. This remarkable scalability &mdash; combined with predictable scaling laws &mdash; is why the Transformer became the universal architecture for AI.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">build</span></div><div><div class="cc-title">Modern Transformer Improvements</div><div class="cc-sub">GQA, SwiGLU, RMSNorm, and KV caching</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Post-2017 Refinements</div><div class="cc-text">The core Transformer design has been refined significantly: <strong>Grouped-Query Attention (GQA)</strong> shares key/value heads across query heads, reducing memory during inference. <strong>SwiGLU activation</strong> (Shazeer, 2020) replaces ReLU/GELU in the FFN for better performance. <strong>RMSNorm</strong> replaces LayerNorm for efficiency. <strong>Pre-norm</strong> (normalize before attention) replaces post-norm for more stable training. <strong>KV caching</strong> stores computed key/value pairs to avoid recomputation during autoregressive generation. These are all used in LLaMA, Mistral, and most modern LLMs.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Modern LLM Architecture</div><div class="cc-code"><span class="hl-cmt">// LLaMA-style Transformer (2023+)</span>
+<span class="hl-key">Normalization</span>: RMSNorm (pre-norm)
+<span class="hl-key">Attention</span>:     GQA (grouped-query)
+<span class="hl-key">Position</span>:      RoPE (rotary embeddings)
+<span class="hl-key">Activation</span>:    SwiGLU in FFN
+<span class="hl-key">FFN ratio</span>:     d_ff = 8/3 × d_model
+<span class="hl-key">Vocab</span>:         BPE tokenizer (32K-128K)
+<span class="hl-key">Training</span>:      AdamW, cosine decay
+<span class="hl-key">Inference</span>:     KV cache, speculative decoding
+
+<span class="hl-cmt">// vs. Original Transformer (2017):</span>
+<span class="hl-cmt">// LayerNorm (post), MHA, sinusoidal,</span>
+<span class="hl-cmt">// ReLU, d_ff = 4×d_model</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> These refinements are evolutionary, not revolutionary. The core idea &mdash; stacked self-attention + FFN blocks with residual connections &mdash; hasn&rsquo;t changed since 2017. The improvements are about efficiency and scale, not architecture.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">smart_toy</span></div><div><div class="cc-title">The Bridge to LLMs</div><div class="cc-sub">From deep learning fundamentals to the AI revolution</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Everything Connects</div><div class="cc-text">This course traced a path from the 1943 McCulloch-Pitts neuron to the 2017 Transformer. Every concept builds on the last: <strong>perceptrons</strong> → <strong>backpropagation</strong> → <strong>CNNs</strong> (spatial hierarchy) → <strong>RNNs</strong> (sequence memory) → <strong>LSTMs</strong> (gating) → <strong>attention</strong> (direct connections) → <strong>Transformers</strong> (attention is all you need). The Transformer combined the best ideas from 74 years of neural network research into a single, scalable architecture. GPT, BERT, LLaMA, Claude, Gemini &mdash; they are all Transformers, trained on the same principles covered in this course.</div></div>
+          <div class="cc-note n-green"><strong>Course complete:</strong> You now understand the foundations that power every modern AI system. To go deeper into how LLMs specifically work, explore the <strong>How LLMs Work</strong> course. For practical applications, see <strong>Prompt Engineering</strong> and <strong>AI-Assisted Coding</strong>.</div>
+        </div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Full Journey</div><div class="cc-code"><span class="hl-cmt">// Deep Learning Fundamentals → LLMs</span>
+<span class="hl-key">1943</span>: McCulloch-Pitts neuron
+<span class="hl-key">1958</span>: Perceptron (learning from data)
+<span class="hl-key">1986</span>: Backpropagation (training deep nets)
+<span class="hl-key">1989</span>: CNNs (spatial hierarchy)
+<span class="hl-key">1997</span>: LSTMs (gated memory)
+<span class="hl-key">2012</span>: AlexNet (GPU + deep learning)
+<span class="hl-key">2015</span>: ResNet (skip connections)
+<span class="hl-key">2015</span>: Attention (direct connections)
+<span class="hl-key">2017</span>: Transformer (attention only)
+<span class="hl-key">2018</span>: BERT + GPT (pretrained LLMs)
+<span class="hl-key">2020</span>: GPT-3 (scaling laws)
+<span class="hl-key">2022</span>: ChatGPT (RLHF + scale)
+<span class="hl-key">2024+</span>: Reasoning, agents, multimodal</div></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="11-the-attention-mechanism.html"><span class="material-symbols-rounded">arrow_back</span> Ch 11: The Attention Mechanism</a>
+    <a class="ch-nav-btn next" href="index.html">Back to Course Index <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3,4],2:[0,1],3:[1,2,3],4:[2],5:[2,3,4],6:[0,1,2,3,4],7:[1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> "Attention Is All You Need" (Vaswani et al., 2017) proposed the Transformer — built entirely from attention, no recurrence. 28.4 BLEU on En→De, trained in 3.5 days on 8 GPUs.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Self-attention is permutation-invariant — it needs positional encoding. Sinusoidal (original), learned (GPT-2), or RoPE (LLaMA) encode position information.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Each Transformer block: LayerNorm → Multi-Head Attention → Residual → LayerNorm → FFN → Residual. The FFN stores knowledge; attention handles relationships.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Causal masking prevents seeing future tokens during generation. A triangular mask sets future attention scores to -∞. Enables parallel training with autoregressive inference.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Encoder-only (BERT) for understanding, decoder-only (GPT) for generation, encoder-decoder (T5) for seq2seq. Decoder-only won — it\'s simpler and scales better.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Scaling laws: Transformer performance follows power laws with model size, data, and compute. The architecture scaled from 65M to 1.8T parameters with no fundamental changes.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Modern refinements: GQA (efficient attention), SwiGLU (better FFN), RMSNorm (faster normalization), RoPE (relative positions), KV caching (fast inference).',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> From the 1943 McCulloch-Pitts neuron to GPT-4 — every concept in this course is present in modern LLMs. The Transformer is the culmination of 74 years of neural network research.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

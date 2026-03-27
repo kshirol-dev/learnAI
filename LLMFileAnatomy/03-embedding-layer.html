@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: The Embedding Layer — Words to Vectors — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; The Embedding Layer: Words to Vectors</h2><span class="tb-sub">The model's dictionary &mdash; where token IDs become high-dimensional vectors</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Token ID</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_on</span></div><span class="pipe-label">Lookup</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Vector</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Clustering</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">link</span></div><span class="pipe-label">Tying</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">data_usage</span></div><span class="pipe-label">Size Impact</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">grid_on</span></div>
+        <div><div class="cc-title">The Embedding Matrix: A Giant Lookup Table</div><div class="cc-sub">model.embed_tokens.weight &mdash; shape [vocab_size, hidden_size]</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Is</div>
+            <div class="cc-text">The embedding layer is a <strong>2D matrix</strong> stored as the tensor <code>model.embed_tokens.weight</code>. Its shape is <strong>[vocab_size, hidden_size]</strong> &mdash; for Llama 3.1 8B, that's [128,256 &times; 4,096]. Each of the 128,256 rows is a learned vector of 4,096 floating-point numbers representing one token. The entire matrix is the model's "dictionary" &mdash; but instead of definitions, each word gets a coordinate in 4,096-dimensional space.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Tensor Entry</div>
+            <div class="cc-code"><span class="hl-key">"model.embed_tokens.weight"</span>: {
+  <span class="hl-key">"dtype"</span>: <span class="hl-str">"BF16"</span>,
+  <span class="hl-key">"shape"</span>: [<span class="hl-num">128256</span>, <span class="hl-num">4096</span>],
+  <span class="hl-key">"data_offsets"</span>: [<span class="hl-num">0</span>, <span class="hl-num">1050673152</span>]
+}
+<span class="hl-cmt">// 128,256 × 4,096 × 2 bytes = ~1 GB</span>
+<span class="hl-cmt">// One of the largest individual tensors</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The embedding matrix is one of only two tensors whose first dimension is vocab_size rather than hidden_size. The other is <code>lm_head.weight</code>. Together, they're the model's "on-ramp" and "off-ramp" between human language and the internal representation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">search</span></div>
+        <div><div class="cc-title">How Embedding Lookup Works</div><div class="cc-sub">Token ID 42 = Row 42 of the matrix &mdash; no multiplication needed</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Lookup Operation</div>
+            <div class="cc-text">Unlike most layers in the transformer, the embedding layer does <strong>no matrix multiplication</strong>. It's a pure <strong>table lookup</strong>: given a token ID, it returns the corresponding row of the matrix. If the tokenizer converts "Hello" to ID 9906, the embedding layer simply reads row 9906 from the matrix &mdash; a 4,096-dimensional vector. This vector is the model's internal representation of "Hello" and gets passed into the first transformer layer.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Lookup in Action</div>
+            <div class="cc-code"><span class="hl-cmt">// Pseudocode for embedding lookup:</span>
+<span class="hl-key">input_ids</span> = [<span class="hl-num">9906</span>, <span class="hl-num">11</span>, <span class="hl-num">1917</span>]  <span class="hl-cmt">// "Hello, world"</span>
+
+<span class="hl-cmt">// Each ID selects a row:</span>
+embed[<span class="hl-num">0</span>] = embed_tokens[<span class="hl-num">9906</span>]  <span class="hl-cmt">// → [0.12, -0.34, ...]</span>
+embed[<span class="hl-num">1</span>] = embed_tokens[<span class="hl-num">11</span>]    <span class="hl-cmt">// → [0.05, 0.89, ...]</span>
+embed[<span class="hl-num">2</span>] = embed_tokens[<span class="hl-num">1917</span>]  <span class="hl-cmt">// → [-0.71, 0.22, ...]</span>
+
+<span class="hl-cmt">// Output shape: [3, 4096]</span>
+<span class="hl-cmt">// 3 tokens, each represented as 4096 floats</span></div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> This is just fancy indexing. In PyTorch, it's <code>F.embedding(input_ids, weight)</code> which is equivalent to <code>weight[input_ids]</code>. No gradients flow through the index operation itself &mdash; they flow into the selected rows during backpropagation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">scatter_plot</span></div>
+        <div><div class="cc-title">What the Vectors Mean: Semantic Space</div><div class="cc-sub">Similar words cluster together in 4,096-dimensional space</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Learned Geometry</div>
+            <div class="cc-text">During training, the embedding matrix learns to place tokens with <strong>similar meaning or usage near each other</strong> in the 4,096-dimensional space. "dog" and "cat" end up close together. "Python" and "JavaScript" cluster near each other. "happy" and "joyful" are neighbors. This isn't programmed &mdash; it emerges from the training data as the model learns to predict next tokens. The geometry captures semantic relationships: king - man + woman &asymp; queen.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Conceptual Neighborhoods</div>
+            <div class="cc-code"><span class="hl-cmt">// Conceptual embedding neighborhoods:</span>
+
+<span class="hl-key">Animals</span>: dog, cat, fish, bird  <span class="hl-cmt">// nearby</span>
+<span class="hl-key">Code</span>:    python, java, rust   <span class="hl-cmt">// nearby</span>
+<span class="hl-key">Numbers</span>: one, two, three      <span class="hl-cmt">// nearby</span>
+
+<span class="hl-cmt">// Each token has 4,096 coordinates</span>
+<span class="hl-cmt">// Different dimensions capture different</span>
+<span class="hl-cmt">// features: formality, topic, syntax role...</span>
+<span class="hl-cmt">// No single dimension has a clean meaning</span></div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The 4,096 dimensions don't individually correspond to understandable features like "animal-ness" or "verb-ness." The meaning is distributed across all dimensions. This is why you need all 4,096 values &mdash; losing even a few degrades the representation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">straighten</span></div>
+        <div><div class="cc-title">Vocabulary Size and Its Impact</div><div class="cc-sub">32K vs 128K tokens &mdash; what changes and what doesn't</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Vocab Size Tradeoffs</div>
+            <div class="cc-text">Vocabulary size directly controls the embedding matrix's first dimension. <strong>Llama 2 had 32,000 tokens; Llama 3 expanded to 128,256</strong>. This 4&times; increase in vocab size meant a 4&times; increase in embedding parameters &mdash; from ~131M to ~525M parameters just for the embedding layer. Larger vocabularies encode text more efficiently (fewer tokens per sentence) but increase memory for the embedding and output matrices.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Vocab Size Comparison</div>
+            <div class="cc-code"><span class="hl-cmt">// Embedding size by vocabulary:</span>
+
+<span class="hl-key">Llama 2</span> (32K vocab, 4096 dim):
+  <span class="hl-num">32,000</span> × <span class="hl-num">4,096</span> × <span class="hl-num">2B</span> = <span class="hl-num">~256 MB</span>
+
+<span class="hl-key">Llama 3</span> (128K vocab, 4096 dim):
+  <span class="hl-num">128,256</span> × <span class="hl-num">4,096</span> × <span class="hl-num">2B</span> = <span class="hl-num">~1 GB</span>
+
+<span class="hl-cmt">// 4× more vocab = 4× larger embedding</span>
+<span class="hl-cmt">// But: fewer tokens per sentence</span>
+<span class="hl-cmt">// "Hello world" = 2 tokens vs 3</span>
+<span class="hl-cmt">// Faster inference per character</span></div>
+          </div>
+          <div class="cc-note n-orange"><strong>Why it matters:</strong> Larger vocabulary = bigger embedding + lm_head tensors, but shorter sequences. This is a tradeoff: you spend more memory on the dictionary but less compute per character because each token covers more text. For multilingual models, larger vocabs are essential.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">output</span></div>
+        <div><div class="cc-title">The Output Head: lm_head.weight</div><div class="cc-sub">The inverse embedding &mdash; vectors back to token probabilities</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What lm_head Does</div>
+            <div class="cc-text">At the output end, the model needs to convert its internal 4,096-dimensional representation back into a <strong>probability distribution over the vocabulary</strong>. The <code>lm_head.weight</code> tensor does this: it's a matrix of shape <strong>[vocab_size, hidden_size]</strong> &mdash; the same shape as the embedding. It multiplies the final hidden state by this matrix to produce a "logit" score for each of the 128,256 tokens. Softmax converts these logits into probabilities.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Output Projection</div>
+            <div class="cc-code"><span class="hl-cmt">// Final hidden state → token probabilities:</span>
+
+<span class="hl-key">hidden</span> = transformer_output  <span class="hl-cmt">// [1, 4096]</span>
+<span class="hl-key">logits</span> = hidden @ lm_head.T  <span class="hl-cmt">// [1, 128256]</span>
+<span class="hl-key">probs</span>  = softmax(logits)     <span class="hl-cmt">// [1, 128256]</span>
+
+<span class="hl-cmt">// Highest probability → predicted next token</span>
+<span class="hl-cmt">// lm_head.weight shape: [128256, 4096]</span>
+<span class="hl-cmt">// Same shape as embed_tokens.weight!</span></div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The embedding converts IDs &rarr; vectors. The lm_head converts vectors &rarr; probabilities over IDs. They're mirror images of each other. This symmetry is why weight tying works &mdash; the same matrix can serve both roles.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">link</span></div>
+        <div><div class="cc-title">Weight Tying: Shared vs. Separate</div><div class="cc-sub">When embed_tokens and lm_head share the same matrix</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Tied Embeddings</div>
+            <div class="cc-text"><strong>Weight tying</strong> means the embedding matrix and the output head share the <strong>same physical parameters</strong> &mdash; they point to the same memory. This was introduced by Press &amp; Wolf (2017) and used in GPT-2 and BERT. The benefit: you save vocab_size &times; hidden_size parameters. For Llama 3.1 8B, that would save ~525M parameters (~1 GB in BF16). The config field <code>tie_word_embeddings</code> controls this.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Current Practice</div>
+            <div class="cc-text"><strong>Modern open-source LLMs like Llama and Mistral do NOT tie embeddings</strong> &mdash; they use <code>tie_word_embeddings: false</code>. The embedding and lm_head are separate tensors. This gives the model more capacity: the input embedding can specialize in encoding meaning, while the output head can specialize in predicting the next token.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Config Examples</div>
+            <div class="cc-code"><span class="hl-cmt">// Llama 3.1 8B config.json:</span>
+<span class="hl-key">"tie_word_embeddings"</span>: <span class="hl-num">false</span>
+<span class="hl-cmt">// → Two separate tensors in the file:</span>
+<span class="hl-cmt">//   model.embed_tokens.weight  [128256, 4096]</span>
+<span class="hl-cmt">//   lm_head.weight             [128256, 4096]</span>
+<span class="hl-cmt">//   Total: ~2 GB for both</span>
+
+<span class="hl-cmt">// GPT-2 / smaller models:</span>
+<span class="hl-key">"tie_word_embeddings"</span>: <span class="hl-num">true</span>
+<span class="hl-cmt">// → One tensor, shared:</span>
+<span class="hl-cmt">//   model.embed_tokens.weight  [50257, 768]</span>
+<span class="hl-cmt">//   lm_head.weight → same memory</span></div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> When you see <code>tie_word_embeddings: false</code>, expect two large vocab-sized tensors in the file. When it's <code>true</code>, the safetensors header will only contain one, and the framework creates a reference for the other.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">data_usage</span></div>
+        <div><div class="cc-title">File Size Impact</div><div class="cc-sub">How much of the model file is just the embedding?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Embedding as % of Total</div>
+            <div class="cc-text">For Llama 3.1 8B with untied embeddings, the embedding + lm_head together contain about <strong>1.05 billion parameters</strong> out of 8.03 billion total &mdash; roughly <strong>13% of the model</strong>. In BF16, that's ~2.1 GB out of ~16 GB. For models with smaller vocabularies (32K), this drops to about 3%. For models with larger hidden sizes (like Llama 3.1 70B with hidden_size=8192), the absolute size doubles but the percentage drops because the per-layer tensors grow even more.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Embedding Sizes Across Models</div>
+            <div class="cc-code"><span class="hl-cmt">// embed_tokens + lm_head (BF16, untied):</span>
+
+<span class="hl-key">Llama 3.1 8B</span>   (128K×4096):
+  <span class="hl-num">2 × 1.0 GB</span> = <span class="hl-num">~2.1 GB</span>  <span class="hl-cmt">// 13% of model</span>
+
+<span class="hl-key">Llama 3.1 70B</span>  (128K×8192):
+  <span class="hl-num">2 × 2.0 GB</span> = <span class="hl-num">~4.0 GB</span>  <span class="hl-cmt">// 3% of model</span>
+
+<span class="hl-key">Mistral 7B</span>     (32K×4096):
+  <span class="hl-num">2 × 0.25 GB</span> = <span class="hl-num">~0.5 GB</span> <span class="hl-cmt">// 3.5% of model</span>
+
+<span class="hl-cmt">// Larger vocab → embedding dominates more</span>
+<span class="hl-cmt">// Larger model → embedding % shrinks</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">lightbulb</span></div>
+        <div><div class="cc-title">Practical Takeaways</div><div class="cc-sub">What knowing the embedding layer helps you do</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Debugging & Analysis</div>
+            <div class="cc-text"><strong>Inspect token representations:</strong> Extract a row from the embedding matrix to see how the model "thinks about" a word. Compare cosine similarity between rows to find semantic neighbors.<br><br>
+              <strong>Detect tokenizer mismatches:</strong> If the embedding matrix has 128,256 rows but your tokenizer has 32,000 tokens, you have a mismatch &mdash; loading will fail or produce garbage.<br><br>
+              <strong>Estimate overhead:</strong> Switching from 32K to 128K vocabulary adds ~1.5 GB to the model (with untied embeddings in BF16). Know this before choosing a model.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quick Reference</div>
+            <div class="cc-code"><span class="hl-cmt">// Embedding layer cheat sheet:</span>
+
+<span class="hl-key">Tensor name</span>:  model.embed_tokens.weight
+<span class="hl-key">Shape</span>:        [vocab_size, hidden_size]
+<span class="hl-key">Operation</span>:    Table lookup (no matmul)
+<span class="hl-key">Mirror</span>:       lm_head.weight (output)
+<span class="hl-key">Tied?</span>:        Check config.tie_word_embeddings
+<span class="hl-key">Size formula</span>: vocab × hidden × bytes_per_param
+<span class="hl-key">Llama 3.1 8B</span>: 128256 × 4096 × 2 = <span class="hl-num">1.0 GB</span></div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The embedding layer is the bridge between human language and the model's internal math. Everything that happens inside the transformer operates on these 4,096-dimensional vectors. Next up: the attention weights that let the model relate these vectors to each other.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-file-formats.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: File Formats</a>
+    <a class="ch-nav-btn next" href="04-attention-weights.html">Ch 4: Attention Weights <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,1],3:[1,2,3],4:[0,5],5:[2,4],6:[4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>The embedding matrix:</strong> <code>model.embed_tokens.weight</code> has shape [128256, 4096] in Llama 3.1 8B — 128K rows, each a 4096-dimensional vector representing one token. ~1 GB in BF16.',color:'#0d9488'},
+    2:{text:'<strong>Lookup, not multiplication:</strong> Token ID 9906 → row 9906 of the matrix. Pure table indexing. The output is a [seq_len, 4096] tensor that enters the first transformer layer.',color:'#0d9488'},
+    3:{text:'<strong>Semantic space:</strong> Training arranges tokens so similar words cluster together in 4096-dimensional space. "dog" and "cat" are neighbors. The geometry emerges from next-token prediction.',color:'#7c3aed'},
+    4:{text:'<strong>Vocabulary tradeoff:</strong> Llama 3 expanded from 32K to 128K tokens — 4× more embedding parameters (~256 MB → ~1 GB), but fewer tokens per sentence means faster inference per character.',color:'#ea580c'},
+    5:{text:'<strong>lm_head.weight:</strong> Shape [vocab_size, hidden_size] — the mirror of the embedding. Multiplies the final hidden state to produce logits over every token. Softmax converts to probabilities.',color:'#2563eb'},
+    6:{text:'<strong>Weight tying:</strong> GPT-2 shared embed_tokens and lm_head (saves V×D params). Llama/Mistral keep them separate (<code>tie_word_embeddings: false</code>) for more capacity.',color:'#db2777'},
+    7:{text:'<strong>File size impact:</strong> embed_tokens + lm_head = ~13% of Llama 3.1 8B (2.1 GB). For 70B models the percentage drops to ~3% because per-layer tensors grow even more.',color:'#d97706'},
+    8:{text:'<strong>Takeaway:</strong> The embedding is the bridge between language and math. vocab_size mismatch with the tokenizer = instant crash. Next: how attention weights let vectors relate to each other.',color:'#16a34a'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

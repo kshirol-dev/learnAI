@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: RNNs &amp; Sequences — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}.pipe-arrow.lit{color:var(--red)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; RNNs &amp; Sequences</h2><span class="tb-sub">Processing sequential data &mdash; from vanilla RNNs to LSTMs and the road to transformers</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="08-rnns-and-sequences-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">text_fields</span></div><span class="pipe-label">Sequence</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">loop</span></div><span class="pipe-label">RNN</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Vanishing</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">LSTM</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">GRU</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">swap_horiz</span></div><span class="pipe-label">Seq2Seq</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">text_fields</span></div><div><div class="cc-title">Why Sequences Need Special Networks</div><div class="cc-sub">Text, speech, time series &mdash; data where order matters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">MLPs and CNNs process fixed-size inputs. But many real-world problems involve <strong>sequences of variable length</strong> where the order of elements matters. &ldquo;The dog bit the man&rdquo; means something very different from &ldquo;The man bit the dog.&rdquo; We need networks that understand temporal order and context.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Sequential data examples</span>
+
+<span class="hl-key">Text:</span>       "I grew up in France ... I speak ___"
+<span class="hl-key">Speech:</span>     audio waveform over time
+<span class="hl-key">Music:</span>      sequence of notes and chords
+<span class="hl-key">Time series:</span> stock prices, sensor readings
+<span class="hl-key">Video:</span>      sequence of image frames
+<span class="hl-key">DNA:</span>        sequence of nucleotides (A,T,G,C)
+<span class="hl-key">Code:</span>       sequence of tokens</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Sequence Task Types</div><div class="cc-code"><span class="hl-key">One-to-One:</span>    image &rarr; label (not a sequence)
+<span class="hl-key">One-to-Many:</span>   image &rarr; caption (words)
+<span class="hl-key">Many-to-One:</span>   review &rarr; sentiment (pos/neg)
+<span class="hl-key">Many-to-Many:</span>  English &rarr; French (translation)
+<span class="hl-key">Many-to-Many:</span>  video &rarr; per-frame labels</div></div>
+          <div class="cc-note n-red"><strong>The key requirement:</strong> The network must maintain a <strong>memory</strong> of what it has seen so far. When processing the word &ldquo;speak&rdquo; in &ldquo;I grew up in France ... I speak ___&rdquo;, it needs to remember &ldquo;France&rdquo; from many words ago to predict &ldquo;French.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">loop</span></div><div><div class="cc-title">The Vanilla RNN</div><div class="cc-sub">A network with a loop &mdash; hidden state carries memory forward</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">At each time step, the RNN takes two inputs: the <strong>current input</strong> (x\u209c) and the <strong>previous hidden state</strong> (h\u209c\u208b\u2081). It produces a new hidden state that encodes information about the entire sequence seen so far. The same weights are shared across all time steps &mdash; the network is &ldquo;unrolled&rdquo; through time.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># RNN computation at each time step</span>
+
+<span class="hl-key">h\u209c</span> = tanh(W\u2095 &middot; h\u209c\u208b\u2081 + W\u2093 &middot; x\u209c + b)
+<span class="hl-key">y\u209c</span> = W\u2099 &middot; h\u209c + b\u2099
+
+<span class="hl-cmt"># h\u209c = hidden state (memory)</span>
+<span class="hl-cmt"># x\u209c = input at time t</span>
+<span class="hl-cmt"># y\u209c = output at time t</span>
+<span class="hl-cmt"># W\u2095, W\u2093, W\u2099 = shared weights</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Unrolled View</div><div class="cc-code"><span class="hl-cmt"># Processing "the cat sat"</span>
+
+<span class="hl-key">t=1:</span> x="the" + h\u2080 &rarr; h\u2081
+<span class="hl-key">t=2:</span> x="cat" + h\u2081 &rarr; h\u2082
+<span class="hl-key">t=3:</span> x="sat" + h\u2082 &rarr; h\u2083
+
+<span class="hl-cmt"># h\u2083 encodes the entire sequence</span>
+<span class="hl-cmt"># Same W\u2095, W\u2093 used at every step</span>
+<span class="hl-cmt"># This is weight sharing through time</span></div></div>
+          <div class="cc-note n-orange"><strong>The hidden state is the memory.</strong> It&rsquo;s a fixed-size vector (e.g., 256 or 512 dimensions) that must compress everything the network has seen. This is both the RNN&rsquo;s strength (compact memory) and its weakness (limited capacity, information bottleneck).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Vanishing Gradient Problem</div><div class="cc-sub">Why vanilla RNNs can&rsquo;t learn long-range dependencies</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">During backpropagation through time (BPTT), gradients flow backward from the loss to early time steps. At each step, the gradient is multiplied by the weight matrix W\u2095 and the tanh derivative. After many steps, these repeated multiplications cause gradients to either <strong>vanish</strong> (shrink to ~0) or <strong>explode</strong> (grow to infinity).</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Gradient after T time steps</span>
+
+<span class="hl-key">&part;L/&part;h\u2080</span> = &part;L/&part;h\u209c &times; <span class="hl-err">(W\u2095 &times; tanh&prime;)\u1d40</span>
+
+<span class="hl-cmt"># If largest eigenvalue of W\u2095 &lt; 1:</span>
+<span class="hl-err">Gradient vanishes exponentially</span>
+  0.9\u00b9\u2070\u2070 = 0.0000265 &asymp; 0
+
+<span class="hl-cmt"># If largest eigenvalue of W\u2095 &gt; 1:</span>
+<span class="hl-err">Gradient explodes exponentially</span>
+  1.1\u00b9\u2070\u2070 = 13,780 &rarr; NaN</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Practical Impact</div><div class="cc-text"><strong>Vanishing:</strong> The network can&rsquo;t learn dependencies beyond ~10&ndash;20 time steps. &ldquo;I grew up in <strong>France</strong> ... [50 words later] ... I speak ___&rdquo; &mdash; the gradient from &ldquo;France&rdquo; has vanished by the time it reaches the prediction.<br><br><strong>Exploding:</strong> Training becomes unstable (loss = NaN). Fix: <strong>gradient clipping</strong> &mdash; cap gradient magnitude at a threshold (e.g., 5.0).</div></div>
+          <div class="cc-note n-pink"><strong>This is the same problem</strong> that plagued deep feedforward networks (Ch 5&ndash;6). ResNets solved it with skip connections. LSTMs solve it with a <strong>cell state</strong> &mdash; an information highway where gradients flow with minimal transformation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">LSTM: Long Short-Term Memory</div><div class="cc-sub">Hochreiter &amp; Schmidhuber (1997) &mdash; gates that control information flow</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Key Innovation</div><div class="cc-text">LSTMs add a <strong>cell state</strong> &mdash; a separate memory channel that runs parallel to the hidden state. Information flows through the cell state via simple addition and multiplication, avoiding the repeated matrix multiplications that cause vanishing gradients. Three <strong>gates</strong> control what information enters, stays, and leaves.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># LSTM gates (all sigmoid, output 0&ndash;1)</span>
+
+<span class="hl-key">Forget gate (f):</span>
+  &ldquo;What to erase from memory?&rdquo;
+  f = &sigma;(W\u1da0 &middot; [h\u209c\u208b\u2081, x\u209c] + b\u1da0)
+
+<span class="hl-key">Input gate (i):</span>
+  &ldquo;What new info to store?&rdquo;
+  i = &sigma;(W\u1d62 &middot; [h\u209c\u208b\u2081, x\u209c] + b\u1d62)
+
+<span class="hl-key">Output gate (o):</span>
+  &ldquo;What to output from memory?&rdquo;
+  o = &sigma;(W\u2092 &middot; [h\u209c\u208b\u2081, x\u209c] + b\u2092)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cell State Update</div><div class="cc-code"><span class="hl-cmt"># Cell state = long-term memory highway</span>
+
+<span class="hl-key">C\u209c</span> = f &odot; C\u209c\u208b\u2081 + i &odot; tanh(W\u1d9c &middot; [h\u209c\u208b\u2081, x\u209c])
+     <span class="hl-str">forget old</span>    <span class="hl-str">add new</span>
+
+<span class="hl-key">h\u209c</span> = o &odot; tanh(C\u209c)
+     <span class="hl-str">output filtered memory</span>
+
+<span class="hl-cmt"># &odot; = element-wise multiplication</span>
+<span class="hl-cmt"># Gates are 0&ndash;1: 0=block, 1=pass through</span></div></div>
+          <div class="cc-note n-violet"><strong>Why LSTMs work:</strong> The cell state update is C\u209c = f&middot;C\u209c\u208b\u2081 + i&middot;new. When f=1 and i=0, the cell state passes through unchanged &mdash; gradients flow perfectly. The network <em>learns</em> when to remember (f=1) and when to forget (f=0). This enables learning dependencies across 1000+ time steps.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">GRU: Gated Recurrent Unit</div><div class="cc-sub">A simpler alternative to LSTM with similar performance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Simplified Gates</div><div class="cc-text">Cho et al. (2014) introduced the GRU as a simpler alternative to LSTM. It merges the cell state and hidden state into one, and uses only <strong>two gates</strong> instead of three: a reset gate and an update gate. Fewer parameters, faster training, and comparable performance on most tasks.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># GRU: 2 gates instead of 3</span>
+
+<span class="hl-key">Reset gate (r):</span>
+  &ldquo;How much past to forget?&rdquo;
+  r = &sigma;(W\u1d63 &middot; [h\u209c\u208b\u2081, x\u209c])
+
+<span class="hl-key">Update gate (z):</span>
+  &ldquo;How much to update vs keep?&rdquo;
+  z = &sigma;(W\u1dbb &middot; [h\u209c\u208b\u2081, x\u209c])
+
+<span class="hl-key">New state:</span>
+  h\u0303 = tanh(W &middot; [r &odot; h\u209c\u208b\u2081, x\u209c])
+  h\u209c = (1-z) &odot; h\u209c\u208b\u2081 + z &odot; h\u0303</div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">LSTM</div><div class="cb-text"><strong>3 gates</strong> (forget, input, output) + cell state. More parameters. Slightly better on very long sequences. Standard for speech recognition.</div></div>
+            <div class="compare-box good"><div class="cb-tag">GRU</div><div class="cb-text"><strong>2 gates</strong> (reset, update). Fewer parameters, faster training. Comparable accuracy. Better for smaller datasets. No separate cell state.</div></div>
+          </div>
+          <div class="cc-note n-blue"><strong>In practice:</strong> LSTM and GRU perform similarly on most tasks. LSTM is the safer default. GRU is preferred when compute is limited. Both are largely superseded by transformers (Ch 9) for most NLP tasks, but remain relevant for real-time streaming, edge devices, and time-series forecasting.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">swap_horiz</span></div><div><div class="cc-title">Sequence-to-Sequence &amp; Encoder-Decoder</div><div class="cc-sub">Translating between sequences of different lengths</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Architecture</div><div class="cc-text">Sutskever et al. (2014) introduced the <strong>encoder-decoder</strong> architecture for machine translation. The encoder RNN reads the input sequence and compresses it into a fixed-size <strong>context vector</strong>. The decoder RNN generates the output sequence from this context vector, one token at a time.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Seq2Seq: English &rarr; French</span>
+
+<span class="hl-key">Encoder:</span>
+  "The cat sat" &rarr; h\u2081 &rarr; h\u2082 &rarr; h\u2083
+  Context vector = h\u2083
+
+<span class="hl-key">Decoder:</span>
+  h\u2083 &rarr; "Le" &rarr; "chat" &rarr; "s'est" &rarr; "assis"
+
+<span class="hl-cmt"># The context vector must encode the</span>
+<span class="hl-cmt"># ENTIRE input sentence in one vector</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Bottleneck Problem</div><div class="cc-text">Compressing an entire sentence into a single fixed-size vector is a severe bottleneck. Long sentences lose information. The decoder has no way to &ldquo;look back&rdquo; at specific parts of the input. This limitation directly motivated the invention of <strong>attention</strong> (Ch 9) &mdash; allowing the decoder to focus on relevant parts of the input at each step.</div></div>
+          <div class="cc-note n-teal"><strong>Bahdanau attention (2015)</strong> was the breakthrough: instead of one context vector, let the decoder attend to all encoder hidden states at each decoding step. This dramatically improved translation quality and became the foundation for the transformer architecture (Ch 9).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">RNN Applications</div><div class="cc-sub">Where recurrent networks still shine</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># RNN/LSTM applications</span>
+
+<span class="hl-key">Language modeling</span>
+  Predict next word/character
+  Foundation for text generation
+
+<span class="hl-key">Machine translation</span>
+  Seq2Seq + attention (pre-transformer)
+
+<span class="hl-key">Speech recognition</span>
+  Audio waveform &rarr; text (CTC loss)
+  LSTMs still used in streaming ASR
+
+<span class="hl-key">Time-series forecasting</span>
+  Stock prices, weather, sensor data
+  LSTMs handle irregular intervals
+
+<span class="hl-key">Music generation</span>
+  Sequence of notes &rarr; new melody
+
+<span class="hl-key">Handwriting generation</span>
+  Sequence of pen strokes</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Bidirectional RNNs</div><div class="cc-text">Process the sequence in <strong>both directions</strong> &mdash; forward and backward &mdash; and concatenate the hidden states. This gives each position context from both past and future. Essential for tasks like named entity recognition where the word after a name matters as much as the word before.</div></div>
+          <div class="cc-note n-orange"><strong>Stacked RNNs:</strong> Multiple RNN layers stacked on top of each other. The output of one layer becomes the input to the next. Deeper RNNs learn more abstract representations. Google&rsquo;s Neural Machine Translation (2016) used 8 stacked LSTM layers with attention.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">swap_horiz</span></div><div><div class="cc-title">RNNs Today &amp; Key Takeaways</div><div class="cc-sub">The transition from recurrence to attention</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Transformer Takeover</div><div class="cc-text">Transformers (Ch 9) replaced RNNs for most NLP tasks by 2018. Key advantages: <strong>parallelizable</strong> (RNNs must process sequentially), <strong>better long-range dependencies</strong> (attention connects any two positions directly), and <strong>scalable</strong> (RNNs don&rsquo;t benefit as much from more compute). But RNNs aren&rsquo;t dead &mdash; they remain relevant for streaming, edge, and real-time applications.</div></div>
+          <div class="cc-note n-red"><strong>State Space Models (SSMs)</strong> like Mamba (2023) are a modern alternative that combines RNN-like sequential processing with transformer-like performance. They process sequences in O(n) time vs transformers&rsquo; O(n&sup2;), making them promising for very long sequences.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Takeaways</div><div class="cc-text"><strong>1.</strong> RNNs process sequences by maintaining a hidden state (memory)<br><br><strong>2.</strong> Vanilla RNNs suffer from vanishing/exploding gradients<br><br><strong>3.</strong> LSTMs solve this with a cell state + 3 gates (forget, input, output)<br><br><strong>4.</strong> GRUs are simpler (2 gates) with similar performance<br><br><strong>5.</strong> Seq2Seq encoder-decoder enabled machine translation<br><br><strong>6.</strong> The context vector bottleneck motivated attention<br><br><strong>7.</strong> Transformers largely replaced RNNs, but RNNs persist for streaming and edge use cases</div></div>
+          <div class="cc-note n-green"><strong>Coming up:</strong> Ch 9 introduces attention and the transformer &mdash; the architecture that replaced RNNs and now powers GPT, BERT, and all modern LLMs.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Sequential data</strong> requires networks with memory. Text, speech, time series, music, video \u2014 the order of elements matters. "The dog bit the man" \u2260 "The man bit the dog." We need networks that process one element at a time while remembering what came before.',color:'#dc2626'},
+    2:{text:'<strong>The vanilla RNN:</strong> h\u209c = tanh(W\u2095\u00b7h\u209c\u208b\u2081 + W\u2093\u00b7x\u209c + b). At each time step, combine the current input with the previous hidden state. The hidden state is the memory \u2014 a fixed-size vector encoding everything seen so far. Same weights shared across all time steps.',color:'#ea580c'},
+    3:{text:'<strong>Vanishing gradients:</strong> During backpropagation through time, gradients are multiplied by W\u2095 at each step. After 100 steps: 0.9\u00b9\u2070\u2070 \u2248 0. The gradient vanishes \u2014 the network can\u2019t learn dependencies beyond ~10\u201320 steps. Exploding gradients (>1 eigenvalue) are fixed by gradient clipping.',color:'#db2777'},
+    4:{text:'<strong>LSTM</strong> (Hochreiter & Schmidhuber, 1997) adds a cell state \u2014 an information highway with gates. Forget gate: what to erase. Input gate: what to store. Output gate: what to reveal. Cell update: C\u209c = f\u2299C\u209c\u208b\u2081 + i\u2299new. When f=1, gradients flow unchanged across 1000+ steps.',color:'#7c3aed'},
+    5:{text:'<strong>GRU</strong> (Cho, 2014) simplifies LSTM to 2 gates: reset and update. Fewer parameters, faster training, comparable performance. h\u209c = (1\u2212z)\u2299h\u209c\u208b\u2081 + z\u2299h\u0303. LSTM is safer for long sequences; GRU is better for limited compute. Both largely superseded by transformers.',color:'#2563eb'},
+    6:{text:'<strong>Seq2Seq</strong> (Sutskever, 2014): Encoder RNN compresses input into a context vector. Decoder RNN generates output from it. The bottleneck: one vector must encode an entire sentence. This limitation directly motivated <strong>attention</strong> \u2014 letting the decoder look back at all encoder states.',color:'#0d9488'},
+    7:{text:'<strong>RNN applications:</strong> Language modeling, machine translation, speech recognition (streaming ASR), time-series forecasting, music generation. Bidirectional RNNs see both past and future. Stacked RNNs (8 layers in Google NMT) learn deeper representations.',color:'#d97706'},
+    8:{text:'<strong>RNNs today:</strong> Transformers replaced RNNs for most NLP by 2018 \u2014 they\u2019re parallelizable, handle long-range dependencies better, and scale with compute. But RNNs persist for streaming, edge devices, and real-time applications. State Space Models (Mamba) offer a modern O(n) alternative.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

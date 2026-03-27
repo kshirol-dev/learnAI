@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: Red Teaming AI Systems — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--orange)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--slate-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--red),var(--violet),var(--blue));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-slate{background:var(--slate-light);border:1px solid var(--border)}.cc-note.n-slate strong{color:var(--slate)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{background:#c2410c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; Red Teaming AI Systems</h2><span class="tb-sub">Garak, PyRIT, DeepTeam &mdash; NIST AI RMF, DEF CON AI Village, automated red teaming</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="11-red-teaming-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">target</span></div><span class="pipe-label">Scope</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Tool Setup</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">auto_fix_high</span></div><span class="pipe-label">Generate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">play_arrow</span></div><span class="pipe-label">Execute</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Measure</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">summarize</span></div><span class="pipe-label">Report</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why AI red teaming is different — maps to "Scope" -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">target</span></div><div><div class="cc-title">Why AI Red Teaming Is Different</div><div class="cc-sub">Pen testing finds known bugs &mdash; red teaming discovers unknown failures</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pen Testing vs. Red Teaming</div><div class="cc-text"><strong>AI penetration testing</strong> is systematic and repeatable: test every known attack class from OWASP LLM Top 10, produce severity-rated findings, deliver remediation guidance. It asks: &ldquo;Does this specific vulnerability exist?&rdquo;<br><br><strong>AI red teaming</strong> is open-ended and exploratory: follow unexpected paths, discover novel failure modes, test behavioral issues and safety policy violations. It asks: &ldquo;How can I make this system fail in ways that matter?&rdquo;<br><br>Both are necessary. Pen testing provides coverage; red teaming provides depth.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Makes AI Different</div><div class="cc-text">AI red teaming differs from traditional software security testing in fundamental ways:<br><br><strong>Probabilistic outputs:</strong> The same input can produce different outputs. You can&rsquo;t write deterministic test cases.<br><strong>Dual risk surface:</strong> Must probe both security risks (injection, exfiltration) AND responsible AI risks (bias, toxicity, misinformation) simultaneously.<br><strong>Natural language attack surface:</strong> Attacks are crafted in plain English, not exploit code. Creative writing skills matter as much as technical skills.<br><strong>Moving target:</strong> Model updates, fine-tuning, and prompt changes can invalidate previous test results overnight.</div></div>
+          <div class="cc-note n-orange"><strong>Microsoft&rsquo;s framing:</strong> &ldquo;Red teaming generative AI differs from traditional software testing because generative AI systems are more probabilistic than traditional systems.&rdquo; This is why they built PyRIT &mdash; manual testing doesn&rsquo;t scale for probabilistic systems.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: NIST framework — maps to "Scope" -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">account_balance</span></div><div><div class="cc-title">NIST AI RMF &amp; the ARIA Program</div><div class="cc-sub">Government frameworks for structured AI red teaming</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">NIST AI Risk Management Framework</div><div class="cc-text">The <strong>NIST AI RMF</strong> (Jan 2023) provides the foundational structure for AI red teaming. Its &ldquo;Measure&rdquo; function defines four categories:<br><br><strong>Measure 1:</strong> Define testing metrics for AI risk evaluation<br><strong>Measure 2:</strong> Evaluate for trustworthiness, safety, security, fairness, and misuse<br><strong>Measure 3:</strong> Track and manage emerging risks<br><strong>Measure 4:</strong> Correlate AI risk with business impact<br><br>Additional guidance in <strong>NIST 600-1</strong> (Generative AI Profile) and <strong>NIST AI 800-1</strong> (Dual-Use Foundation Models, 2nd draft Jan 2025).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ARIA: Three-Level Testbed</div><div class="cc-text">NIST&rsquo;s <strong>ARIA</strong> (Assessing Risks and Impacts of AI) program operationalizes the framework with three testing levels:<br><br><strong>Level 1 &mdash; Model testing:</strong> Confirm claimed capabilities<br><strong>Level 2 &mdash; Red teaming:</strong> Stress test and attempt to induce risks<br><strong>Level 3 &mdash; Field testing:</strong> Examine impacts under regular use<br><br>The first national ARIA Red-Teaming Challenge (Fall 2024) had <strong>500+ participants</strong> conducting <strong>139 successful attacks</strong> against target AI systems using social engineering and technical exploits.</div></div>
+          <div class="cc-note n-blue"><strong>Key finding:</strong> The ARIA challenge found that NIST 600-1 is &ldquo;readily operationalizable in several &mdash; but not all &mdash; key areas.&rdquo; Some risk categories still need clarification for field validation. The framework is evolving alongside the threat landscape.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: DEF CON AI Village — maps to "Tool Setup" -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">groups</span></div><div><div class="cc-title">DEF CON 31: The Largest Public AI Red Team</div><div class="cc-sub">2,500 hackers, 8 LLMs, White House-backed &mdash; August 2023</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Event</div><div class="cc-text">At <strong>DEF CON 31</strong> (August 2023), the AI Village hosted the first-ever public Generative AI Red Team Challenge, backed by the <strong>White House Office of Science and Technology Policy</strong>. Nearly <strong>2,500 hackers</strong> tested <strong>8 LLMs</strong> from Anthropic, Google, Hugging Face, NVIDIA, OpenAI, Stability, and Microsoft using 156 closed-network terminals at Caesars Forum, Las Vegas.</div></div>
+          <div class="cc-block"><div class="cc-label">What They Found</div><div class="cc-text">&bull; Diverse vulnerabilities: jailbreaks, hallucinations, prompt injection, bias, discrimination, and privacy leaks<br>&bull; Some models were <strong>updated overnight</strong> based on Day 1 findings &mdash; participants noticed improved defenses on Day 2<br>&bull; Participants found challenges <strong>harder than anticipated</strong>, suggesting models had meaningful safeguards<br>&bull; External red-teaming proved effective at identifying <strong>novel risks at scale</strong> that internal testing missed</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why It Matters</div><div class="cc-text">DEF CON 31 demonstrated three critical principles:<br><br><strong>1. Public red teaming works:</strong> Crowdsourced testing discovers failure modes that internal teams miss. Diverse backgrounds (security researchers, linguists, ethicists) produce diverse attack strategies.<br><br><strong>2. Continuous testing is essential:</strong> Models updated overnight changed the attack surface. A one-time audit is insufficient.<br><br><strong>3. Red teaming is a community effort:</strong> No single organization has the expertise to test all failure modes. The White House endorsement signaled that external red teaming should become standard practice.</div></div>
+          <div class="cc-note n-red"><strong>Impact:</strong> The DEF CON event directly influenced the Biden-Harris AI governance framework and established norms for continuous external assessment of LLMs. It proved that adversarial testing at scale is both feasible and necessary.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Garak — maps to "Generate" -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">radar</span></div><div><div class="cc-title">Garak: NVIDIA&rsquo;s LLM Vulnerability Scanner</div><div class="cc-sub">The nmap of LLMs &mdash; probes, generators, and detectors</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Garak Does</div><div class="cc-text"><strong>Garak</strong> (Generative AI Red-teaming &amp; Assessment Kit) is NVIDIA&rsquo;s open-source LLM vulnerability scanner. Think of it as <strong>nmap or Metasploit, but for LLMs</strong>. It combines static, dynamic, and adaptive probes to find hallucination, data leakage, prompt injection, misinformation, toxicity, and jailbreaks.</div></div>
+          <div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-text"><strong>Probes:</strong> Manage attack strategies (prompt injection, encoding attacks, social engineering, etc.)<br><strong>Generators:</strong> Abstract away target models (supports Hugging Face, OpenAI, AWS Bedrock, Replicate, LiteLLM, GGUF/llama.cpp, REST APIs)<br><strong>Detectors:</strong> Assess whether attacks succeeded using pattern matching, semantic analysis, and LLM-based evaluation<br><br>Results compile into HTML reports and JSON summaries. Originally developed by Prof. Leon Derczynski (Spring 2023), now maintained by NVIDIA under Apache 2.0.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Garak: scan an LLM for vulnerabilities</span>
+
+<span class="hl-cmt"># Install</span>
+$ pip install garak
+
+<span class="hl-cmt"># Scan OpenAI model for all known vulns</span>
+$ <span class="hl-ok">garak --model_type openai \
+  --model_name gpt-4 \
+  --probes all</span>
+
+<span class="hl-cmt"># Scan for specific vulnerability class</span>
+$ <span class="hl-ok">garak --model_type openai \
+  --model_name gpt-4 \
+  --probes promptinject,encoding</span>
+
+<span class="hl-cmt"># Output: HTML report + JSON results</span>
+<span class="hl-cmt"># Shows: probe name, attempts, passes,</span>
+<span class="hl-cmt"># failures, success rate per attack type</span>
+
+<span class="hl-cmt"># Also supports local models:</span>
+$ <span class="hl-ok">garak --model_type huggingface \
+  --model_name meta-llama/Llama-3-8B</span></div>
+          <div class="cc-note n-violet"><strong>Strength:</strong> Garak is coverage-oriented &mdash; it systematically tests every known attack class. Use it for pen-testing-style sweeps. For creative, exploratory red teaming, combine with human testers or multi-turn tools like PyRIT.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: PyRIT — maps to "Execute" -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">PyRIT: Microsoft&rsquo;s Multi-Turn Red Teaming</div><div class="cc-sub">Automated Crescendo, TAP, and Skeleton Key attacks</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why PyRIT Exists</div><div class="cc-text">Microsoft released <strong>PyRIT</strong> (Python Risk Identification Tool) in February 2024 because single-turn probes (like Garak) miss multi-turn attacks where the adversary gradually escalates across a conversation. PyRIT automates <strong>multi-turn attack strategies</strong> that would take human red teamers hours to execute manually.</div></div>
+          <div class="cc-block"><div class="cc-label">Attack Strategies</div><div class="cc-text"><strong>Crescendo:</strong> Gradually escalate from benign to harmful requests across multiple turns<br><strong>TAP (Tree of Attacks with Pruning):</strong> Explore branching attack paths, pruning unsuccessful branches<br><strong>Skeleton Key:</strong> Convince the model to adopt a permissive persona that bypasses safety training<br><br>Supports OpenAI, Azure, Anthropic, Google, HuggingFace, custom HTTP endpoints, and web apps. Built-in memory (SQLite/Azure SQL) tracks all conversations and results. <strong>v0.11.0</strong> (Feb 2026), ~99K monthly PyPI downloads, 3,556 GitHub stars.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># PyRIT: multi-turn Crescendo attack</span>
+
+<span class="hl-key">from</span> pyrit.orchestrator <span class="hl-key">import</span> (
+    CrescendoOrchestrator
+)
+<span class="hl-key">from</span> pyrit.prompt_target <span class="hl-key">import</span> (
+    OpenAIChatTarget
+)
+
+target = OpenAIChatTarget(
+    model_name=<span class="hl-str">"gpt-4"</span>
+)
+
+orchestrator = CrescendoOrchestrator(
+    objective=<span class="hl-str">"Extract system prompt"</span>,
+    prompt_target=target,
+    max_turns=<span class="hl-num">10</span>
+)
+
+<span class="hl-cmt"># Runs automated multi-turn conversation</span>
+<span class="hl-cmt"># Gradually escalates toward objective</span>
+<span class="hl-cmt"># Scores each response for success</span>
+result = <span class="hl-key">await</span> orchestrator.run()
+<span class="hl-cmt"># result.success, result.conversation</span></div>
+          <div class="cc-note n-teal"><strong>CoPyRIT GUI:</strong> PyRIT also includes a graphical interface for human-led red teaming with collaboration features. Useful for teams where not everyone writes Python. Combines automated attack generation with human judgment.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: DeepTeam — maps to "Measure" -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">DeepTeam: Framework-Aligned Vulnerability Scanning</div><div class="cc-sub">Confident AI &mdash; 40+ vulnerabilities, OWASP/NIST/MITRE aligned</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What DeepTeam Does</div><div class="cc-text"><strong>DeepTeam</strong> (Confident AI) is an open-source red teaming framework that detects <strong>40+ vulnerability types</strong> out-of-the-box: bias (gender, race, political, religious), PII leakage, toxicity, misinformation, factual errors, and robustness issues. It supports <strong>10+ adversarial attack methods</strong> including prompt injection, jailbreaking, leetspeak, ROT-13, and multi-turn attacks (linear and tree jailbreaking).</div></div>
+          <div class="cc-block"><div class="cc-label">Framework Alignment</div><div class="cc-text">DeepTeam maps directly to industry standards:<br><br>&bull; <strong>OWASP Top 10 for LLMs 2025</strong><br>&bull; <strong>OWASP Top 10 for Agents 2026</strong><br>&bull; <strong>NIST AI Risk Management Framework</strong><br>&bull; <strong>MITRE ATLAS</strong><br><br>This means your red team results map directly to compliance requirements. v1.0.4 (Nov 2025), Apache 2.0 license.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># DeepTeam: scan for OWASP LLM Top 10</span>
+
+<span class="hl-key">from</span> deepteam <span class="hl-key">import</span> red_team
+<span class="hl-key">from</span> deepteam.vulnerabilities <span class="hl-key">import</span> (
+    PromptInjection, Bias, PIILeakage
+)
+<span class="hl-key">from</span> deepteam.attacks <span class="hl-key">import</span> (
+    Jailbreaking, Leetspeak, ROT13
+)
+
+<span class="hl-cmt"># Define your model callback</span>
+<span class="hl-key">def</span> model_callback(prompt):
+    <span class="hl-key">return</span> my_llm.generate(prompt)
+
+<span class="hl-cmt"># Run red team scan</span>
+results = red_team(
+    model_callback=model_callback,
+    vulnerabilities=[
+        PromptInjection(),
+        Bias(),
+        PIILeakage()
+    ],
+    attacks=[
+        Jailbreaking(),
+        Leetspeak(),
+        ROT13()
+    ]
+)
+<span class="hl-cmt"># Binary pass/fail with reasoning</span></div>
+          <div class="cc-note n-pink"><strong>Choosing the right tool:</strong> <strong>Garak</strong> for broad vulnerability scanning (nmap-style). <strong>PyRIT</strong> for multi-turn, creative attack strategies. <strong>DeepTeam</strong> for compliance-aligned testing against OWASP/NIST/MITRE. Use all three for comprehensive coverage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Building a red team program — maps to "Report" -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Building a Red Team Program</div><div class="cc-sub">From one-off tests to continuous adversarial evaluation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Red Team Pipeline</div><div class="cc-text"><strong>1. Scope:</strong> Define what you&rsquo;re testing (model, RAG pipeline, agent, MCP integrations) and what failure looks like (safety violations, data leakage, bias, jailbreaks)<br><br><strong>2. Tool setup:</strong> Configure Garak for coverage scans, PyRIT for multi-turn attacks, DeepTeam for compliance mapping<br><br><strong>3. Generate:</strong> Create attack payloads &mdash; automated (tool-generated) + manual (human-crafted for novel attacks)<br><br><strong>4. Execute:</strong> Run attacks against the target system. Log every interaction.<br><br><strong>5. Measure:</strong> Score results using LLM-based scorers, pattern matching, and human review<br><br><strong>6. Report:</strong> Map findings to OWASP/NIST categories. Prioritize by severity and exploitability.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Delivery Models</div><div class="cc-text"><strong>1. Automated SaaS:</strong> CI/CD-integrated scanning that runs on every deployment. Catches regressions. Low cost, high coverage, limited creativity.<br><br><strong>2. Open-source frameworks:</strong> PyRIT, Garak, DeepTeam. Full control, customizable, requires in-house expertise.<br><br><strong>3. Bespoke consultancy:</strong> External red team with AI security expertise. Highest creativity, discovers novel failures. Expensive, periodic.</div></div>
+          <div class="cc-note n-green"><strong>The bottom line:</strong> AI red teaming is not optional. The NIST AI RMF, EU AI Act, and Executive Order 14110 all require adversarial testing. Start with automated tools (Garak + DeepTeam) for coverage, add PyRIT for multi-turn depth, and bring in external red teamers for high-stakes deployments. Make it continuous, not one-off.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=12000;
+  const PIPE_MAP={1:0, 2:0, 3:1, 4:2, 5:3, 6:4, 7:5};
+  const NARRATION={
+    1:{text:'<strong>AI red teaming ≠ pen testing.</strong> Pen testing finds known bugs systematically (OWASP coverage). Red teaming discovers unknown failures creatively. AI adds complexity: probabilistic outputs, dual risk surface (security + responsible AI), natural language attacks, and a constantly moving target.',color:'#ea580c'},
+    2:{text:'<strong>NIST AI RMF</strong> provides the framework: Measure 1–4 for risk evaluation. <strong>ARIA</strong> operationalizes it with three levels: model testing → red teaming → field testing. First national ARIA challenge (Fall 2024): 500+ participants, 139 successful attacks.',color:'#2563eb'},
+    3:{text:'<strong>DEF CON 31</strong> (Aug 2023): 2,500 hackers tested 8 LLMs from Anthropic, Google, NVIDIA, OpenAI, and others. White House-backed. Models updated overnight based on Day 1 findings. Proved that public red teaming discovers novel risks that internal testing misses.',color:'#dc2626'},
+    4:{text:'<strong>Garak</strong> (NVIDIA): The nmap of LLMs. Probes + Generators + Detectors. Supports Hugging Face, OpenAI, Bedrock, Replicate, llama.cpp. Systematic coverage of all known attack classes. HTML reports + JSON. Open-source, Apache 2.0.',color:'#7c3aed'},
+    5:{text:'<strong>PyRIT</strong> (Microsoft, Feb 2024): Multi-turn attack automation — Crescendo (gradual escalation), TAP (branching attack trees), Skeleton Key (persona hijacking). CoPyRIT GUI for human-led testing. v0.11.0, ~99K monthly downloads.',color:'#0d9488'},
+    6:{text:'<strong>DeepTeam</strong> (Confident AI): 40+ vulnerabilities, 10+ attack methods. Maps to OWASP LLM Top 10, OWASP Agents Top 10, NIST AI RMF, MITRE ATLAS. Compliance-aligned red teaming with binary pass/fail scoring.',color:'#db2777'},
+    7:{text:'<strong>Build the program:</strong> Scope → Tool Setup → Generate → Execute → Measure → Report. Three models: automated SaaS (CI/CD), open-source frameworks (PyRIT/Garak/DeepTeam), bespoke consultancy. NIST, EU AI Act, and EO 14110 all require adversarial testing. Make it continuous.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--orange)';narText.innerHTML='Click play or press Space to begin the journey...';stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

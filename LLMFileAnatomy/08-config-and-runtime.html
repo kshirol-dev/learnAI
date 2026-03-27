@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: config.json, generation_config.json, and Runtime Structures — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}.pipe-arrow.lit{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; config.json, generation_config.json, and Runtime Structures</h2><span class="tb-sub">The blueprint, the defaults, and the invisible memory consumers</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">description</span></div><span class="pipe-label">config.json</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">gen_config</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">cached</span></div><span class="pipe-label">KV Cache</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Activations</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">calculate</span></div><span class="pipe-label">Memory</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Complete</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">description</span></div><div><div class="cc-title">config.json: The Architectural Blueprint</div><div class="cc-sub">Every field maps to a tensor shape or model behavior</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Reading the Blueprint</div><div class="cc-text"><code>config.json</code> is the <strong>DNA of the model</strong>. Every field directly determines a tensor dimension, a computation path, or a behavior. You can reverse-engineer the entire model architecture from this one file. It tells the inference engine how many layers to create, how wide each tensor should be, how many attention heads to use, and which activation function to apply. At ~1.4 KB, it's the smallest file but arguably the most information-dense.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Field-to-Tensor Map</div><div class="cc-code"><span class="hl-cmt">// config.json → tensor shapes:</span>
+
+<span class="hl-key">"hidden_size"</span>: <span class="hl-num">4096</span>
+  <span class="hl-cmt">→ embed_tokens: [V, 4096]</span>
+  <span class="hl-cmt">→ q_proj, o_proj: [4096, 4096]</span>
+  <span class="hl-cmt">→ all norm weights: [4096]</span>
+
+<span class="hl-key">"num_hidden_layers"</span>: <span class="hl-num">32</span>
+  <span class="hl-cmt">→ layers.0 through layers.31</span>
+
+<span class="hl-key">"num_attention_heads"</span>: <span class="hl-num">32</span>
+  <span class="hl-cmt">→ head_dim = 4096/32 = 128</span>
+
+<span class="hl-key">"num_key_value_heads"</span>: <span class="hl-num">8</span>
+  <span class="hl-cmt">→ k_proj, v_proj: [8×128, 4096] = [1024, 4096]</span>
+
+<span class="hl-key">"intermediate_size"</span>: <span class="hl-num">14336</span>
+  <span class="hl-cmt">→ gate/up_proj: [14336, 4096]</span>
+
+<span class="hl-key">"vocab_size"</span>: <span class="hl-num">128256</span>
+  <span class="hl-cmt">→ embed_tokens: [128256, 4096]</span></div></div></div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">build</span></div><div><div class="cc-title">Reverse-Engineering from config.json</div><div class="cc-sub">Calculate total parameters without opening the weight files</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Parameter Formula</div><div class="cc-text">You can compute the total parameter count from config.json alone:<br><br><strong>Embedding + lm_head:</strong> 2 &times; vocab &times; hidden (if untied)<br><strong>Per-layer attention:</strong> hidden&sup2; + 2 &times; (kv_heads &times; head_dim &times; hidden) + hidden&sup2;<br><strong>Per-layer FFN:</strong> 3 &times; intermediate &times; hidden<br><strong>Per-layer norms:</strong> 2 &times; hidden<br><strong>Final norm:</strong> hidden<br><br>Multiply per-layer by num_layers, add embeddings. This gives you the exact parameter count and therefore the exact file size in any precision.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Calculation</div><div class="cc-code"><span class="hl-cmt">// Llama 3.1 8B from config.json alone:</span>
+
+<span class="hl-key">Embed + head</span>: 2 × 128256 × 4096 = <span class="hl-num">1.05B</span>
+<span class="hl-key">Attn/layer</span>:   4096² + 2×(1024×4096) + 4096²
+              = <span class="hl-num">41.9M</span>
+<span class="hl-key">FFN/layer</span>:    3 × 14336 × 4096 = <span class="hl-num">176.2M</span>
+<span class="hl-key">Norms/layer</span>:  2 × 4096 = <span class="hl-num">8.2K</span>
+<span class="hl-key">Layer total</span>:  <span class="hl-num">218.1M</span> × 32 = <span class="hl-num">6.98B</span>
+<span class="hl-key">Final norm</span>:   4096 = <span class="hl-num">4K</span>
+<span class="hl-key">─────────────────────────</span>
+<span class="hl-key">Grand total</span>: <span class="hl-num">~8.03B</span> parameters</div></div></div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">generation_config.json: Generation Defaults</div><div class="cc-sub">Temperature, top_p, top_k, and other sampling parameters</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What It Controls</div><div class="cc-text"><code>generation_config.json</code> defines <strong>default text generation parameters</strong>. These control how the model samples from its probability distribution: <strong>temperature</strong> (randomness), <strong>top_p</strong> (nucleus sampling threshold), <strong>top_k</strong> (limit to top K tokens), <strong>max_new_tokens</strong> (output length limit), and <strong>repetition_penalty</strong>. These are <strong>defaults</strong> &mdash; inference frameworks can override them per request.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Example File</div><div class="cc-code"><span class="hl-cmt">// generation_config.json (~148 bytes):</span>
+{
+  <span class="hl-key">"bos_token_id"</span>: <span class="hl-num">128000</span>,
+  <span class="hl-key">"do_sample"</span>: <span class="hl-num">true</span>,
+  <span class="hl-key">"eos_token_id"</span>: [<span class="hl-num">128001</span>, <span class="hl-num">128008</span>, <span class="hl-num">128009</span>],
+  <span class="hl-key">"max_length"</span>: <span class="hl-num">4096</span>,
+  <span class="hl-key">"temperature"</span>: <span class="hl-num">0.6</span>,
+  <span class="hl-key">"top_p"</span>: <span class="hl-num">0.9</span>
+}</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Notice <code>eos_token_id</code> is an array &mdash; multiple tokens can signal "stop generating." This is how the model knows to stop at <code>&lt;|end_of_text|&gt;</code>, <code>&lt;|eom_id|&gt;</code>, or <code>&lt;|eot_id|&gt;</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">cached</span></div><div><div class="cc-title">The KV Cache: The Invisible Memory Consumer</div><div class="cc-sub">Runtime structure that can consume more memory than the model itself</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What the KV Cache Is</div><div class="cc-text">During inference, the model needs to remember the K and V vectors from all previous tokens to attend to them. Rather than recomputing these every time, they're <strong>cached in GPU memory</strong>. The KV cache shape is <strong>[num_layers, 2, seq_len, num_kv_heads, head_dim]</strong>. It doesn't exist in the model file &mdash; it's created at runtime and <strong>grows linearly with sequence length</strong>. For long conversations, the KV cache can exceed the model weight memory.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">KV Cache Size Formula</div><div class="cc-code"><span class="hl-cmt">// KV cache memory per token:</span>
+<span class="hl-key">per_token</span> = 2 × num_layers × num_kv_heads
+            × head_dim × bytes_per_param
+
+<span class="hl-cmt">// Llama 3.1 8B (BF16):</span>
+<span class="hl-key">per_token</span> = 2 × 32 × 8 × 128 × 2
+          = <span class="hl-num">131,072 bytes</span> = <span class="hl-num">128 KB/token</span>
+
+<span class="hl-cmt">// At various sequence lengths:</span>
+  <span class="hl-num">4K</span> tokens:   <span class="hl-num">512 MB</span>
+  <span class="hl-num">32K</span> tokens:  <span class="hl-num">4 GB</span>
+  <span class="hl-num">128K</span> tokens: <span class="hl-num">16 GB</span> <span class="hl-cmt">// = model size!</span></div></div>
+          <div class="cc-note n-red"><strong>Why it matters:</strong> At 128K context length, the KV cache for Llama 3.1 8B consumes ~16 GB &mdash; as much as the model weights themselves. This is why long-context serving requires significantly more GPU memory than the model size alone suggests.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Activation Tensors and Attention Masks</div><div class="cc-sub">Temporary memory that exists only during the forward pass</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Runtime-Only Structures</div><div class="cc-text"><strong>Activations</strong> are the intermediate computation results at each layer &mdash; the hidden states, attention scores, FFN intermediate values. They're temporary: allocated during the forward pass, used once, then freed. <strong>Attention masks</strong> prevent the model from attending to future tokens (causal masking) or padding tokens. Both are created at runtime and never stored in the model file. Activation memory peaks during the FFN layer (14,336-dimensional intermediate).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Memory Categories</div><div class="cc-code"><span class="hl-cmt">// Total GPU memory during inference:</span>
+
+<span class="hl-key">1. Model weights</span>  <span class="hl-cmt">// Loaded from file</span>
+   <span class="hl-num">~16 GB</span> (8B, BF16)
+
+<span class="hl-key">2. KV cache</span>       <span class="hl-cmt">// Grows with seq_len</span>
+   <span class="hl-num">128 KB/token</span>
+
+<span class="hl-key">3. Activations</span>    <span class="hl-cmt">// Temporary per layer</span>
+   <span class="hl-num">~200-500 MB</span> peak
+
+<span class="hl-key">4. Framework</span>      <span class="hl-cmt">// CUDA, PyTorch overhead</span>
+   <span class="hl-num">~1-2 GB</span>
+
+<span class="hl-cmt">// Only #1 comes from the file</span>
+<span class="hl-cmt">// #2-4 are created at runtime</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> When people say "this model needs 24 GB of VRAM," they mean weights + KV cache + activations + overhead. The model file alone tells you only the weight size &mdash; you need to add runtime memory based on your expected sequence length and batch size.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">The Memory Budget Calculator</div><div class="cc-sub">How to estimate total GPU memory for any model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Step-by-Step Estimation</div><div class="cc-text"><strong>Step 1:</strong> Model weights = params &times; bytes_per_param<br><strong>Step 2:</strong> KV cache = 2 &times; layers &times; kv_heads &times; head_dim &times; seq_len &times; bytes &times; batch_size<br><strong>Step 3:</strong> Activations &asymp; 2&times; hidden_size &times; seq_len &times; bytes (peak during FFN)<br><strong>Step 4:</strong> Framework overhead &asymp; 1-2 GB<br><strong>Total:</strong> Sum of all four. If total &gt; GPU VRAM, you need quantization, model parallelism, or a bigger GPU.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Example: Llama 3.1 8B, 8K Context</div><div class="cc-code"><span class="hl-cmt">// Llama 3.1 8B, BF16, 8K ctx, batch=1:</span>
+
+<span class="hl-key">Weights</span>:      8.03B × 2    = <span class="hl-num">16.1 GB</span>
+<span class="hl-key">KV cache</span>:     128KB × 8192 = <span class="hl-num">1.0 GB</span>
+<span class="hl-key">Activations</span>:                 <span class="hl-num">~0.4 GB</span>
+<span class="hl-key">Overhead</span>:                    <span class="hl-num">~1.5 GB</span>
+<span class="hl-key">────────────────────────────────</span>
+<span class="hl-key">Total</span>:                       <span class="hl-num">~19 GB</span>
+<span class="hl-cmt">// → Fits on a 24 GB GPU (A10, 4090)</span>
+
+<span class="hl-cmt">// Same model, Q4 quantized:</span>
+<span class="hl-key">Weights</span>:      8.03B × 0.5  = <span class="hl-num">4.0 GB</span>
+<span class="hl-key">KV cache</span>:     (same)        <span class="hl-num">1.0 GB</span>
+<span class="hl-key">Total</span>:                       <span class="hl-num">~6.9 GB</span>
+<span class="hl-cmt">// → Fits on an 8 GB GPU</span></div></div></div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">architecture</span></div><div><div class="cc-title">Config Fields Decoded: The Complete Reference</div><div class="cc-sub">Every important field and what it means</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Architecture Fields</div><div class="cc-code"><span class="hl-key">"architectures"</span>: [<span class="hl-str">"LlamaForCausalLM"</span>]
+  <span class="hl-cmt">// Which model class to instantiate</span>
+
+<span class="hl-key">"model_type"</span>: <span class="hl-str">"llama"</span>
+  <span class="hl-cmt">// Architecture family identifier</span>
+
+<span class="hl-key">"torch_dtype"</span>: <span class="hl-str">"bfloat16"</span>
+  <span class="hl-cmt">// Native precision of weights</span>
+
+<span class="hl-key">"tie_word_embeddings"</span>: <span class="hl-num">false</span>
+  <span class="hl-cmt">// embed_tokens and lm_head separate</span>
+
+<span class="hl-key">"rope_theta"</span>: <span class="hl-num">500000.0</span>
+  <span class="hl-cmt">// Controls context length capability</span>
+
+<span class="hl-key">"rms_norm_eps"</span>: <span class="hl-num">1e-05</span>
+  <span class="hl-cmt">// Epsilon for numerical stability</span></div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Dimension Fields</div><div class="cc-code"><span class="hl-key">"hidden_size"</span>: <span class="hl-num">4096</span>
+  <span class="hl-cmt">// Width of the residual stream</span>
+
+<span class="hl-key">"num_hidden_layers"</span>: <span class="hl-num">32</span>
+  <span class="hl-cmt">// Depth: how many transformer blocks</span>
+
+<span class="hl-key">"num_attention_heads"</span>: <span class="hl-num">32</span>
+  <span class="hl-cmt">// Q heads → head_dim = 4096/32 = 128</span>
+
+<span class="hl-key">"num_key_value_heads"</span>: <span class="hl-num">8</span>
+  <span class="hl-cmt">// KV heads (GQA) → K/V are [1024, 4096]</span>
+
+<span class="hl-key">"intermediate_size"</span>: <span class="hl-num">14336</span>
+  <span class="hl-cmt">// FFN width → gate/up: [14336, 4096]</span>
+
+<span class="hl-key">"vocab_size"</span>: <span class="hl-num">128256</span>
+  <span class="hl-cmt">// Embedding rows → must match tokenizer</span>
+
+<span class="hl-key">"max_position_embeddings"</span>: <span class="hl-num">131072</span>
+  <span class="hl-cmt">// Maximum supported context length</span></div></div></div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">emoji_events</span></div><div><div class="cc-title">Course Complete: You Can Now Read Any LLM File</div><div class="cc-sub">From bytes on disk to a working transformer &mdash; the full map</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What You Now Know</div><div class="cc-text"><strong>Ch 1:</strong> An LLM file = metadata + tokenizer + weights (99.98%)<br><strong>Ch 2:</strong> Three formats: Safetensors (safe, fast), GGUF (self-contained), PyTorch (legacy, risky)<br><strong>Ch 3:</strong> Embedding = [vocab, hidden] lookup table, token IDs &rarr; vectors<br><strong>Ch 4:</strong> Attention = Q, K, V, O projections with GQA shrinking K/V<br><strong>Ch 5:</strong> FFN = SwiGLU gate/up/down, 65% of all parameters<br><strong>Ch 6:</strong> Special tensors: RMSNorm, RoPE (computed), lm_head, MoE<br><strong>Ch 7:</strong> Tokenizer = BPE vocab + merges + chat template contract<br><strong>Ch 8:</strong> config.json is the DNA; KV cache grows with sequence length</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Complete File Map</div><div class="cc-code"><span class="hl-cmt">// Every file in an LLM download:</span>
+
+<span class="hl-key">config.json</span>              <span class="hl-cmt">// DNA</span>
+<span class="hl-key">generation_config.json</span>   <span class="hl-cmt">// Defaults</span>
+<span class="hl-key">tokenizer.json</span>           <span class="hl-cmt">// Dictionary</span>
+<span class="hl-key">tokenizer_config.json</span>    <span class="hl-cmt">// Chat template</span>
+<span class="hl-key">model.safetensors.index</span>  <span class="hl-cmt">// Shard map</span>
+<span class="hl-key">model-0000N.safetensors</span>  <span class="hl-cmt">// Weights</span>
+
+<span class="hl-cmt">// Not in the file but in your GPU:</span>
+<span class="hl-key">KV cache</span>                 <span class="hl-cmt">// 128 KB/token</span>
+<span class="hl-key">Activations</span>              <span class="hl-cmt">// Temporary</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> You can now open any LLM file, read its config, inspect its tensors, estimate its memory footprint, verify its tokenizer compatibility, and understand exactly what every byte is doing. You've completed the anatomy course.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-tokenizer-files.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: Tokenizer Files</a>
+    <a class="ch-nav-btn next" href="index.html">Back to Index <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0],3:[1],4:[2],5:[3],6:[4],7:[0,1],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>config.json as DNA:</strong> Every field maps to a tensor shape. hidden_size=4096 determines embedding width, num_layers=32 determines layer count, vocab_size=128256 determines embedding rows.',color:'#0d9488'},
+    2:{text:'<strong>Reverse-engineer params:</strong> From config.json alone you can calculate total parameters: 2×vocab×hidden + layers×(attn + FFN + norms) + final_norm = 8.03B for Llama 3.1 8B.',color:'#ea580c'},
+    3:{text:'<strong>generation_config.json:</strong> Default sampling parameters — temperature=0.6, top_p=0.9, eos_token_id as an array of stop tokens. These are defaults that inference frameworks can override.',color:'#7c3aed'},
+    4:{text:'<strong>KV cache:</strong> 128 KB per token for Llama 3.1 8B. At 128K context, that\'s 16 GB — equaling the model weight size. The KV cache is the #1 memory consumer for long-context serving.',color:'#dc2626'},
+    5:{text:'<strong>Activations:</strong> Temporary tensors during the forward pass — hidden states, attention scores, FFN intermediates. ~200-500 MB peak. Created at runtime, never stored in the file.',color:'#2563eb'},
+    6:{text:'<strong>Memory budget:</strong> Weights (16 GB BF16) + KV cache (128 KB/token) + activations (~0.4 GB) + overhead (~1.5 GB). At 8K context = ~19 GB total → fits a 24 GB GPU.',color:'#d97706'},
+    7:{text:'<strong>Config field reference:</strong> architectures = model class, model_type = family, torch_dtype = native precision, rope_theta = context capability, rms_norm_eps = numerical stability.',color:'#db2777'},
+    8:{text:'<strong>Course complete!</strong> You can now read any LLM file, inspect tensors, estimate memory, verify tokenizer compatibility, and understand what every byte does. The hood is open.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

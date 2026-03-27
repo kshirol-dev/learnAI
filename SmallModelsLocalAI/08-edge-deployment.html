@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Edge Deployment — Small Models & Local AI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--cyan:#0891b2;--cyan-light:#ecfeff;--cyan-border:#a5f3fc;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);padding:4px 12px;background:var(--cyan-light);border:1px solid var(--cyan-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--cyan-border);background:var(--cyan-light)}.pipe-stage.lit .pipe-icon{background:var(--cyan);color:#fff}.pipe-stage.lit .pipe-label{color:var(--cyan)}.pipe-arrow.lit{color:var(--cyan)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--cyan-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--cyan);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--cyan);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--cyan);box-shadow:0 0 5px rgba(8,145,178,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-cyan{background:var(--cyan-light);border:1px solid var(--cyan-border)}.cc-note.n-cyan strong{color:var(--cyan)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--cyan);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Edge Deployment: Phones, Browsers, IoT</h2><span class="tb-sub">Running AI on the device itself &mdash; no server, no cloud, no internet required</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Applied</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">devices</span></div><span class="pipe-label">Why Edge</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">ExecuTorch</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">phone_iphone</span></div><span class="pipe-label">Mobile</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">language</span></div><span class="pipe-label">WebLLM</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">ONNX</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">apps</span></div><span class="pipe-label">Use Cases</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Constraints</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Decision Map</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--cyan)"><span class="material-symbols-rounded">devices</span></div><div><div class="cc-title">Why Edge Deployment?</div><div class="cc-sub">Zero latency, zero cost, works offline &mdash; AI that lives on the device</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Edge vs Local vs Cloud</div><div class="cc-code"><span class="hl-key">Cloud:</span> Model runs on provider servers
+  Latency: 200ms-8s | Cost: per token
+  Internet: Required | Privacy: Low
+
+<span class="hl-key">Local:</span> Model runs on your laptop/desktop
+  Latency: 50-200ms | Cost: hardware
+  Internet: Not needed | Privacy: High
+
+<span class="hl-key">Edge:</span> Model runs on phone/browser/IoT
+  Latency: 20-100ms | Cost: $0
+  Internet: Not needed | Privacy: Maximum
+  Size limit: 1-3B models (2-4GB RAM)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Edge Advantage</div><div class="cc-text"><strong>Instant response:</strong> No network hop. The model is already on the device, loaded in memory. Response starts in milliseconds.<br><br><strong>Works offline:</strong> Airplane mode, subway, rural areas, disaster zones. The AI works wherever the device works.<br><br><strong>Maximum privacy:</strong> Data never leaves the device. Not even to a local server. The computation happens in the same process as your app.<br><br><strong>Zero marginal cost:</strong> No server to maintain. No API to pay for. The user&rsquo;s device does the work.</div></div>
+          <div class="cc-note n-cyan"><strong>Key insight:</strong> Edge AI is the ultimate form of local AI. Instead of &ldquo;your server,&rdquo; it&rsquo;s &ldquo;the user&rsquo;s device.&rdquo; The trade-off: you&rsquo;re limited to 1&ndash;3B models that fit in mobile RAM. But for the right tasks, these tiny models are more than enough.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">ExecuTorch: PyTorch to Mobile</div><div class="cc-sub">Meta&rsquo;s framework for deploying models to phones and edge devices</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What ExecuTorch Does</div><div class="cc-code"><span class="hl-key">PyTorch Model (.pt)</span>
+    ↓ torch.export()
+<span class="hl-key">Exported Model</span>
+    ↓ ExecuTorch compiler
+<span class="hl-key">Optimized .pte file</span>
+    ↓ deploy to device
+<span class="hl-key">Runs on phone/IoT</span>
+
+<span class="hl-str">Runtime size:</span> ~50KB base
+<span class="hl-str">Platforms:</span>  iOS, Android, Linux, MCU
+<span class="hl-str">Backends:</span>   XNNPack (CPU), CoreML (Apple),
+            QNN (Qualcomm), Vulkan (GPU)
+<span class="hl-str">Models:</span>     Llama 3.2 1B/3B officially
+            supported by Meta</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Llama 3.2 on Mobile</div><div class="cc-code"><span class="hl-key">Llama 3.2 1B on iPhone 16 Pro:</span>
+  Speed: <span class="hl-num">~50</span> tok/s (ANE + GPU)
+  RAM:   <span class="hl-num">~1.5</span> GB
+  Load:  <span class="hl-num">~2</span> seconds
+
+<span class="hl-key">Llama 3.2 3B on iPhone 16 Pro:</span>
+  Speed: <span class="hl-num">~25</span> tok/s
+  RAM:   <span class="hl-num">~2.5</span> GB
+  Load:  <span class="hl-num">~4</span> seconds
+
+<span class="hl-key">Llama 3.2 1B on Samsung Galaxy S24:</span>
+  Speed: <span class="hl-num">~30</span> tok/s (Qualcomm QNN)
+  RAM:   <span class="hl-num">~1.5</span> GB</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> ExecuTorch is the official path from PyTorch to mobile. Meta uses it in production across their apps (Instagram, WhatsApp). The 50KB runtime means it adds almost nothing to your app size. The model file itself (1&ndash;2GB) is the main cost.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">phone_iphone</span></div><div><div class="cc-title">Mobile Deployment Patterns</div><div class="cc-sub">How to actually ship an LLM inside a mobile app</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Deployment Options</div><div class="cc-code"><span class="hl-key">Option 1: Bundle with app</span>
+  Model included in app binary
+  Pro: Works immediately, no download
+  Con: App size = 1-2GB (large!)
+
+<span class="hl-key">Option 2: Download on first run</span>
+  App downloads model after install
+  Pro: Small initial app size
+  Con: Needs internet for first setup
+
+<span class="hl-key">Option 3: On-demand download</span>
+  Download model when feature is used
+  Pro: Most users never download
+  Con: Delay when first using AI feature
+
+<span class="hl-cmt">Option 2 is most common. Apple and
+Google both support "on-demand
+resources" for large assets.</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Platform-Specific Acceleration</div><div class="cc-code"><span class="hl-key">Apple (iPhone/iPad):</span>
+  Apple Neural Engine (ANE): 15.8 TOPS
+  CoreML backend via ExecuTorch
+  Best for: 1-3B models
+
+<span class="hl-key">Qualcomm (Android flagship):</span>
+  Hexagon NPU: up to 45 TOPS
+  QNN backend via ExecuTorch
+  Best for: 1-3B models
+
+<span class="hl-key">MediaTek (Android mid-range):</span>
+  APU: up to 36 TOPS
+  NeuroPilot SDK
+  Best for: 1B models
+
+<span class="hl-key">Samsung (Exynos):</span>
+  NPU: up to 34.7 TOPS
+  Samsung Neural SDK
+  Best for: 1-3B models</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Modern phones have dedicated AI hardware (NPUs) that are specifically designed for neural network inference. A 2024+ flagship phone can run a 1B model at 30&ndash;50 tok/s &mdash; fast enough for interactive use. The hardware is already there; the software ecosystem is catching up.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">language</span></div><div><div class="cc-title">WebLLM: AI in the Browser</div><div class="cc-sub">Run models directly in Chrome/Edge using WebGPU &mdash; no installation needed</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How WebLLM Works</div><div class="cc-code"><span class="hl-key">WebLLM (by MLC AI)</span>
+
+Browser → WebGPU API → GPU
+  ↓
+Compiled model (Wasm + WebGPU shaders)
+  ↓
+Inference runs entirely in browser
+
+<span class="hl-str">No server.</span> No installation.
+<span class="hl-str">No data leaves the browser tab.</span>
+
+Supported browsers:
+  ✓ Chrome 113+ (WebGPU)
+  ✓ Edge 113+
+  ✓ Safari 18+ (partial)
+  ✗ Firefox (WebGPU in development)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Example: WebLLM in 10 Lines</div><div class="cc-code"><span class="hl-key">import</span> { CreateMLCEngine } <span class="hl-key">from</span>
+  <span class="hl-str">"@mlc-ai/web-llm"</span>;
+
+<span class="hl-key">const</span> engine = <span class="hl-key">await</span> CreateMLCEngine(
+  <span class="hl-str">"Llama-3.2-1B-Instruct-q4f16_1-MLC"</span>
+);
+
+<span class="hl-key">const</span> reply = <span class="hl-key">await</span> engine.chat.completions
+  .create({
+    messages: [{
+      role: <span class="hl-str">"user"</span>,
+      content: <span class="hl-str">"What is quantization?"</span>
+    }]
+  });
+
+console.log(reply.choices[<span class="hl-num">0</span>].message.content);
+<span class="hl-cmt">// Model downloaded to browser cache
+// on first use (~800MB for 1B Q4)</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> WebLLM is remarkable: a user visits your website, the model downloads to their browser cache, and all inference happens on their GPU. No server costs, no privacy concerns, no installation. The catch: first load downloads 0.5&ndash;2GB, and performance depends on the user&rsquo;s GPU.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">ONNX Runtime: Cross-Platform</div><div class="cc-sub">One model format, runs everywhere &mdash; Windows, Mac, Linux, mobile, web</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What ONNX Runtime Does</div><div class="cc-text"><strong>ONNX</strong> (Open Neural Network Exchange) is a standard format for ML models. <strong>ONNX Runtime</strong> is Microsoft&rsquo;s inference engine that runs ONNX models on any platform.<br><br>Unlike GGUF (llama.cpp-specific) or .pte (ExecuTorch-specific), ONNX is a universal format supported by virtually every ML framework and hardware vendor.</div></div>
+          <div class="cc-block"><div class="cc-label">Execution Providers</div><div class="cc-code"><span class="hl-key">ONNX Runtime backends:</span>
+  CPU:        Default, works everywhere
+  CUDA:       NVIDIA GPUs
+  DirectML:   Windows GPU (any vendor)
+  CoreML:     Apple devices
+  QNN:        Qualcomm NPUs
+  WebGPU:     Browser-based
+  TensorRT:   NVIDIA optimized
+  OpenVINO:   Intel hardware</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ONNX Runtime GenAI</div><div class="cc-code"><span class="hl-key">pip install</span> onnxruntime-genai
+
+<span class="hl-key">import</span> onnxruntime_genai <span class="hl-key">as</span> og
+
+model = og.Model(<span class="hl-str">"phi-4-mini-onnx"</span>)
+tokenizer = og.Tokenizer(model)
+
+params = og.GeneratorParams(model)
+params.set_search_options(
+    max_length=<span class="hl-num">200</span>,
+    temperature=<span class="hl-num">0.7</span>
+)
+
+prompt = <span class="hl-str">"Explain quantization briefly."</span>
+tokens = tokenizer.encode(prompt)
+params.input_ids = tokens
+
+generator = og.Generator(model, params)
+<span class="hl-key">while not</span> generator.is_done():
+    generator.compute_logits()
+    generator.generate_next_token()
+
+output = tokenizer.decode(
+    generator.get_sequence(<span class="hl-num">0</span>)
+)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> ONNX Runtime is the &ldquo;write once, run anywhere&rdquo; approach. Convert your model to ONNX once, deploy to Windows (DirectML), Mac (CoreML), Android (QNN), web (WebGPU), or server (CUDA). Microsoft uses it for Phi-4 deployment across all their platforms.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">Real-World Edge AI Use Cases</div><div class="cc-sub">What people are actually building with on-device models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Production Use Cases</div><div class="cc-code"><span class="hl-key">Offline Assistants</span>
+  Smart reply suggestions in messaging
+  Email draft assistance without internet
+  Meeting note summarization on-device
+
+<span class="hl-key">On-Device Translation</span>
+  Real-time translation without cloud
+  Privacy for sensitive conversations
+  Works in areas with no connectivity
+
+<span class="hl-key">Smart Keyboards</span>
+  Next-word prediction (already in iOS/Android)
+  Grammar correction
+  Tone adjustment suggestions
+
+<span class="hl-key">Code Completion</span>
+  IDE autocomplete running locally
+  No code sent to external servers
+  Works offline (airplane, VPN issues)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Emerging Use Cases</div><div class="cc-code"><span class="hl-key">Smart Home / IoT</span>
+  Voice commands processed locally
+  No "always listening" cloud service
+  Works during internet outages
+
+<span class="hl-key">Automotive</span>
+  In-car voice assistant (no cell signal)
+  Real-time navigation instructions
+  Passenger entertainment
+
+<span class="hl-key">Healthcare</span>
+  Patient intake form assistance
+  Symptom triage on tablets
+  Clinical note summarization
+
+<span class="hl-key">Education</span>
+  Personalized tutoring on tablets
+  Offline learning in rural schools
+  Language learning without internet</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The common thread: edge AI shines when you need <strong>privacy</strong> (healthcare, messaging), <strong>offline capability</strong> (rural, automotive, IoT), or <strong>instant response</strong> (keyboards, autocomplete). If your use case has any of these requirements, edge deployment is worth the constraints.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Edge Constraints: The Hard Limits</div><div class="cc-sub">Memory, battery, thermal throttling &mdash; the realities of on-device AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Constraints</div><div class="cc-code"><span class="hl-key">Memory</span>
+  iPhone 16 Pro: 8GB total RAM
+  Your app gets: ~3-4GB max
+  Model + context must fit in that
+
+<span class="hl-key">Battery</span>
+  LLM inference is power-hungry
+  1B model: ~2-5W during generation
+  Continuous use: noticeable drain
+  Background inference: not practical
+
+<span class="hl-key">Thermal Throttling</span>
+  Sustained inference heats the device
+  After ~2-3 min, phone throttles CPU/GPU
+  Speed drops 20-40% when hot
+
+<span class="hl-key">Storage</span>
+  Model files: 0.5-2GB each
+  Users may not want to download
+  App store size limits apply</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Practical Limits</div><div class="cc-text"><strong>Model size:</strong> Realistically 1B&ndash;3B on phones. Anything larger won&rsquo;t fit in available RAM alongside the OS and other apps.<br><br><strong>Context window:</strong> Keep it short (2K&ndash;4K tokens). Longer contexts consume more RAM and slow down generation.<br><br><strong>Generation length:</strong> Short responses (50&ndash;200 tokens) work well. Long generation (1000+ tokens) causes thermal throttling and battery drain.<br><br><strong>Frequency:</strong> Occasional use (user-triggered) is fine. Continuous background inference is not practical on mobile.</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Edge AI is not &ldquo;laptop AI on a phone.&rdquo; It&rsquo;s a fundamentally different environment with hard constraints. Design for short, focused tasks: classify this, extract that, suggest a reply. Don&rsquo;t try to run a full chatbot conversation on a phone &mdash; that&rsquo;s what local (laptop) or cloud is for.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Edge Deployment Decision Map</div><div class="cc-sub">Which framework for which platform and use case</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Framework Selection</div><div class="cc-code"><span class="hl-key">Target: iOS / Android native app</span>
+  → ExecuTorch (Meta)
+  → Models: Llama 3.2 1B/3B
+  → Best performance, official support
+
+<span class="hl-key">Target: Web application (browser)</span>
+  → WebLLM (MLC AI)
+  → Models: Llama 3.2 1B, Gemma 2B
+  → No installation, WebGPU required
+
+<span class="hl-key">Target: Cross-platform (all devices)</span>
+  → ONNX Runtime
+  → Models: Phi-4-mini, any ONNX model
+  → One format, many backends
+
+<span class="hl-key">Target: Desktop app (Electron/Tauri)</span>
+  → llama.cpp (embedded)
+  → Models: Any GGUF model
+  → Maximum flexibility</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Quick Decision</div><div class="cc-text"><strong>Building a mobile app?</strong> → ExecuTorch + Llama 3.2 1B<br><br><strong>Building a web app?</strong> → WebLLM + Llama 3.2 1B<br><br><strong>Need cross-platform?</strong> → ONNX Runtime + Phi-4-mini<br><br><strong>Building a desktop app?</strong> → Ollama/llama.cpp + any model<br><br><strong>Just prototyping?</strong> → Ollama on your laptop (Ch 5)</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Edge deployment is the frontier of local AI. The tools are maturing fast &mdash; ExecuTorch, WebLLM, and ONNX Runtime all reached production quality in 2024&ndash;2025. The hardware (NPUs in every phone) is already there. Chapter 9 ties everything together with a decision framework for choosing between edge, local, and cloud.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-building-local-apps.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: Building Local Apps</a>
+    <a class="ch-nav-btn next" href="09-local-vs-cloud.html">Ch 9: Local vs Cloud <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Edge = AI on the device itself. Zero latency, works offline, maximum privacy. Trade-off: limited to 1-3B models that fit in mobile RAM.',color:'#0891b2'},
+    2:{text:'<strong>Step 2:</strong> ExecuTorch: PyTorch to mobile in 50KB runtime. Llama 3.2 1B runs at ~50 tok/s on iPhone 16 Pro. Meta uses it in production.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Mobile deployment: download model on first run (most common). NPUs in modern phones (15-45 TOPS) handle 1-3B models at interactive speeds.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> WebLLM: LLM in the browser via WebGPU. No installation, no server. Model cached in browser. 10 lines of JavaScript to get started.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> ONNX Runtime: one model format, runs on CPU/CUDA/CoreML/QNN/WebGPU/DirectML. Microsoft\'s "write once, run anywhere" for AI.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Use cases: offline assistants, on-device translation, smart keyboards, code completion, IoT voice commands, healthcare, education.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Hard limits: 3-4GB RAM on phones, battery drain, thermal throttling after 2-3 min. Design for short, focused tasks — not full conversations.',color:'#dc2626'},
+    8:{text:'<strong>Step 8:</strong> Mobile → ExecuTorch. Browser → WebLLM. Cross-platform → ONNX. Desktop → llama.cpp. Prototyping → Ollama. Pick the right tool for the target.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

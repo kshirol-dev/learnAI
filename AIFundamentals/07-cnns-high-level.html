@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: CNNs — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--red-border);background:var(--red-light)}.pipe-stage.lit .pipe-icon{background:var(--red);color:#fff}.pipe-stage.lit .pipe-label{color:var(--red)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--red)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--red);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b91c1c;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; Convolutional Neural Networks</h2><span class="tb-sub">How CNNs see &mdash; from pixels to features to classification</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="07-cnns-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">image</span></div><span class="pipe-label">Input</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Convolve</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">Pool</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">Deep</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">view_list</span></div><span class="pipe-label">Flatten</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">label</span></div><span class="pipe-label">Classify</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- Step 1: Why CNNs? -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">image</span></div><div><div class="cc-title">Why CNNs?</div><div class="cc-sub">The problem with using MLPs for images</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">A 224&times;224 RGB image has <strong>150,528 pixels</strong>. A fully connected layer with 1000 neurons would need 150 million weights &mdash; just for the first layer. This is wasteful because images have <strong>spatial structure</strong>: nearby pixels are related, and the same pattern (an edge, a texture) can appear anywhere in the image.</div></div>
+          <div class="cc-block"><div class="cc-label">The CNN Insight</div><div class="cc-text">Instead of connecting every pixel to every neuron, use small <strong>filters</strong> that slide across the image, detecting local patterns. The same filter is reused everywhere (<strong>weight sharing</strong>), dramatically reducing parameters. A 3&times;3 filter has only 9 weights but can detect edges anywhere in the image.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">MLP on 224&times;224 Image</div><div class="cb-text">First layer: 224&times;224&times;3 &times; 1000 = <strong>150M parameters</strong>. No spatial awareness. A cat in the corner looks completely different from a cat in the center.</div></div>
+            <div class="compare-box good"><div class="cb-tag">CNN on 224&times;224 Image</div><div class="cb-text">First layer: 64 filters &times; 3&times;3&times;3 = <strong>1,728 parameters</strong>. Spatially aware. Same filter detects edges everywhere. Translation invariant.</div></div>
+          </div>
+          <div class="cc-note n-red"><strong>Biological inspiration:</strong> CNNs were inspired by Hubel and Wiesel&rsquo;s 1962 Nobel Prize-winning discovery that neurons in the visual cortex respond to specific local patterns (edges, orientations) in small receptive fields, not the entire visual field.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: The Convolution Operation -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">filter_alt</span></div><div><div class="cc-title">The Convolution Operation</div><div class="cc-sub">Sliding a small filter across the image to detect patterns</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">A small <strong>kernel</strong> (typically 3&times;3 or 5&times;5) slides across the input image. At each position, it computes the dot product between the kernel weights and the overlapping image patch. The result is a <strong>feature map</strong> &mdash; a new image showing where the pattern was detected.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># 3&times;3 edge-detection kernel example</span>
+
+<span class="hl-key">Kernel:</span>  [-1, -1, -1]
+         [-1,  <span class="hl-num">8</span>, -1]
+         [-1, -1, -1]
+
+<span class="hl-cmt"># Slide across image, compute dot product</span>
+<span class="hl-cmt"># at each position:</span>
+<span class="hl-key">output[i,j]</span> = &sum; kernel &times; image_patch[i,j]
+
+<span class="hl-cmt"># High output = strong edge detected</span>
+<span class="hl-cmt"># Low output = smooth region (no edge)</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Concepts</div><div class="cc-text"><strong>Stride:</strong> How many pixels the kernel moves each step. Stride 1 = move one pixel. Stride 2 = skip every other pixel (halves output size).<br><br><strong>Padding:</strong> Add zeros around the image border so the output has the same size as the input. Without padding, each convolution shrinks the image.<br><br><strong>Multiple filters:</strong> Each filter detects a different pattern. 64 filters produce 64 feature maps. The network learns which filters are useful during training.</div></div>
+          <div class="cc-note n-orange"><strong>Weight sharing is the key:</strong> One 3&times;3 filter has 9 weights but is applied at every position in the image. A 224&times;224 image has ~50,000 positions. The same 9 weights detect the same pattern everywhere &mdash; this is why CNNs are translation invariant.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Pooling -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">Pooling</div><div class="cc-sub">Downsampling feature maps to reduce computation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Max Pooling</div><div class="cc-text">Divide the feature map into non-overlapping patches (typically 2&times;2) and keep only the <strong>maximum value</strong> in each patch. This halves the spatial dimensions, reduces computation by 4x, and makes the network more robust to small translations.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># Max pooling 2&times;2 example</span>
+
+<span class="hl-key">Input:</span>        <span class="hl-key">Output:</span>
+[1, 3, 2, 4]
+[5, <span class="hl-ok">6</span>, 1, <span class="hl-ok">8</span>]  &rarr;  [<span class="hl-ok">6</span>, <span class="hl-ok">8</span>]
+[3, 2, 7, 1]
+[<span class="hl-ok">9</span>, 4, <span class="hl-ok">8</span>, 3]  &rarr;  [<span class="hl-ok">9</span>, <span class="hl-ok">8</span>]
+
+<span class="hl-cmt"># Takes the max from each 2&times;2 block</span>
+<span class="hl-cmt"># 4&times;4 &rarr; 2&times;2 (halves each dimension)</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Pool?</div><div class="cc-text"><strong>1. Reduce computation:</strong> Fewer pixels to process in subsequent layers<br><strong>2. Translation invariance:</strong> Small shifts in input don&rsquo;t change the max value<br><strong>3. Larger receptive field:</strong> After pooling, each neuron &ldquo;sees&rdquo; a larger area of the original image<br><strong>4. Prevent overfitting:</strong> Fewer parameters in later layers</div></div>
+          <div class="cc-note n-pink"><strong>Modern trend:</strong> Many modern architectures replace pooling with <strong>strided convolutions</strong> (stride 2 convolution achieves similar downsampling but with learnable parameters). ResNets and EfficientNets use strided convolutions. Some architectures like ViT eliminate pooling entirely.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Hierarchical Features -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Hierarchical Feature Learning</div><div class="cc-sub">How deeper layers learn increasingly abstract features</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Layer-by-Layer Abstraction</div><div class="cc-text">Each convolutional layer builds on the previous one, creating a <strong>hierarchy of features</strong> from simple to complex. This is the fundamental power of deep CNNs &mdash; they automatically learn the right features for the task.</div></div>
+          <div class="cc-code"><span class="hl-cmt"># What each layer learns (image classification)</span>
+
+<span class="hl-key">Layer 1:</span>  Edges, corners, color gradients
+          Simple, low-level patterns
+          <span class="hl-str">| / \ &mdash; + L T</span>
+
+<span class="hl-key">Layer 2:</span>  Textures, simple shapes
+          Combinations of edges
+          <span class="hl-str">circles, grids, stripes</span>
+
+<span class="hl-key">Layer 3:</span>  Parts of objects
+          Combinations of textures/shapes
+          <span class="hl-str">eyes, wheels, windows, fur</span>
+
+<span class="hl-key">Layer 4+:</span> Whole objects, scenes
+          Combinations of parts
+          <span class="hl-str">faces, cars, dogs, buildings</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Receptive Field Growth</div><div class="cc-text">Each layer&rsquo;s neurons &ldquo;see&rdquo; a larger area of the original image. Layer 1 neurons see a 3&times;3 patch. Layer 2 neurons see a 5&times;5 patch (through the layer 1 neurons they connect to). By layer 10, neurons may see the entire image. This is how local patterns combine into global understanding.</div></div>
+          <div class="cc-note n-violet"><strong>Transfer learning works because of this hierarchy.</strong> Early layers learn universal features (edges, textures) that transfer across tasks. A CNN trained on ImageNet can be fine-tuned for medical imaging by replacing only the last few layers. The edge and texture detectors are reusable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Classic CNN Architecture -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">view_list</span></div><div><div class="cc-title">CNN Architecture</div><div class="cc-sub">The standard pattern: Conv &rarr; ReLU &rarr; Pool &rarr; repeat &rarr; Flatten &rarr; Dense</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Classic CNN architecture</span>
+
+<span class="hl-key">Input:</span>  224 &times; 224 &times; 3  (RGB image)
+
+<span class="hl-key">Conv1:</span>  64 filters, 3&times;3, ReLU
+<span class="hl-key">Conv2:</span>  64 filters, 3&times;3, ReLU
+<span class="hl-key">Pool:</span>   2&times;2 max pool &rarr; 112&times;112&times;64
+
+<span class="hl-key">Conv3:</span>  128 filters, 3&times;3, ReLU
+<span class="hl-key">Conv4:</span>  128 filters, 3&times;3, ReLU
+<span class="hl-key">Pool:</span>   2&times;2 max pool &rarr; 56&times;56&times;128
+
+<span class="hl-key">Conv5:</span>  256 filters, 3&times;3, ReLU
+<span class="hl-key">Conv6:</span>  256 filters, 3&times;3, ReLU
+<span class="hl-key">Pool:</span>   2&times;2 max pool &rarr; 28&times;28&times;256
+
+<span class="hl-key">Flatten:</span> 28&times;28&times;256 = 200,704
+<span class="hl-key">Dense:</span>  4096 &rarr; 4096 &rarr; 1000
+<span class="hl-key">Output:</span> softmax (1000 classes)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Pattern</div><div class="cc-text"><strong>Spatial dimensions decrease:</strong> 224 &rarr; 112 &rarr; 56 &rarr; 28 &rarr; 14 &rarr; 7<br><strong>Channel depth increases:</strong> 3 &rarr; 64 &rarr; 128 &rarr; 256 &rarr; 512<br><br>The network trades spatial resolution for feature richness. Early layers have large spatial maps with few channels. Deep layers have small spatial maps with many channels. The final dense layers combine all features for classification.</div></div>
+          <div class="cc-note n-blue"><strong>Batch norm + residual connections</strong> (from Ch 6) are added to every modern CNN. Each conv block becomes: Conv &rarr; BatchNorm &rarr; ReLU + skip connection. This is the ResNet pattern that enabled 100+ layer CNNs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6: Architecture Evolution -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">Architecture Evolution</div><div class="cc-sub">From LeNet to ResNet &mdash; 25 years of innovation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">LeNet-5</span> (LeCun, 1998)
+  <span class="hl-num">7</span> layers, <span class="hl-num">60K</span> params
+  Handwritten digits (MNIST)
+  First practical CNN
+
+<span class="hl-key">AlexNet</span> (Krizhevsky, 2012)
+  <span class="hl-num">8</span> layers, <span class="hl-num">60M</span> params
+  ImageNet top-5 error: <span class="hl-ok">15.3%</span> (vs 26% prev)
+  ReLU, dropout, GPU training
+
+<span class="hl-key">VGGNet</span> (Simonyan, 2014)
+  <span class="hl-num">16-19</span> layers, <span class="hl-num">138M</span> params
+  Uniform 3&times;3 convolutions
+  Proved depth matters
+
+<span class="hl-key">GoogLeNet</span> (Szegedy, 2014)
+  <span class="hl-num">22</span> layers, <span class="hl-num">6.8M</span> params
+  Inception modules (multi-scale)
+  Efficient parameter usage</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-key">ResNet</span> (He, 2015)
+  <span class="hl-num">50-152</span> layers, <span class="hl-num">25-60M</span> params
+  Skip connections (y = F(x) + x)
+  <span class="hl-ok">3.57%</span> top-5 error (superhuman!)
+
+<span class="hl-key">EfficientNet</span> (Tan, 2019)
+  Compound scaling (depth+width+resolution)
+  <span class="hl-num">5.3M</span> params, better than ResNet
+  Neural architecture search (NAS)
+
+<span class="hl-key">Vision Transformer</span> (Dosovitskiy, 2020)
+  No convolutions at all!
+  Split image into patches, use attention
+  Matches/beats CNNs with enough data</div>
+          <div class="cc-note n-teal"><strong>The trend:</strong> ImageNet top-5 error went from 26% (2011) to 3.57% (2015, ResNet) &mdash; surpassing human performance (~5%). The key innovations: depth (VGG), multi-scale (Inception), skip connections (ResNet), efficient scaling (EfficientNet), and now attention (ViT).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7: CNN Applications -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">apps</span></div><div><div class="cc-title">CNN Applications</div><div class="cc-sub">Beyond classification &mdash; detection, segmentation, generation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># CNN task types</span>
+
+<span class="hl-key">Classification</span>
+  Input: image &rarr; Output: label
+  &ldquo;This is a cat&rdquo;
+
+<span class="hl-key">Object Detection</span> (YOLO, Faster R-CNN)
+  Input: image &rarr; Output: bounding boxes + labels
+  &ldquo;Cat at (x,y,w,h), dog at (x,y,w,h)&rdquo;
+
+<span class="hl-key">Semantic Segmentation</span> (U-Net, DeepLab)
+  Input: image &rarr; Output: per-pixel labels
+  Every pixel classified (road, car, person)
+
+<span class="hl-key">Instance Segmentation</span> (Mask R-CNN)
+  Input: image &rarr; Output: per-pixel per-object
+  Separate masks for each individual object
+
+<span class="hl-key">Image Generation</span> (GANs, Diffusion)
+  Input: noise/text &rarr; Output: image
+  Create photorealistic images (Ch 11)</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Real-World Impact</div><div class="cc-text"><strong>Medical imaging:</strong> Detect tumors, diabetic retinopathy, skin cancer (dermatologist-level accuracy)<br><strong>Self-driving cars:</strong> Detect pedestrians, lanes, signs, other vehicles in real-time<br><strong>Facial recognition:</strong> Unlock phones, security systems, photo organization<br><strong>Agriculture:</strong> Detect crop diseases, count livestock from satellite imagery<br><strong>Manufacturing:</strong> Detect defects on assembly lines</div></div>
+          <div class="cc-note n-orange"><strong>YOLO (You Only Look Once)</strong> processes an entire image in a single forward pass, achieving real-time object detection at 30+ FPS. This made practical applications like self-driving cars and security systems possible. YOLOv8 (2023) detects objects in under 5ms.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 8: CNNs Today & Key Takeaways -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--red),var(--orange))"><span class="material-symbols-rounded">visibility</span></div><div><div class="cc-title">CNNs Today &amp; Key Takeaways</div><div class="cc-sub">The state of computer vision in the transformer era</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CNNs vs Vision Transformers</div><div class="cc-text"><strong>CNNs still dominate</strong> when data is limited, latency matters, or the task is well-defined (medical imaging, edge devices, real-time detection). <strong>Vision Transformers (ViT)</strong> excel with massive datasets and compute, and are increasingly used in multimodal models (CLIP, DALL-E). Many modern systems combine both &mdash; CNN backbones with transformer heads.</div></div>
+          <div class="cc-note n-red"><strong>The inductive bias advantage:</strong> CNNs have built-in assumptions (locality, translation invariance, weight sharing) that make them data-efficient. ViTs must learn these properties from data, requiring much more training data. For small datasets, CNNs still win.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Takeaways</div><div class="cc-text"><strong>1.</strong> CNNs exploit spatial structure via local filters and weight sharing<br><br><strong>2.</strong> Convolution + ReLU + pooling is the core building block<br><br><strong>3.</strong> Deeper layers learn increasingly abstract features (edges &rarr; objects)<br><br><strong>4.</strong> Spatial dims decrease, channel depth increases through the network<br><br><strong>5.</strong> ResNet skip connections enabled 100+ layer CNNs<br><br><strong>6.</strong> Applications: classification, detection, segmentation, generation<br><br><strong>7.</strong> Vision Transformers are emerging but CNNs remain essential</div></div>
+          <div class="cc-note n-green"><strong>Coming up:</strong> Ch 8 covers RNNs for sequential data (text, time series). Ch 9 introduces the transformer &mdash; which replaced RNNs and is now challenging CNNs too.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[3,4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Why CNNs?</strong> A 224\u00d7224 RGB image has 150K pixels. A fully connected layer would need 150M weights. CNNs use small sliding filters (3\u00d73) with weight sharing \u2014 the same 9 weights detect patterns everywhere. This reduces parameters by 100,000x while exploiting spatial structure.',color:'#dc2626'},
+    2:{text:'<strong>Convolution:</strong> A small kernel (3\u00d73) slides across the image, computing dot products at each position. The output is a feature map showing where patterns were detected. Stride controls step size. Padding preserves dimensions. Multiple filters detect different patterns.',color:'#ea580c'},
+    3:{text:'<strong>Pooling</strong> downsamples feature maps. Max pooling (2\u00d72) keeps the maximum value in each patch, halving spatial dimensions. This reduces computation, increases translation invariance, and grows the receptive field. Modern architectures often replace pooling with strided convolutions.',color:'#db2777'},
+    4:{text:'<strong>Hierarchical features:</strong> Layer 1 learns edges. Layer 2 combines edges into textures. Layer 3 combines textures into parts (eyes, wheels). Layer 4+ recognizes objects. Each layer\u2019s receptive field grows, enabling local-to-global understanding. This hierarchy is why transfer learning works.',color:'#7c3aed'},
+    5:{text:'<strong>CNN architecture pattern:</strong> Conv \u2192 BatchNorm \u2192 ReLU \u2192 Pool, repeated. Spatial dimensions shrink (224 \u2192 7), channel depth grows (3 \u2192 512). Final layers flatten and classify. Every modern CNN adds batch normalization and residual connections.',color:'#2563eb'},
+    6:{text:'<strong>Architecture evolution:</strong> LeNet (1998, 60K params) \u2192 AlexNet (2012, 60M, GPU revolution) \u2192 VGG (2014, depth matters) \u2192 GoogLeNet (2014, multi-scale) \u2192 ResNet (2015, skip connections, superhuman accuracy) \u2192 EfficientNet (2019, compound scaling) \u2192 ViT (2020, attention replaces convolution).',color:'#0d9488'},
+    7:{text:'<strong>CNN applications:</strong> Classification (label an image), object detection (YOLO \u2014 bounding boxes in real-time), semantic segmentation (label every pixel), instance segmentation (separate masks per object), and image generation. CNNs power medical imaging, self-driving cars, and facial recognition.',color:'#d97706'},
+    8:{text:'<strong>CNNs today:</strong> Still dominant for small datasets, edge devices, and real-time tasks. Vision Transformers excel with massive data. Many systems combine both. CNNs\u2019 inductive biases (locality, translation invariance) make them data-efficient \u2014 ViTs must learn these from scratch.',color:'#dc2626'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--red)';narText.innerHTML='Click play or press Space to begin the journey...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

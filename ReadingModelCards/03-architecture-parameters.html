@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Architecture & Parameters — Reading Model Cards</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--pink-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--pink),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Architecture &amp; Parameters</h2><span class="tb-sub">Sizing up a model &mdash; what the numbers actually mean for your hardware and use case</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Params</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Dense/MoE</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">visibility</span></div><span class="pipe-label">Attention</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">straighten</span></div><span class="pipe-label">Context</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">settings</span></div><span class="pipe-label">Config</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Memory</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tag</span></div>
+        <div><div class="cc-title">What &ldquo;7B&rdquo; Actually Means</div><div class="cc-sub">Parameter count &mdash; the number that dominates every model name</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Basics</div>
+            <div class="cc-text">When you see &ldquo;Llama-3.1-8B,&rdquo; the <strong>8B means 8 billion parameters</strong> &mdash; 8 billion individual numbers (weights) that the model learned during training. More parameters generally means more capacity to store knowledge and handle complex reasoning. The common sizes you&rsquo;ll encounter: <strong>1B&ndash;3B</strong> (edge/mobile), <strong>7B&ndash;8B</strong> (single GPU sweet spot), <strong>13B&ndash;14B</strong> (strong single-GPU), <strong>32B&ndash;70B</strong> (multi-GPU or quantized), <strong>405B+</strong> (cluster-scale).</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Practical Implication</div>
+            <div class="cc-text">Parameter count directly determines <strong>how much memory (VRAM/RAM) you need</strong>. Each parameter at full precision (FP16) takes 2 bytes. So an 8B model needs ~16GB of VRAM just for the weights, plus overhead for KV-cache and activations. A 70B model needs ~140GB at FP16 &mdash; that&rsquo;s multiple high-end GPUs. This is why quantization exists: an 8B model at 4-bit precision needs only ~4GB.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Parameter count is like engine displacement in cars. A bigger engine has more power, but it also burns more fuel and won&rsquo;t fit in every chassis. A 7B model on a laptop can be more useful than a 70B model you can&rsquo;t run.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">hub</span></div>
+        <div><div class="cc-title">Dense vs. Mixture-of-Experts (MoE)</div><div class="cc-sub">Why &ldquo;47B parameters&rdquo; doesn&rsquo;t always mean what you think</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Dense Models</div>
+            <div class="cc-text">In a <strong>dense model</strong>, every parameter is used for every input token. Llama 3.1 8B is dense &mdash; all 8 billion parameters fire on every forward pass. This is simple but expensive at scale: double the parameters, double the compute.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">MoE Models</div>
+            <div class="cc-text">In a <strong>Mixture-of-Experts</strong> model, the parameters are split into &ldquo;expert&rdquo; sub-networks, and a router selects only a few experts per token. <strong>Mixtral 8x7B</strong> has 46.7B total parameters but only ~12.9B are active per token (2 of 8 experts). <strong>DeepSeek-R1</strong> has 671B total but only ~37B active. The model&rsquo;s name says 47B, but it runs like a 13B.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">How to Spot It on a Card</div>
+            <div class="cc-text">Look for keywords: <strong>&ldquo;Mixture of Experts,&rdquo; &ldquo;MoE,&rdquo; &ldquo;8x7B&rdquo;</strong> (the &ldquo;x&rdquo; is a giveaway), or in <code>config.json</code> you&rsquo;ll see fields like <code>num_experts</code> and <code>num_experts_per_tok</code>. If the card reports both &ldquo;total parameters&rdquo; and &ldquo;active parameters,&rdquo; it&rsquo;s MoE. Memory requirements are based on <strong>total parameters</strong> (all experts must be loaded), but inference speed relates to <strong>active parameters</strong>.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Parameter count alone is misleading for MoE models. A 47B MoE model (Mixtral) can be faster to run than a 13B dense model, because only 12.9B parameters are active per token. Always ask: &ldquo;Is this dense or MoE?&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">visibility</span></div>
+        <div><div class="cc-title">Attention Types: MHA, GQA, MQA</div><div class="cc-sub">The architectural choice that affects speed and memory during inference</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Attention Is</div>
+            <div class="cc-text">Every transformer model uses an <strong>attention mechanism</strong> with queries (Q), keys (K), and values (V). The attention type determines how these are organized, affecting speed and memory during long-context inference.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Three Types</div>
+            <div class="cc-text"><strong>Multi-Head Attention (MHA):</strong> Each attention head has its own Q, K, V projections. The original Transformer design. Full quality but highest memory for KV-cache.<br><br><strong>Grouped-Query Attention (GQA):</strong> Multiple query heads share a smaller set of K/V heads. Llama 3, Gemma 2, and Mistral use this. Reduces KV-cache memory significantly with minimal quality loss.<br><br><strong>Multi-Query Attention (MQA):</strong> All query heads share a single K/V head. Maximum speed, but slightly lower quality. Used in some older models like Falcon.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Where to Find It</div>
+            <div class="cc-text">In <code>config.json</code>, compare <code>num_attention_heads</code> (query heads) with <code>num_key_value_heads</code> (KV heads). If they&rsquo;re equal, it&rsquo;s MHA. If KV is smaller (e.g., 32 query heads, 8 KV heads), it&rsquo;s GQA. If KV is 1, it&rsquo;s MQA. Most modern LLMs use GQA as the sweet spot.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> GQA is now the de facto standard. If you see a model with GQA, it will handle long contexts more efficiently than an MHA model of the same size. This matters most when you&rsquo;re processing documents, not short prompts.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">straighten</span></div>
+        <div><div class="cc-title">Context Length</div><div class="cc-sub">How much text the model can see at once &mdash; and why bigger isn&rsquo;t always better</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Means</div>
+            <div class="cc-text">Context length (or context window) is the <strong>maximum number of tokens the model can process in a single input+output</strong>. Common values: <strong>2K&ndash;4K</strong> (older models), <strong>8K</strong> (GPT-3.5 era), <strong>32K&ndash;128K</strong> (modern LLMs like Llama 3.1, Gemma 2), <strong>200K&ndash;1M+</strong> (Gemini, Claude). A token is roughly 3/4 of a word in English, so 128K tokens &#x2248; 96,000 words &#x2248; a full novel.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Tradeoffs</div>
+            <div class="cc-text">Longer context means you can feed in more documents, longer conversations, or entire codebases. But: <strong>memory usage grows with context length</strong> (the KV-cache), <strong>quality can degrade</strong> at the edges of very long contexts (the &ldquo;lost in the middle&rdquo; problem), and <strong>cost scales linearly</strong> with input tokens. A model that advertises 128K context may perform great at 32K but poorly at 120K. Look for the card&rsquo;s stated &ldquo;effective context&rdquo; or needle-in-a-haystack test results.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Match the context length to your use case. Chatbot? 8K is fine. RAG with documents? 32K covers most needs. Full-codebase analysis? You need 128K+. Don&rsquo;t pay the memory cost of 128K context if you only need 8K.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">settings</span></div>
+        <div><div class="cc-title">Reading <code>config.json</code></div><div class="cc-sub">The blueprint that defines every architectural decision</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Key Fields</div>
+            <div class="cc-code"><span class="hl-cmt">// From a typical LLM config.json</span>
+<span class="hl-key">"hidden_size"</span>: <span class="hl-num">4096</span>,        <span class="hl-cmt">// Width of each layer</span>
+<span class="hl-key">"num_hidden_layers"</span>: <span class="hl-num">32</span>,   <span class="hl-cmt">// Depth (number of layers)</span>
+<span class="hl-key">"num_attention_heads"</span>: <span class="hl-num">32</span>, <span class="hl-cmt">// Query heads</span>
+<span class="hl-key">"num_key_value_heads"</span>: <span class="hl-num">8</span>,  <span class="hl-cmt">// KV heads (GQA)</span>
+<span class="hl-key">"vocab_size"</span>: <span class="hl-num">128256</span>,      <span class="hl-cmt">// Tokenizer vocabulary</span>
+<span class="hl-key">"max_position_embeddings"</span>: <span class="hl-num">131072</span>, <span class="hl-cmt">// Max context</span>
+<span class="hl-key">"rope_theta"</span>: <span class="hl-num">500000.0</span>,   <span class="hl-cmt">// Rotary embedding base</span>
+<span class="hl-key">"rms_norm_eps"</span>: <span class="hl-num">1e-05</span>     <span class="hl-cmt">// Normalization</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Each Field Tells You</div>
+            <div class="cc-text"><strong>hidden_size &times; num_hidden_layers</strong> = the model&rsquo;s capacity. More layers and wider layers = more parameters.<br><br><strong>num_attention_heads vs num_key_value_heads</strong> = attention type (equal = MHA, different = GQA).<br><br><strong>max_position_embeddings</strong> = the maximum context length. 131072 = 128K tokens.<br><br><strong>rope_theta</strong> = the rotary position encoding base. Higher values (500K+) indicate models trained for long context. Lower values (10K) suggest shorter effective context.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> You don&rsquo;t need to understand the math behind every field. The <code>config.json</code> is the model&rsquo;s blueprint &mdash; scan it for the key numbers (layers, heads, context length, vocab size) and move on.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">memory</span></div>
+        <div><div class="cc-title">The Memory Estimation Rule of Thumb</div><div class="cc-sub">Can you even run this model? A quick mental math formula</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Formula</div>
+            <div class="cc-text"><strong>VRAM (GB) &#x2248; Parameters (B) &times; Bytes per Parameter</strong><br><br>FP32: 8B &times; 4 = 32GB<br>FP16/BF16: 8B &times; 2 = <strong>16GB</strong><br>INT8: 8B &times; 1 = 8GB<br>INT4 (Q4): 8B &times; 0.5 = <strong>4GB</strong><br><br>This is <em>weights only</em>. Add 20&ndash;30% for KV-cache, activations, and framework overhead. So an 8B model at FP16 realistically needs ~20GB, and at INT4 needs ~5&ndash;6GB. A 70B model at INT4 needs ~40GB &mdash; two 24GB GPUs or one 48GB GPU.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Quick Reference</div>
+            <div class="cc-code"><span class="hl-cmt">// Can I run it? Quick check:</span>
+<span class="hl-str">  7B  Q4</span> &rarr; <span class="hl-num">~5GB</span>   <span class="hl-cmt">// Laptop GPU</span>
+<span class="hl-str">  7B  FP16</span> &rarr; <span class="hl-num">~16GB</span>  <span class="hl-cmt">// RTX 4090</span>
+<span class="hl-str"> 13B  Q4</span> &rarr; <span class="hl-num">~8GB</span>   <span class="hl-cmt">// RTX 3080/4070</span>
+<span class="hl-str"> 70B  Q4</span> &rarr; <span class="hl-num">~40GB</span>  <span class="hl-cmt">// 2x RTX 4090</span>
+<span class="hl-str">405B  Q4</span> &rarr; <span class="hl-num">~220GB</span> <span class="hl-cmt">// Multi-node</span></div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Before reading benchmarks or training data, check if you can even run the model. Parameters &times; bytes-per-param + 25% overhead = minimum VRAM. If it doesn&rsquo;t fit, look for a quantized variant or a smaller model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Size vs. Quality: The Frontier</div><div class="cc-sub">When smaller models punch above their weight</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Scaling Reality</div>
+            <div class="cc-text">Bigger is generally better, but the relationship is <strong>logarithmic, not linear</strong>. Going from 7B to 70B (10x more parameters) doesn&rsquo;t give you 10x better results &mdash; it might give you 15&ndash;25% improvement on benchmarks. Meanwhile, a well-fine-tuned 7B model can outperform a generic 70B model on a specific task. The current generation of &ldquo;small&rdquo; models (Llama 3.2 3B, Phi-4 14B, Gemma 3 4B) often match or beat previous-generation large models.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Compare</div>
+            <div class="cc-text">When choosing between model sizes, compare: <strong>benchmarks per GB of VRAM</strong> (efficiency), not raw benchmark scores. A 7B model scoring 75% on MMLU while needing 5GB is often more practical than a 70B model scoring 85% while needing 40GB. The question isn&rsquo;t &ldquo;which is smarter?&rdquo; but &ldquo;which gives me the best result I can actually run?&rdquo;</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Always ask: &ldquo;Is the next size up worth 4x more VRAM and 3x slower inference?&rdquo; For most production use cases, the answer is no. The sweet spot for most teams is the largest model that comfortably fits their hardware budget.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">checklist</span></div>
+        <div><div class="cc-title">Your Architecture Checklist</div><div class="cc-sub">The five questions to answer from the architecture section of any card</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Five Questions</div>
+            <div class="cc-text"><strong>1. How many parameters?</strong> Check if total vs. active differs (MoE).<br><br><strong>2. Dense or MoE?</strong> Look for &ldquo;8x7B&rdquo; naming or <code>num_experts</code> in config.json.<br><br><strong>3. What&rsquo;s the context length?</strong> Check <code>max_position_embeddings</code> and match to your use case.<br><br><strong>4. Will it fit my hardware?</strong> Params &times; bytes-per-param + 25% overhead.<br><br><strong>5. What attention type?</strong> GQA = modern and efficient. MHA = older, more memory-hungry.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Connecting to Practical Needs</div>
+            <div class="cc-text">Architecture specs only matter in relation to <strong>your constraints</strong>. A chatbot for customer support might need a 7B model with 8K context. A code assistant might need a 32B model with 128K context. A document analysis pipeline might need a 70B model with 32K context. Let your use case drive the spec requirements, not the other way around.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Architecture is not about finding the &ldquo;best&rdquo; model. It&rsquo;s about finding the best model <em>you can run</em> for <em>your specific task</em>. The best model in the world is useless if it won&rsquo;t fit on your hardware.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-the-yaml-header.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: The YAML Header</a>
+    <a class="ch-nav-btn next" href="04-benchmarks-evaluation.html">Ch 4: Benchmarks &amp; Evaluation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[5],7:[0,1,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Parameters:</strong> &ldquo;8B&rdquo; = 8 billion weights. At FP16 that&rsquo;s ~16GB of VRAM. Parameter count is engine displacement &mdash; more power, more fuel.',color:'#7c3aed'},
+    2:{text:'<strong>Dense vs MoE:</strong> Mixtral 8x7B has 47B total but only 12.9B active per token. DeepSeek-R1 has 671B total, 37B active. Always ask: dense or MoE?',color:'#0d9488'},
+    3:{text:'<strong>Attention:</strong> MHA (original), GQA (modern standard &mdash; Llama 3, Gemma 2), MQA (fastest). Compare num_attention_heads vs num_key_value_heads in config.json.',color:'#2563eb'},
+    4:{text:'<strong>Context length:</strong> 128K tokens &asymp; a full novel. Longer context = more memory. Match context length to your use case, don&rsquo;t overpay.',color:'#ea580c'},
+    5:{text:'<strong>config.json:</strong> hidden_size, num_layers, attention heads, vocab_size, max_position_embeddings, rope_theta &mdash; the model&rsquo;s complete blueprint.',color:'#16a34a'},
+    6:{text:'<strong>Memory rule:</strong> Params &times; bytes-per-param + 25%. An 8B model at Q4 needs ~5GB. A 70B at Q4 needs ~40GB. Check before you download.',color:'#db2777'},
+    7:{text:'<strong>Size vs quality:</strong> Going 7B &rarr; 70B gives 15&ndash;25% better benchmarks, not 10x. A fine-tuned 7B can beat a generic 70B on your specific task.',color:'#d97706'},
+    8:{text:'<strong>Checklist:</strong> Params, dense/MoE, context length, hardware fit, attention type. Let your use case drive the spec requirements.',color:'#dc2626'},
+  };
+
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Input Guardrails & Output Filtering — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);padding:4px 12px;background:var(--red-light);border:1px solid var(--red-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--teal),var(--green),var(--blue));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-slate{background:var(--slate-light);border:1px solid var(--border)}.cc-note.n-slate strong{color:var(--slate)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Input Guardrails &amp; Output Filtering</h2><span class="tb-sub">NeMo Guardrails, LLM Guard, Lakera Guard, OpenAI Moderation &mdash; the defensive toolchain</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="06-input-guardrails-output-filtering-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">person</span></div><span class="pipe-label">User Input</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Input Guard</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">LLM</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">verified_user</span></div><span class="pipe-label">Output Guard</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Safe Response</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why guardrails — maps to "User Input" -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">shield</span></div><div><div class="cc-title">Why Guardrails: Runtime Defense for LLMs</div><div class="cc-sub">The model can&rsquo;t protect itself &mdash; external layers must enforce safety</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Chapters 2&ndash;5 showed that LLMs are vulnerable to prompt injection, jailbreaking, and adversarial inputs. Safety training (RLHF) helps but is <strong>not sufficient</strong> &mdash; Anthropic&rsquo;s Sleeper Agents paper proved backdoors survive it. The model cannot reliably police itself. <strong>Guardrails</strong> are external software layers that inspect inputs before they reach the LLM and filter outputs before they reach the user.</div></div>
+          <div class="cc-block"><div class="cc-label">Two-Sided Defense</div><div class="cc-text"><strong>Input guardrails</strong> &mdash; Detect and block prompt injection, jailbreak attempts, toxic content, PII, and off-topic requests <em>before</em> the LLM processes them<br><br><strong>Output guardrails</strong> &mdash; Scan LLM responses for harmful content, data leakage, hallucinated facts, system prompt leakage, and policy violations <em>before</em> the user sees them</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># The guardrail pattern</span>
+
+user_input = get_user_message()
+
+<span class="hl-cmt"># 1. Input guard</span>
+<span class="hl-key">if</span> input_guard.<span class="hl-ok">scan</span>(user_input).flagged:
+    <span class="hl-key">return</span> <span class="hl-err">"Request blocked"</span>
+
+<span class="hl-cmt"># 2. LLM generates response</span>
+response = llm.generate(user_input)
+
+<span class="hl-cmt"># 3. Output guard</span>
+<span class="hl-key">if</span> output_guard.<span class="hl-ok">scan</span>(response).flagged:
+    <span class="hl-key">return</span> <span class="hl-err">"Response filtered"</span>
+
+<span class="hl-cmt"># 4. Safe to deliver</span>
+<span class="hl-key">return</span> <span class="hl-ok">response</span></div>
+          <div class="cc-note n-violet"><strong>Defense in depth:</strong> No single guardrail catches everything. Production systems layer multiple tools: a fast regex/classifier for obvious attacks, an LLM-as-judge for nuanced cases, and canary tokens for exfiltration detection.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: NeMo Guardrails — maps to "Input Guard" -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">NVIDIA NeMo Guardrails</div><div class="cc-sub">Open-source programmable rails with Colang 2.0 &mdash; v0.10.1 (beta)</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What It Is</div><div class="cc-text"><strong>NeMo Guardrails</strong> is NVIDIA&rsquo;s open-source toolkit for adding programmable guardrails to LLM applications. It uses <strong>Colang 2.0</strong>, a Python-like domain-specific language for defining conversational rails. You write flows that control what the bot can discuss, enforce dialog paths, and validate inputs/outputs &mdash; all as code, not just prompts.</div></div>
+          <div class="cc-block"><div class="cc-label">Colang 2.0 Architecture</div><div class="cc-text">Colang 2.0 (available in NeMo Guardrails &ge;0.9) is a complete rewrite from 1.0. Key features: <strong>parallel flow execution</strong>, a standard library, async actions, a generation operator (<code>...</code>), and an explicit <code>main</code> flow entry point. It supports input rails, output rails, dialog rails, and multimodal rails.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># NeMo Guardrails — Colang 2.0 example</span>
+
+<span class="hl-key">define</span> flow main
+  <span class="hl-key">activate</span> greeting
+  <span class="hl-key">activate</span> input_safety_check
+  <span class="hl-key">activate</span> output_safety_check
+
+<span class="hl-key">define</span> flow input_safety_check
+  <span class="hl-key">when</span> user said something
+  <span class="hl-key">if</span> contains_injection(user_message):
+    bot say <span class="hl-err">"I can't process that request."</span>
+    <span class="hl-key">abort</span>
+
+<span class="hl-key">define</span> flow output_safety_check
+  <span class="hl-key">when</span> bot said something
+  <span class="hl-key">if</span> contains_pii(bot_message):
+    bot say <span class="hl-ok">"[Response redacted for safety]"</span></div>
+          <div class="cc-note n-teal"><strong>Strength:</strong> Programmable, auditable, version-controlled safety logic. <strong>Tradeoff:</strong> Requires learning Colang and adds latency from the flow engine. Best for applications needing deterministic, policy-driven control over conversations.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: LLM Guard — still "Input Guard" -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">security</span></div><div><div class="cc-title">LLM Guard by Protect AI</div><div class="cc-sub">Open-source scanner library &mdash; MIT license, 2,680+ GitHub stars</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scanner-Based Architecture</div><div class="cc-text"><strong>LLM Guard</strong> takes a different approach from NeMo: instead of a flow language, it provides a library of <strong>composable scanners</strong> that you chain into a pipeline. Each scanner checks for one specific threat. Input scanners protect prompts; output scanners protect responses. Install with <code>pip install llm-guard</code>. Requires Python &ge;3.9.</div></div>
+          <div class="cc-block"><div class="cc-label">Available Scanners</div><div class="cc-text"><strong>Input:</strong> Anonymize, BanCode, BanSubstrings, BanTopics, Gibberish detection, Invisible text detection, Language detection, Prompt injection detection, Regex patterns, Secrets detection<br><br><strong>Output:</strong> Deanonymize, NoRefusal, Relevance, Sensitive content, Bias detection, Regex filtering</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># LLM Guard — scanner pipeline</span>
+<span class="hl-key">from</span> llm_guard <span class="hl-key">import</span> scan_prompt, scan_output
+<span class="hl-key">from</span> llm_guard.input_scanners <span class="hl-key">import</span> (
+    PromptInjection, Secrets, Anonymize
+)
+<span class="hl-key">from</span> llm_guard.output_scanners <span class="hl-key">import</span> (
+    Sensitive, NoRefusal
+)
+
+input_scanners = [
+    PromptInjection(),
+    Secrets(),
+    Anonymize(),
+]
+
+sanitized, results, valid = <span class="hl-ok">scan_prompt</span>(
+    input_scanners, prompt
+)
+<span class="hl-key">if not</span> valid:
+    <span class="hl-key">return</span> <span class="hl-err">"Blocked"</span></div>
+          <div class="cc-note n-blue"><strong>Strength:</strong> Modular, open-source (MIT), easy to integrate. Each scanner is independent &mdash; add or remove as needed. <strong>Tradeoff:</strong> Scanner quality varies; prompt injection detection relies on classifier models that can be bypassed by novel attacks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Lakera Guard — maps to "LLM" (wraps the call) -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">cloud</span></div><div><div class="cc-title">Lakera Guard: API-Based Detection</div><div class="cc-sub">Real-time threat detection across 100+ languages &mdash; updated daily</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>Lakera Guard</strong> is a hosted API service (not a library you run locally). You send user inputs, reference documents, and model outputs to the <code>/v2/guard</code> endpoint, and it returns <code>flagged: true/false</code> with detected threat categories. It screens for prompt injection, jailbreaks, data leakage, and inappropriate content across <strong>100+ languages and scripts</strong>.</div></div>
+          <div class="cc-block"><div class="cc-label">Threat Intelligence</div><div class="cc-text">Lakera&rsquo;s detection models are updated daily using threat intelligence from analyzing <strong>100K+ Gandalf attacks per day</strong> (Gandalf is Lakera&rsquo;s public prompt injection challenge). This gives them a continuously evolving dataset of real attack patterns, not just academic examples.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># Lakera Guard — API call</span>
+<span class="hl-key">import</span> requests
+
+response = requests.post(
+    <span class="hl-str">"https://api.lakera.ai/v2/guard"</span>,
+    headers={
+        <span class="hl-str">"Authorization"</span>: f<span class="hl-str">"Bearer {API_KEY}"</span>,
+    },
+    json={
+        <span class="hl-str">"messages"</span>: [{
+            <span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+            <span class="hl-str">"content"</span>: user_input
+        }],
+        <span class="hl-str">"project_id"</span>: <span class="hl-str">"my-project"</span>
+    }
+)
+
+<span class="hl-key">if</span> response.json()[<span class="hl-str">"flagged"</span>]:
+    <span class="hl-key">return</span> <span class="hl-err">"Threat detected"</span></div>
+          <div class="cc-note n-orange"><strong>Strength:</strong> Ultra-low latency, multilingual, continuously updated from real attacks. <strong>Tradeoff:</strong> Hosted service (data leaves your infrastructure), API dependency, cost at scale. Best for teams that want managed security without running their own models.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: OpenAI + Guardrails AI — maps to "Output Guard" -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">gavel</span></div><div><div class="cc-title">OpenAI Moderation &amp; Guardrails AI</div><div class="cc-sub">Provider-side safety + structured output validation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">OpenAI&rsquo;s Built-In Defenses</div><div class="cc-text">OpenAI provides two complementary mechanisms. The <strong>Moderation API</strong> (free, using <code>omni-moderation-latest</code> built on GPT-4o) classifies text and images across categories: hate, violence, self-harm, sexual content, harassment, and illicit activities. It supports <strong>40+ languages</strong> with a 42% accuracy improvement over the previous model. Separately, the <strong>Instruction Hierarchy</strong> (April 2024) trains models to prioritize system prompts over user instructions when they conflict.</div></div>
+          <div class="cc-block"><div class="cc-label">Guardrails AI: Output Validation</div><div class="cc-text"><strong>Guardrails AI</strong> focuses on <strong>structured output validation</strong> rather than safety scanning. It uses Pydantic-based validators to ensure LLM outputs match expected schemas. Validators return PassResult or FailResult, with configurable <code>on_fail</code> policies (fix, re-ask, filter). Useful for enforcing JSON structure, regex patterns, and business rules on LLM outputs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"><span class="hl-cmt"># OpenAI Moderation API</span>
+response = openai.moderations.create(
+    model=<span class="hl-str">"omni-moderation-latest"</span>,
+    input=llm_output
+)
+<span class="hl-key">if</span> response.results[<span class="hl-num">0</span>].flagged:
+    <span class="hl-key">return</span> <span class="hl-err">"Content policy violation"</span>
+
+<span class="hl-cmt"># Guardrails AI — structured validation</span>
+<span class="hl-key">from</span> guardrails <span class="hl-key">import</span> Guard
+<span class="hl-key">from</span> pydantic <span class="hl-key">import</span> BaseModel
+
+<span class="hl-key">class</span> SafeResponse(BaseModel):
+    answer: str
+    confidence: float
+    sources: list[str]
+
+guard = Guard.for_pydantic(SafeResponse)
+result = guard(llm.generate, prompt=query)
+<span class="hl-cmt"># Validates structure + field constraints</span></div>
+          <div class="cc-note n-pink"><strong>Different roles:</strong> OpenAI Moderation catches harmful content. Guardrails AI enforces output structure. They solve different problems and can be layered together.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Canary tokens & LLM-as-Judge — still "Output Guard" -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">nest_cam_wired_stand</span></div><div><div class="cc-title">Canary Tokens &amp; LLM-as-Judge</div><div class="cc-sub">Exfiltration detection and nuanced safety evaluation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Canary Tokens</div><div class="cc-text">A <strong>canary token</strong> is a cryptographically random string injected into the system prompt at the start of each interaction. If the LLM&rsquo;s response contains the canary, it means the model leaked its system prompt &mdash; likely due to a prompt injection attack (OWASP LLM07:2025). The check is a simple exact string match on the output, making it fast and reliable. LangChain4j has implemented this as a built-in guardrail feature.</div></div>
+          <div class="cc-block"><div class="cc-label">LLM-as-Judge</div><div class="cc-text">For nuanced safety decisions that regex and classifiers can&rsquo;t handle, a <strong>second LLM evaluates the first LLM&rsquo;s output</strong>. The judge LLM is prompted with safety criteria and returns a pass/fail verdict. This catches subtle policy violations that pattern matching misses.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">LLM-as-Judge Limitations</div><div class="cc-text">Research shows significant weaknesses: <strong>small stylistic changes</strong> in outputs can cause false negative rates to jump by up to 0.24. <strong>Adversarial attacks can fool judges</strong> into misclassifying 100% of harmful generations as safe. Judges exhibit <strong>prompt sensitivity and distribution shifts</strong> between benchmarks and real-world deployment. Source: Eiras et al., ICML 2025 &ldquo;Know Thy Judge.&rdquo;</div></div>
+          <div class="cc-note n-amber"><strong>The tradeoff:</strong> LLM-as-judge catches things classifiers miss, but adds latency, cost, and its own attack surface. A compromised judge LLM is worse than no judge at all. Human review remains necessary for high-stakes decisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Layered defense — maps to "Safe Response" -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Layered Defense &amp; Honest Limitations</div><div class="cc-sub">No single guardrail is sufficient &mdash; combine, layer, and accept the gaps</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Production Stack</div><div class="cc-text"><strong>Layer 1 &mdash; Fast classifiers:</strong> Regex, keyword blocklists, LLM Guard scanners. Catches obvious attacks in &lt;10ms.<br><br><strong>Layer 2 &mdash; ML classifiers:</strong> Lakera Guard or fine-tuned injection detectors. Catches sophisticated attacks in 50&ndash;200ms.<br><br><strong>Layer 3 &mdash; Programmable rails:</strong> NeMo Guardrails Colang flows for dialog control and topic enforcement.<br><br><strong>Layer 4 &mdash; Output validation:</strong> Guardrails AI for structure, OpenAI Moderation for content, canary tokens for leakage.<br><br><strong>Layer 5 &mdash; LLM-as-judge:</strong> For edge cases that escape all other layers. Expensive but catches nuance.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Honest Limitations</div><div class="cc-text"><strong>No guardrail stack is 100% effective.</strong> Novel prompt injection techniques bypass classifiers trained on known patterns. Adversarial tokenization (Ch 5) evades text-based scanners. LLM-as-judge can be fooled. The goal is to <strong>raise the cost of attack</strong> and <strong>detect breaches quickly</strong>, not to achieve perfect prevention.</div></div>
+          <div class="cc-block"><div class="cc-label">Coming Up</div><div class="cc-text"><strong>Ch 7: Securing RAG</strong> &mdash; Guardrails for retrieval-augmented generation pipelines<br><br><strong>Ch 8: Securing Agents</strong> &mdash; Guardrails for tool-calling and autonomous agents<br><br><strong>Ch 11: Red Teaming</strong> &mdash; Testing your guardrails with automated attack tools</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Guardrails are a <em>necessary but insufficient</em> defense. They must be combined with secure architecture (Ch 13), monitoring (Ch 14), and continuous red teaming (Ch 11). Treat them as seatbelts, not force fields.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=12000;
+  const PIPE_MAP={1:0, 2:1, 3:1, 4:2, 5:3, 6:3, 7:4};
+  const NARRATION={
+    1:{text:'<strong>Guardrails</strong> are external software layers that inspect inputs before the LLM and filter outputs before the user. The model cannot reliably police itself — external enforcement is required. Two-sided: input guards block attacks, output guards catch leakage and harmful content.',color:'#7c3aed'},
+    2:{text:'<strong>NVIDIA NeMo Guardrails</strong> (v0.10.1 beta): Programmable rails using Colang 2.0, a Python-like DSL. Supports input rails, output rails, dialog rails, and multimodal rails. Parallel flow execution, async actions, standard library. Open source.',color:'#0d9488'},
+    3:{text:'<strong>LLM Guard</strong> by Protect AI: Open-source (MIT) scanner library. Composable input/output scanners — PromptInjection, Secrets, Anonymize, Sensitive, Bias, and more. pip install llm-guard. 2,680+ GitHub stars.',color:'#2563eb'},
+    4:{text:'<strong>Lakera Guard</strong>: Hosted API for real-time threat detection across 100+ languages. Updated daily from 100K+ Gandalf challenge attacks. Returns flagged/unflagged with threat categories. Low latency, managed service.',color:'#ea580c'},
+    5:{text:'<strong>OpenAI Moderation API</strong> (free, omni-moderation-latest on GPT-4o): Classifies text and images across harm categories, 40+ languages. <strong>Instruction Hierarchy</strong> (Apr 2024) trains models to prioritize system prompts. <strong>Guardrails AI</strong> validates structured output with Pydantic.',color:'#db2777'},
+    6:{text:'<strong>Canary tokens</strong>: Random strings in system prompts that trigger alerts if leaked in output (OWASP LLM07). <strong>LLM-as-judge</strong>: A second LLM evaluates safety. But research shows judges can be fooled — adversarial attacks achieve 100% bypass rates. Source: Eiras et al., ICML 2025.',color:'#d97706'},
+    7:{text:'<strong>Layer the stack:</strong> Fast classifiers → ML detectors → programmable rails → output validation → LLM-as-judge. No single layer is sufficient. The goal is raising attack cost and detecting breaches quickly, not perfect prevention. Guardrails are seatbelts, not force fields.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin the journey...';stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

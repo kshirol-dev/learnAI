@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Model Evaluation & Selection — Classic ML</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Model Evaluation &amp; Selection</h2><span class="tb-sub">How to honestly measure model performance &mdash; and pick the best model</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Toolkit</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">call_split</span></div><span class="pipe-label">Split</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">K-Fold CV</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">grid_view</span></div><span class="pipe-label">Grid Search</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">show_chart</span></div><span class="pipe-label">Learn Curves</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Acc Paradox</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">PR Trade-off</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Significance</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">flowsheet</span></div><span class="pipe-label">Flowchart</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">call_split</span></div><div><div class="cc-title">Train / Validation / Test Splits</div><div class="cc-sub">Three datasets, three purposes &mdash; never peek at the test set</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Three Splits?</div><div class="cc-text"><strong>Training set</strong> (~60&ndash;80%): The model learns from this data. It sees these examples during <code>fit()</code>.<br><br><strong>Validation set</strong> (~10&ndash;20%): Used to tune hyperparameters (learning rate, regularization, tree depth). The model never trains on this data, but you use its performance to make decisions.<br><br><strong>Test set</strong> (~10&ndash;20%): The final, untouched evaluation. You look at this <strong>once</strong>, at the very end, to report your model&rsquo;s true performance. If you tune hyperparameters based on test performance, you&rsquo;re cheating &mdash; the test set becomes a second validation set.<br><br><strong>Data leakage</strong> is the #1 mistake in ML evaluation. It happens when information from the test set leaks into training &mdash; through feature scaling, feature selection, or hyperparameter tuning on test data. Always fit preprocessing on training data only.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Splitting in scikit-learn</div><div class="cc-code"><span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> train_test_split
+
+<span class="hl-cmt"># Two-way split (simple)</span>
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=<span class="hl-num">0.2</span>, stratify=y, random_state=<span class="hl-num">42</span>
+)
+
+<span class="hl-cmt"># Three-way split (with validation)</span>
+X_temp, X_test, y_temp, y_test = train_test_split(
+    X, y, test_size=<span class="hl-num">0.15</span>, stratify=y, random_state=<span class="hl-num">42</span>
+)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_temp, y_temp, test_size=<span class="hl-num">0.18</span>, stratify=y_temp,
+    random_state=<span class="hl-num">42</span>
+)
+<span class="hl-cmt"># Result: ~70% train, ~15% val, ~15% test</span>
+
+<span class="hl-key">stratify=y</span> ensures class ratios are preserved.
+<span class="hl-cmt"># If 30% spam in full data → 30% in each split.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The test set is like a sealed exam. You study (train), take practice tests (validate), and adjust your strategy. But the real exam (test set) is only opened once. If you peek at the real exam while studying, your grade doesn&rsquo;t reflect true knowledge &mdash; it reflects memorization of that specific exam.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">replay</span></div><div><div class="cc-title">K-Fold Cross-Validation</div><div class="cc-sub">Use all data for both training and validation &mdash; rotate through folds</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How K-Fold Works</div><div class="cc-text">A single train/val split wastes data and gives a noisy estimate. <strong>K-Fold CV</strong> fixes both:<br><br>1. Split data into K equal folds (typically K=5 or 10).<br>2. For each fold: use it as validation, train on the other K&minus;1 folds.<br>3. Average the K validation scores.<br><br>Every sample is used for validation exactly once and for training K&minus;1 times. With K=5, you get 5 accuracy estimates. The mean is more reliable than any single split, and the standard deviation tells you how stable the model is.<br><br><strong>Stratified K-Fold</strong> ensures each fold has the same class distribution as the full dataset. Critical for imbalanced data.<br><br><strong>Leave-One-Out (LOO)</strong> is K-Fold with K=n. Maximum data usage but very slow and high variance. Rarely used in practice.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Cross-Validation in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> (
+    cross_val_score, StratifiedKFold
+)
+<span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> RandomForestClassifier
+
+model = RandomForestClassifier(n_estimators=<span class="hl-num">100</span>)
+
+<span class="hl-cmt"># Simple 5-fold CV</span>
+scores = cross_val_score(model, X, y, cv=<span class="hl-num">5</span>,
+                         scoring=<span class="hl-str">'accuracy'</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Accuracy: {scores.mean():.3f} ± {scores.std():.3f}"</span>)
+
+<span class="hl-cmt"># Stratified K-Fold (explicit control)</span>
+skf = StratifiedKFold(n_splits=<span class="hl-num">10</span>, shuffle=<span class="hl-num">True</span>,
+                      random_state=<span class="hl-num">42</span>)
+scores = cross_val_score(model, X, y, cv=skf)
+
+<span class="hl-cmt"># Typical output:
+# Fold scores: [0.93, 0.91, 0.94, 0.92, 0.90]
+# Mean: 0.920 ± 0.015
+# The ± tells you: "expect ~92% ± 1.5% on new data"</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Cross-validation is like a round-robin tournament. Every team plays every other team. The final ranking (mean score) is much more reliable than a single match result. The standard deviation tells you if the model is consistently good or just got lucky on one split.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">grid_view</span></div><div><div class="cc-title">GridSearchCV: Systematic Hyperparameter Tuning</div><div class="cc-sub">Try every combination, pick the best &mdash; with honest evaluation</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Grid Search + Cross-Validation</div><div class="cc-text"><strong>GridSearchCV</strong> combines exhaustive hyperparameter search with cross-validation:<br><br>1. Define a grid of hyperparameter values to try.<br>2. For each combination, run K-fold CV.<br>3. Pick the combination with the best mean CV score.<br>4. Refit the model on all training data with the best hyperparameters.<br><br>For a grid with 4 values of C and 4 values of gamma (16 combinations) with 5-fold CV, that&rsquo;s 80 model fits. Can be slow for large grids.<br><br><strong>RandomizedSearchCV</strong> samples random combinations instead of trying all. With 100 random samples from a large grid, you often find a solution within 5% of the best &mdash; at a fraction of the cost. Preferred for large search spaces.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">GridSearchCV in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> GridSearchCV
+<span class="hl-key">from</span> sklearn.svm <span class="hl-key">import</span> SVC
+<span class="hl-key">from</span> sklearn.pipeline <span class="hl-key">import</span> make_pipeline
+<span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> StandardScaler
+
+pipe = make_pipeline(StandardScaler(), SVC())
+param_grid = {
+    <span class="hl-str">'svc__C'</span>: [<span class="hl-num">0.1</span>, <span class="hl-num">1</span>, <span class="hl-num">10</span>, <span class="hl-num">100</span>],
+    <span class="hl-str">'svc__gamma'</span>: [<span class="hl-num">0.001</span>, <span class="hl-num">0.01</span>, <span class="hl-num">0.1</span>, <span class="hl-num">1</span>],
+    <span class="hl-str">'svc__kernel'</span>: [<span class="hl-str">'rbf'</span>]
+}
+
+grid = GridSearchCV(pipe, param_grid, cv=<span class="hl-num">5</span>,
+                    scoring=<span class="hl-str">'accuracy'</span>, n_jobs=-<span class="hl-num">1</span>,
+                    refit=<span class="hl-num">True</span>)
+grid.fit(X_train, y_train)
+
+<span class="hl-key">print</span>(f<span class="hl-str">"Best params: {grid.best_params_}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Best CV score: {grid.best_score_:.3f}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Test score: {grid.score(X_test, y_test):.3f}"</span>)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> GridSearchCV is like a cooking competition where you try every combination of temperature and cooking time, taste-test each (cross-validate), and pick the winner. The key is that the taste-testing uses fresh food each time (different folds), so you&rsquo;re not just picking the combination that got lucky on one batch.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">show_chart</span></div><div><div class="cc-title">Learning Curves: Diagnose Bias vs Variance</div><div class="cc-sub">Plot performance vs training size &mdash; know if you need more data or a better model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reading Learning Curves</div><div class="cc-text">A <strong>learning curve</strong> plots training score and validation score as a function of training set size.<br><br><strong>High bias (underfitting):</strong> Both curves plateau at a low score, close together. More data won&rsquo;t help &mdash; the model is too simple. Fix: use a more complex model, add features, reduce regularization.<br><br><strong>High variance (overfitting):</strong> Training score is high, validation score is much lower. The gap is large. More data will help (the curves converge as n increases). Fix: more data, simpler model, more regularization, feature selection.<br><br><strong>Good fit:</strong> Both curves converge at a high score with a small gap. The model has found the right complexity for the data.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Learning Curves in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> learning_curve
+<span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+
+sizes, train_scores, val_scores = learning_curve(
+    model, X, y,
+    train_sizes=np.linspace(<span class="hl-num">0.1</span>, <span class="hl-num">1.0</span>, <span class="hl-num">10</span>),
+    cv=<span class="hl-num">5</span>, scoring=<span class="hl-str">'accuracy'</span>
+)
+
+<span class="hl-cmt"># Plot means ± std for train and val</span>
+train_mean = train_scores.mean(axis=<span class="hl-num">1</span>)
+val_mean = val_scores.mean(axis=<span class="hl-num">1</span>)
+
+<span class="hl-key">Diagnosis:</span>
+  train=<span class="hl-num">0.99</span>, val=<span class="hl-num">0.75</span> → <span class="hl-str">high variance</span> (overfit)
+    → Get more data, simplify model, regularize
+
+  train=<span class="hl-num">0.80</span>, val=<span class="hl-num">0.78</span> → <span class="hl-str">high bias</span> (underfit)
+    → More complex model, more features
+
+  train=<span class="hl-num">0.95</span>, val=<span class="hl-num">0.93</span> → <span class="hl-str">good fit</span> ✓</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Learning curves answer the most important question in ML: &ldquo;Should I get more data or a better model?&rdquo; If the curves are converging (high variance), more data helps. If they&rsquo;re already flat and close together (high bias), more data is useless &mdash; you need a more powerful model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">The Accuracy Paradox</div><div class="cc-sub">99% accuracy can be terrible &mdash; when class imbalance strikes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When Accuracy Lies</div><div class="cc-text">A fraud detection dataset: 99.5% legitimate transactions, 0.5% fraud. A model that <strong>always predicts &ldquo;legitimate&rdquo;</strong> gets 99.5% accuracy &mdash; while catching zero fraud.<br><br>This is the <strong>accuracy paradox</strong>: high accuracy on imbalanced data is meaningless. The model learned to predict the majority class and ignore the minority class entirely.<br><br><strong>Better metrics for imbalanced data:</strong><br>&bull; <strong>Precision/Recall/F1</strong> (from Ch 3) &mdash; focus on the minority class<br>&bull; <strong>ROC-AUC</strong> &mdash; threshold-independent ranking quality<br>&bull; <strong>PR-AUC</strong> (Precision-Recall AUC) &mdash; better than ROC-AUC for severe imbalance<br>&bull; <strong>Matthews Correlation Coefficient (MCC)</strong> &mdash; balanced metric even with imbalanced classes<br><br><strong>Techniques for imbalanced data:</strong> class weights (<code>class_weight='balanced'</code>), oversampling (SMOTE), undersampling, or threshold tuning.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Handling Imbalance</div><div class="cc-code"><span class="hl-key">from</span> sklearn.linear_model <span class="hl-key">import</span> LogisticRegression
+<span class="hl-key">from</span> sklearn.metrics <span class="hl-key">import</span> (
+    classification_report, average_precision_score
+)
+
+<span class="hl-cmt"># Without class weights: ignores minority</span>
+lr = LogisticRegression()
+lr.fit(X_train, y_train)
+<span class="hl-cmt"># Accuracy: 99.5%, Recall(fraud): 0.10 ← terrible</span>
+
+<span class="hl-cmt"># With class weights: penalizes minority errors more</span>
+lr_balanced = LogisticRegression(
+    class_weight=<span class="hl-str">'balanced'</span>
+)
+lr_balanced.fit(X_train, y_train)
+<span class="hl-cmt"># Accuracy: 97.0%, Recall(fraud): 0.85 ← much better</span>
+
+<span class="hl-cmt"># Use PR-AUC for imbalanced evaluation</span>
+y_prob = lr_balanced.predict_proba(X_test)[:, <span class="hl-num">1</span>]
+pr_auc = average_precision_score(y_test, y_prob)
+<span class="hl-key">print</span>(f<span class="hl-str">"PR-AUC: {pr_auc:.3f}"</span>)</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Accuracy is like grading a multiple-choice test where 99 out of 100 answers are &ldquo;A.&rdquo; A student who writes &ldquo;A&rdquo; for everything gets 99% &mdash; without knowing anything. For imbalanced data, always use precision, recall, F1, or PR-AUC. These metrics force the model to actually learn the minority class.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">balance</span></div><div><div class="cc-title">Precision-Recall Trade-off &amp; Threshold Tuning</div><div class="cc-sub">You can&rsquo;t maximize both &mdash; choose based on business cost</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Trade-off</div><div class="cc-text">Most classifiers output a <strong>probability</strong>. The default threshold is 0.5: predict positive if P &gt; 0.5. But 0.5 is arbitrary &mdash; you can adjust it.<br><br><strong>Lower threshold</strong> (e.g., 0.3): More positives predicted &rarr; higher recall (catch more fraud) but lower precision (more false alarms).<br><br><strong>Higher threshold</strong> (e.g., 0.7): Fewer positives predicted &rarr; higher precision (fewer false alarms) but lower recall (miss more fraud).<br><br>The right threshold depends on the <strong>business cost</strong>:<br>&bull; Cancer screening: low threshold (missing cancer is deadly)<br>&bull; Spam filter: medium threshold (balance convenience and safety)<br>&bull; Criminal sentencing: high threshold (false conviction is catastrophic)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Threshold Tuning in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.metrics <span class="hl-key">import</span> precision_recall_curve
+
+y_prob = model.predict_proba(X_test)[:, <span class="hl-num">1</span>]
+precisions, recalls, thresholds = precision_recall_curve(
+    y_test, y_prob
+)
+
+<span class="hl-cmt"># Find threshold for desired recall</span>
+target_recall = <span class="hl-num">0.90</span>
+idx = (recalls >= target_recall).sum() - <span class="hl-num">1</span>
+best_threshold = thresholds[idx]
+<span class="hl-key">print</span>(f<span class="hl-str">"Threshold for 90% recall: {best_threshold:.3f}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"Precision at that recall: {precisions[idx]:.3f}"</span>)
+
+<span class="hl-cmt"># Apply custom threshold</span>
+y_pred_custom = (y_prob >= best_threshold).astype(int)
+
+<span class="hl-cmt"># Typical trade-off:
+# threshold=0.3: recall=0.95, precision=0.40
+# threshold=0.5: recall=0.80, precision=0.70
+# threshold=0.7: recall=0.60, precision=0.90</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The precision-recall trade-off is like a security checkpoint. Strict screening (high threshold) catches fewer innocent people but also misses some threats. Loose screening (low threshold) catches every threat but hassles many innocent people. The right strictness depends on whether missing a threat or hassling innocents costs more.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Statistical Significance</div><div class="cc-sub">Is 92% really better than 91%? Or just noise?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When Differences Matter</div><div class="cc-text">Model A: 92.3% &plusmn; 1.5%. Model B: 91.8% &plusmn; 1.2%. Is A really better?<br><br>With overlapping confidence intervals, the difference might be <strong>noise</strong>. A paired t-test on the K-fold scores can tell you if the difference is statistically significant.<br><br><strong>Paired t-test:</strong> Compare the K scores from model A vs model B on the same folds. If p &lt; 0.05, the difference is significant.<br><br><strong>Practical significance</strong> matters too. Even if 92.3% vs 91.8% is statistically significant, is 0.5% worth the extra complexity? A simpler model that&rsquo;s 0.5% worse but 10x faster and more interpretable might be the better choice.<br><br>Rule of thumb: if the difference is within 1 standard deviation of the CV scores, it&rsquo;s probably not meaningful. Focus on the model that&rsquo;s simplest, fastest, and most interpretable among the top performers.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Statistical Test in Code</div><div class="cc-code"><span class="hl-key">from</span> scipy.stats <span class="hl-key">import</span> ttest_rel
+<span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> cross_val_score, StratifiedKFold
+
+skf = StratifiedKFold(n_splits=<span class="hl-num">10</span>, shuffle=<span class="hl-num">True</span>,
+                      random_state=<span class="hl-num">42</span>)
+
+scores_A = cross_val_score(model_A, X, y, cv=skf)
+scores_B = cross_val_score(model_B, X, y, cv=skf)
+
+t_stat, p_value = ttest_rel(scores_A, scores_B)
+<span class="hl-key">print</span>(f<span class="hl-str">"A: {scores_A.mean():.3f} ± {scores_A.std():.3f}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"B: {scores_B.mean():.3f} ± {scores_B.std():.3f}"</span>)
+<span class="hl-key">print</span>(f<span class="hl-str">"p-value: {p_value:.4f}"</span>)
+
+<span class="hl-key">if</span> p_value < <span class="hl-num">0.05</span>:
+    <span class="hl-key">print</span>(<span class="hl-str">"Significant difference"</span>)
+<span class="hl-key">else</span>:
+    <span class="hl-key">print</span>(<span class="hl-str">"No significant difference → pick simpler model"</span>)</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Statistical significance is like asking &ldquo;if we ran this experiment 100 times, would model A consistently beat model B?&rdquo; A single comparison can be misleading. The paired t-test on K-fold scores gives you confidence. But always weigh statistical significance against practical significance &mdash; 0.5% accuracy isn&rsquo;t worth 10x complexity.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--slate)"><span class="material-symbols-rounded">flowsheet</span></div><div><div class="cc-title">Model Selection Flowchart</div><div class="cc-sub">Which algorithm for which problem? A practical decision guide</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Decision Flowchart</div><div class="cc-code"><span class="hl-key">START: What type of problem?</span>
+
+<span class="hl-key">REGRESSION (predict a number):</span>
+  Few features, linear?  → <span class="hl-str">LinearRegression / Ridge</span>
+  Nonlinear?             → <span class="hl-str">RandomForestRegressor</span>
+  Best accuracy?         → <span class="hl-str">HistGradientBoostingRegressor</span>
+  Small data, nonlinear? → <span class="hl-str">SVR (RBF kernel)</span>
+
+<span class="hl-key">CLASSIFICATION (predict a category):</span>
+  Need interpretability? → <span class="hl-str">LogisticRegression / DecisionTree</span>
+  Text data?             → <span class="hl-str">MultinomialNB + TF-IDF</span>
+  Small data (<1K)?      → <span class="hl-str">SVC (RBF) or NaiveBayes</span>
+  Medium data (1K-100K)? → <span class="hl-str">RandomForestClassifier</span>
+  Best accuracy?         → <span class="hl-str">HistGradientBoostingClassifier</span>
+  Very large (>100K)?    → <span class="hl-str">HistGradientBoosting / SGD</span>
+
+<span class="hl-key">CLUSTERING (find groups):</span>
+  Know K, spherical?     → <span class="hl-str">KMeans</span>
+  Unknown K, any shape?  → <span class="hl-str">DBSCAN / HDBSCAN</span>
+  Need hierarchy?        → <span class="hl-str">AgglomerativeClustering</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Practitioner&rsquo;s Checklist</div><div class="cc-code"><span class="hl-key">For any ML project:</span>
+
+  <span class="hl-num">1.</span> Start with the simplest baseline
+     (LogReg, DecisionTree, or NaiveBayes)
+  <span class="hl-num">2.</span> Evaluate with cross-validation
+  <span class="hl-num">3.</span> Check learning curves (bias vs variance)
+  <span class="hl-num">4.</span> Try 2-3 more complex models
+  <span class="hl-num">5.</span> Tune hyperparameters with GridSearchCV
+  <span class="hl-num">6.</span> Compare with paired t-test
+  <span class="hl-num">7.</span> Pick simplest model within 1% of the best
+  <span class="hl-num">8.</span> Final evaluation on held-out test set
+  <span class="hl-num">9.</span> Report test score (never tune after this!)
+
+<span class="hl-cmt"># The model selection process matters more
+# than the model itself. A well-evaluated
+# simple model beats a poorly-evaluated
+# complex model every time.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Model selection is not about finding the &ldquo;best&rdquo; algorithm. It&rsquo;s about finding the simplest model that meets your performance requirements, evaluated honestly. Start simple, add complexity only when the learning curve demands it, and always hold out a final test set you never peek at until the very end.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-dimensionality-reduction.html"><span class="material-symbols-rounded">arrow_back</span> Dimensionality Reduction</a>
+    <a class="ch-nav-btn next" href="10-feature-engineering.html">Feature Engineering <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[5],7:[6],8:[0,1,2,3,4,5,6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> <strong>Train/val/test split</strong>: train to learn, validate to tune, test to report. Never peek at test data during development. Data leakage = fitting preprocessing on test data.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> <strong>K-Fold CV</strong>: split into K folds, rotate validation fold, average K scores. More reliable than single split. Stratified K-Fold preserves class ratios. K=5 or 10 is standard.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> <strong>GridSearchCV</strong>: try every hyperparameter combination with CV. RandomizedSearchCV samples randomly for large grids. Always use a pipeline to prevent data leakage.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> <strong>Learning curves</strong>: plot score vs training size. High bias = both curves low (need complex model). High variance = big gap (need more data or regularization).',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> <strong>Accuracy paradox</strong>: 99.5% accuracy means nothing if 99.5% of data is one class. Use precision, recall, F1, PR-AUC for imbalanced data. class_weight="balanced" helps.',color:'#dc2626'},
+    6:{text:'<strong>Step 6:</strong> <strong>Threshold tuning</strong>: lower threshold → higher recall, lower precision. Higher threshold → opposite. Choose based on business cost of false positives vs false negatives.',color:'#d97706'},
+    7:{text:'<strong>Step 7:</strong> <strong>Statistical significance</strong>: paired t-test on K-fold scores tells you if 92% vs 91% is real or noise. If p > 0.05, pick the simpler model — the difference isn\'t meaningful.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> <strong>Model selection flowchart</strong>: start simple (LogReg/NB), evaluate with CV, check learning curves, try 2-3 models, tune with GridSearch, pick simplest within 1% of best.',color:'#64748b'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

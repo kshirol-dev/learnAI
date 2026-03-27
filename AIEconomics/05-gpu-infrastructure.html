@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: The GPU & Infrastructure Layer — AI Economics</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; The GPU &amp; Infrastructure Layer</h2><span class="tb-sub">The real estate analogy &mdash; renting, buying, or building</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">home</span></div><span class="pipe-label">Analogy</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">GPUs</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">attach_money</span></div><span class="pipe-label">Margins</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">cloud</span></div><span class="pipe-label">Cloud</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">API vs Self</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Decision</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">home</span></div>
+        <div><div class="cc-title">The Real Estate Analogy</div><div class="cc-sub">Renting an apartment vs buying a house vs building from scratch</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Three Options</div>
+            <div class="cc-text"><strong>Renting (API)</strong> &mdash; Pay per use, no maintenance, move anytime. Like renting an apartment: you pay monthly, the landlord handles plumbing and repairs. <strong>Buying (Self-hosting)</strong> &mdash; Purchase GPUs, run your own models. Like buying a house: big upfront cost, you handle maintenance, but no monthly rent. <strong>Building (Custom infra)</strong> &mdash; Design custom hardware and software stacks. Like building a house from the ground up: maximum control, maximum complexity.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Decision Framework</div>
+            <div class="cc-text">Most teams should <strong>rent (use APIs)</strong>. APIs win for 87% of use cases because they eliminate infrastructure complexity, scale instantly, and require zero GPU expertise. Self-hosting only makes sense at extreme volume (&gt;10B tokens/month) or with strict regulatory requirements (HIPAA, data sovereignty). Building custom infrastructure is reserved for hyperscalers and AI labs.</div>
+          </div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The most common mistake is self-hosting too early. Teams underestimate the hidden costs (operations, monitoring, security, model updates) by 3&ndash;5x. Start with APIs, measure your actual volume, and only self-host when the math clearly justifies it.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">memory</span></div>
+        <div><div class="cc-title">NVIDIA&rsquo;s GPU Stack</div><div class="cc-sub">H100, H200, B200, and the Vera Rubin roadmap</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The GPU Lineup (2024&ndash;2026)</div>
+            <div class="cc-code"><span class="hl-cmt">// NVIDIA datacenter GPU stack</span>
+<span class="hl-key">H100</span>  (2023) 80GB HBM3   <span class="hl-str">Workhorse</span>
+<span class="hl-key">H200</span>  (2024) 141GB HBM3e  <span class="hl-str">Memory upgrade</span>
+<span class="hl-key">B200</span>  (2025) 192GB HBM3e  <span class="hl-str">Blackwell arch</span>
+<span class="hl-key">GB200</span> (2025) 384GB combined <span class="hl-str">Superchip</span>
+<span class="hl-key">Vera Rubin</span> (2026+)        <span class="hl-str">Next gen</span></div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why Memory Matters</div>
+            <div class="cc-text">GPU memory (HBM) determines <strong>how large a model can fit on a single chip</strong>. A 70B parameter model needs ~140GB in FP16, requiring 2 H100s but only 1 H200. Fewer GPUs = lower cost, simpler infrastructure, and better utilization. The memory race is as important as the compute race.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Performance Leaps</div>
+            <div class="cc-text">Each generation delivers <strong>2&ndash;3x inference throughput</strong> over the previous. B200 processes roughly 2.5x more tokens per second than H100 for the same model. This is a key driver of the cost collapse from Chapter 1 &mdash; newer hardware makes each token cheaper to serve, which providers pass on (partially) as lower API prices.</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> You don&rsquo;t need to understand GPU architecture to use AI effectively. But understanding that each generation makes inference 2&ndash;3x cheaper explains why API prices keep falling and why locking into long-term GPU contracts can be risky.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">attach_money</span></div>
+        <div><div class="cc-title">Manufacturing Economics</div><div class="cc-sub">What GPUs actually cost to make vs what they sell for</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Cost vs Price</div>
+            <div class="cc-code"><span class="hl-cmt">// Manufacturing cost vs selling price</span>
+<span class="hl-key">H100</span>
+  Manufacturing: $<span class="hl-num">3,320</span>
+  Selling price: $<span class="hl-num">28,000</span>
+  Gross margin:  <span class="hl-str">88%</span>
+
+<span class="hl-key">H200</span>
+  Manufacturing: $<span class="hl-num">4,250</span>
+  Selling price: $<span class="hl-num">38,000</span>
+  Gross margin:  <span class="hl-str">89%</span>
+
+<span class="hl-key">B200</span>
+  Manufacturing: $<span class="hl-num">6,400</span>
+  Selling price: $<span class="hl-num">40,000&ndash;50,000</span>
+  Gross margin:  <span class="hl-str">84%</span>
+
+<span class="hl-key">GB200</span> (superchip)
+  Manufacturing: $<span class="hl-num">13,500</span>
+  Selling price: $<span class="hl-num">65,000</span>
+  Gross margin:  <span class="hl-str">79%</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Margin Story</div>
+            <div class="cc-text">NVIDIA operates at <strong>79&ndash;89% gross margins</strong> on datacenter GPUs. A B200 costs ~$6,400 to manufacture and sells for $40,000&ndash;$50,000. The biggest cost driver is <strong>HBM memory</strong>, which accounts for 35&ndash;47% of manufacturing cost ($2,900 for B200&rsquo;s HBM3e). Advanced packaging (CoWoS-L) adds another $1,100.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> NVIDIA&rsquo;s margins explain why GPU cloud pricing has room to fall. Specialized cloud providers (Northflank, RunPod) can offer B200s at $5&ndash;9/hour vs hyperscalers at $14&ndash;19/hour by accepting lower margins and optimizing utilization.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">cloud</span></div>
+        <div><div class="cc-title">Cloud GPU Pricing</div><div class="cc-sub">Hyperscalers vs specialized clouds &mdash; the 3x gap</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">B200 Hourly Rates (March 2026)</div>
+            <div class="cc-code"><span class="hl-cmt">// B200 cloud GPU pricing by provider</span>
+<span class="hl-key">Northflank</span>    $<span class="hl-num">5.87</span>/hr  <span class="hl-str">(specialized)</span>
+<span class="hl-key">RunPod</span>        $<span class="hl-num">8.64</span>/hr  <span class="hl-str">(specialized)</span>
+<span class="hl-key">AWS</span>           $<span class="hl-num">14.24</span>/hr <span class="hl-str">(hyperscaler)</span>
+<span class="hl-key">GCP</span>           $<span class="hl-num">18.53</span>/hr <span class="hl-str">(hyperscaler)</span>
+
+<span class="hl-cmt">// Monthly cost (24/7 usage)</span>
+<span class="hl-key">Northflank</span>    $<span class="hl-num">4,226</span>/month
+<span class="hl-key">GCP</span>           $<span class="hl-num">13,342</span>/month
+<span class="hl-cmt">// 3.2x difference for identical hardware</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Hidden Cloud Costs</div>
+            <div class="cc-text">The hourly GPU rate is just the start. <strong>Egress fees</strong> (data transfer out) can add 20&ndash;30% for high-throughput inference. <strong>Storage premiums</strong> for model weights and data. <strong>Virtualization overhead</strong> reduces effective GPU performance by 5&ndash;15%. <strong>Networking</strong> for multi-GPU setups. Total hidden costs typically add <strong>20&ndash;40%</strong> on top of the base GPU rate.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> GPU utilization is the critical metric. A GPU at 10% load costs 10x per token vs one at 100% load. Most self-hosted deployments run at 15&ndash;30% utilization, meaning you&rsquo;re paying for 3&ndash;7x more GPU than you actually use.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">API vs Self-Hosting: The Break-Even</div><div class="cc-sub">When does owning your own GPUs make sense?</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Comparison</div>
+            <div class="compare-row">
+              <div class="compare-box good">
+                <div class="cb-tag">API (Renting)</div>
+                <div class="cb-text"><strong>GPT-5 API:</strong> ~$168/month for moderate usage. Zero infrastructure. Instant scaling. Automatic model updates. No GPU expertise needed. Pay only for what you use.</div>
+              </div>
+              <div class="compare-box bad">
+                <div class="cb-tag">Self-Hosted (Buying)</div>
+                <div class="cb-text"><strong>4x A100 cluster:</strong> ~$5,760/month cloud rental. Plus 0.25&ndash;1.0 FTE for operations ($37K&ndash;$150K/year). Model serving software. Monitoring. Security. Updates. Total: $8,800&ndash;18,260/month.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Crossover Point</div>
+            <div class="cc-text">APIs win until you hit roughly <strong>10 billion tokens/month</strong> (~500M tokens/day). Below that volume, the operational overhead of self-hosting exceeds the API cost savings. Above that volume, the per-token economics of dedicated GPUs start to win &mdash; but only if you can maintain <strong>&gt;60% GPU utilization</strong> and have the engineering team to support it.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Self-hosting hidden costs are 3&ndash;5x the raw GPU price. A $5,760/month GPU cluster actually costs $8,800&ndash;18,260/month when you add operations, monitoring, security, and model management. Most teams underestimate this dramatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">shield</span></div>
+        <div><div class="cc-title">When Self-Hosting Wins</div><div class="cc-sub">The four scenarios where owning GPUs makes sense</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Scenario 1: Regulated Data</div>
+            <div class="cc-text"><strong>HIPAA, SOC 2, GDPR, data sovereignty.</strong> When regulations prohibit sending data to third-party APIs, self-hosting is the only option. Healthcare, finance, and government often require on-premises or private-cloud inference. The cost premium is a compliance cost, not a technology choice.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Scenario 2: Ultra-High Volume</div>
+            <div class="cc-text"><strong>&gt;10B tokens/month</strong> with consistent, predictable demand. At this scale, dedicated GPUs at high utilization beat per-token API pricing. But the demand must be <em>consistent</em> &mdash; bursty workloads still favor APIs because idle GPUs cost the same as busy ones.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Scenario 3: Latency Requirements</div>
+            <div class="cc-text"><strong>Sub-100ms inference.</strong> API calls include network latency, queue time, and shared infrastructure overhead. Self-hosted models on dedicated GPUs can achieve <strong>2&ndash;5x lower latency</strong> for latency-critical applications like real-time trading, gaming, or interactive voice.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Scenario 4: Custom Models</div>
+            <div class="cc-text"><strong>Fine-tuned or proprietary models</strong> that can&rsquo;t run on API providers. If you&rsquo;ve trained a custom model on proprietary data, you need your own inference infrastructure. This is increasingly common for domain-specific applications in legal, medical, and scientific fields.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> If none of these four scenarios apply to you, use APIs. The engineering complexity of self-hosting is substantial, and the cost savings only materialize at extreme scale with dedicated operations staff.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">speed</span></div>
+        <div><div class="cc-title">GPU Utilization: The Hidden Metric</div><div class="cc-sub">Why most self-hosted deployments waste 70&ndash;85% of their GPU capacity</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Utilization Problem</div>
+            <div class="cc-text">A GPU costs the same whether it&rsquo;s processing tokens or sitting idle. Most self-hosted deployments run at <strong>15&ndash;30% average utilization</strong> because demand is bursty &mdash; peak hours see high load, but nights and weekends are quiet. At 20% utilization, your effective cost per token is <strong>5x higher</strong> than the theoretical maximum.</div>
+          </div>
+          <div class="cc-code"><span class="hl-cmt">// Utilization impact on cost per token</span>
+<span class="hl-key">100% utilization:</span> $<span class="hl-num">0.10</span>/1K tokens
+<span class="hl-key"> 50% utilization:</span> $<span class="hl-num">0.20</span>/1K tokens (2x)
+<span class="hl-key"> 20% utilization:</span> $<span class="hl-num">0.50</span>/1K tokens (5x)
+<span class="hl-key"> 10% utilization:</span> $<span class="hl-num">1.00</span>/1K tokens (10x)
+<span class="hl-cmt">// At 10% utilization, APIs are almost
+// always cheaper</span></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Improving Utilization</div>
+            <div class="cc-text">Techniques to push utilization higher: <strong>Request batching</strong> (group multiple requests into single GPU passes). <strong>Multi-model serving</strong> (run different models on the same GPU based on demand). <strong>Spot/preemptible instances</strong> (use cheap GPU time for non-urgent batch work). <strong>Auto-scaling</strong> (spin GPUs up/down with demand, though this has cold-start penalties).</div>
+          </div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Before self-hosting, honestly assess your expected utilization. If you can&rsquo;t sustain &gt;60% utilization, APIs will be cheaper. The break-even math only works when GPUs are busy most of the time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">lightbulb</span></div>
+        <div><div class="cc-title">The Infrastructure Decision Tree</div><div class="cc-sub">A simple framework for choosing your path</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Decision Tree</div>
+            <div class="cc-code"><span class="hl-cmt">// Infrastructure decision framework</span>
+<span class="hl-key">Q1:</span> Regulated data (HIPAA/SOC2)?
+  <span class="hl-str">Yes &rarr; Self-host (mandatory)</span>
+  No &rarr; Q2
+
+<span class="hl-key">Q2:</span> &gt;10B tokens/month consistently?
+  <span class="hl-str">Yes &rarr; Evaluate self-hosting</span>
+  No &rarr; Q3
+
+<span class="hl-key">Q3:</span> Need sub-100ms latency?
+  <span class="hl-str">Yes &rarr; Evaluate self-hosting</span>
+  No &rarr; Q4
+
+<span class="hl-key">Q4:</span> Custom/fine-tuned models?
+  <span class="hl-str">Yes &rarr; Self-host or specialized cloud</span>
+  No &rarr; <span class="hl-str">Use APIs</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What&rsquo;s Next</div>
+            <div class="cc-text">Chapter 6 covers <strong>the optimization playbook</strong> &mdash; the water conservation analogy. Whether you use APIs or self-host, these techniques (caching, routing, compression, distillation, batching) can cut your bill by 60&ndash;70%. They work at every scale and every infrastructure choice.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Chapter Summary</div>
+            <div class="cc-text">APIs win for 87% of use cases. NVIDIA GPUs carry 79&ndash;89% margins, with B200 costing $6,400 to make and selling for $40K+. Cloud GPU pricing varies 3x between specialized and hyperscaler providers. Self-hosting hidden costs are 3&ndash;5x raw GPU price. The break-even is ~10B tokens/month at &gt;60% utilization. Four scenarios justify self-hosting: regulated data, ultra-high volume, latency requirements, and custom models.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-real-world-bills.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Real-World Bills</a>
+    <a class="ch-nav-btn next" href="06-optimization-playbook.html">Ch 6: Optimization Playbook <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The real estate analogy \u2014 renting (API), buying (self-hosting), or building (custom infra). APIs win for 87% of use cases.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> NVIDIA\u2019s GPU stack: H100 \u2192 H200 \u2192 B200 \u2192 GB200. Each generation delivers 2\u20133x more inference throughput.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> B200 costs $6,400 to manufacture, sells for $40K\u2013$50K (84% margin). HBM memory is 45% of manufacturing cost.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Cloud GPU pricing varies 3.2x: Northflank at $5.87/hr vs GCP at $18.53/hr for identical B200 hardware.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> API vs self-hosting break-even: ~10B tokens/month. Self-hosting hidden costs are 3\u20135x the raw GPU price.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Four scenarios justify self-hosting: regulated data, ultra-high volume, sub-100ms latency, and custom models.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> GPU utilization is the hidden metric. At 20% utilization, your cost per token is 5x higher than theoretical maximum.',color:'#dc2626'},
+    8:{text:'<strong>Step 8:</strong> Simple decision tree: regulated data? \u2192 self-host. >10B tokens/month? \u2192 evaluate. Otherwise \u2192 use APIs.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Alignment — RLHF &amp; Reward Models — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--pink-light) 50%,var(--blue-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--pink),var(--blue),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.compare-box{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.compare-item{padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6}.compare-item.ci-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.compare-item.ci-blue strong{color:var(--blue)}.compare-item.ci-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.compare-item.ci-violet strong{color:var(--violet)}.compare-item.ci-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.compare-item.ci-pink strong{color:var(--pink)}.compare-item.ci-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.compare-item.ci-teal strong{color:var(--teal)}.compare-item.ci-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.compare-item.ci-amber strong{color:var(--amber)}.compare-item.ci-green{background:var(--green-light);border:1px solid var(--green-border)}.compare-item.ci-green strong{color:var(--green)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.compare-box{grid-template-columns:1fr}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Alignment: RLHF &amp; Reward Models</h2><span class="tb-sub">Why alignment matters, the RLHF pipeline, reward model training, PPO, and the InstructGPT recipe</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="06-alignment-rlhf-under-the-hood.html">Under the Hood &rarr;</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Why</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">route</span></div><span class="pipe-label">Pipeline</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">thumb_up</span></div><span class="pipe-label">Preference</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Reward</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">PPO</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">warning</span></div><span class="pipe-label">Challenges</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">history</span></div><span class="pipe-label">History</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1: Why Alignment -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why Alignment Matters</div><div class="cc-sub">The gap between a capable model and a helpful, harmless, honest one</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">A pre-trained LLM is a powerful text predictor, but it has no concept of being <strong>helpful</strong>, <strong>harmless</strong>, or <strong>honest</strong> (the "HHH" criteria from Anthropic). It will happily:<br><br>- Generate toxic or harmful content<br>- Make up facts with high confidence<br>- Follow dangerous instructions<br>- Produce verbose, unhelpful responses<br>- Refuse to follow reasonable instructions<br><br><strong>SFT (supervised fine-tuning)</strong> teaches the model the format of helpful responses, but it doesn't teach the model to <em>prefer</em> good responses over bad ones. The model learns to mimic the training data, not to optimize for quality.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Alignment Does</div><div class="cc-text"><strong>Alignment</strong> is the process of making a model's behavior match human intentions and values. It goes beyond SFT by teaching the model to:<br><br>- <strong>Prefer</strong> helpful responses over unhelpful ones<br>- <strong>Refuse</strong> harmful requests appropriately<br>- <strong>Acknowledge</strong> uncertainty instead of hallucinating<br>- <strong>Follow</strong> instructions precisely<br>- <strong>Be concise</strong> when brevity is appropriate<br><br>The key insight: alignment requires <strong>preference data</strong> (which response is better?) rather than just demonstration data (what is a good response?).</div></div>
+          <div class="cc-note n-violet"><strong>The alignment tax:</strong> Alignment typically makes models slightly worse at raw benchmarks (e.g., MMLU) but dramatically better at real-world usefulness. This is a worthwhile trade-off. A model that scores 85% on MMLU but follows instructions well is more useful than one that scores 90% but ignores instructions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: RLHF Pipeline -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">The RLHF Pipeline</div><div class="cc-sub">Three stages from base model to aligned model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stage 1: Supervised Fine-Tuning (SFT)</div><div class="cc-text">Start with a pre-trained base model. Fine-tune it on high-quality instruction-response pairs to teach the format and style of helpful responses.<br><br><strong>Data:</strong> 10K-100K curated (prompt, response) pairs<br><strong>Result:</strong> A model that can follow instructions but doesn't yet distinguish good from great responses</div></div>
+          <div class="cc-block"><div class="cc-label">Stage 2: Reward Model Training</div><div class="cc-text">Train a separate model to predict human preferences. Given a prompt and two responses, the reward model outputs which response is better.<br><br><strong>Data:</strong> 50K-500K (prompt, chosen, rejected) triples<br><strong>Result:</strong> A reward model that scores any response on a quality scale</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Stage 3: RL Optimization (PPO)</div><div class="cc-text">Use the reward model as a scoring function. The SFT model generates responses, the reward model scores them, and PPO (Proximal Policy Optimization) updates the model to generate higher-scoring responses.<br><br><strong>Key constraint:</strong> A KL-divergence penalty prevents the model from drifting too far from the SFT model (to avoid reward hacking).<br><br><strong>Result:</strong> An aligned model that generates responses humans prefer</div></div>
+          <div class="cc-code"><span class="hl-cmt">The InstructGPT recipe (Ouyang et al., 2022):</span>
+
+Base model (GPT-3)
+    &darr; SFT on 13K demonstrations
+SFT model
+    &darr; Train reward model on 33K comparisons
+Reward model
+    &darr; PPO with 31K prompts
+<strong>InstructGPT</strong> (preferred over 175B GPT-3)</div>
+          <div class="cc-note n-blue"><strong>InstructGPT (Ouyang et al., 2022, OpenAI)</strong> was the landmark paper that proved RLHF works at scale. A 1.3B InstructGPT model was preferred by humans over the 175B GPT-3 base model. This showed that alignment is more important than raw scale for user-facing applications.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Preference Data -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">thumb_up</span></div><div><div class="cc-title">Preference Data Collection</div><div class="cc-sub">How human preferences are gathered and structured</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Comparison Format</div><div class="cc-text">Human annotators are shown a prompt and two (or more) model-generated responses. They choose which response is better, or rank them. This creates <strong>preference pairs</strong>:<br><br><strong>Format:</strong> (prompt, chosen_response, rejected_response)<br><br><strong>Example:</strong><br>Prompt: "Explain quantum entanglement simply"<br>Chosen: "Quantum entanglement is when two particles become linked so that measuring one instantly affects the other, no matter the distance..."<br>Rejected: "Quantum entanglement is a phenomenon described by the mathematical formalism of quantum mechanics involving the tensor product of Hilbert spaces..."<br><br>The chosen response is simpler and more helpful for the given prompt.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Data Collection Methods</div><div class="cc-text"><strong>Human annotation (gold standard):</strong><br>- Hire trained annotators (OpenAI used ~40 contractors)<br>- Provide detailed guidelines on what "better" means<br>- Inter-annotator agreement is typically 65-75%<br>- Cost: $1-$5 per comparison<br><br><strong>AI feedback (scalable alternative):</strong><br>- Use a strong model (GPT-4, Claude) as the judge<br>- "Constitutional AI" (Bai et al., 2022, Anthropic): the model critiques and revises its own outputs based on a set of principles<br>- RLAIF: RL from AI Feedback<br>- Much cheaper but may inherit biases from the judge model</div></div>
+          <div class="cc-block"><div class="cc-label">Public Preference Datasets</div><div class="cc-text"><strong>Anthropic HH-RLHF:</strong> ~170K human preference pairs for helpfulness and harmlessness<br><strong>OpenAssistant OASST1:</strong> ~88K messages in 35 languages with rankings<br><strong>UltraFeedback:</strong> ~64K prompts with GPT-4 preference annotations<br><strong>Nectar:</strong> ~183K comparisons from 7 models, ranked by GPT-4</div></div>
+          <div class="cc-note n-pink"><strong>Data quality matters enormously.</strong> Noisy preference labels (low inter-annotator agreement) lead to a weak reward model, which leads to poor alignment. Investing in clear annotation guidelines and annotator training pays off more than collecting more data.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Reward Model -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">star</span></div><div><div class="cc-title">Reward Model Training</div><div class="cc-sub">Teaching a model to score response quality</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-text">A reward model is typically the <strong>same architecture as the LLM</strong> but with the language modeling head replaced by a <strong>scalar output head</strong> (a single linear layer that outputs one number).<br><br><strong>Common approach:</strong> Start from the SFT model checkpoint, replace the LM head with a value head. This gives the reward model a strong understanding of language before it learns to score quality.<br><br><strong>Input:</strong> (prompt + response) concatenated<br><strong>Output:</strong> A single scalar reward score</div></div>
+          <div class="cc-block"><div class="cc-label">Training Objective</div><div class="cc-text">The reward model is trained with the <strong>Bradley-Terry preference model</strong>:<br><br>Given a prompt x, chosen response y_w, and rejected response y_l:<br><br><strong>Loss = -log(sigmoid(r(x, y_w) - r(x, y_l)))</strong><br><br>This pushes the reward model to assign a higher score to the chosen response than the rejected one. The sigmoid ensures the loss is bounded and well-behaved.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reward Model Quality</div><div class="cc-text"><strong>Accuracy metric:</strong> On held-out preference pairs, how often does the reward model agree with the human label? Typical accuracy: 65-75% (matching human inter-annotator agreement).<br><br><strong>Reward model size:</strong> Usually the same size as the policy model or smaller. OpenAI used a 6B reward model for InstructGPT. Anthropic uses reward models of similar size to the policy.<br><br><strong>Overoptimization risk:</strong> If the policy model optimizes too hard against the reward model, it finds adversarial inputs that score high but are actually bad (reward hacking). This is why KL penalty is essential.</div></div>
+          <div class="cc-note n-amber"><strong>The reward model is the bottleneck of RLHF.</strong> A bad reward model means the RL step optimizes for the wrong thing. Common failure modes: (1) reward model is too small and can't capture nuanced preferences, (2) training data has inconsistent labels, (3) reward model overfits to surface features (length, formatting) rather than actual quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: PPO -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">model_training</span></div><div><div class="cc-title">PPO: Proximal Policy Optimization</div><div class="cc-sub">The RL algorithm that updates the language model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How PPO Works for LLMs</div><div class="cc-text"><strong>Four models in memory simultaneously:</strong><br><br><strong>1. Policy model (active):</strong> The LLM being optimized. Generates responses.<br><br><strong>2. Reference model (frozen):</strong> A copy of the SFT model. Used to compute KL divergence (how far has the policy drifted?).<br><br><strong>3. Reward model (frozen):</strong> Scores the generated responses.<br><br><strong>4. Value model (active):</strong> Estimates expected future reward. Used to compute advantages for PPO.<br><br>This means PPO requires <strong>4x the memory</strong> of SFT. For a 7B model: ~360 GB of GPU memory. This is why RLHF is expensive.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The PPO Training Loop</div><div class="cc-text"><strong>For each batch of prompts:</strong><br><br>1. <strong>Generate:</strong> Policy model generates responses<br>2. <strong>Score:</strong> Reward model scores each response<br>3. <strong>Compute advantage:</strong> reward - value_estimate - KL_penalty<br>4. <strong>Update policy:</strong> PPO clipped objective (prevent large updates)<br>5. <strong>Update value model:</strong> Fit to observed rewards<br><br><strong>KL penalty:</strong> reward_final = reward - beta * KL(policy || reference)<br>Typical beta: 0.01-0.2. Higher beta = more conservative (stays closer to SFT model).</div></div>
+          <div class="cc-code"><span class="hl-cmt"># PPO objective (simplified)</span>
+reward = reward_model(prompt, response)
+kl = log_prob_policy - log_prob_reference
+penalized_reward = reward - beta * kl
+
+<span class="hl-cmt"># PPO clipped objective</span>
+ratio = exp(log_prob_new - log_prob_old)
+clipped = clip(ratio, 1-eps, 1+eps)
+loss = -min(ratio * advantage,
+            clipped * advantage)</div>
+          <div class="cc-note n-teal"><strong>PPO is notoriously unstable for LLMs.</strong> Common issues: reward hacking (model finds exploits in the reward model), mode collapse (model generates only one type of response), training instability (loss spikes). This complexity is a major motivation for simpler alternatives like DPO (Chapter 7).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Challenges -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">RLHF Challenges</div><div class="cc-sub">Why RLHF is hard and what can go wrong</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Reward Hacking</div><div class="cc-text">The policy model finds ways to get high reward scores without actually being helpful. Examples:<br><br>- <strong>Length gaming:</strong> Longer responses often get higher rewards, so the model becomes excessively verbose<br>- <strong>Sycophancy:</strong> The model learns to agree with the user regardless of correctness, because agreeable responses were preferred in training<br>- <strong>Format gaming:</strong> The model produces responses with bullet points, headers, and formatting that the reward model likes, even when plain text would be better<br>- <strong>Hedging:</strong> The model adds excessive caveats and disclaimers to avoid being wrong</div></div>
+          <div class="cc-block"><div class="cc-label">Computational Cost</div><div class="cc-text"><strong>4 models in memory:</strong> Policy + reference + reward + value model. For a 7B model, this requires 8-16 A100 GPUs.<br><br><strong>Generation during training:</strong> Each PPO step requires generating full responses, which is much slower than forward/backward passes in SFT.<br><br><strong>Typical RLHF cost:</strong> 5-20x more expensive than SFT for the same model.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training Instability</div><div class="cc-text"><strong>Hyperparameter sensitivity:</strong> PPO has many hyperparameters (KL coefficient, clip range, learning rate, batch size, number of PPO epochs per batch). Small changes can cause training to diverge.<br><br><strong>Reward model quality ceiling:</strong> The aligned model can only be as good as the reward model. If the reward model has blind spots, the policy will exploit them.<br><br><strong>Evaluation difficulty:</strong> There's no simple metric for "alignment quality." Human evaluation is expensive and subjective. Automated benchmarks (MT-Bench, AlpacaEval) are imperfect proxies.</div></div>
+          <div class="cc-note n-red"><strong>These challenges drove the development of DPO</strong> (Direct Preference Optimization, Rafailov et al., 2023). DPO eliminates the reward model and PPO entirely, directly optimizing the policy on preference data. It's simpler, more stable, and cheaper. We cover DPO in detail in Chapter 7.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: History & Timeline -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">history</span></div><div><div class="cc-title">Alignment History &amp; Timeline</div><div class="cc-sub">Key papers and milestones in RLHF</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Papers</div><div class="cc-text"><strong>2017 &mdash; "Learning from Human Preferences"</strong> (Christiano et al., OpenAI): First demonstration of RLHF for deep RL agents. Showed humans could train agents by comparing trajectory segments.<br><br><strong>2020 &mdash; "Learning to summarize from human feedback"</strong> (Stiennon et al., OpenAI): Applied RLHF to text summarization. Trained a reward model on human comparisons, then used PPO to optimize a summarization model.<br><br><strong>2022 &mdash; "Training language models to follow instructions with human feedback" (InstructGPT)</strong> (Ouyang et al., OpenAI): The paper that launched ChatGPT. Showed RLHF works at scale for general instruction following.<br><br><strong>2022 &mdash; "Constitutional AI" (CAI)</strong> (Bai et al., Anthropic): Replaced human feedback with AI feedback based on a set of principles ("constitution"). The foundation of Claude.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Shift Away from PPO</div><div class="cc-text"><strong>2023 &mdash; "Direct Preference Optimization" (DPO)</strong> (Rafailov et al., Stanford): Showed that RLHF can be reformulated as a simple classification loss, eliminating the reward model and PPO. Became the dominant alignment method.<br><br><strong>2024 &mdash; ORPO, SimPO, KTO:</strong> Further simplifications. ORPO combines SFT and alignment in one step. SimPO removes the reference model. KTO works with binary feedback (good/bad) instead of comparisons.<br><br><strong>Current state (2025):</strong> Most open-source models use DPO or its variants. PPO-based RLHF is still used by frontier labs (OpenAI, Anthropic, Google) where the extra complexity is justified by the scale and stakes.</div></div>
+          <div class="cc-note n-green"><strong>The trend is toward simplification.</strong> RLHF with PPO requires 4 models and is hard to tune. DPO requires 2 models and is a simple loss function. ORPO requires 1 model and combines SFT + alignment. Each generation is simpler, cheaper, and often just as effective. But PPO remains the gold standard for maximum control at frontier scale.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6};
+  const NARRATION={
+    1:{text:'<strong>Why alignment?</strong> A pre-trained LLM is a powerful text predictor but has no concept of being helpful, harmless, or honest. SFT teaches format, but not preference. Alignment teaches the model to <em>prefer</em> good responses over bad ones using human preference data. The "alignment tax" slightly reduces benchmark scores but dramatically improves real-world usefulness.',color:'#7c3aed'},
+    2:{text:'<strong>The RLHF pipeline has 3 stages:</strong> (1) <strong>SFT</strong> on demonstration data to teach format. (2) <strong>Reward model</strong> trained on human preference comparisons to score response quality. (3) <strong>PPO</strong> to optimize the SFT model against the reward model. InstructGPT (Ouyang et al., 2022) proved this works: a 1.3B RLHF model was preferred over 175B GPT-3.',color:'#2563eb'},
+    3:{text:'<strong>Preference data:</strong> Annotators compare two responses and choose the better one, creating (prompt, chosen, rejected) triples. Human annotation costs $1-$5 per comparison with 65-75% inter-annotator agreement. AI feedback (RLAIF) is cheaper but may inherit biases. Key datasets: Anthropic HH-RLHF (170K), UltraFeedback (64K), OpenAssistant OASST1 (88K).',color:'#db2777'},
+    4:{text:'<strong>Reward model:</strong> Same architecture as the LLM but with a scalar output head instead of a language modeling head. Trained with the Bradley-Terry loss: push r(chosen) > r(rejected). Typical accuracy: 65-75% (matching human agreement). The reward model is the bottleneck \u2014 a bad reward model means optimizing for the wrong thing.',color:'#d97706'},
+    5:{text:'<strong>PPO requires 4 models in memory:</strong> policy (active), reference (frozen SFT copy), reward model (frozen), and value model (active). That is 4x the memory of SFT. The training loop: generate responses \u2192 score with reward model \u2192 compute advantage with KL penalty \u2192 update policy with clipped PPO objective. KL penalty prevents reward hacking.',color:'#0d9488'},
+    6:{text:'<strong>RLHF challenges:</strong> Reward hacking (length gaming, sycophancy, format gaming). Computational cost (4 models, 5-20x more expensive than SFT). Training instability (many sensitive hyperparameters). Evaluation difficulty (no simple metric for alignment quality). These challenges motivated DPO and other simpler alternatives.',color:'#dc2626'},
+    7:{text:'<strong>Timeline:</strong> 2017 \u2014 RLHF for RL agents (Christiano et al.). 2020 \u2014 RLHF for summarization (Stiennon et al.). 2022 \u2014 InstructGPT (Ouyang et al.) and Constitutional AI (Bai et al.). 2023 \u2014 DPO eliminates reward model and PPO. 2024 \u2014 ORPO, SimPO, KTO further simplify. The trend: simpler, cheaper, and often just as effective.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(i<litIdx)s.classList.add('done');else if(i===litIdx)s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(i<litIdx)a.classList.add('done');else if(i===litIdx)a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+</body>
+</html>

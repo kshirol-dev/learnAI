@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Text Classification — Natural Language Processing</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet),var(--teal),var(--green));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red)}.cc-code .hl-ok{color:var(--green)}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Text Classification</h2><span class="tb-sub">Sentiment analysis, spam detection, and the classical ML pipeline for text</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">description</span></div><span class="pipe-label">Text</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">data_object</span></div><span class="pipe-label">Features</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">model_training</span></div><span class="pipe-label">Model</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">label</span></div><span class="pipe-label">Predict</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Evaluate</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">label</span></div><div><div class="cc-title">What Is Text Classification?</div><div class="cc-sub">Assigning labels to documents &mdash; the most common NLP task in production</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Task</div><div class="cc-text"><strong>Text classification</strong> assigns one or more labels to a piece of text. Given a document, predict its category. It's the most widely deployed NLP task in industry. <strong>Sentiment analysis</strong>: "This movie was terrible" &rarr; negative. <strong>Spam detection</strong>: "You've won $1,000,000!" &rarr; spam. <strong>Topic classification</strong>: an article about GDP growth &rarr; economics. <strong>Intent detection</strong>: "Book a flight to London" &rarr; book_flight. Classification can be <strong>binary</strong> (spam/not spam), <strong>multi-class</strong> (one of N categories), or <strong>multi-label</strong> (multiple tags per document). The task seems simple, but doing it well at scale &mdash; handling edge cases, class imbalance, domain shift, and evolving categories &mdash; is where the real engineering challenge lies.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Classification Types</div><div class="cc-code"><span class="hl-key">Binary</span>: exactly 2 classes
+  spam / not spam
+  positive / negative
+  toxic / non-toxic
+
+<span class="hl-key">Multi-class</span>: one of N classes
+  sports | politics | tech | science
+  anger | joy | sadness | fear | surprise
+
+<span class="hl-key">Multi-label</span>: multiple labels per doc
+  Article: [politics, economics, trade]
+  Movie: [action, comedy, sci-fi]
+
+<span class="hl-str">Real-world applications</span>:
+  Email routing, content moderation
+  Customer support ticket triage
+  Medical document coding (ICD-10)
+  Legal document categorization</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Text classification is the <strong>"hello world" of NLP</strong> &mdash; simple to define, hard to master. Most production NLP systems start with classification, and the skills transfer to every other NLP task.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">Naive Bayes</div><div class="cc-sub">The surprisingly effective probabilistic baseline</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>Naive Bayes</strong> applies Bayes' theorem with a "naive" assumption: all features (words) are <strong>conditionally independent</strong> given the class. This assumption is obviously wrong &mdash; "New" and "York" are highly correlated &mdash; but the model works remarkably well in practice. For text, <strong>Multinomial Naive Bayes</strong> models word counts: P(class | document) is proportional to P(class) &times; &prod; P(word | class). Training is just counting: how often does each word appear in documents of each class? Prediction is fast: multiply the probabilities. Naive Bayes excels with <strong>small training sets</strong> (as few as dozens of examples), is extremely fast to train and predict, and provides a strong baseline that more complex models must beat. It's still the go-to first model for text classification prototypes.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Naive Bayes for Text</div><div class="cc-code"><span class="hl-key">Bayes' theorem</span>:
+  P(spam | "free money now") =
+    P("free"|spam) &times; P("money"|spam) &times;
+    P("now"|spam) &times; P(spam)
+    &divide; P("free money now")
+
+<span class="hl-key">Training</span> = counting:
+  P("free" | spam) = count("free" in spam)
+                     / total words in spam
+  P("free" | ham)  = count("free" in ham)
+                     / total words in ham
+
+<span class="hl-ok">Strengths</span>:
+  Works with tiny datasets (50+ examples)
+  Trains in milliseconds
+  Interpretable: which words drive predictions
+  Hard to overfit
+
+<span class="hl-err">Weaknesses</span>:
+  Independence assumption is wrong
+  Can't capture word interactions
+  Sensitive to word frequency imbalance</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Naive Bayes is the <strong>baseline that refuses to die</strong>. Its independence assumption is wrong, but the ranking of class probabilities is often correct. Always start with Naive Bayes &mdash; if a complex model can't beat it, the problem is your data, not your model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">linear_scale</span></div><div><div class="cc-title">Logistic Regression</div><div class="cc-sub">The linear model that dominates text classification</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why It Works for Text</div><div class="cc-text"><strong>Logistic regression</strong> learns a weighted sum of features, passed through a sigmoid function to produce a probability. For text, the features are typically TF-IDF values, and the model learns which words are most predictive of each class. It consistently achieves <strong>83&ndash;88% accuracy</strong> on sentiment analysis benchmarks, often matching or beating more complex models. Logistic regression works so well for text because TF-IDF features are <strong>high-dimensional and sparse</strong> &mdash; exactly the regime where linear models shine. With L1 regularization (Lasso), it performs automatic feature selection, zeroing out irrelevant words. With L2 regularization (Ridge), it handles correlated features gracefully. The learned weights are directly interpretable: the highest-weighted words for "positive" might be "excellent", "amazing", "loved."</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Logistic Regression for Text</div><div class="cc-code"><span class="hl-key">Model</span>:
+  P(positive | doc) = sigmoid(w &middot; x + b)
+  x = TF-IDF vector of document
+  w = learned word weights
+
+<span class="hl-key">Learned weights</span> (sentiment):
+  "excellent": <span class="hl-ok">+2.3</span>
+  "amazing":   <span class="hl-ok">+2.1</span>
+  "terrible":  <span class="hl-err">-2.8</span>
+  "boring":    <span class="hl-err">-1.9</span>
+  "the":       <span class="hl-num">+0.01</span> (near zero)
+
+<span class="hl-key">Regularization</span>:
+  L1 (Lasso): sparse weights, feature selection
+  L2 (Ridge): small weights, handles correlation
+
+<span class="hl-ok">Performance</span>:
+  Sentiment: 83-88% accuracy (F1: 0.83)
+  Spam: 97-99% accuracy
+  Fast training, fast inference</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Logistic regression with TF-IDF is the <strong>strongest classical baseline</strong> for text classification. In comparative studies, it achieves the best F1 scores among classical models. If you can only try one model, try this one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">view_in_ar</span></div><div><div class="cc-title">Support Vector Machines (SVMs)</div><div class="cc-sub">Finding the maximum-margin decision boundary in high-dimensional space</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">SVMs for Text</div><div class="cc-text"><strong>Support Vector Machines</strong> find the hyperplane that maximizes the <strong>margin</strong> between classes. In the high-dimensional space of TF-IDF vectors, SVMs are particularly effective because they handle sparse, high-dimensional data well and are robust to overfitting through the margin constraint. <strong>Linear SVMs</strong> (LinearSVC) are the standard choice for text &mdash; kernel SVMs are usually unnecessary because the feature space is already high-dimensional enough for linear separability. SVMs were the <strong>dominant text classification method</strong> from the late 1990s through the early 2010s, winning most shared tasks and competitions. They remain competitive today, especially when combined with careful feature engineering. The key advantage over logistic regression: SVMs focus on the <strong>hardest examples</strong> (support vectors near the boundary) rather than all examples, making them more robust to noisy data.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">SVM Properties</div><div class="cc-code"><span class="hl-key">Core idea</span>:
+  Find the hyperplane that maximizes
+  the margin between classes
+
+  Positive class: +++  |  --- :Negative class
+                  +++  |  ---
+  &larr; margin &rarr; | &larr; margin &rarr;
+
+<span class="hl-key">For text</span>:
+  Use Linear SVM (not kernel SVM)
+  High-dimensional TF-IDF already separable
+  Kernel adds cost without benefit
+
+<span class="hl-ok">Strengths</span>:
+  Robust to high dimensionality
+  Focus on hard examples (support vectors)
+  Strong generalization from margin
+
+<span class="hl-err">Weaknesses</span>:
+  Slower training than Naive Bayes/LR
+  No probability output (by default)
+  Less interpretable than LR weights</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> For text classification, <strong>linear models (LR, SVM) are hard to beat</strong> with classical methods. The high dimensionality of text features means non-linear models rarely add value &mdash; the data is already linearly separable in TF-IDF space.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">Deep Learning for Classification</div><div class="cc-sub">CNNs, RNNs, and transformers &mdash; when neural models add value</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Neural Approaches</div><div class="cc-text">Deep learning brought three waves of neural text classifiers. <strong>TextCNN</strong> (Kim, 2014) applies convolutional filters over word embeddings to capture local n-gram patterns &mdash; fast and effective for short texts. <strong>LSTMs and BiLSTMs</strong> process text sequentially, capturing long-range dependencies that bag-of-words models miss. <strong>Transformer-based models</strong> (BERT, RoBERTa) achieve state-of-the-art by fine-tuning pre-trained language models on classification tasks. BERT adds a classification head on top of the [CLS] token representation and fine-tunes the entire model. The accuracy gains over classical models are real but <strong>task-dependent</strong>: for simple binary sentiment, BERT might improve 2&ndash;3% over logistic regression; for nuanced multi-class tasks with subtle distinctions, the gap can be 10%+. The trade-off is always compute cost and complexity.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Neural Classification Models</div><div class="cc-code"><span class="hl-key">TextCNN</span> (2014):
+  Convolutional filters over embeddings
+  Captures local n-gram patterns
+  Fast, good for short texts
+
+<span class="hl-key">BiLSTM</span> (2015+):
+  Sequential processing, both directions
+  Captures long-range dependencies
+  + Attention for weighted aggregation
+
+<span class="hl-key">BERT fine-tuning</span> (2018+):
+  [CLS] token &rarr; classification head
+  Fine-tune entire pre-trained model
+  SOTA on most benchmarks
+
+<span class="hl-str">Accuracy comparison (sentiment)</span>:
+  Naive Bayes:  ~82%
+  LR + TF-IDF:  ~85%
+  TextCNN:      ~87%
+  BiLSTM:       ~88%
+  BERT:         ~93%</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Deep learning models are <strong>not always worth the cost</strong> for text classification. If logistic regression gets 85% and BERT gets 87%, the 2% gain may not justify 100x the compute. But for hard tasks with subtle distinctions, transformers are transformative.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">Feature Engineering for Text</div><div class="cc-sub">The features you choose matter more than the model you pick</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond Bag-of-Words</div><div class="cc-text">For classical models, <strong>feature engineering</strong> is where the real performance gains come from. Beyond unigram TF-IDF, you can add <strong>n-gram features</strong>: bigrams ("not good", "very bad") capture negation and intensification that unigrams miss. <strong>Character n-grams</strong> capture morphological patterns and are robust to typos. <strong>Metadata features</strong> like document length, punctuation count, capitalization ratio, and emoji presence add signal. <strong>Domain-specific features</strong> like sentiment lexicon scores (AFINN, VADER) provide expert knowledge. <strong>Feature selection</strong> using chi-squared tests or mutual information removes noise features. The best classical systems combine multiple feature types: TF-IDF unigrams + bigrams + character n-grams + metadata, often matching neural models without GPU costs.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Feature Engineering Toolkit</div><div class="cc-code"><span class="hl-key">N-gram features</span>:
+  Unigrams: "not", "good"
+  Bigrams:  "not good" (captures negation!)
+  Trigrams: "not very good"
+
+<span class="hl-key">Character n-grams</span>:
+  "amazing" &rarr; "ama", "maz", "azi", "zin"
+  Robust to typos: "amzing" still matches
+
+<span class="hl-key">Metadata features</span>:
+  Document length, sentence count
+  Punctuation ratio (!!!)
+  Capitalization ratio (ALL CAPS)
+  Emoji count, URL count
+
+<span class="hl-key">Lexicon features</span>:
+  VADER sentiment score
+  AFINN word-level scores
+  Domain-specific dictionaries
+
+<span class="hl-ok">Best practice</span>:
+  Combine TF-IDF (1,2)-grams + metadata</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Bigram features are <strong>the single most impactful addition</strong> to a unigram baseline. They capture negation ("not good"), intensification ("very bad"), and multi-word expressions ("New York") that unigrams completely miss.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Common Pitfalls</div><div class="cc-sub">Class imbalance, data leakage, and the mistakes that silently kill accuracy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Goes Wrong</div><div class="cc-text"><strong>Class imbalance</strong> is the most common pitfall. If 95% of emails are not spam, a model that always predicts "not spam" gets 95% accuracy but catches zero spam. Use <strong>F1 score</strong> (not accuracy) as your primary metric, and consider oversampling, undersampling, or class weights. <strong>Data leakage</strong> happens when test data information leaks into training &mdash; fitting TF-IDF on the entire dataset before splitting means the model has seen test vocabulary statistics. Always fit preprocessing on training data only. <strong>Domain shift</strong>: a model trained on movie reviews may fail on product reviews because the vocabulary and sentiment expressions differ. <strong>Label noise</strong>: human annotators disagree 10&ndash;20% of the time on subjective tasks like sentiment, setting a ceiling on model performance. <strong>Overfitting on spurious correlations</strong>: the model learns that reviews mentioning "Oscar" are positive, not because of sentiment but because Oscar-nominated films get more positive reviews.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Pitfall Checklist</div><div class="cc-code"><span class="hl-err">Class imbalance</span>:
+  95% negative, 5% positive
+  Accuracy = 95% by always saying "negative"
+  <span class="hl-ok">Fix</span>: Use F1, class weights, resampling
+
+<span class="hl-err">Data leakage</span>:
+  Fitting TF-IDF on train + test
+  <span class="hl-ok">Fix</span>: fit_transform(train), transform(test)
+
+<span class="hl-err">Domain shift</span>:
+  Train on movie reviews, test on products
+  <span class="hl-ok">Fix</span>: domain adaptation, more diverse data
+
+<span class="hl-err">Label noise</span>:
+  Annotators disagree 10-20% of the time
+  <span class="hl-ok">Fix</span>: multiple annotators, adjudication
+
+<span class="hl-err">Spurious correlations</span>:
+  "Oscar" &rarr; positive (not causal)
+  <span class="hl-ok">Fix</span>: error analysis, counterfactual tests</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The difference between a demo and a production classifier is <strong>how you handle edge cases</strong>. Class imbalance, domain shift, and label noise are not exceptions &mdash; they are the norm in real-world text classification.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">The Classification Pipeline</div><div class="cc-sub">Putting it all together &mdash; from raw text to deployed model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">End-to-End Pipeline</div><div class="cc-text">A production text classification pipeline follows a structured flow. <strong>Data collection</strong>: gather labeled examples (manually annotated, crowd-sourced, or from existing systems). <strong>Preprocessing</strong>: clean and normalize text using the pipeline from Chapter 2. <strong>Feature extraction</strong>: convert text to numerical features (TF-IDF, embeddings). <strong>Model selection</strong>: start with logistic regression as a baseline, then try more complex models only if needed. <strong>Evaluation</strong>: use stratified cross-validation with F1 as the primary metric. <strong>Error analysis</strong>: examine misclassified examples to find systematic patterns. <strong>Iteration</strong>: improve features, add data for weak categories, adjust thresholds. <strong>Deployment</strong>: serve predictions via API with monitoring for drift. The most important step is <strong>error analysis</strong> &mdash; understanding why the model fails teaches you more than any hyperparameter search.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Pipeline Steps</div><div class="cc-code"><span class="hl-key">1. Collect</span>: labeled data (1K+ examples)
+<span class="hl-key">2. Split</span>: train/val/test (stratified)
+<span class="hl-key">3. Preprocess</span>: clean, normalize
+<span class="hl-key">4. Featurize</span>: TF-IDF (1,2)-grams
+<span class="hl-key">5. Baseline</span>: Logistic Regression
+<span class="hl-key">6. Evaluate</span>: F1, precision, recall
+<span class="hl-key">7. Error analysis</span>: why does it fail?
+<span class="hl-key">8. Iterate</span>: better features, more data
+<span class="hl-key">9. Compare</span>: SVM, BERT if needed
+<span class="hl-key">10. Deploy</span>: API + monitoring
+
+<span class="hl-ok">Model selection heuristic</span>:
+  &lt;1K examples: Naive Bayes
+  1K-100K: Logistic Regression + TF-IDF
+  100K+: Consider BERT fine-tuning
+  Always start simple, add complexity</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The best text classification systems are built through <strong>iteration, not architecture</strong>. Start with the simplest model that works, do thorough error analysis, and add complexity only where the errors demand it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-representing-text.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: Representing Text</a>
+    <a class="ch-nav-btn next" href="05-sequence-labeling.html">Ch 5: Sequence Labeling <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3],2:[0,1,2],3:[0,1,2],4:[0,1,2],5:[0,1,2,3],6:[0,1],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Text classification assigns labels to documents: sentiment, spam, topic, intent. The most widely deployed NLP task. Can be binary, multi-class, or multi-label.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Naive Bayes: multiply word probabilities per class. Wrong independence assumption, but works with as few as 50 examples. The baseline that refuses to die.',color:'#16a34a'},
+    3:{text:'<strong>Step 3:</strong> Logistic regression with TF-IDF: the strongest classical baseline. 83-88% accuracy on sentiment. Interpretable weights show which words drive predictions.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> SVMs find maximum-margin boundaries. Dominated NLP competitions for a decade. Linear SVMs work best for text &mdash; the feature space is already high-dimensional.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> Deep learning: TextCNN for local patterns, BiLSTM for sequences, BERT for state-of-the-art. The gains are real but task-dependent &mdash; 2% or 10% depending on complexity.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Feature engineering: bigrams capture negation ("not good"), character n-grams handle typos, metadata adds signal. Features matter more than model choice.',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> Common pitfalls: class imbalance (use F1, not accuracy), data leakage (fit on train only), domain shift, label noise, and spurious correlations.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The pipeline: collect &rarr; preprocess &rarr; featurize &rarr; baseline &rarr; evaluate &rarr; error analysis &rarr; iterate. Start simple, add complexity where errors demand it.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

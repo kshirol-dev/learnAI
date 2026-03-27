@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 2: Chain-of-Thought Prompting — Reasoning & CoT Models</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);padding:4px 12px;background:var(--orange-light);border:1px solid var(--orange-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--orange-border);background:var(--orange-light)}.pipe-stage.lit .pipe-icon{background:var(--orange);color:#fff}.pipe-stage.lit .pipe-label{color:var(--orange)}.pipe-arrow.lit{color:var(--orange)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--orange-light) 0%,var(--amber-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--amber),var(--red),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--orange);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--orange);box-shadow:0 0 5px rgba(234,88,12,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--orange);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 2 &mdash; Chain-of-Thought Prompting</h2><span class="tb-sub">Wei et al. (2022), zero-shot CoT, self-consistency, and why &ldquo;let&rsquo;s think step by step&rdquo; works</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">help</span></div><span class="pipe-label">Question</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">Few-Shot</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">auto_fix_high</span></div><span class="pipe-label">Zero-Shot</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">route</span></div><span class="pipe-label">Chain</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">diversity_1</span></div><span class="pipe-label">Sample</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Answer</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <!-- Card 1: The Original Paper -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">article</span></div><div><div class="cc-title">The Original Paper: Wei et al. (2022)</div><div class="cc-sub">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Breakthrough</div><div class="cc-text">In January 2022, Jason Wei and colleagues at Google Brain published the paper that launched the reasoning revolution. The core idea is deceptively simple: instead of asking a model to jump directly from question to answer, provide <strong>exemplars that include intermediate reasoning steps</strong>. The model then learns to generate its own reasoning steps for new problems. Testing on Google&rsquo;s PaLM (540B parameter) model, chain-of-thought prompting with just <strong>8 exemplars</strong> achieved state-of-the-art on the GSM8K math benchmark &mdash; surpassing a fine-tuned GPT-3 with a verifier. The improvement was dramatic across three categories: <strong>arithmetic reasoning</strong> (GSM8K, SVAMP, MultiArith), <strong>commonsense reasoning</strong> (StrategyQA, CSQA), and <strong>symbolic reasoning</strong> (last letter concatenation, coin flip). Crucially, CoT only helps with <strong>large models</strong> (100B+ parameters). Smaller models generate incoherent chains that hurt performance.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Few-Shot CoT Example</div><div class="cc-code"><span class="hl-cmt">// Few-shot chain-of-thought prompt</span>
+
+<span class="hl-key">Exemplar</span>:
+Q: Roger has 5 tennis balls. He buys
+2 more cans of 3 tennis balls each.
+How many tennis balls does he have?
+
+A: Roger started with 5 balls.
+2 cans of 3 balls each = 2 × 3 = 6.
+5 + 6 = 11.
+<span class="hl-str">The answer is 11.</span>
+
+<span class="hl-key">New Question</span>:
+Q: The cafeteria had 23 apples. If
+they used 20 for lunch and bought 6
+more, how many apples do they have?
+
+A: The cafeteria started with 23.
+They used 20, so 23 - 20 = 3.
+They bought 6 more, so 3 + 6 = 9.
+<span class="hl-str">The answer is 9.</span> ✓
+
+<span class="hl-key">Results (PaLM 540B)</span>:
+  GSM8K: <span class="hl-num">17.9%</span> → <span class="hl-num">56.9%</span> (+39%)
+  SVAMP: <span class="hl-num">79.0%</span> → <span class="hl-num">86.6%</span>
+  <span class="hl-cmt">// State-of-the-art with 8 exemplars</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Chain-of-thought prompting is a <strong>few-shot</strong> technique: you provide 4&ndash;8 exemplars that include reasoning steps, and the model learns to generate its own. The magic is that it works without any fine-tuning &mdash; just prompting. But it only works with large models (100B+).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Zero-Shot CoT -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">auto_fix_high</span></div><div><div class="cc-title">Zero-Shot CoT: &ldquo;Let&rsquo;s Think Step by Step&rdquo;</div><div class="cc-sub">Kojima et al. (2022) &mdash; no exemplars needed</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Discovery</div><div class="cc-text">Just two months after Wei et al., Kojima et al. made a surprising discovery: you don&rsquo;t need hand-crafted exemplars at all. Simply appending <strong>&ldquo;Let&rsquo;s think step by step&rdquo;</strong> to the prompt triggers chain-of-thought reasoning in large language models. This <strong>zero-shot CoT</strong> approach is remarkably effective: on MultiArith, accuracy jumped from 17.7% to 78.7% with InstructGPT. On GSM8K, it went from 10.4% to 40.7%. The technique works in two stages: (1) append &ldquo;Let&rsquo;s think step by step&rdquo; and let the model generate reasoning, then (2) append &ldquo;Therefore, the answer is&rdquo; to extract the final answer. While zero-shot CoT doesn&rsquo;t match few-shot CoT performance (no exemplars to guide the reasoning format), it&rsquo;s dramatically simpler to use. No need to craft domain-specific exemplars &mdash; one magic phrase works across tasks.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Zero-Shot CoT</div><div class="cc-code"><span class="hl-cmt">// Zero-shot CoT (Kojima et al. 2022)</span>
+
+<span class="hl-key">Standard Prompt</span>:
+Q: A juggler has 16 balls. Half are
+golf balls, and half of the golf
+balls are blue. How many blue golf
+balls are there?
+A: <span class="hl-num">8</span>  <span class="hl-cmt">// Wrong!</span>
+
+<span class="hl-key">Zero-Shot CoT</span>:
+Q: A juggler has 16 balls. Half are
+golf balls, and half of the golf
+balls are blue. How many blue golf
+balls are there?
+<span class="hl-str">Let's think step by step.</span>
+
+A: There are 16 balls total.
+Half are golf balls: 16 / 2 = 8.
+Half of golf balls are blue: 8 / 2 = 4.
+<span class="hl-str">Therefore, the answer is 4.</span> ✓
+
+<span class="hl-key">Results (InstructGPT)</span>:
+  MultiArith: <span class="hl-num">17.7%</span> → <span class="hl-num">78.7%</span>
+  GSM8K: <span class="hl-num">10.4%</span> → <span class="hl-num">40.7%</span>
+  SVAMP: <span class="hl-num">63.7%</span> → <span class="hl-num">79.3%</span>
+
+<span class="hl-key">Other Effective Phrases</span>:
+  "Let's work this out step by step"
+  "Let's break this down"
+  "Think carefully and show your work"</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> &ldquo;Let&rsquo;s think step by step&rdquo; is arguably the most impactful six words in AI history. It proved that LLMs already have latent reasoning capabilities &mdash; they just need to be <strong>prompted</strong> to use them. The reasoning is there; it just needs to be elicited.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Self-Consistency -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">diversity_1</span></div><div><div class="cc-title">Self-Consistency: Majority Vote over Paths</div><div class="cc-sub">Wang et al. (2022) &mdash; sample diverse reasoning, pick the consensus</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Idea</div><div class="cc-text">Standard CoT uses <strong>greedy decoding</strong>: the model generates one reasoning path and returns one answer. But complex problems often have multiple valid approaches. What if the model takes a wrong turn in its reasoning? Self-consistency (Wang et al., 2022, published at ICLR 2023) addresses this by: (1) <strong>Sampling</strong> multiple reasoning paths using temperature &gt; 0 (e.g., temperature = 0.7, sample 40 paths). (2) <strong>Extracting</strong> the final answer from each path. (3) <strong>Taking the majority vote</strong> &mdash; the most common answer across all paths wins. The intuition: if a problem has a correct answer, multiple different reasoning approaches should converge on it. Wrong answers are more random and spread across different values. Results were striking: GSM8K improved by +17.9%, SVAMP by +11.0%, AQuA by +12.2%. Self-consistency is now the standard approach for any reasoning task where you can afford the extra inference cost.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Self-Consistency</div><div class="cc-code"><span class="hl-cmt">// Self-consistency (Wang et al. 2022)</span>
+
+<span class="hl-key">Step 1: Sample N reasoning paths</span>
+  temperature = <span class="hl-num">0.7</span>, N = <span class="hl-num">40</span>
+
+  Path 1: "23 - 20 = 3, 3 + 6 = 9"
+  → Answer: <span class="hl-num">9</span>
+
+  Path 2: "23 + 6 = 29, 29 - 20 = 9"
+  → Answer: <span class="hl-num">9</span>
+
+  Path 3: "20 - 6 = 14, 23 - 14 = 9"
+  → Answer: <span class="hl-num">9</span>
+
+  Path 4: "23 - 20 = 13, 13 + 6 = 19"
+  → Answer: <span class="hl-num">19</span>  <span class="hl-cmt">// Wrong path!</span>
+
+<span class="hl-key">Step 2: Majority vote</span>
+  Answer 9: <span class="hl-num">36</span> votes (90%)
+  Answer 19: <span class="hl-num">3</span> votes (7.5%)
+  Answer 3: <span class="hl-num">1</span> vote (2.5%)
+
+<span class="hl-key">Step 3: Return majority</span>
+  → <span class="hl-str">9</span> ✓
+
+<span class="hl-key">Results (CoT + Self-Consistency)</span>:
+  GSM8K: <span class="hl-num">56.9%</span> → <span class="hl-num">74.4%</span> (+17.9%)
+  AQuA: <span class="hl-num">35.8%</span> → <span class="hl-num">48.0%</span> (+12.2%)
+  <span class="hl-cmt">// Significant gains over greedy CoT</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Self-consistency trades compute for accuracy. Sampling 40 paths costs 40x more inference than greedy decoding, but the accuracy gains are substantial. The trade-off is worth it for high-stakes reasoning tasks. This is an early form of test-time compute scaling.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Why CoT Works -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Why Does Chain-of-Thought Work?</div><div class="cc-sub">Theories and empirical evidence</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Proposed Explanations</div><div class="cc-text">Why does generating intermediate text improve reasoning? Several theories: <strong>External working memory</strong> &mdash; the chain of text serves as scratch space. Each token generated becomes part of the context for the next token, effectively giving the model more &ldquo;memory&rdquo; to work with. <strong>Problem decomposition</strong> &mdash; CoT breaks one hard problem into many easy sub-problems. Each step is simple enough for the model to handle in a single forward pass. <strong>Distributional shift</strong> &mdash; training data contains many examples of step-by-step reasoning (textbooks, tutorials, Stack Overflow). CoT prompts the model to access this &ldquo;reasoning mode&rdquo; of its training distribution. <strong>Attention allocation</strong> &mdash; intermediate steps help the model attend to the right parts of the problem at each stage, rather than trying to attend to everything at once. <strong>Error localization</strong> &mdash; when reasoning fails, you can identify which step went wrong, enabling targeted correction.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why It Works</div><div class="cc-code"><span class="hl-cmt">// Theories for why CoT works</span>
+
+<span class="hl-key">1. External Working Memory</span>:
+   Standard: all reasoning in 1 pass
+   CoT: each step adds to context
+   → More "memory" for computation
+   <span class="hl-cmt">// Like writing on scratch paper</span>
+
+<span class="hl-key">2. Problem Decomposition</span>:
+   Hard: "What is 23 - 20 + 6?"
+   Easy: "23 - 20 = ?" then "3 + 6 = ?"
+   → Each sub-step is trivial
+   <span class="hl-cmt">// Divide and conquer</span>
+
+<span class="hl-key">3. Training Distribution</span>:
+   Training data has step-by-step:
+   Textbooks, tutorials, forums
+   CoT activates this "mode"
+   <span class="hl-cmt">// Accessing learned patterns</span>
+
+<span class="hl-key">4. Attention Allocation</span>:
+   Step 1: focus on "23 apples"
+   Step 2: focus on "used 20"
+   Step 3: focus on "bought 6"
+   <span class="hl-cmt">// Guided attention per step</span>
+
+<span class="hl-key">Empirical Finding</span>:
+   CoT only helps models ≥ 100B params
+   Smaller models: incoherent chains
+   <span class="hl-cmt">// Need enough capacity to reason</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The most compelling explanation is that CoT provides <strong>external working memory</strong>. A transformer&rsquo;s hidden state has limited capacity for intermediate computation. By writing steps as text, each step becomes part of the context window &mdash; effectively unlimited scratch space.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: CoT Variants -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">tune</span></div><div><div class="cc-title">CoT Variants &amp; Extensions</div><div class="cc-sub">Least-to-most, complexity-based, and more</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond Basic CoT</div><div class="cc-text">Researchers have developed many CoT variants: <strong>Least-to-Most Prompting</strong> (Zhou et al., 2022) &mdash; first decompose the problem into sub-problems, then solve each sub-problem sequentially, using previous answers as context. Particularly effective for problems requiring compositional generalization. <strong>Complexity-Based Prompting</strong> (Fu et al., 2023) &mdash; among multiple sampled reasoning paths, select the ones with the most reasoning steps (highest complexity). The intuition: longer reasoning chains tend to be more thorough. <strong>Active Prompting</strong> (Diao et al., 2023) &mdash; automatically select the most informative exemplars for CoT by identifying questions where the model is most uncertain. <strong>Auto-CoT</strong> (Zhang et al., 2022) &mdash; automatically generate CoT exemplars using zero-shot CoT, eliminating the need for manual exemplar creation. Clusters questions by similarity and generates demonstrations for each cluster.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">CoT Variants</div><div class="cc-code"><span class="hl-cmt">// CoT variant comparison</span>
+
+<span class="hl-key">Least-to-Most</span> (Zhou et al. 2022):
+  Step 1: Decompose into sub-problems
+  "What sub-problems do I need to
+  solve first?"
+  Step 2: Solve each sequentially
+  <span class="hl-cmt">// Best for compositional problems</span>
+
+<span class="hl-key">Complexity-Based</span> (Fu et al. 2023):
+  Sample N reasoning paths
+  Select paths with MOST steps
+  (not majority vote on answer)
+  <span class="hl-cmt">// Longer chains = more thorough</span>
+
+<span class="hl-key">Auto-CoT</span> (Zhang et al. 2022):
+  1. Cluster questions by similarity
+  2. Zero-shot CoT on each cluster
+  3. Use generated chains as exemplars
+  <span class="hl-cmt">// No manual exemplar creation</span>
+
+<span class="hl-key">Active Prompting</span> (Diao 2023):
+  Find questions model is uncertain on
+  Create exemplars for those
+  <span class="hl-cmt">// Targeted exemplar selection</span>
+
+<span class="hl-key">When to Use What</span>:
+  Simple: Zero-shot CoT
+  Important: Few-shot CoT + SC
+  Compositional: Least-to-Most
+  Automated: Auto-CoT</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The practical recommendation: start with zero-shot CoT (&ldquo;let&rsquo;s think step by step&rdquo;). If accuracy matters, add self-consistency (sample 5&ndash;40 paths). If the problem is compositional, use least-to-most. Only craft manual exemplars if these simpler approaches fail.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6: Practical Implementation -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Practical Implementation</div><div class="cc-sub">How to use CoT in production systems</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Implementation Guide</div><div class="cc-text">Implementing CoT in production requires attention to several details: <strong>Prompt structure</strong> &mdash; for few-shot CoT, include 4&ndash;8 exemplars that match your task domain. Each exemplar should show the question, step-by-step reasoning, and a clearly marked final answer. <strong>Answer extraction</strong> &mdash; use a consistent format like &ldquo;The answer is X&rdquo; or &ldquo;Therefore: X&rdquo; to make parsing reliable. Regex extraction is common. <strong>Temperature</strong> &mdash; for greedy CoT, use temperature = 0. For self-consistency, use temperature = 0.5&ndash;0.8 to get diverse paths. <strong>Cost management</strong> &mdash; CoT generates more tokens (reasoning + answer), increasing cost. Self-consistency multiplies this by N samples. Budget accordingly. <strong>Streaming</strong> &mdash; for user-facing applications, you can stream the reasoning steps to show &ldquo;thinking&rdquo; progress, or hide them and only show the final answer.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Code Example</div><div class="cc-code"><span class="hl-cmt"># Self-consistency with CoT (Python)</span>
+
+<span class="hl-key">import</span> openai
+<span class="hl-key">import</span> re
+<span class="hl-key">from</span> collections <span class="hl-key">import</span> Counter
+
+<span class="hl-key">def</span> solve_with_sc(question, n=<span class="hl-num">10</span>):
+    prompt = f<span class="hl-str">"""Solve step by step.
+Q: {question}
+A: Let's think step by step."""</span>
+
+    answers = []
+    <span class="hl-key">for</span> _ <span class="hl-key">in</span> range(n):
+        resp = openai.chat.completions
+            .create(
+            model=<span class="hl-str">"gpt-4o"</span>,
+            messages=[{<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+                       <span class="hl-str">"content"</span>: prompt}],
+            temperature=<span class="hl-num">0.7</span>,
+        )
+        text = resp.choices[<span class="hl-num">0</span>]
+            .message.content
+        <span class="hl-cmt"># Extract final answer</span>
+        match = re.search(
+            r<span class="hl-str">"answer is (\d+)"</span>, text)
+        <span class="hl-key">if</span> match:
+            answers.append(match.group(<span class="hl-num">1</span>))
+
+    <span class="hl-cmt"># Majority vote</span>
+    <span class="hl-key">return</span> Counter(answers)
+        .most_common(<span class="hl-num">1</span>)[<span class="hl-num">0</span>][<span class="hl-num">0</span>]</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> In production, the biggest practical concern is <strong>cost</strong>. CoT generates 3&ndash;10x more tokens than direct answering. Self-consistency multiplies that by N. For cost-sensitive applications, use zero-shot CoT with greedy decoding. Reserve self-consistency for high-stakes decisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7: Limitations -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Limitations of Chain-of-Thought</div><div class="cc-sub">When CoT fails and what to do about it</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Known Limitations</div><div class="cc-text">CoT is powerful but not a silver bullet: <strong>Faithfulness problem</strong> &mdash; the generated reasoning may not reflect the model&rsquo;s actual computation. The model might arrive at the right answer for wrong reasons, or generate plausible-looking reasoning that leads to a wrong answer. The chain is a <em>rationalization</em>, not necessarily the true reasoning process. <strong>Error propagation</strong> &mdash; if an early step is wrong, all subsequent steps build on that error. Unlike humans who can catch and correct mistakes, standard CoT has no self-correction mechanism. <strong>Model size dependency</strong> &mdash; CoT only helps models with 100B+ parameters. Smaller models generate incoherent chains that actually hurt performance (an &ldquo;inverse scaling&rdquo; effect). <strong>Computational overhead</strong> &mdash; generating reasoning tokens is expensive. For simple questions, CoT wastes compute. <strong>Not true reasoning</strong> &mdash; CoT improves pattern matching over reasoning-like text, but the model still doesn&rsquo;t truly &ldquo;understand&rdquo; logic.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Failure Modes</div><div class="cc-code"><span class="hl-cmt">// CoT failure modes</span>
+
+<span class="hl-key">1. Unfaithful Reasoning</span>:
+   Chain says: "5 × 3 = 15, 15 + 2 = 17"
+   But model may have just guessed 17
+   and generated plausible steps after
+   <span class="hl-cmt">// Post-hoc rationalization</span>
+
+<span class="hl-key">2. Error Propagation</span>:
+   Step 1: "23 - 20 = 13" ← WRONG
+   Step 2: "13 + 6 = 19" ← Correct math
+   Final: 19 ← Wrong answer
+   <span class="hl-cmt">// One bad step ruins everything</span>
+
+<span class="hl-key">3. Small Model Failure</span>:
+   7B model with CoT:
+   "The cafeteria had apples. Apples
+   are red. Red is a color. Colors
+   are nice. The answer is 42."
+   <span class="hl-cmt">// Incoherent chain, worse result</span>
+
+<span class="hl-key">4. Overthinking Simple Problems</span>:
+   "What is 2 + 2?"
+   CoT: "Let me think... 2 is a number
+   representing a pair. Adding another
+   pair gives us..." → wastes tokens
+
+<span class="hl-key">Solutions</span>:
+   → Self-consistency (fixes some errors)
+   → Verification (Ch 5: PRMs)
+   → Tree search (Ch 3: ToT)
+   → Tool use (Ch 6: calculators)</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The faithfulness problem is the deepest limitation of CoT. We can&rsquo;t be sure the generated reasoning reflects the model&rsquo;s actual computation. This is why <strong>verification</strong> (Chapter 5) and <strong>mechanistic interpretability</strong> are so important &mdash; we need to verify reasoning, not just trust it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8: CoT in the Bigger Picture -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">map</span></div><div><div class="cc-title">CoT in the Bigger Picture</div><div class="cc-sub">From prompting trick to foundational technique</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Legacy</div><div class="cc-text">Chain-of-thought prompting was the spark that ignited the reasoning revolution. Its impact extends far beyond the original paper: <strong>It proved reasoning is elicitable</strong> &mdash; LLMs have latent reasoning capabilities that can be activated through prompting. This changed how we think about model capabilities. <strong>It established the paradigm</strong> &mdash; &ldquo;think before you answer&rdquo; is now the default for any complex task. Every modern reasoning technique builds on this idea. <strong>It inspired training approaches</strong> &mdash; OpenAI&rsquo;s o1/o3 models are trained to generate &ldquo;thinking tokens&rdquo; &mdash; essentially CoT that&rsquo;s been baked into the model through reinforcement learning. <strong>It changed benchmarking</strong> &mdash; reasoning benchmarks (GSM8K, MATH) became the primary measure of model capability, shifting focus from perplexity to problem-solving. Looking ahead: CoT is the foundation. Tree-of-Thought (next chapter) extends it with search. Test-time compute (Chapter 4) trains it into the model. Verification (Chapter 5) validates it.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evolution of CoT</div><div class="cc-code"><span class="hl-cmt">// How CoT evolved into modern reasoning</span>
+
+<span class="hl-key">2022: Prompting Era</span>
+  CoT prompting (Wei et al.)
+  Zero-shot CoT (Kojima et al.)
+  Self-consistency (Wang et al.)
+  <span class="hl-cmt">// External technique, no training</span>
+
+<span class="hl-key">2023: Search Era</span>
+  Tree-of-Thought (Yao et al.)
+  Graph-of-Thought
+  Least-to-Most decomposition
+  <span class="hl-cmt">// CoT + structured search</span>
+
+<span class="hl-key">2024: Training Era</span>
+  OpenAI o1: CoT trained via RL
+  "Thinking tokens" = learned CoT
+  Process reward models verify steps
+  <span class="hl-cmt">// CoT baked into the model</span>
+
+<span class="hl-key">2025: Democratization</span>
+  DeepSeek-R1: open-source o1
+  o3-mini: cheap reasoning
+  Reasoning as a commodity
+  <span class="hl-cmt">// Everyone gets CoT</span>
+
+<span class="hl-key">The Thread</span>:
+  All of these are the same idea:
+  "Think before you answer"
+  Just implemented differently
+  <span class="hl-cmt">// CoT is the foundation of it all</span></div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Every modern reasoning technique &mdash; from Tree-of-Thought to o1 to DeepSeek-R1 &mdash; is a descendant of chain-of-thought prompting. The core idea (&ldquo;generate intermediate reasoning steps&rdquo;) is the same; only the implementation has evolved from prompting to search to training.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="01-the-reasoning-gap.html"><span class="material-symbols-rounded">arrow_back</span> Ch 1: The Reasoning Gap</a>
+    <a class="ch-nav-btn next" href="03-tree-of-thought-and-search.html">Ch 3: Tree-of-Thought &amp; Search <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,2],3:[0,3,4,5],4:[0,3],5:[0,1,2],6:[0,1,2,3,4,5],7:[0,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Wei et al. (2022): provide exemplars with reasoning steps. PaLM 540B with 8 exemplars achieved state-of-the-art on GSM8K — surpassing fine-tuned GPT-3.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> Zero-shot CoT (Kojima 2022): "Let\'s think step by step" — no exemplars needed. MultiArith accuracy jumped from 17.7% to 78.7%. Six words that changed AI.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Self-consistency (Wang 2022): sample multiple reasoning paths, take majority vote. GSM8K +17.9%. Trade compute for accuracy — an early form of test-time scaling.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Why CoT works: external working memory (text as scratch paper), problem decomposition (one hard → many easy), and accessing reasoning patterns from training data.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> CoT variants: Least-to-Most (decompose first), Complexity-Based (longer chains = better), Auto-CoT (automatic exemplars), Active Prompting (targeted exemplars).',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Production implementation: 4-8 exemplars, consistent answer format, temperature 0.7 for self-consistency, regex extraction. Biggest concern: cost (3-10x more tokens).',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Limitations: unfaithful reasoning (post-hoc rationalization), error propagation, small model failure, computational overhead. Solutions: verification, search, tools.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> CoT is the foundation of ALL modern reasoning: ToT, o1, DeepSeek-R1 are all descendants. The core idea — "think before you answer" — just implemented differently.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

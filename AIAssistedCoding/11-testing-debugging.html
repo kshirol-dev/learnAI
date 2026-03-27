@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: AI-Assisted Testing & Debugging — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}.cc-code .hl-err{color:var(--red);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; AI-Assisted Testing &amp; Debugging</h2><span class="tb-sub">Generate tests, fix failures, and debug systematically &mdash; with AI in the loop</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Generate</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">play_arrow</span></div><span class="pipe-label">Run</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Diagnose</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">build</span></div><span class="pipe-label">Fix</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Re-run</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Green</span></div>
+  </div></div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">AI Test Generation: The New Baseline</div><div class="cc-sub">From zero tests to meaningful coverage in minutes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What AI Can Generate</div><div class="cc-text">AI excels at generating <strong>unit tests</strong> for pure functions, data transformations, and API endpoints. It reads the function signature, infers expected behavior, and produces tests covering the happy path, edge cases, and error conditions. For a typical utility function, AI generates 5&ndash;10 test cases in seconds &mdash; work that would take a developer 15&ndash;30 minutes.</div></div>
+          <div class="cc-block"><div class="cc-label">Scope of Generation</div><div class="cc-text">&bull; <strong>Unit tests</strong> &mdash; individual functions and methods<br>&bull; <strong>Integration tests</strong> &mdash; API endpoints with mocked dependencies<br>&bull; <strong>Snapshot tests</strong> &mdash; component rendering output<br>&bull; <strong>Edge case tests</strong> &mdash; null inputs, empty arrays, boundary values<br>&bull; <strong>Error path tests</strong> &mdash; invalid inputs, network failures, timeouts</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Prompt That Works</div><div class="cc-code"><span class="hl-cmt">// Effective test generation prompt:</span>
+
+<span class="hl-str">&ldquo;Write tests for @src/utils/validate.ts.</span>
+<span class="hl-str"> Use vitest. Follow the patterns in</span>
+<span class="hl-str"> @tests/utils/format.test.ts.</span>
+<span class="hl-str"> Cover: valid inputs, empty strings,</span>
+<span class="hl-str"> null/undefined, boundary values,</span>
+<span class="hl-str"> and error messages.</span>
+<span class="hl-str"> Run the tests after writing them.&rdquo;</span>
+
+<span class="hl-cmt">// Key elements:</span>
+<span class="hl-ok">1.</span> Specific file to test
+<span class="hl-ok">2.</span> Test framework specified
+<span class="hl-ok">3.</span> Pattern to follow (exemplar)
+<span class="hl-ok">4.</span> Cases to cover (explicit)
+<span class="hl-ok">5.</span> Verification step (run them)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> AI-generated tests are a starting point, not a finished product. They cover the obvious cases well but often miss business logic edge cases, race conditions, and security-relevant scenarios. Always review and supplement.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">replay</span></div><div><div class="cc-title">The Code-Test-Fix Loop</div><div class="cc-sub">The autonomous cycle that reduces debugging time by 6.5x</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text">The most powerful AI testing pattern: the agent writes code, <strong>runs the tests automatically</strong>, sees the failures, fixes the code, and re-runs &mdash; all in a single interaction. This tight loop means the agent gets immediate feedback on whether its code works, without waiting for you to manually run anything.</div></div>
+          <div class="cc-block"><div class="cc-label">The Loop in Practice</div><div class="cc-code"><span class="hl-ok">1.</span> Agent writes implementation code
+<span class="hl-ok">2.</span> Agent runs: <span class="hl-str">npm test -- --watch</span>
+<span class="hl-ok">3.</span> Tests fail (expected for new code)
+<span class="hl-ok">4.</span> Agent reads failure output
+<span class="hl-ok">5.</span> Agent fixes the implementation
+<span class="hl-ok">6.</span> Tests re-run automatically
+<span class="hl-ok">7.</span> Repeat until all green
+
+<span class="hl-cmt">// Typical: 2&ndash;4 iterations to green</span>
+<span class="hl-cmt">// Complex: 5&ndash;8 iterations</span>
+<span class="hl-cmt">// If &gt;8: agent is likely stuck</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Escalation Tiers</div><div class="cc-text">When the loop stalls, structured systems escalate:<br><br><strong>Tier 1:</strong> Agent retries with a different approach<br><strong>Tier 2:</strong> An independent &ldquo;arbiter&rdquo; model reviews the code for logic errors the tests don&rsquo;t catch<br><strong>Tier 3:</strong> The system flags the issue for human review<br><br>This prevents infinite fix-the-fix loops while maximizing autonomous resolution.</div></div>
+          <div class="cc-note n-green"><strong>The 6.5x multiplier:</strong> Properly structured code-test-fix loops reduce manual debugging time by 6.5x. The key is having tests <em>before</em> the agent writes code (TDD) or immediately after. Tests turn vague &ldquo;something&rsquo;s wrong&rdquo; into precise &ldquo;line 42 returns null instead of [].&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bug_report</span></div><div><div class="cc-title">AI-Assisted Debugging: Paste the Error</div><div class="cc-sub">The fastest debugging technique is the simplest one</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Paste-and-Explain Pattern</div><div class="cc-text">The single most effective debugging technique with AI: <strong>paste the full error message and stack trace</strong>. The model reads the error, traces it to the source file and line, identifies the root cause, and suggests a fix. This works because error messages are highly structured &mdash; they contain exactly the information the model needs.</div></div>
+          <div class="cc-block"><div class="cc-label">What to Include</div><div class="cc-text">&bull; <strong>Full error message</strong> &mdash; not just the first line<br>&bull; <strong>Stack trace</strong> &mdash; shows the call chain<br>&bull; <strong>What you expected</strong> &mdash; vs. what actually happened<br>&bull; <strong>Steps to reproduce</strong> &mdash; what triggers the bug<br>&bull; <strong>What you already tried</strong> &mdash; prevents duplicate suggestions</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Where AI Debugging Excels</div><div class="cc-code"><span class="hl-ok">GREAT at:</span>
+  Type errors and null reference exceptions
+  Import/module resolution failures
+  Configuration and environment issues
+  Syntax errors and typos
+  Known library error patterns
+  Stack trace interpretation
+
+<span class="hl-err">STRUGGLES with:</span>
+  Race conditions and timing bugs
+  State management inconsistencies
+  Performance regressions (no profiler)
+  Visual/layout bugs (can&rsquo;t see the UI)
+  Intermittent / flaky failures
+  Business logic errors (doesn&rsquo;t know intent)</div></div>
+          <div class="cc-note n-blue"><strong>Pro tip:</strong> For visual bugs, describe what you see vs. what you expect. For intermittent bugs, provide the conditions under which it fails. The more context you give, the better the diagnosis. AI debugging is a conversation, not a magic wand.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">TDD with AI: Tests First, Code Second</div><div class="cc-sub">The most disciplined and most effective AI coding workflow</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The TDD + AI Workflow</div><div class="cc-text"><strong>Step 1:</strong> You write the test (or describe it to the AI). The test defines what the code should do.<br><strong>Step 2:</strong> The AI writes the implementation to make the test pass.<br><strong>Step 3:</strong> The AI runs the test. If it fails, the AI fixes the implementation.<br><strong>Step 4:</strong> You review the passing code for quality and correctness.</div></div>
+          <div class="cc-block"><div class="cc-label">Why TDD + AI Is Powerful</div><div class="cc-text">&bull; <strong>Tests are the spec</strong> &mdash; the AI knows exactly what &ldquo;correct&rdquo; means<br>&bull; <strong>Immediate feedback</strong> &mdash; the code-test-fix loop runs automatically<br>&bull; <strong>No hallucination</strong> &mdash; if the test passes, the behavior is verified<br>&bull; <strong>Built-in safety net</strong> &mdash; future changes are protected by the tests<br>&bull; <strong>Faster review</strong> &mdash; you review tests (intent) + passing code (implementation)</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Coverage Target</div><div class="cc-text">Aim for <strong>~70% test coverage</strong> as a practical safety net. 100% coverage is diminishing returns &mdash; the last 30% tests trivial getters, configuration, and framework boilerplate. Focus coverage on: business logic, data transformations, authentication/authorization, error handling, and API contracts.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> TDD with AI inverts the traditional workflow. Instead of writing code and hoping it works, you define &ldquo;works&rdquo; first (the test) and let the AI figure out how. This is the most reliable way to get correct AI-generated code.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">What AI-Generated Tests Get Wrong</div><div class="cc-sub">The blind spots you must check manually</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Testing the Implementation, Not the Behavior</div><div class="cc-text">AI tests often mirror the implementation too closely. If the function uses a <code>for</code> loop, the test checks for a <code>for</code> loop &mdash; instead of checking the <em>output</em>. These tests pass but break on any refactor. <strong>Fix:</strong> Review tests for behavioral assertions (what it returns) vs. implementation assertions (how it works).</div></div>
+          <div class="cc-block"><div class="cc-label">Missing Security Tests</div><div class="cc-text">AI rarely generates tests for: SQL injection, XSS, authentication bypass, authorization escalation, rate limiting, or input sanitization. It tests the happy path and obvious errors but not <em>adversarial inputs</em>. <strong>Fix:</strong> Explicitly request security-focused tests as a separate pass.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Common Blind Spots</div><div class="cc-code"><span class="hl-err">AI tests often miss:</span>
+
+<span class="hl-err">&times;</span> Concurrent access / race conditions
+<span class="hl-err">&times;</span> Database transaction rollbacks
+<span class="hl-err">&times;</span> Timezone and locale edge cases
+<span class="hl-err">&times;</span> Large dataset performance
+<span class="hl-err">&times;</span> Network timeout handling
+<span class="hl-err">&times;</span> Partial failure scenarios
+<span class="hl-err">&times;</span> State cleanup between tests
+<span class="hl-err">&times;</span> Environment-specific behavior
+
+<span class="hl-ok">AI tests usually cover well:</span>
+
+<span class="hl-ok">&check;</span> Input validation (types, ranges)
+<span class="hl-ok">&check;</span> Null / undefined / empty handling
+<span class="hl-ok">&check;</span> Return value shape and types
+<span class="hl-ok">&check;</span> Basic error throwing
+<span class="hl-ok">&check;</span> Happy path scenarios</div></div>
+          <div class="cc-note n-red"><strong>The danger:</strong> AI-generated tests create a false sense of security. &ldquo;All tests pass&rdquo; doesn&rsquo;t mean &ldquo;all behavior is correct.&rdquo; The tests only verify what they test. If the critical edge case isn&rsquo;t tested, it isn&rsquo;t protected.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Multi-Layer Verification</div><div class="cc-sub">Tests alone aren&rsquo;t enough &mdash; build a verification stack</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Verification Stack</div><div class="cc-code"><span class="hl-ok">Layer 1: Type System</span>
+  TypeScript strict mode catches type errors
+  at compile time. Free and instant.
+
+<span class="hl-ok">Layer 2: Linting</span>
+  ESLint catches patterns known to cause bugs.
+  Security-focused rules catch common vulns.
+
+<span class="hl-ok">Layer 3: Unit Tests</span>
+  AI-generated + human-supplemented.
+  Cover business logic and edge cases.
+
+<span class="hl-ok">Layer 4: Integration Tests</span>
+  Test API contracts and data flow.
+  Catch issues between components.
+
+<span class="hl-ok">Layer 5: AI Review</span>
+  Run code through a different AI model
+  for a &ldquo;second opinion&rdquo; on logic and security.
+
+<span class="hl-ok">Layer 6: Human Review</span>
+  Final check for intent, architecture,
+  and business logic correctness.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Multi-Model Review</div><div class="cc-text">A powerful emerging pattern: <strong>generate code with one model, review with another</strong>. Different models have different blind spots. Code that passes Model A&rsquo;s review might be flagged by Model B. This catches subtle issues that a single model consistently misses.</div></div>
+          <div class="cc-block"><div class="cc-label">The Cost-Benefit</div><div class="cc-text">Each layer catches different classes of bugs. Types catch ~30% of issues for free. Linting catches another ~15%. Tests catch ~35%. AI review catches ~10%. Human review catches the final ~10% &mdash; but that last 10% includes the most dangerous bugs (security, business logic, architectural violations).</div></div>
+          <div class="cc-note n-green"><strong>The principle:</strong> No single verification layer is sufficient. The combination of automated checks and human judgment catches what each alone would miss. Build the stack once, run it on every change.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Debugging Workflows: Systematic Approaches</div><div class="cc-sub">When paste-the-error isn&rsquo;t enough</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Bisect Pattern</div><div class="cc-text">When you don&rsquo;t know which change introduced a bug: ask the AI to help you <strong>git bisect</strong>. The agent checks out commits, runs the test, and binary-searches for the commit that broke things. What would take 30 minutes of manual checkout-and-test takes 2 minutes with an agent.</div></div>
+          <div class="cc-block"><div class="cc-label">The Rubber Duck Pattern</div><div class="cc-text">Explain the bug to the AI as if it knows nothing. Describe the expected behavior, the actual behavior, and your mental model of how the code works. Often, the act of explaining reveals the bug &mdash; and if it doesn&rsquo;t, the AI&rsquo;s questions will probe the assumptions you haven&rsquo;t questioned.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Isolation Pattern</div><div class="cc-text">Ask the AI to create a <strong>minimal reproduction</strong>: the smallest possible code that exhibits the bug. Strip away everything unrelated. This isolates the root cause from the noise of the full application. AI is excellent at this because it can rapidly generate simplified versions of complex code.</div></div>
+          <div class="cc-block"><div class="cc-label">The Log Injection Pattern</div><div class="cc-text">Ask the AI to add <strong>strategic console.log / debug statements</strong> at key decision points in the code. Run the code, paste the log output back to the AI. The agent reads the execution trace and identifies where the actual behavior diverges from the expected behavior.</div></div>
+          <div class="cc-note n-orange"><strong>When to stop:</strong> If you&rsquo;ve spent 15 minutes debugging with AI and aren&rsquo;t making progress, switch strategies. Try a different model, ask a colleague, or use traditional debugging tools (breakpoints, profilers). AI debugging is fast for common issues but can waste time on unusual ones.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Testing &amp; Debugging Playbook</div><div class="cc-sub">A practical reference for every AI coding session</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">For New Code</div><div class="cc-code"><span class="hl-ok">1.</span> Write tests first (TDD) or immediately after
+<span class="hl-ok">2.</span> Ask AI to generate tests with explicit cases
+<span class="hl-ok">3.</span> Supplement with security-focused tests
+<span class="hl-ok">4.</span> Run the code-test-fix loop
+<span class="hl-ok">5.</span> Review tests for behavioral assertions
+<span class="hl-ok">6.</span> Target ~70% coverage on business logic</div></div>
+          <div class="cc-block"><div class="cc-label">For Bug Fixes</div><div class="cc-code"><span class="hl-ok">1.</span> Paste the full error + stack trace
+<span class="hl-ok">2.</span> Describe expected vs. actual behavior
+<span class="hl-ok">3.</span> Include what you already tried
+<span class="hl-ok">4.</span> Ask AI to write a failing test first
+<span class="hl-ok">5.</span> Fix the code to make the test pass
+<span class="hl-ok">6.</span> The test prevents future regression</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">For Existing Code Without Tests</div><div class="cc-code"><span class="hl-ok">1.</span> Ask AI to generate tests for current behavior
+<span class="hl-ok">2.</span> Run them &mdash; they should all pass
+<span class="hl-ok">3.</span> If any fail, the test is wrong (not the code)
+<span class="hl-ok">4.</span> Fix the tests until they match reality
+<span class="hl-ok">5.</span> Now you have a safety net for refactoring
+<span class="hl-ok">6.</span> Add edge case tests manually</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> AI transforms testing from a chore into a conversation. The barrier to writing tests drops dramatically. But the responsibility for test <em>quality</em> &mdash; ensuring the right things are tested &mdash; remains firmly with you. AI writes the tests; you decide what to test.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-multi-file-refactoring.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: Multi-File Refactoring</a>
+    <a class="ch-nav-btn next" href="12-security-quality.html">Ch 12: Security &amp; Quality Risks <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+<script>
+(function(){const TOTAL=8,STEP_MS=5000;const PIPE_MAP={1:[0],2:[0,1,2,3,4],3:[2],4:[0,1,2,3,4,5],5:[0,2],6:[0,1,2,3,4,5],7:[2,3],8:[0,1,2,3,4,5]};const NARRATION={1:{text:'<strong>Step 1:</strong> AI generates unit tests, integration tests, edge cases, and error paths in seconds. Provide the file, framework, pattern to follow, and cases to cover. Always run the tests after generating them.',color:'#0d9488'},2:{text:'<strong>Step 2:</strong> The code-test-fix loop: agent writes code, runs tests, reads failures, fixes code, re-runs. This tight cycle reduces debugging time by 6.5x. Expect 2\u20134 iterations for typical code, 5\u20138 for complex.',color:'#0d9488'},3:{text:'<strong>Step 3:</strong> Paste the full error message and stack trace. Include expected vs. actual behavior. AI excels at type errors, import failures, and config issues. It struggles with race conditions, visual bugs, and business logic.',color:'#2563eb'},4:{text:'<strong>Step 4:</strong> TDD + AI: write the test first (defining "correct"), let AI write the implementation. Tests become the spec. No hallucination \u2014 if the test passes, the behavior is verified. Target ~70% coverage on business logic.',color:'#2563eb'},5:{text:'<strong>Step 5:</strong> AI tests mirror implementations too closely, miss security scenarios, and skip race conditions. They create false confidence. Always supplement with security-focused tests and adversarial input testing.',color:'#7c3aed'},6:{text:'<strong>Step 6:</strong> Build a verification stack: types (30%), linting (15%), tests (35%), AI review (10%), human review (10%). No single layer is sufficient. Multi-model review catches what one model consistently misses.',color:'#7c3aed'},7:{text:'<strong>Step 7:</strong> Debugging workflows: bisect (binary search for breaking commit), rubber duck (explain to reveal assumptions), isolation (minimal reproduction), log injection (trace execution). Switch strategies after 15 min.',color:'#ea580c'},8:{text:'<strong>Step 8:</strong> For new code: TDD + AI generation + security tests. For bugs: paste error + write failing test + fix. For legacy code: generate tests for current behavior first, then refactor safely.',color:'#db2777'}};let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset()})();
+</script>
+</body>
+</html>

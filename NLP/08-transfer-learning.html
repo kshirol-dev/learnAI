@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Transfer Learning &amp; Fine-Tuning — Natural Language Processing</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet),var(--teal),var(--green));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red)}.cc-code .hl-ok{color:var(--green)}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Transfer Learning &amp; Fine-Tuning</h2><span class="tb-sub">Pre-train then fine-tune, feature extraction vs full fine-tuning, LoRA, and the Hugging Face ecosystem</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">cloud_download</span></div><span class="pipe-label">Pre-train</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tune</span></div><span class="pipe-label">Fine-tune</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compress</span></div><span class="pipe-label">PEFT</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Hub</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">analytics</span></div><span class="pipe-label">Evaluate</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Deploy</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">sync_alt</span></div><div><div class="cc-title">The Pre-Train / Fine-Tune Paradigm</div><div class="cc-sub">Why training from scratch is almost never the right answer</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Core Idea</div><div class="cc-text"><strong>Transfer learning</strong> is the most important practical concept in modern NLP. Instead of training a model from scratch on your specific task, you start with a model that has already learned general language understanding from billions of words, then <strong>adapt</strong> it to your task with a small amount of labeled data. Pre-training BERT from scratch costs roughly <strong>$10,000&ndash;$50,000</strong> in compute and requires billions of words of text. Fine-tuning BERT for your classification task costs <strong>$1&ndash;$10</strong> and requires hundreds to thousands of labeled examples. This 1000x cost reduction is why transfer learning democratized NLP &mdash; a startup with 1,000 labeled examples can now match the performance of systems that previously required millions. The pre-trained model provides a <strong>foundation of language understanding</strong> that transfers across tasks, domains, and even languages.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Economics of Transfer Learning</div><div class="cc-code"><span class="hl-err">Training from scratch</span>:
+  Data: billions of words
+  Compute: $10,000-$50,000+
+  Time: days to weeks on GPU clusters
+  Result: general language model
+
+<span class="hl-ok">Fine-tuning</span>:
+  Data: 1,000-10,000 labeled examples
+  Compute: $1-$10
+  Time: minutes to hours on 1 GPU
+  Result: task-specific model
+
+<span class="hl-key">Cost reduction</span>: ~1000x
+<span class="hl-key">Data reduction</span>: ~1000x
+<span class="hl-key">Performance</span>: comparable or better
+
+<span class="hl-str">Analogy</span>:
+  Pre-training = learning to read
+  Fine-tuning = learning a specific job</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Transfer learning works because <strong>language understanding is general</strong>. A model that has learned grammar, semantics, and world knowledge from Wikipedia and books can apply that knowledge to classify medical documents, extract legal entities, or detect spam.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Feature Extraction vs Full Fine-Tuning</div><div class="cc-sub">Two strategies for adapting pre-trained models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Two Approaches</div><div class="cc-text"><strong>Feature extraction</strong> freezes the pre-trained model and uses its output representations as fixed features for a separate classifier. You pass your text through BERT, take the [CLS] token embedding, and train a logistic regression or small neural network on top. The pre-trained weights never change. This is fast, requires minimal compute, and works well when your task is similar to the pre-training data. <strong>Full fine-tuning</strong> updates all parameters of the pre-trained model along with the task-specific head. The entire model adapts to your task, learning domain-specific patterns. Full fine-tuning typically achieves <strong>2&ndash;5% higher accuracy</strong> than feature extraction but requires more compute and risks <strong>catastrophic forgetting</strong> &mdash; the model losing its general language knowledge while adapting to the specific task. The standard practice is to use a <strong>low learning rate</strong> (2e-5 to 5e-5) to preserve pre-trained knowledge.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Comparison</div><div class="cc-code"><span class="hl-key">Feature extraction</span>:
+  Freeze BERT, train classifier on top
+  Fast: minutes on CPU
+  Low risk of catastrophic forgetting
+  Works with very small datasets (100+)
+  Accuracy: ~88% (sentiment example)
+
+<span class="hl-key">Full fine-tuning</span>:
+  Update all BERT parameters + head
+  Slower: hours on GPU
+  Risk of catastrophic forgetting
+  Needs more data (1000+)
+  Accuracy: ~93% (sentiment example)
+
+<span class="hl-ok">Best practices for full fine-tuning</span>:
+  Learning rate: 2e-5 to 5e-5
+  Epochs: 2-4 (more = overfitting)
+  Warmup: 10% of training steps
+  Weight decay: 0.01</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Start with <strong>feature extraction</strong> as a quick baseline. If it's not good enough, try full fine-tuning. The 2-5% accuracy gap is real but not always worth the added complexity, compute, and risk of overfitting.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">add_circle</span></div><div><div class="cc-title">Task-Specific Heads</div><div class="cc-sub">Adding the right output layer for your task</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Architecture Patterns</div><div class="cc-text">Fine-tuning requires adding a <strong>task-specific head</strong> on top of the pre-trained model. The head is a small neural network that transforms the model's representations into task-appropriate outputs. For <strong>classification</strong>, the head takes the [CLS] token representation and passes it through a linear layer with softmax: 768-dim &rarr; num_classes. For <strong>NER/token classification</strong>, each token's representation gets its own linear layer: 768-dim per token &rarr; num_tags per token. For <strong>question answering</strong>, two linear layers predict the start and end positions of the answer span. For <strong>sentence similarity</strong>, both sentences are encoded separately, and their [CLS] representations are compared using cosine similarity. The head is randomly initialized and trained from scratch, while the pre-trained body is fine-tuned with a lower learning rate.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Task Heads</div><div class="cc-code"><span class="hl-key">Classification</span>:
+  [CLS] &rarr; Linear(768, num_classes) &rarr; softmax
+  Loss: cross-entropy
+
+<span class="hl-key">Token classification (NER)</span>:
+  each token &rarr; Linear(768, num_tags)
+  Loss: cross-entropy per token
+
+<span class="hl-key">Question answering</span>:
+  each token &rarr; Linear(768, 2)
+  Output: start_score, end_score
+  Answer = tokens between argmax(start)
+           and argmax(end)
+
+<span class="hl-key">Sentence similarity</span>:
+  sent_A &rarr; [CLS_A] embedding
+  sent_B &rarr; [CLS_B] embedding
+  similarity = cosine(CLS_A, CLS_B)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The task head is deliberately simple &mdash; usually just a linear layer. The <strong>pre-trained model does the heavy lifting</strong> of understanding language; the head just maps that understanding to your specific output format.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">compress</span></div><div><div class="cc-title">Parameter-Efficient Fine-Tuning (PEFT)</div><div class="cc-sub">LoRA, adapters, and training 0.1% of parameters for 99% of the performance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The PEFT Revolution</div><div class="cc-text">Full fine-tuning updates all model parameters &mdash; for a 7B parameter model, that means storing optimizer states for 7 billion weights, requiring 50+ GB of GPU memory. <strong>Parameter-Efficient Fine-Tuning (PEFT)</strong> methods freeze most parameters and train only a tiny fraction. <strong>LoRA</strong> (Low-Rank Adaptation) is the most popular: instead of updating a weight matrix W directly, it learns a low-rank decomposition &Delta;W = A &times; B, where A and B are much smaller matrices. For a 7B model, LoRA typically trains <strong>0.1&ndash;1% of parameters</strong> while achieving <strong>95&ndash;99% of full fine-tuning performance</strong>. LoRA adapters are tiny (~6 MB vs ~14 GB for the full model), can be swapped at inference time, and multiple task-specific adapters can share one base model. This makes it practical to fine-tune large models on consumer GPUs.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LoRA Details</div><div class="cc-code"><span class="hl-key">Full fine-tuning</span>:
+  Update W directly (all params)
+  7B model = 14GB checkpoint
+  Needs 50+ GB GPU memory
+
+<span class="hl-key">LoRA</span>:
+  Freeze W, learn &Delta;W = A &times; B
+  A: (d, r), B: (r, d), r &lt;&lt; d
+  Typical rank r = 8-64
+
+  7B model + LoRA:
+  Trainable params: ~6M (0.1%)
+  Adapter size: ~6 MB
+  GPU memory: ~16 GB
+  Performance: 95-99% of full fine-tuning
+
+<span class="hl-ok">Benefits</span>:
+  Multiple adapters share one base model
+  Swap adapters at inference time
+  Fine-tune on consumer GPUs (16GB)</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> LoRA proved that <strong>most of the knowledge is in the pre-trained weights</strong>. You only need to nudge a tiny fraction of parameters to adapt a model to a new task. This insight has profound implications for how we think about model adaptation.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">domain</span></div><div><div class="cc-title">Domain Adaptation</div><div class="cc-sub">When general-purpose models meet specialized text</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Domain Gap</div><div class="cc-text">Pre-trained models learn from general text (Wikipedia, books, web pages), but many real-world applications involve <strong>specialized domains</strong> with unique vocabulary, writing styles, and knowledge. A BERT model trained on general text may not know that "MI" means "myocardial infarction" in medical text, or that "consideration" has a specific legal meaning in contracts. <strong>Domain-adaptive pre-training</strong> (DAPT) continues pre-training on domain-specific text before fine-tuning on the task. This produces domain-specific models: <strong>BioBERT</strong> (biomedical), <strong>SciBERT</strong> (scientific), <strong>LegalBERT</strong> (legal), <strong>FinBERT</strong> (financial), <strong>ClinicalBERT</strong> (clinical notes). DAPT typically improves performance by <strong>3&ndash;8% F1</strong> on domain-specific tasks. The two-stage approach &mdash; general pre-training &rarr; domain pre-training &rarr; task fine-tuning &mdash; is the standard recipe for production NLP in specialized domains.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Domain-Specific Models</div><div class="cc-code"><span class="hl-key">General BERT</span>:
+  Pre-trained on Wikipedia + BookCorpus
+  Good for general text tasks
+
+<span class="hl-key">Domain-adapted models</span>:
+  BioBERT: PubMed abstracts + PMC
+  SciBERT: Semantic Scholar papers
+  LegalBERT: legal documents, case law
+  FinBERT: financial news, SEC filings
+  ClinicalBERT: MIMIC clinical notes
+
+<span class="hl-str">Three-stage recipe</span>:
+  1. General pre-training (BERT)
+  2. Domain pre-training (DAPT)
+  3. Task fine-tuning
+
+<span class="hl-ok">Improvement from DAPT</span>:
+  Biomedical NER: +5% F1
+  Legal classification: +3% F1
+  Financial sentiment: +8% F1</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Domain adaptation is <strong>the single most impactful technique</strong> for production NLP in specialized fields. If your text looks different from Wikipedia, domain-adaptive pre-training will almost certainly improve your results.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">The Hugging Face Ecosystem</div><div class="cc-sub">The platform that democratized NLP</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Ecosystem</div><div class="cc-text"><strong>Hugging Face</strong> has become the central platform for NLP and machine learning. The <strong>Model Hub</strong> hosts over 500,000 pre-trained models, from BERT variants to the latest LLMs, all downloadable with a single line of code. The <strong>Transformers library</strong> provides a unified API for loading, fine-tuning, and deploying models &mdash; switching from BERT to RoBERTa to DeBERTa requires changing one string. The <strong>Datasets library</strong> provides standardized access to thousands of NLP datasets. The <strong>Tokenizers library</strong> provides fast, production-ready tokenizers. The <strong>PEFT library</strong> implements LoRA and other parameter-efficient methods. The <strong>Trainer API</strong> handles training loops, evaluation, logging, and checkpointing. This ecosystem reduced the barrier to entry from "PhD in NLP" to "can write Python," enabling anyone to fine-tune state-of-the-art models.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Hugging Face Stack</div><div class="cc-code"><span class="hl-key">Model Hub</span>: 500K+ models
+  from transformers import AutoModel
+  model = AutoModel.from_pretrained(
+    "bert-base-uncased"
+  )
+
+<span class="hl-key">Transformers</span>: unified API
+  AutoTokenizer, AutoModelForXxx
+  One API for BERT, GPT, T5, LLaMA...
+
+<span class="hl-key">Datasets</span>: standardized data
+  from datasets import load_dataset
+  ds = load_dataset("imdb")
+
+<span class="hl-key">PEFT</span>: parameter-efficient tuning
+  LoRA, IA3, AdaLoRA
+
+<span class="hl-key">Trainer</span>: training abstraction
+  Handles loops, eval, logging, checkpoints
+  Distributed training built-in</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Hugging Face didn't just build tools &mdash; it created a <strong>network effect</strong>. Researchers publish models on the Hub, practitioners download and fine-tune them, and the ecosystem grows. This is why it became the default platform for NLP.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Fine-Tuning Pitfalls</div><div class="cc-sub">Catastrophic forgetting, overfitting, and the mistakes that waste GPU hours</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Goes Wrong</div><div class="cc-text"><strong>Catastrophic forgetting</strong>: the model loses general language knowledge while adapting to a narrow task. Symptoms: great performance on training data, poor generalization. Fix: lower learning rate, fewer epochs, gradual unfreezing. <strong>Overfitting on small datasets</strong>: with only a few hundred examples, the model memorizes training data instead of learning patterns. Fix: use feature extraction instead, or apply strong regularization (dropout, weight decay). <strong>Learning rate too high</strong>: destroys pre-trained representations in the first few steps. The model never recovers. Fix: use warmup (10% of steps) and learning rates of 2e-5 to 5e-5. <strong>Wrong model choice</strong>: using a 7B parameter model when BERT-base would suffice wastes compute without improving accuracy. <strong>Tokenizer mismatch</strong>: using a different tokenizer than the one the model was pre-trained with produces garbage representations.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Pitfall Checklist</div><div class="cc-code"><span class="hl-err">Catastrophic forgetting</span>:
+  LR too high, too many epochs
+  <span class="hl-ok">Fix</span>: LR=2e-5, epochs=2-4, warmup
+
+<span class="hl-err">Overfitting on small data</span>:
+  &lt;500 examples + full fine-tuning
+  <span class="hl-ok">Fix</span>: feature extraction, or LoRA
+
+<span class="hl-err">Learning rate too high</span>:
+  LR=1e-3 destroys pre-trained weights
+  <span class="hl-ok">Fix</span>: LR=2e-5 to 5e-5 with warmup
+
+<span class="hl-err">Wrong model size</span>:
+  7B model for simple classification
+  <span class="hl-ok">Fix</span>: start with BERT-base (110M)
+
+<span class="hl-err">Tokenizer mismatch</span>:
+  Using GPT tokenizer with BERT model
+  <span class="hl-ok">Fix</span>: always use model's own tokenizer</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Most fine-tuning failures come from <strong>hyperparameters, not architecture</strong>. The learning rate alone accounts for the majority of failed fine-tuning runs. When in doubt, use the defaults from the Hugging Face examples.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">account_tree</span></div><div><div class="cc-title">The Modern Fine-Tuning Decision Tree</div><div class="cc-sub">Choosing the right approach for your constraints</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Decision Framework</div><div class="cc-text">The right fine-tuning approach depends on your <strong>data size</strong>, <strong>compute budget</strong>, and <strong>task complexity</strong>. With <strong>&lt;100 examples</strong>: use a large LLM with few-shot prompting (no fine-tuning needed). With <strong>100&ndash;1,000 examples</strong>: use feature extraction from a pre-trained model, or LoRA fine-tuning. With <strong>1,000&ndash;10,000 examples</strong>: full fine-tuning of BERT-base or similar. With <strong>10,000+ examples</strong>: full fine-tuning with domain-adapted pre-training. For <strong>specialized domains</strong>: always consider domain-adaptive pre-training first. For <strong>limited GPU</strong>: LoRA or feature extraction. For <strong>production deployment</strong>: consider model distillation (DistilBERT is 60% smaller, 97% of BERT's performance). The trend is toward <strong>smaller, specialized models</strong> for production and <strong>large general models</strong> for prototyping.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Decision Tree</div><div class="cc-code"><span class="hl-key">How much labeled data?</span>
+
+<span class="hl-num">&lt;100 examples</span>:
+  &rarr; Few-shot prompting with LLM
+  &rarr; No fine-tuning needed
+
+<span class="hl-num">100-1,000 examples</span>:
+  &rarr; Feature extraction (fast, safe)
+  &rarr; LoRA fine-tuning (better, cheap)
+
+<span class="hl-num">1,000-10,000 examples</span>:
+  &rarr; Full fine-tuning (BERT-base)
+  &rarr; Consider domain pre-training
+
+<span class="hl-num">10,000+ examples</span>:
+  &rarr; Domain DAPT + full fine-tuning
+  &rarr; Consider model distillation
+
+<span class="hl-ok">Production rule of thumb</span>:
+  Prototype with large LLM
+  Deploy with fine-tuned small model</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The best practitioners <strong>prototype with large models and deploy with small ones</strong>. Use GPT-4 to validate the task is solvable, then fine-tune a BERT or DistilBERT for production. This gives you the best of both worlds: fast iteration and efficient deployment.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-transformer-revolution.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: Transformer Revolution</a>
+    <a class="ch-nav-btn next" href="09-nlp-evaluation.html">Ch 9: NLP Evaluation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1],2:[0,1],3:[0,1],4:[0,2],5:[0,1],6:[3],7:[0,1,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Transfer learning: pre-train on billions of words ($10K+), fine-tune on your task ($1-10). 1000x cost reduction. A startup with 1,000 examples matches million-example systems.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Feature extraction freezes the model (fast, safe). Full fine-tuning updates everything (2-5% better, risk of catastrophic forgetting). Start with extraction, upgrade if needed.',color:'#16a34a'},
+    3:{text:'<strong>Step 3:</strong> Task heads: linear layers that map pre-trained representations to task outputs. Classification uses [CLS], NER uses per-token, QA predicts start/end spans.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> LoRA trains 0.1% of parameters for 95-99% of full fine-tuning performance. 6MB adapters vs 14GB checkpoints. Fine-tune 7B models on consumer GPUs.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> Domain adaptation: continue pre-training on domain text (BioBERT, LegalBERT, FinBERT). Adds 3-8% F1 on specialized tasks. Essential for production NLP.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Hugging Face: 500K+ models, unified API, one-line downloads. Transformers + Datasets + PEFT + Trainer. Reduced the barrier from "PhD" to "can write Python."',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> Fine-tuning pitfalls: catastrophic forgetting (LR too high), overfitting (too few examples), tokenizer mismatch. Most failures are hyperparameter issues, not architecture.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Decision tree: &lt;100 examples = few-shot prompting, 100-1K = feature extraction/LoRA, 1K-10K = full fine-tuning, 10K+ = domain pre-training. Prototype big, deploy small.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

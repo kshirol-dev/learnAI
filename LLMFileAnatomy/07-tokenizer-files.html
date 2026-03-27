@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: The Tokenizer Files — Text to Token IDs and Back — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}.pipe-arrow.lit{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; The Tokenizer Files: Text to Token IDs and Back</h2><span class="tb-sub">Vocabulary, BPE merge rules, special tokens, and the chat template contract</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">dictionary</span></div><span class="pipe-label">Vocab</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">merge_type</span></div><span class="pipe-label">BPE Merges</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Special</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">chat</span></div><span class="pipe-label">Template</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">settings</span></div><span class="pipe-label">Config</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">check_circle</span></div><span class="pipe-label">Validate</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">dictionary</span></div><div><div class="cc-title">The Vocabulary: Token-to-ID Mapping</div><div class="cc-sub">128,256 entries mapping text fragments to integer IDs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What It Contains</div><div class="cc-text">The vocabulary is a bidirectional mapping between <strong>text fragments (tokens) and integer IDs</strong>. For Llama 3.1, this means 128,256 entries where each token &mdash; from single characters like "a" to whole words like " the" (note the leading space) to subwords like "tion" &mdash; has a unique integer. The vocabulary lives inside <code>tokenizer.json</code> as a JSON object under the <code>model.vocab</code> key. The vocab_size (128,256) directly determines the embedding matrix's first dimension.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Vocabulary Entries</div><div class="cc-code"><span class="hl-cmt">// Sample from tokenizer.json vocab:</span>
+{
+  <span class="hl-str">"!"</span>: <span class="hl-num">0</span>,
+  <span class="hl-str">"\""</span>: <span class="hl-num">1</span>,
+  <span class="hl-str">"#"</span>: <span class="hl-num">2</span>,
+  ...
+  <span class="hl-str">" the"</span>: <span class="hl-num">279</span>,    <span class="hl-cmt">// note leading space</span>
+  <span class="hl-str">" Hello"</span>: <span class="hl-num">9906</span>,
+  <span class="hl-str">"world"</span>: <span class="hl-num">1917</span>,
+  ...
+  <span class="hl-str">"&lt;|begin_of_text|&gt;"</span>: <span class="hl-num">128000</span>
+}
+<span class="hl-cmt">// Total: 128,256 entries</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Tokens often include leading spaces &mdash; " Hello" (with space) is a different token than "Hello" (without). This is how BPE tokenizers handle word boundaries without explicit whitespace tokens.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">merge_type</span></div><div><div class="cc-title">BPE Merge Rules: How Unknown Words Are Split</div><div class="cc-sub">An ordered list of character pair merges learned from the training corpus</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How BPE Works</div><div class="cc-text"><strong>Byte Pair Encoding (BPE)</strong> starts with individual bytes and iteratively merges the most frequent adjacent pairs. The <code>merges</code> list in tokenizer.json defines these merges <strong>in order of frequency</strong>. When tokenizing new text, the algorithm applies these merges greedily: first split into bytes, then apply merge 1 if the pair exists, then merge 2, etc. This is why any text can be tokenized &mdash; worst case, it falls back to individual bytes.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Merge Rules Example</div><div class="cc-code"><span class="hl-cmt">// BPE merges (ordered by frequency):</span>
+<span class="hl-key">"merges"</span>: [
+  <span class="hl-str">"Ġ t"</span>,      <span class="hl-cmt">// merge #1: space + t</span>
+  <span class="hl-str">"Ġ a"</span>,      <span class="hl-cmt">// merge #2: space + a</span>
+  <span class="hl-str">"i n"</span>,      <span class="hl-cmt">// merge #3: i + n → "in"</span>
+  <span class="hl-str">"h e"</span>,      <span class="hl-cmt">// merge #4: h + e → "he"</span>
+  <span class="hl-str">"Ġ th"</span>,     <span class="hl-cmt">// merge #5: " t" + h</span>
+  <span class="hl-str">"Ġ the"</span>,    <span class="hl-cmt">// merge #6: " th" + e</span>
+  ...
+  <span class="hl-cmt">// ~280K merge rules total</span>
+]
+<span class="hl-cmt">// Ġ represents a space character</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The merge order IS the tokenization algorithm. The same text can produce different tokens if you change the merge order. This is why you must use the exact tokenizer that was trained with the model &mdash; the merge rules and the embedding matrix are linked.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">star</span></div><div><div class="cc-title">Special Tokens: Control Signals</div><div class="cc-sub">Tokens that tell the model about conversation structure</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Special Tokens Do</div><div class="cc-text">Special tokens are <strong>control signals</strong> that never appear in normal text. They mark conversation boundaries, speaker roles, and generation endpoints. Llama 3 uses tokens like <code>&lt;|begin_of_text|&gt;</code> (start of conversation), <code>&lt;|eot_id|&gt;</code> (end of turn), and <code>&lt;|start_header_id|&gt;</code> / <code>&lt;|end_header_id|&gt;</code> (role markers). These tokens occupy IDs at the end of the vocabulary (128000+), reserved specifically for control purposes.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Llama 3 Special Tokens</div><div class="cc-code"><span class="hl-cmt">// Llama 3 special tokens:</span>
+<span class="hl-key">&lt;|begin_of_text|&gt;</span>     ID: <span class="hl-num">128000</span>
+<span class="hl-key">&lt;|end_of_text|&gt;</span>       ID: <span class="hl-num">128001</span>
+<span class="hl-key">&lt;|start_header_id|&gt;</span>  ID: <span class="hl-num">128006</span>
+<span class="hl-key">&lt;|end_header_id|&gt;</span>    ID: <span class="hl-num">128007</span>
+<span class="hl-key">&lt;|eot_id|&gt;</span>           ID: <span class="hl-num">128009</span>
+
+<span class="hl-cmt">// These are "added_tokens" — they don't</span>
+<span class="hl-cmt">// come from BPE merges but are explicitly</span>
+<span class="hl-cmt">// added to the vocabulary</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The model learned the meaning of these tokens during training. <code>&lt;|eot_id|&gt;</code> means "stop generating." If your inference code doesn't include it as a stop token, the model will keep generating past its turn boundary.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">chat</span></div><div><div class="cc-title">The Chat Template: Conversation Formatting</div><div class="cc-sub">A Jinja2 template that structures multi-turn dialogue</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What the Template Does</div><div class="cc-text">The <strong>chat template</strong> in <code>tokenizer_config.json</code> is a Jinja2 template that defines <strong>how multi-turn conversations are formatted</strong> before being fed to the model. It wraps each message with the correct special tokens and role markers. This template is the <strong>contract between the user and the model</strong> &mdash; using the wrong template produces gibberish even with perfect weights, because the model was trained on a specific conversation format.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Formatted Output</div><div class="cc-code"><span class="hl-cmt">// What the chat template produces:</span>
+
+<span class="hl-key">&lt;|begin_of_text|&gt;</span>
+<span class="hl-key">&lt;|start_header_id|&gt;</span><span class="hl-str">system</span><span class="hl-key">&lt;|end_header_id|&gt;</span>
+
+You are a helpful assistant.<span class="hl-key">&lt;|eot_id|&gt;</span>
+<span class="hl-key">&lt;|start_header_id|&gt;</span><span class="hl-str">user</span><span class="hl-key">&lt;|end_header_id|&gt;</span>
+
+What is Python?<span class="hl-key">&lt;|eot_id|&gt;</span>
+<span class="hl-key">&lt;|start_header_id|&gt;</span><span class="hl-str">assistant</span><span class="hl-key">&lt;|end_header_id|&gt;</span>
+
+<span class="hl-cmt">// ↑ Model generates from here</span></div></div>
+          <div class="cc-note n-red"><strong>Why it matters:</strong> Using ChatML template with a Llama model (or vice versa) causes the model to see unfamiliar control tokens, producing confused or degraded output. Always match the template to the model.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">folder_open</span></div><div><div class="cc-title">tokenizer.json: The Complete File</div><div class="cc-sub">Vocabulary, merges, normalizer, pre-tokenizer, post-processor, decoder</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">File Sections</div><div class="cc-text">The <code>tokenizer.json</code> file contains six key sections: <strong>normalizer</strong> (text cleanup before tokenizing), <strong>pre_tokenizer</strong> (how to split text into pre-token chunks, e.g., by whitespace), <strong>model</strong> (the BPE vocabulary and merge rules), <strong>post_processor</strong> (adds special tokens like BOS/EOS), <strong>decoder</strong> (converts token IDs back to text), and <strong>added_tokens</strong> (special tokens injected into the vocabulary).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">File Structure</div><div class="cc-code"><span class="hl-cmt">// tokenizer.json top-level structure:</span>
+{
+  <span class="hl-key">"version"</span>: <span class="hl-str">"1.0"</span>,
+  <span class="hl-key">"added_tokens"</span>: [...],  <span class="hl-cmt">// special tokens</span>
+  <span class="hl-key">"normalizer"</span>: null,     <span class="hl-cmt">// text cleanup</span>
+  <span class="hl-key">"pre_tokenizer"</span>: {...}, <span class="hl-cmt">// split rules</span>
+  <span class="hl-key">"model"</span>: {
+    <span class="hl-key">"type"</span>: <span class="hl-str">"BPE"</span>,
+    <span class="hl-key">"vocab"</span>: {...},       <span class="hl-cmt">// 128K entries</span>
+    <span class="hl-key">"merges"</span>: [...]       <span class="hl-cmt">// ~280K rules</span>
+  },
+  <span class="hl-key">"post_processor"</span>: {...},<span class="hl-cmt">// add BOS/EOS</span>
+  <span class="hl-key">"decoder"</span>: {...}         <span class="hl-cmt">// IDs → text</span>
+}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">settings</span></div><div><div class="cc-title">tokenizer_config.json: Settings and Template</div><div class="cc-sub">Configuration, special token mappings, and the chat template</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Key Config Fields</div><div class="cc-text"><code>tokenizer_config.json</code> contains <strong>operational settings</strong>: which special tokens to use for BOS/EOS/PAD, whether to add BOS token automatically, the maximum sequence length, and crucially, the <strong>chat_template</strong> string (the Jinja2 template). It also specifies the <code>tokenizer_class</code> (e.g., "PreTrainedTokenizerFast") which tells the framework which tokenizer implementation to use.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Config Example</div><div class="cc-code"><span class="hl-cmt">// tokenizer_config.json key fields:</span>
+{
+  <span class="hl-key">"add_bos_token"</span>: <span class="hl-num">true</span>,
+  <span class="hl-key">"add_eos_token"</span>: <span class="hl-num">false</span>,
+  <span class="hl-key">"bos_token"</span>: <span class="hl-str">"&lt;|begin_of_text|&gt;"</span>,
+  <span class="hl-key">"eos_token"</span>: <span class="hl-str">"&lt;|end_of_text|&gt;"</span>,
+  <span class="hl-key">"model_max_length"</span>: <span class="hl-num">131072</span>,
+  <span class="hl-key">"tokenizer_class"</span>: <span class="hl-str">"PreTrainedTokenizerFast"</span>,
+  <span class="hl-key">"chat_template"</span>: <span class="hl-str">"{% set loop_messages... %}"</span>
+}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">link_off</span></div><div><div class="cc-title">What Happens When the Tokenizer Is Wrong</div><div class="cc-sub">Mismatched tokenizers produce garbage &mdash; even with perfect weights</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Failure Modes</div><div class="cc-text"><strong>Wrong vocab size:</strong> If your tokenizer has 32K tokens but the model expects 128K, token IDs above 32K index into nonexistent embedding rows &rarr; crash.<br><br><strong>Wrong merge rules:</strong> "Hello world" might become IDs [9906, 1917] with the correct tokenizer but [412, 1024, 888, 3055] with a different one. The model was trained on the first mapping &mdash; it has no idea what the second means.<br><br><strong>Wrong chat template:</strong> The model sees random special tokens instead of proper role markers, producing confused or incoherent output.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Quick Validation</div><div class="cc-code"><span class="hl-cmt">// Tokenizer compatibility checks:</span>
+
+<span class="hl-key">1.</span> tokenizer.vocab_size == config.vocab_size?
+   <span class="hl-cmt">// Must match embed_tokens shape[0]</span>
+
+<span class="hl-key">2.</span> tokenizer("Hello") produces expected IDs?
+   <span class="hl-cmt">// Compare with reference implementation</span>
+
+<span class="hl-key">3.</span> chat_template matches model's training?
+   <span class="hl-cmt">// Llama 3 ≠ ChatML ≠ Alpaca format</span>
+
+<span class="hl-key">4.</span> Special tokens registered as stop tokens?
+   <span class="hl-cmt">// &lt;|eot_id|&gt; must trigger generation stop</span></div></div>
+          <div class="cc-note n-red"><strong>Rule of thumb:</strong> Always download tokenizer files from the same model repository as the weights. Never mix tokenizers from different model families. The tokenizer and weights are a matched pair &mdash; like a lock and key.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">lightbulb</span></div><div><div class="cc-title">Practical Takeaways</div><div class="cc-sub">The tokenizer cheat sheet</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Tokenizer File Summary</div><div class="cc-code"><span class="hl-cmt">// Tokenizer files and their roles:</span>
+
+<span class="hl-key">tokenizer.json</span>         <span class="hl-cmt">// ~9 MB</span>
+  <span class="hl-cmt">// Vocab + BPE merges + normalizer</span>
+  <span class="hl-cmt">// The core tokenization algorithm</span>
+
+<span class="hl-key">tokenizer_config.json</span>  <span class="hl-cmt">// ~38 KB</span>
+  <span class="hl-cmt">// Settings + chat template</span>
+  <span class="hl-cmt">// Special token mappings</span>
+
+<span class="hl-key">tokenizer.model</span>        <span class="hl-cmt">// ~2.1 MB</span>
+  <span class="hl-cmt">// SentencePiece binary (legacy)</span>
+
+<span class="hl-key">special_tokens_map.json</span> <span class="hl-cmt">// ~88 bytes</span>
+  <span class="hl-cmt">// Quick lookup for BOS/EOS/PAD</span></div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Key Relationships</div><div class="cc-text"><strong>vocab_size &harr; embedding shape:</strong> Must match exactly or loading crashes.<br><br><strong>Merge order &harr; token IDs:</strong> The same text produces different IDs with different merge rules. IDs are the input to the embedding lookup.<br><br><strong>Chat template &harr; training format:</strong> The model was trained to recognize specific control token patterns. Wrong template = wrong patterns = bad output.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The tokenizer is the "API contract" between human text and the model. Get it right and everything works. Get it wrong and no amount of weight quality can save you. Last chapter: config.json and the runtime structures that don't live in any file.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-special-tensors.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Special Tensors</a>
+    <a class="ch-nav-btn next" href="08-config-and-runtime.html">Ch 8: Config &amp; Runtime <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[0,1],6:[4],7:[5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Vocabulary:</strong> 128,256 entries mapping text fragments to integer IDs. Each ID is a row index into the embedding matrix. Tokens often include leading spaces — " the" ≠ "the".',color:'#0d9488'},
+    2:{text:'<strong>BPE merges:</strong> ~280K ordered pair-merge rules learned from training data. Applied greedily to split unknown text into known tokens. The merge order IS the tokenization algorithm.',color:'#ea580c'},
+    3:{text:'<strong>Special tokens:</strong> Control signals like <code>&lt;|begin_of_text|&gt;</code> (ID 128000) and <code>&lt;|eot_id|&gt;</code> (ID 128009). They mark conversation boundaries and generation stops.',color:'#7c3aed'},
+    4:{text:'<strong>Chat template:</strong> A Jinja2 template that wraps messages with special tokens and role markers. Wrong template = model sees unfamiliar patterns = garbage output, even with perfect weights.',color:'#2563eb'},
+    5:{text:'<strong>tokenizer.json:</strong> Contains vocab, merges, normalizer, pre-tokenizer, post-processor, and decoder. ~9 MB — the complete tokenization algorithm in one file.',color:'#d97706'},
+    6:{text:'<strong>tokenizer_config.json:</strong> Settings (add_bos_token, model_max_length), special token mappings, and the chat_template string. ~38 KB but controls conversation formatting.',color:'#db2777'},
+    7:{text:'<strong>Mismatch = failure:</strong> Wrong vocab size → crash. Wrong merges → wrong IDs → garbage embeddings. Wrong template → confused output. Tokenizer and weights are a matched pair.',color:'#dc2626'},
+    8:{text:'<strong>Takeaway:</strong> The tokenizer is the API contract between human text and the model. Always download tokenizer files from the same repository as the weights. Next: config.json and runtime.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

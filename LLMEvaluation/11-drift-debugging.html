@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: Drift, Debugging & Alerts — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; Drift, Debugging &amp; Alerts</h2><span class="tb-sub">Detecting silent degradation, diagnosing root causes, and building alerting systems</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">trending_down</span></div><span class="pipe-label">Drift</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">Detect</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Debug</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">account_tree</span></div><span class="pipe-label">Root Cause</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">notifications</span></div><span class="pipe-label">Alerts</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">autorenew</span></div><span class="pipe-label">Recover</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">trending_down</span></div>
+        <div><div class="cc-title">Understanding Drift in LLM Systems</div><div class="cc-sub">Your system degrades silently &mdash; here&rsquo;s why and how</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Is Drift?</div>
+            <div class="cc-text">Drift is the <strong>gradual, silent degradation</strong> of your LLM system&rsquo;s performance over time. Unlike a crash or error, drift doesn&rsquo;t trigger alarms. Your system keeps running, returning 200 OK, while quality slowly erodes. Users notice before your metrics do &mdash; unless you&rsquo;re specifically watching for it.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Types of Drift</div>
+            <div class="cc-text">&bull; <strong>Data drift:</strong> The distribution of user queries changes over time. Users start asking questions your system wasn&rsquo;t designed for<br>&bull; <strong>Model drift:</strong> The LLM provider silently updates the model. Output style, accuracy, and behavior shift without notice<br>&bull; <strong>Concept drift:</strong> The world changes and your system&rsquo;s knowledge becomes stale. Facts that were correct become wrong<br>&bull; <strong>Retrieval drift:</strong> Your document corpus grows, ages, or develops contradictions. RAG quality degrades as the knowledge base evolves</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why Drift Is Dangerous</div>
+            <div class="cc-text">Drift is the <strong>most common cause of production LLM failures</strong> and the hardest to detect because:<br><br>&bull; <strong>No error signals:</strong> HTTP 200, no exceptions, no crashes<br>&bull; <strong>Gradual:</strong> 0.5% quality drop per week is invisible day-to-day but devastating over months<br>&bull; <strong>Multi-causal:</strong> Often caused by multiple factors interacting, making root cause analysis hard<br>&bull; <strong>Delayed feedback:</strong> Users may not report degradation for weeks</div>
+          </div>
+          <div class="cc-note n-red"><strong>Critical:</strong> OpenAI, Anthropic, and Google update their models without notice. A &ldquo;minor improvement&rdquo; to GPT-4o can change your system&rsquo;s behavior. Run your eval suite weekly even when you haven&rsquo;t changed anything on your end.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">search</span></div>
+        <div><div class="cc-title">Drift Detection Methods</div><div class="cc-sub">Catching degradation before users notice</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Statistical Detection</div>
+            <div class="cc-text">&bull; <strong>Rolling averages:</strong> Compare this week&rsquo;s quality scores to the 4-week rolling average. Flag if deviation exceeds 2&sigma;<br>&bull; <strong>Distribution comparison:</strong> Use KL divergence or Jensen-Shannon divergence to compare input/output distributions across time windows<br>&bull; <strong>Trend analysis:</strong> Fit a regression line to weekly quality scores. A negative slope indicates drift even if individual weeks look normal<br>&bull; <strong>Embedding drift:</strong> Track the centroid of query embeddings over time. Movement indicates changing user behavior</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Scheduled Eval Runs</div>
+            <div class="cc-text">The simplest and most effective drift detection: <strong>run your eval suite on a fixed schedule</strong>.<br><br>&bull; <strong>Daily:</strong> Run a quick subset (20 examples) against production<br>&bull; <strong>Weekly:</strong> Run the full eval suite (200+ examples)<br>&bull; <strong>Monthly:</strong> Run extended eval with human review of a sample<br><br>Compare each run to the baseline. Any metric drop &gt;2% triggers investigation.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Canary Queries</div>
+            <div class="cc-text"><strong>Canary queries</strong> are fixed test inputs with known-good outputs that you run against production continuously. Like a canary in a coal mine &mdash; if the canary dies, something changed. Run 10&ndash;20 canary queries every hour. If any canary response changes significantly, alert immediately.</div>
+          </div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Canary queries are the cheapest and fastest drift detection method. 20 queries/hour costs ~$1/day with GPT-4o-mini but catches model-level drift within an hour of it happening.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">bug_report</span></div>
+        <div><div class="cc-title">Debugging LLM Systems</div><div class="cc-sub">A systematic approach to finding what went wrong</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Debugging Workflow</div>
+            <div class="cc-text">LLM debugging is fundamentally different from traditional software debugging. There&rsquo;s no stack trace, no line number, no deterministic reproduction. Instead, use this systematic approach:<br><br>1. <strong>Reproduce:</strong> Can you trigger the same failure with the same input?<br>2. <strong>Isolate:</strong> Which component is failing? Retrieval? Generation? Guardrails?<br>3. <strong>Compare:</strong> What&rsquo;s different between working and failing cases?<br>4. <strong>Hypothesize:</strong> Form a theory about the root cause<br>5. <strong>Test:</strong> Modify one variable and re-run to confirm the hypothesis</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Trace-Based Debugging</div>
+            <div class="cc-text">Traces are your primary debugging tool. For a failing request, examine:<br><br>&bull; <strong>Input:</strong> Was the user query unusual or ambiguous?<br>&bull; <strong>Retrieval:</strong> Were the right documents retrieved? Were they relevant?<br>&bull; <strong>Prompt:</strong> What did the full prompt look like with context injected?<br>&bull; <strong>Model response:</strong> What exactly did the model output?<br>&bull; <strong>Post-processing:</strong> Did guardrails modify or block the response?<br><br>Most failures become obvious once you can see the full trace.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Pro tip:</strong> Build a &ldquo;debug mode&rdquo; that lets you replay any production trace locally with full visibility. This means storing the complete input, retrieved documents, and model output for every request (or a sample). The storage cost is minimal compared to the debugging time saved.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">account_tree</span></div>
+        <div><div class="cc-title">Root Cause Analysis</div><div class="cc-sub">The five most common failure categories and how to diagnose them</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Failure Category Map</div>
+            <div class="cc-code"><span class="hl-cmt">// Symptom &rarr; Likely root cause</span>
+
+<span class="hl-key">Wrong facts</span>
+  &rarr; Retrieval failure (wrong docs)
+  &rarr; Stale knowledge base
+  &rarr; Hallucination (no grounding)
+
+<span class="hl-key">Off-topic response</span>
+  &rarr; Query misclassification
+  &rarr; System prompt ignored
+  &rarr; Prompt injection success
+
+<span class="hl-key">Quality drop (gradual)</span>
+  &rarr; Model provider update
+  &rarr; Data drift (new query types)
+  &rarr; Retrieval corpus degradation
+
+<span class="hl-key">Quality drop (sudden)</span>
+  &rarr; Prompt change regression
+  &rarr; Config change (temperature, etc.)
+  &rarr; API version change
+
+<span class="hl-key">Inconsistent behavior</span>
+  &rarr; High temperature setting
+  &rarr; Non-deterministic retrieval
+  &rarr; Load balancer routing to different models</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Isolation Method</div>
+            <div class="cc-text">When you can&rsquo;t identify the root cause, <strong>isolate each component</strong>:<br><br>1. <strong>Test retrieval alone:</strong> Are the right documents being retrieved for the failing query? If not, the problem is retrieval<br>2. <strong>Test generation with known-good context:</strong> Give the model perfect context manually. If it still fails, the problem is the model or prompt<br>3. <strong>Test with a different model:</strong> Same prompt, different model. If the other model works, the problem is model-specific<br>4. <strong>Test with the original prompt:</strong> Revert to the last known-good prompt. If it works, the problem is the prompt change</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> 70% of LLM production issues trace back to one of three causes: (1) retrieval returning wrong documents, (2) prompt changes that regressed other cases, or (3) model provider silent updates. Check these three first.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">notifications</span></div>
+        <div><div class="cc-title">Building an Alerting System</div><div class="cc-sub">The right alerts at the right time to the right people</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Alert Tiers</div>
+            <div class="cc-text"><strong>Tier 1 &mdash; Critical (page immediately):</strong><br>&bull; Safety violation rate &gt; 0.1%<br>&bull; System completely down (error rate &gt; 50%)<br>&bull; Cost exceeding 2x daily budget<br><br><strong>Tier 2 &mdash; Warning (Slack notification):</strong><br>&bull; Quality score drops &gt; 5% from baseline<br>&bull; Latency p95 exceeds SLA<br>&bull; Hallucination rate &gt; 10%<br><br><strong>Tier 3 &mdash; Informational (daily digest):</strong><br>&bull; Quality score drops 1&ndash;5%<br>&bull; Cost trending 20% above forecast<br>&bull; New query patterns detected</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Avoiding Alert Fatigue</div>
+            <div class="cc-text">Alert fatigue is when teams get so many alerts they start ignoring them. It&rsquo;s the <strong>#1 reason alerting systems fail</strong>. Prevention strategies:<br><br>&bull; <strong>Fewer, smarter alerts:</strong> 5 well-tuned alerts beat 50 noisy ones<br>&bull; <strong>Deduplication:</strong> Group related alerts into a single notification<br>&bull; <strong>Cooldown periods:</strong> Don&rsquo;t re-alert for the same issue within 4 hours<br>&bull; <strong>Actionable only:</strong> Every alert should have a clear action. If you can&rsquo;t act on it, it&rsquo;s not an alert &mdash; it&rsquo;s a metric<br>&bull; <strong>Regular review:</strong> Monthly review of alert frequency. Tune or remove alerts that fire too often without action</div>
+          </div>
+          <div class="cc-note n-green"><strong>Pro tip:</strong> Start with just 3 alerts: (1) safety violation rate above threshold, (2) quality score below threshold, (3) cost above budget. Add more only when you have a specific incident that would have been caught by a new alert.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">autorenew</span></div>
+        <div><div class="cc-title">Recovery Strategies</div><div class="cc-sub">What to do when things go wrong in production</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Immediate Response</div>
+            <div class="cc-text">&bull; <strong>Rollback:</strong> Revert to the last known-good configuration (prompt, model version, retrieval config). This is your fastest recovery option &mdash; have a rollback procedure documented and tested<br>&bull; <strong>Feature flag:</strong> Disable the affected feature while keeping the rest of the system running<br>&bull; <strong>Fallback model:</strong> Switch to a backup model (e.g., GPT-4o-mini as fallback for GPT-4o) that may be less capable but more stable<br>&bull; <strong>Human-in-the-loop:</strong> Route affected queries to human agents while investigating</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Post-Incident Process</div>
+            <div class="cc-text">After every significant incident:<br><br>1. <strong>Timeline:</strong> When did it start? When was it detected? When was it resolved?<br>2. <strong>Impact:</strong> How many users were affected? What was the severity?<br>3. <strong>Root cause:</strong> What specifically caused the issue?<br>4. <strong>Detection gap:</strong> Why didn&rsquo;t we catch it sooner? What monitoring was missing?<br>5. <strong>Prevention:</strong> What changes prevent recurrence?<br>6. <strong>Eval update:</strong> Add the failure case to your eval dataset</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The most important recovery action is adding the failure to your eval dataset. This ensures the same failure is caught automatically in the future. Over time, your eval dataset becomes a comprehensive record of every failure mode your system has encountered.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">science</span></div>
+        <div><div class="cc-title">A/B Testing LLM Changes</div><div class="cc-sub">Safely deploying changes with controlled experiments</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Why A/B Test LLM Changes</div>
+            <div class="cc-text">Offline eval tells you if a change is <strong>likely better</strong>. A/B testing tells you if it&rsquo;s <strong>actually better in production</strong>. The gap between offline and online performance can be significant because:<br><br>&bull; Eval datasets don&rsquo;t perfectly represent production traffic<br>&bull; User behavior changes in response to different outputs<br>&bull; Edge cases in production aren&rsquo;t captured in eval sets<br>&bull; Latency and cost differences affect real user experience</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">A/B Testing Flow</div>
+            <div class="cc-text">1. <strong>Offline eval passes:</strong> New config meets quality thresholds<br>2. <strong>Deploy to 5% of traffic:</strong> Small exposure limits blast radius<br>3. <strong>Monitor for 48 hours:</strong> Compare quality, safety, latency, and cost<br>4. <strong>Statistical significance:</strong> Wait until you have enough data to be confident<br>5. <strong>Ramp to 50%, then 100%:</strong> Gradually increase exposure<br>6. <strong>Keep the old config ready:</strong> Instant rollback if issues emerge at scale</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What to Measure</div>
+            <div class="cc-text">&bull; <strong>Quality metrics:</strong> LLM judge scores on a sample of both variants<br>&bull; <strong>User signals:</strong> Thumbs up/down, regeneration rate, session length<br>&bull; <strong>Safety:</strong> Violation rate in both variants<br>&bull; <strong>Operational:</strong> Latency, cost, error rate<br>&bull; <strong>Business metrics:</strong> Conversion, retention, task completion rate</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> A/B testing is especially important for prompt changes, which are the most common and most impactful changes to LLM systems. A prompt that improves one use case often regresses another. A/B testing catches this in production before full rollout.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">checklist</span></div>
+        <div><div class="cc-title">The Production Readiness Checklist</div><div class="cc-sub">Everything you need before going live &mdash; and staying live</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Pre-Launch Checklist</div>
+            <div class="cc-code"><span class="hl-cmt">// Before going to production</span>
+
+<span class="hl-str">[&check;]</span> Eval dataset: 50+ examples, all passing
+<span class="hl-str">[&check;]</span> CI/CD eval gate: blocks bad deployments
+<span class="hl-str">[&check;]</span> Input guardrails: injection, PII, content
+<span class="hl-str">[&check;]</span> Output guardrails: safety, grounding, PII
+<span class="hl-str">[&check;]</span> Tracing: every request logged with full context
+<span class="hl-str">[&check;]</span> Cost tracking: per-query, per-feature, daily budget
+<span class="hl-str">[&check;]</span> Latency monitoring: p50, p95, p99, TTFT
+<span class="hl-str">[&check;]</span> Quality monitoring: LLM judge on 5% sample
+<span class="hl-str">[&check;]</span> Alerting: safety, quality, cost (3 alerts min)
+<span class="hl-str">[&check;]</span> Rollback plan: documented and tested
+<span class="hl-str">[&check;]</span> Canary queries: 10+ running hourly</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Ongoing Operations</div>
+            <div class="cc-text">&bull; <strong>Weekly:</strong> Full eval suite run, review quality trends, check canary results<br>&bull; <strong>Monthly:</strong> Human evaluation of 100 production samples, alert tuning review, eval dataset expansion from production failures<br>&bull; <strong>Quarterly:</strong> Full system audit, model comparison (should we switch?), cost optimization review<br>&bull; <strong>On every change:</strong> CI/CD eval, A/B test for significant changes, rollback plan ready</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Next up:</strong> Chapter 12 brings it all together with the Eval-First Mindset &mdash; building evaluation into your team&rsquo;s culture, not just your CI/CD pipeline.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-guardrails-safety.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: Guardrails</a>
+    <a class="ch-nav-btn next" href="12-eval-first-mindset.html">Ch 12: Eval-First Mindset <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[4],6:[5],7:[1,2,3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Drift is silent degradation \u2014 your system returns 200 OK while quality erodes. Four types: data drift, model drift, concept drift, retrieval drift.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> Detection: rolling averages, distribution comparison, scheduled eval runs, and canary queries. Canaries are cheapest at ~$1/day and catch drift within an hour.',color:'#d97706'},
+    3:{text:'<strong>Step 3:</strong> Debugging LLMs: reproduce, isolate, compare, hypothesize, test. Traces are your primary tool \u2014 examine input, retrieval, prompt, model output, and post-processing.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> 70% of issues trace to: wrong retrieval, prompt regression, or silent model update. Check these three first. Use component isolation to narrow down.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Three alert tiers: critical (page), warning (Slack), informational (digest). Start with just 3 alerts: safety, quality, cost. Avoid alert fatigue.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Recovery: rollback, feature flags, fallback models, human-in-the-loop. Post-incident: add every failure to your eval dataset for the flywheel.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> A/B test LLM changes: deploy to 5%, monitor 48hrs, ramp gradually. Offline eval says \u201clikely better\u201d; A/B testing says \u201cactually better.\u201d',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> Production readiness: eval dataset, CI/CD gates, guardrails, tracing, monitoring, alerting, rollback plan, and canary queries. All before launch.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 1: Why CPUs Aren't Enough — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 1 &mdash; Why CPUs Aren&rsquo;t Enough</h2><span class="tb-sub">Sequential vs parallel &mdash; why AI needs a fundamentally different processor</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Foundation</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">CPU Design</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">grid_view</span></div><span class="pipe-label">Matrix Math</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">developer_board</span></div><span class="pipe-label">GPU Design</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Throughput</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">data_array</span></div><span class="pipe-label">Memory Wall</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">calculate</span></div><span class="pipe-label">The Numbers</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Real World</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Why It Matters</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">The CPU: Brilliant at One Thing at a Time</div><div class="cc-sub">4&ndash;128 powerful cores, each a Swiss Army knife of computing</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Highway Analogy</div><div class="cc-text">Think of a CPU as a <strong>4-lane highway</strong>. Each lane is wide, fast, and can handle any vehicle &mdash; sports cars, trucks, buses. The lanes have traffic lights that adapt in real time, ramps that predict where cars are going, and emergency shoulders for unexpected situations.<br><br>A modern CPU like the Intel Core i9-14900K has <strong>24 cores</strong> running at up to <strong>6.0 GHz</strong>. Each core has branch prediction, out-of-order execution, speculative execution, and deep cache hierarchies. These features make each core incredibly smart &mdash; it can handle complex, unpredictable tasks with minimal wasted cycles.<br><br>This design is perfect for tasks like running your operating system, compiling code, or serving web requests &mdash; workloads where each step depends on the result of the previous one.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">CPU Architecture at a Glance</div><div class="cc-code"><span class="hl-key">Intel Core i9-14900K (2024)</span>
+  Cores:          <span class="hl-num">24</span> (8P + 16E)
+  Clock:          up to <span class="hl-num">6.0</span> GHz
+  L3 Cache:       <span class="hl-num">36</span> MB
+  Memory BW:      ~<span class="hl-num">90</span> GB/s (DDR5-5600)
+  FP32 TFLOPS:    ~<span class="hl-num">1.5</span>
+
+<span class="hl-key">AMD EPYC 9754 (Server, 2024)</span>
+  Cores:          <span class="hl-num">128</span>
+  Clock:          up to <span class="hl-num">3.1</span> GHz
+  L3 Cache:       <span class="hl-num">256</span> MB
+  Memory BW:      ~<span class="hl-num">460</span> GB/s (12-ch DDR5)
+  FP32 TFLOPS:    ~<span class="hl-num">5</span>
+
+<span class="hl-cmt">Even the biggest server CPU: ~5 TFLOPS.
+An H100 GPU: ~67 TFLOPS (FP32).
+That's 13x more raw compute.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> A CPU is like a team of 24 expert surgeons &mdash; each one can handle any operation brilliantly. But when you need to stitch 10 million wounds at once, you don&rsquo;t need surgeons. You need 10,000 medics who each know one simple stitch.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">grid_view</span></div><div><div class="cc-title">AI Is Just Matrix Multiplication</div><div class="cc-sub">Every neural network forward pass boils down to multiply-and-add</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Happens Inside a Neural Network</div><div class="cc-text">When you send a prompt to an LLM, here&rsquo;s what actually happens at the hardware level:<br><br><strong>1. Token embedding:</strong> Your words become vectors (arrays of numbers). Each token is a vector of 4,096&ndash;12,288 floating-point numbers.<br><br><strong>2. Attention layers:</strong> Each layer multiplies your token vectors by three huge weight matrices (Q, K, V) &mdash; each one is [hidden_dim &times; hidden_dim]. For a 70B model, that&rsquo;s [8192 &times; 8192] matrices.<br><br><strong>3. Feed-forward layers:</strong> Another pair of matrix multiplications, typically [hidden_dim &times; 4&times;hidden_dim].<br><br><strong>4. Repeat:</strong> A 70B model has ~80 layers. Each layer does 4&ndash;6 matrix multiplications. That&rsquo;s <strong>320&ndash;480 matrix multiplications per token</strong>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Math Behind One Token</div><div class="cc-code"><span class="hl-key">Llama 3 70B — per token:</span>
+
+Hidden dim:     <span class="hl-num">8,192</span>
+Layers:         <span class="hl-num">80</span>
+Attention heads: <span class="hl-num">64</span>
+
+<span class="hl-key">Per layer operations:</span>
+  Q projection: <span class="hl-num">8192</span> × <span class="hl-num">8192</span> = <span class="hl-num">67M</span> multiply-adds
+  K projection: <span class="hl-num">67M</span> multiply-adds
+  V projection: <span class="hl-num">67M</span> multiply-adds
+  Output proj:  <span class="hl-num">67M</span> multiply-adds
+  FFN up:       <span class="hl-num">8192</span> × <span class="hl-num">28,672</span> = <span class="hl-num">235M</span>
+  FFN down:     <span class="hl-num">235M</span>
+
+<span class="hl-key">Per layer total:</span> ~<span class="hl-num">738M</span> multiply-adds
+<span class="hl-key">All 80 layers:</span>  ~<span class="hl-num">59 billion</span> operations
+
+<span class="hl-cmt">Per. Single. Token.</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> AI doesn&rsquo;t need the CPU&rsquo;s ability to handle complex branching logic. It needs to do the same simple operation &mdash; multiply two numbers and add &mdash; billions of times. This is the fundamental mismatch between CPU architecture and AI workloads.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">developer_board</span></div><div><div class="cc-title">The GPU: Thousands of Simple Workers</div><div class="cc-sub">Trade individual smarts for massive parallelism</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Stadium Analogy</div><div class="cc-text">If a CPU is a 4-lane highway, a GPU is a <strong>10,000-lane road</strong>. Each lane is narrow &mdash; it can only handle bicycles, not trucks. But when your job is to move 10,000 identical packages from point A to point B, 10,000 bicycles beat 4 trucks every time.<br><br>An NVIDIA H100 GPU has <strong>16,896 CUDA cores</strong> and <strong>528 Tensor Cores</strong>. Each CUDA core is simple &mdash; no branch prediction, no speculative execution, no out-of-order logic. It does one thing: take two numbers, multiply them, add to an accumulator.<br><br>The magic is that all 16,896 cores do this <strong>simultaneously</strong>. In a single clock cycle, the H100 performs thousands of multiply-add operations in parallel. This is the SIMT (Single Instruction, Multiple Threads) execution model.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">GPU vs CPU Architecture</div><div class="cc-code"><span class="hl-key">NVIDIA H100 SXM (2023)</span>
+  CUDA Cores:     <span class="hl-num">16,896</span>
+  Tensor Cores:   <span class="hl-num">528</span>
+  Clock:          <span class="hl-num">1.98</span> GHz (boost)
+  Memory:         <span class="hl-num">80</span> GB HBM3
+  Memory BW:      <span class="hl-num">3,350</span> GB/s
+  FP32 TFLOPS:    <span class="hl-num">67</span>
+  FP16 TFLOPS:    <span class="hl-num">990</span> (with Tensor Cores)
+
+<span class="hl-key">Compare to best server CPU:</span>
+  EPYC 9754:      <span class="hl-num">~5</span> TFLOPS FP32
+  H100:           <span class="hl-num">67</span> TFLOPS FP32
+
+<span class="hl-str">That's 13x on FP32.
+On FP16 with Tensor Cores: 200x.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> A GPU trades the CPU&rsquo;s ability to handle complex, branching logic for raw throughput on simple, repetitive operations. Since AI is almost entirely simple, repetitive operations (multiply-add), this trade-off is enormously favorable.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">The Throughput Gap: 593x Faster</div><div class="cc-sub">Real benchmarks on matrix multiplication &mdash; the core operation of AI</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Matrix Multiplication Benchmark</div><div class="cc-text">Researchers benchmarked a <strong>4096&times;4096 matrix multiplication</strong> &mdash; the kind of operation that happens hundreds of times per token in an LLM:<br><br><strong>Sequential CPU (single core):</strong> The baseline. One core multiplying row by column, element by element. Painfully slow.<br><br><strong>Parallel CPU (all cores):</strong> Using OpenMP to spread the work across all CPU cores gives a <strong>12&ndash;14x speedup</strong>. Significant, but still limited by core count.<br><br><strong>GPU (CUDA):</strong> The same matrix multiply on a GPU achieves a <strong>593x speedup</strong> over sequential CPU and <strong>45x over optimized parallel CPU</strong>.<br><br>For larger matrices (8192&times;8192, 16384&times;16384), the GPU advantage grows even further because GPUs scale better with problem size.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Benchmark Numbers</div><div class="cc-code"><span class="hl-key">4096 × 4096 matrix multiply:</span>
+
+<span class="hl-str">Sequential CPU (1 core):</span>
+  Time:  <span class="hl-num">~120</span> seconds
+  Speed: <span class="hl-num">1x</span> baseline
+
+<span class="hl-str">Parallel CPU (all cores):</span>
+  Time:  <span class="hl-num">~9</span> seconds
+  Speed: <span class="hl-num">~13x</span>
+
+<span class="hl-str">GPU (CUDA optimized):</span>
+  Time:  <span class="hl-num">~0.2</span> seconds
+  Speed: <span class="hl-num">~593x</span>
+
+<span class="hl-key">Why the gap grows with size:</span>
+  2048×2048: GPU <span class="hl-num">~100x</span> faster
+  4096×4096: GPU <span class="hl-num">~593x</span> faster
+  8192×8192: GPU <span class="hl-num">~1000x+</span> faster
+
+<span class="hl-cmt">GPUs get relatively faster as
+matrices get bigger — exactly
+the trend in modern AI models.</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The GPU advantage isn&rsquo;t just &ldquo;a bit faster.&rdquo; It&rsquo;s 100&ndash;1000x faster for the exact operation AI needs most. This is why training GPT-4 on CPUs would take decades instead of months. The performance gap is the entire reason the AI revolution is happening now.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">data_array</span></div><div><div class="cc-title">The Memory Wall</div><div class="cc-sub">Compute is fast &mdash; but feeding data to the compute is the real bottleneck</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Restaurant Kitchen Analogy</div><div class="cc-text">Imagine a kitchen with 100 chefs (GPU cores), but only one narrow door to the pantry (memory bus). The chefs can cook incredibly fast, but they spend most of their time <strong>waiting for ingredients</strong>.<br><br>This is the <strong>memory wall</strong> &mdash; the gap between how fast processors can compute and how fast memory can deliver data. It&rsquo;s the single biggest bottleneck in AI hardware.<br><br><strong>CPU memory bandwidth:</strong> A server CPU gets ~90&ndash;460 GB/s from DDR5 RAM. That&rsquo;s the equivalent of a single-lane road to the pantry.<br><br><strong>GPU memory bandwidth:</strong> An H100 gets <strong>3,350 GB/s</strong> from HBM3 memory. That&rsquo;s a 37-lane highway to the pantry. The newer B200 pushes this to <strong>8,000 GB/s</strong>.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Bandwidth Comparison</div><div class="cc-code"><span class="hl-key">Memory bandwidth (GB/s):</span>
+
+<span class="hl-str">Consumer CPU (DDR5-5600):</span>
+  ~<span class="hl-num">90</span> GB/s
+
+<span class="hl-str">Server CPU (12-ch DDR5):</span>
+  ~<span class="hl-num">460</span> GB/s
+
+<span class="hl-str">NVIDIA A100 (HBM2e):</span>
+  <span class="hl-num">2,039</span> GB/s
+
+<span class="hl-str">NVIDIA H100 (HBM3):</span>
+  <span class="hl-num">3,350</span> GB/s
+
+<span class="hl-str">NVIDIA B200 (HBM3e):</span>
+  <span class="hl-num">8,000</span> GB/s
+
+<span class="hl-str">AMD MI350X (HBM3e):</span>
+  <span class="hl-num">8,000</span> GB/s
+
+<span class="hl-cmt">B200 has 89x the bandwidth of
+a consumer CPU. This is why
+AI models run on GPUs.</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Raw compute (FLOPS) gets the headlines, but memory bandwidth often determines real-world AI performance. A model that fits in GPU memory with enough bandwidth to feed the cores will run fast. A model that doesn&rsquo;t will stall, no matter how many TFLOPS you have.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">calculate</span></div><div><div class="cc-title">The Numbers: Training GPT-4 on CPUs</div><div class="cc-sub">A thought experiment that shows why GPUs aren&rsquo;t optional</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Scale of Modern Training</div><div class="cc-text">Let&rsquo;s do some back-of-envelope math to understand why CPUs simply cannot train modern AI models:<br><br><strong>Training Llama 3 70B</strong> required approximately <strong>6.4 million GPU-hours</strong> on H100 GPUs. Meta used 16,384 H100 GPUs running for about 54 days.<br><br>Each H100 delivers ~990 TFLOPS at FP16 with Tensor Cores. A top server CPU delivers ~5 TFLOPS at FP32 (and less at FP16 since CPUs lack native FP16 acceleration).<br><br>Even being generous and assuming the CPU could match its FP32 rate at FP16, you&rsquo;d need <strong>~200x more time</strong> on CPUs. That 54-day training run becomes <strong>~29 years</strong> on the same number of CPUs. And you&rsquo;d need 16,384 of the most expensive server CPUs on the planet.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Math</div><div class="cc-code"><span class="hl-key">Llama 3 70B training:</span>
+
+GPU setup:  <span class="hl-num">16,384</span> × H100
+GPU time:   <span class="hl-num">54</span> days
+GPU FLOPS:  <span class="hl-num">990</span> TFLOPS (FP16)
+
+<span class="hl-key">If we used CPUs instead:</span>
+
+CPU FLOPS:  ~<span class="hl-num">5</span> TFLOPS (FP32)
+Ratio:      990 / 5 = <span class="hl-num">198x</span> slower
+
+CPU time:   54 × 198 = <span class="hl-num">10,692</span> days
+            = <span class="hl-num">~29 years</span>
+
+<span class="hl-key">Cost comparison:</span>
+  H100 cloud: ~$<span class="hl-num">3-4</span>/hr/GPU
+  16K GPUs × 54 days = ~$<span class="hl-num">63M</span>
+
+  CPUs for 29 years?
+  <span class="hl-str">Effectively impossible.</span>
+
+<span class="hl-cmt">And GPT-4 used ~5x more compute
+than Llama 3 70B.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> This isn&rsquo;t about GPUs being &ldquo;nice to have.&rdquo; Without GPUs, modern AI simply would not exist. The transformer architecture was published in 2017, but it took GPU compute scaling to make models like GPT-3 (2020) and GPT-4 (2023) possible. Hardware enables the science.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Real-World Comparison: Training vs Inference</div><div class="cc-sub">GPUs dominate training, but inference has more nuance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training vs Inference</div><div class="cc-text"><strong>Training</strong> is like building a factory &mdash; massive upfront investment, enormous compute, done once (or a few times). GPUs are absolutely essential here. No debate.<br><br><strong>Inference</strong> is like running the factory &mdash; serving predictions to users. Here, the picture is more nuanced:<br><br>For <strong>large models</strong> (70B+), GPUs are still essential for inference. The model weights alone need 140+ GB of memory, and you need high bandwidth to generate tokens fast.<br><br>For <strong>small models</strong> (1B&ndash;7B), CPUs can actually work. A quantized 7B model runs at 10&ndash;30 tokens/sec on a modern CPU. Not fast, but usable for batch processing. For models under 1.5B parameters, CPUs can even outperform budget GPUs by 1.3x.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">When CPUs Still Make Sense</div>
+          <div class="compare-row">
+            <div class="compare-box bad"><div class="cb-tag">CPU Struggles</div><div class="cb-text"><strong>Training any model</strong> &mdash; too slow by 100&ndash;1000x<br><br><strong>Large model inference</strong> &mdash; not enough memory or bandwidth<br><br><strong>Real-time serving</strong> &mdash; latency too high for interactive use<br><br><strong>Batch inference at scale</strong> &mdash; cost per token is much higher</div></div>
+            <div class="compare-box good"><div class="cb-tag">CPU Works Fine</div><div class="cb-text"><strong>Tiny models (&lt;1.5B)</strong> &mdash; CPU can match budget GPUs<br><br><strong>Low-volume inference</strong> &mdash; a few requests per minute<br><br><strong>Preprocessing</strong> &mdash; tokenization, data loading, ETL<br><br><strong>Orchestration</strong> &mdash; managing GPU jobs, serving APIs, logging</div></div>
+          </div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Modern AI infrastructure uses CPUs and GPUs together. CPUs handle the &ldquo;brain&rdquo; work (orchestration, data prep, networking), while GPUs handle the &ldquo;muscle&rdquo; work (matrix multiplication). Neither replaces the other &mdash; they&rsquo;re complementary.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">bolt</span></div><div><div class="cc-title">Why This Matters for Everything Ahead</div><div class="cc-sub">The GPU compute gap shapes every decision in AI infrastructure</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Cascade Effect</div><div class="cc-text">The CPU-GPU performance gap doesn&rsquo;t just affect training speed. It cascades through every infrastructure decision:<br><br><strong>GPU scarcity &rarr; GPU pricing:</strong> H100s cost $25,000&ndash;$40,000 each. Demand far exceeds supply. This drives the entire cloud GPU market.<br><br><strong>GPU power &rarr; cooling crisis:</strong> An H100 draws 700W. A B200 draws 1,000W. A rack of 8 GPUs needs 8,000W just for compute. This is why data centers are moving to liquid cooling.<br><br><strong>GPU memory limits &rarr; distributed training:</strong> A 70B model doesn&rsquo;t fit on one GPU. You need 4&ndash;8 GPUs connected by fast interconnects. This drives NVLink, InfiniBand, and cluster networking.<br><br><strong>GPU efficiency &rarr; cost optimization:</strong> At $3&ndash;4/hr per GPU, keeping GPUs idle is burning money. This drives scheduling, orchestration, and utilization optimization.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Course Roadmap</div><div class="cc-code"><span class="hl-key">What we'll cover next:</span>
+
+Ch 2:  GPU architecture deep dive
+       (CUDA cores, Tensor Cores, SMs)
+
+Ch 3:  The accelerator landscape
+       (NVIDIA, AMD, Google TPU, AWS)
+
+Ch 4:  Memory — the real bottleneck
+       (HBM, bandwidth, KV cache)
+
+Ch 5:  Interconnects — how GPUs talk
+       (NVLink, InfiniBand, PCIe)
+
+Ch 6:  Network topologies
+       (fat-tree, rail-optimized)
+
+Ch 7:  Distributed training
+       (data/tensor/pipeline parallelism)
+
+Ch 8-14: Training clusters, inference,
+         storage, power, cloud, and more</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Every chapter in this course exists because of the fundamental truth we covered here: AI needs parallel compute that CPUs can&rsquo;t provide. GPUs fill that gap, but they bring their own constraints &mdash; power, cooling, memory, networking, cost &mdash; and the entire field of AI infrastructure exists to manage those constraints.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="index.html"><span class="material-symbols-rounded">arrow_back</span> Course Index</a>
+    <a class="ch-nav-btn next" href="02-gpu-architecture.html">Ch 2: Inside a GPU <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> CPUs have 4–128 powerful cores optimized for sequential, branching logic. An i9-14900K: 24 cores at 6 GHz, ~1.5 TFLOPS.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> AI is matrix multiplication — Llama 3 70B does ~59 billion multiply-adds per token across 80 layers. The same simple operation, billions of times.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> GPUs flip the design: 16,896 simple CUDA cores doing one thing — multiply and add — simultaneously. H100: 67 TFLOPS FP32, 990 TFLOPS FP16.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> On a 4096×4096 matrix multiply, GPUs achieve 593x speedup over sequential CPU. The gap grows with matrix size — exactly the trend in modern AI.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> The memory wall: compute is fast, but feeding data to cores is the bottleneck. H100: 3,350 GB/s. Consumer CPU: 90 GB/s. A 37x bandwidth gap.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Training Llama 3 70B took 54 days on 16,384 H100s. On CPUs? ~29 years. GPT-4 used 5x more compute. Without GPUs, modern AI doesn\'t exist.',color:'#ea580c'},
+    7:{text:'<strong>Step 7:</strong> GPUs dominate training and large-model inference. CPUs still handle orchestration, data prep, and tiny model inference (<1.5B params).',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> The GPU compute gap cascades into every infra decision: pricing, cooling, distributed training, networking, cost optimization. This is the foundation.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

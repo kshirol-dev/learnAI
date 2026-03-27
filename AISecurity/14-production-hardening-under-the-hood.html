@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 14: Production Security Operations — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:pointer;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}.bg-slate{background:var(--slate)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--pink);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 14 &mdash; Production Security Operations &mdash; Under the Hood</h2><span class="tb-sub">CI/CD security gates, canary deployments, incident response, monitoring, operational checklist</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="14-production-hardening-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin. Click any node for deep-dive details...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: CI/CD SECURITY GATES -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">CI/CD Security Gates for AI</span><span class="zone-sub">Automated checks before every deployment</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red dimmed" data-step="1"><span class="step-badge bg-red">1</span><div class="fnode-icon"><span class="material-symbols-rounded">rule</span></div><span class="fnode-label">Security Gates</span><span class="fnode-sub">Red team scan<br>bias audit, guardrails</span></div>
+      <div class="farr dimmed" data-step="1"></div>
+      <div class="fnode c-red dimmed" data-step="1"><div class="fnode-icon"><span class="material-symbols-rounded">integration_instructions</span></div><span class="fnode-label">Pipeline Config</span><span class="fnode-sub">GitHub Actions<br>GitLab CI example</span></div>
+      <div class="farr dimmed" data-step="2"></div>
+      <div class="fnode c-red dimmed" data-step="2"><span class="step-badge bg-red">2</span><div class="fnode-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="fnode-label">Canary Deploy</span><span class="fnode-sub">Gradual rollout<br>with safety checks</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange dimmed" data-step="3"><span class="step-badge bg-orange">3</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Production monitoring &amp; anomaly detection</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: PRODUCTION MONITORING -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Production Monitoring</span><span class="zone-sub">Security metrics, anomaly detection, alerting</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange dimmed" data-step="3"><div class="fnode-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="fnode-label">Security Metrics</span><span class="fnode-sub">Guardrail triggers<br>injection rate, latency</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><span class="step-badge bg-orange">4</span><div class="fnode-icon"><span class="material-symbols-rounded">crisis_alert</span></div><span class="fnode-label">Anomaly Detection</span><span class="fnode-sub">Unusual patterns<br>automated alerts</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><div class="fnode-icon"><span class="material-symbols-rounded">dashboard</span></div><span class="fnode-label">Security Dashboard</span><span class="fnode-sub">Real-time visibility<br>SIEM integration</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet dimmed" data-step="5"><span class="step-badge bg-violet">5</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> AI-specific incident response</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: INCIDENT RESPONSE -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">AI Incident Response</span><span class="zone-sub">Playbooks, severity classification, containment</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="5"><div class="fnode-icon"><span class="material-symbols-rounded">emergency</span></div><span class="fnode-label">Severity Levels</span><span class="fnode-sub">P0 through P3<br>AI-specific criteria</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><span class="step-badge bg-violet">6</span><div class="fnode-icon"><span class="material-symbols-rounded">menu_book</span></div><span class="fnode-label">Playbooks</span><span class="fnode-sub">Jailbreak, data leak<br>model compromise</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><div class="fnode-icon"><span class="material-symbols-rounded">block</span></div><span class="fnode-label">Containment</span><span class="fnode-sub">Kill switch<br>instant rollback</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue dimmed" data-step="7"><span class="step-badge bg-blue">7</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Audit logging &amp; compliance evidence</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: AUDIT & COMPLIANCE -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Audit Logging &amp; Compliance Evidence</span><span class="zone-sub">Immutable logs, structured events, regulatory reporting</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="7"><div class="fnode-icon"><span class="material-symbols-rounded">receipt_long</span></div><span class="fnode-label">Structured Logs</span><span class="fnode-sub">Every prompt<br>every response</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><span class="step-badge bg-blue">8</span><div class="fnode-icon"><span class="material-symbols-rounded">lock</span></div><span class="fnode-label">Immutable Store</span><span class="fnode-sub">S3 Object Lock<br>tamper-proof trail</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal dimmed" data-step="9"><span class="step-badge bg-teal">9</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Complete production operations checklist</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: OPERATIONS CHECKLIST -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Production Operations Checklist</span><span class="zone-sub">The complete launch checklist &mdash; everything from Ch 1&ndash;14</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="9"><div class="fnode-icon"><span class="material-symbols-rounded">checklist</span></div><span class="fnode-label">Launch Checklist</span><span class="fnode-sub">Pre-deploy gates<br>all 14 chapters</span></div>
+      <div class="farr dimmed" data-step="10"></div>
+      <div class="fnode c-teal dimmed" data-step="10"><span class="step-badge bg-green">10</span><div class="fnode-icon"><span class="material-symbols-rounded">verified</span></div><span class="fnode-label">Production Ready</span><span class="fnode-sub">Full course<br>synthesis</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head"><div class="dp-step" id="dpStep"></div><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10, STEP_MS=5000;
+  const NARRATION={
+    1:{text:'<strong>CI/CD security gates:</strong> Every AI deployment must pass automated security checks before reaching production. Gates: Garak red team scan (ASR thresholds per OWASP category), bias audit (demographic parity), guardrail config validation, model card completeness, dependency vulnerability scan. Any gate failure blocks the deploy.',color:'#dc2626'},
+    2:{text:'<strong>Canary deployments:</strong> Don\'t ship to 100% of users at once. Route 5% of traffic to the new model version. Monitor security metrics (guardrail trigger rate, injection detection rate) for 24-48 hours. If metrics are stable, gradually increase to 25%, 50%, 100%. Automated rollback if any security metric exceeds threshold.',color:'#dc2626'},
+    3:{text:'<strong>Security metrics:</strong> Track in real-time: guardrail trigger rate (input + output), prompt injection detection rate, PII detection rate, tool call anomaly rate, latency P99, token usage per user, error rate. These are your early warning system — a spike in any metric signals a potential attack or regression.',color:'#ea580c'},
+    4:{text:'<strong>Anomaly detection:</strong> Baseline normal behavior, then alert on deviations. Sudden spike in injection detections = possible attack campaign. Unusual tool call patterns = potential agent exploitation. Single user consuming 100x normal tokens = possible extraction attempt. Feed alerts to SIEM (Splunk, Sentinel) for correlation with other security events.',color:'#ea580c'},
+    5:{text:'<strong>AI incident severity levels:</strong> <strong>P0</strong> — Active data exfiltration, model weights compromised, PII leaked to users. <strong>P1</strong> — Jailbreak bypassing all guardrails, systematic prompt injection. <strong>P2</strong> — Elevated guardrail trigger rate, drift detected, single-user abuse. <strong>P3</strong> — Minor policy violation, false positive spike, performance degradation.',color:'#7c3aed'},
+    6:{text:'<strong>Incident playbooks:</strong> Pre-written, tested response procedures for each AI-specific incident type. Jailbreak playbook: activate kill switch → analyze attack vector → update guardrails → re-scan with Garak → restore service. Data leak playbook: isolate model → assess scope → notify DPO → regulatory reporting (72h for EU AI Act).',color:'#7c3aed'},
+    7:{text:'<strong>Structured audit logs:</strong> Every LLM interaction logged with: timestamp, user ID, session ID, prompt (hashed or full), response (hashed or full), guardrail results, tool calls, latency, token count, model version. Structured JSON format for queryability. Retention: minimum 12 months for compliance.',color:'#2563eb'},
+    8:{text:'<strong>Immutable storage:</strong> Audit logs stored in S3 with Object Lock (WORM — Write Once Read Many). Once written, logs cannot be modified or deleted — even by admins. This provides tamper-proof evidence for regulatory audits, incident investigations, and legal proceedings. EU AI Act Article 12 requires logging for high-risk AI.',color:'#2563eb'},
+    9:{text:'<strong>Launch checklist:</strong> The synthesis of all 14 chapters into a single pre-deployment verification. Every item maps to a specific chapter. This is the "are we ready for production?" gate that the AI governance board reviews before approving any high-risk AI deployment.',color:'#0d9488'},
+    10:{text:'<strong>Course complete.</strong> You now have a comprehensive understanding of AI security — from the threat landscape (Ch 1) through attacks (Ch 2-5), defenses (Ch 6-9), privacy (Ch 10), red teaming (Ch 11), governance (Ch 12), architecture (Ch 13), and production operations (Ch 14). The field evolves rapidly — stay current with OWASP, NIST, and MITRE ATLAS.',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    1:{title:'CI/CD Security Gates for AI',color:'#dc2626',body:`
+<div class="dp-label">Pipeline Configuration</div>
+<div class="dp-code"><span class="hl-cmt"># .github/workflows/ai-security-gates.yml</span>
+
+<span class="hl-key">name:</span> AI Security Gates
+<span class="hl-key">on:</span> [push, pull_request]
+
+<span class="hl-key">jobs:</span>
+  <span class="hl-key">security-scan:</span>
+    <span class="hl-key">steps:</span>
+
+      <span class="hl-ok">- name: Red Team Scan (Garak)</span>
+        <span class="hl-key">run:</span> |
+          garak --model_type openai \\
+                --model_name $MODEL \\
+                --probes promptinject,dan,encoding,toxicity
+          <span class="hl-cmt"># Fail if ASR > threshold</span>
+          python check_asr.py --max-asr <span class="hl-num">0.05</span>
+
+      <span class="hl-ok">- name: Bias Audit</span>
+        <span class="hl-key">run:</span> |
+          python bias_audit.py \\
+            --model $MODEL \\
+            --dataset eval/fairness.jsonl \\
+            --metric demographic_parity \\
+            --threshold <span class="hl-num">0.1</span>
+
+      <span class="hl-ok">- name: Guardrail Config Validation</span>
+        <span class="hl-key">run:</span> |
+          python validate_guardrails.py \\
+            --config guardrails/config.yml \\
+            --require input_injection_scan \\
+            --require output_pii_filter \\
+            --require canary_token_check
+
+      <span class="hl-ok">- name: Model Card Check</span>
+        <span class="hl-key">run:</span> |
+          python check_model_card.py \\
+            --card model_card.yaml \\
+            --require intended_use \\
+            --require evaluation_metrics \\
+            --require red_team_results \\
+            --require eu_ai_act_tier
+
+      <span class="hl-ok">- name: Dependency Scan</span>
+        <span class="hl-key">run:</span> |
+          pip-audit --strict
+          <span class="hl-cmt"># Check for known vulns in ML deps</span>
+          python scan_model_deps.py \\
+            --format safetensors \\
+            --no-pickle</div>
+<div class="dp-note n-red"><strong>Gate policy:</strong> ALL gates must pass for deployment to proceed. Any single failure blocks the pipeline. Gates run on every model update, prompt template change, guardrail config change, and dependency update. Average gate runtime: ~30 minutes. This is the automated equivalent of the governance board review — it runs on every commit.</div>`},
+    2:{title:'Canary Deployments for AI',color:'#dc2626',body:`
+<div class="dp-label">Gradual Rollout with Safety Checks</div>
+<div class="dp-code"><span class="hl-cmt"># Canary deployment strategy</span>
+
+<span class="hl-ok">Phase 1: Canary (5% traffic)</span>
+  Duration: 24 hours
+  Monitor:
+    - Guardrail trigger rate (baseline ± 2σ)
+    - Injection detection rate
+    - PII detection rate
+    - Error rate
+    - Latency P99
+  Auto-rollback if ANY metric exceeds threshold
+
+<span class="hl-ok">Phase 2: Early Adopters (25% traffic)</span>
+  Duration: 24 hours
+  Same monitoring + human review of
+  flagged interactions from Phase 1
+  Governance board notified
+
+<span class="hl-ok">Phase 3: Majority (50% traffic)</span>
+  Duration: 48 hours
+  Full monitoring suite
+  Compare A/B metrics: old vs new model
+  Red team spot-check (manual)
+
+<span class="hl-ok">Phase 4: Full Rollout (100% traffic)</span>
+  Old model kept as instant rollback target
+  Retain for minimum 7 days
+  Continue monitoring at steady state
+
+<span class="hl-err">ROLLBACK TRIGGERS (automatic):</span>
+  - Guardrail trigger rate > 2x baseline
+  - Any P0 incident detected
+  - Error rate > 5%
+  - Latency P99 > 2x baseline
+  - Manual kill switch activated</div>
+<div class="dp-note n-red"><strong>Why canary for AI:</strong> Unlike traditional software, AI model behavior is probabilistic. A model that passes all CI/CD gates can still exhibit unexpected behavior on real-world traffic distributions. Canary deployment catches issues that synthetic test data misses — real users generate prompts that no test suite anticipates.</div>`},
+    5:{title:'AI Incident Severity Classification',color:'#7c3aed',body:`
+<div class="dp-label">Severity Levels & Response Times</div>
+<div class="dp-code"><span class="hl-err">P0 — CRITICAL (respond in 15 min)</span>
+  • Active data exfiltration via model
+  • Model weights compromised / stolen
+  • PII leaked to end users (confirmed)
+  • Complete guardrail bypass (all layers)
+  • Regulatory breach (EU AI Act prohibited)
+  Response: Kill switch → War room → Exec notify
+  EU AI Act: Report to authority within 72 hours
+
+<span class="hl-cmd">P1 — HIGH (respond in 1 hour)</span>
+  • Jailbreak bypassing multiple guardrails
+  • Systematic prompt injection campaign
+  • Unauthorized tool execution detected
+  • Training data extraction in progress
+  • Model serving unauthorized content
+  Response: Activate playbook → Contain → Assess
+
+<span class="hl-key">P2 — MEDIUM (respond in 4 hours)</span>
+  • Elevated guardrail trigger rate (>2x)
+  • Data/model drift exceeding thresholds
+  • Single-user abuse pattern detected
+  • MCP tool description tampering detected
+  • Anomalous token consumption pattern
+  Response: Investigate → Adjust controls → Monitor
+
+<span class="hl-ok">P3 — LOW (respond in 24 hours)</span>
+  • Minor policy violation (single instance)
+  • False positive spike in guardrails
+  • Performance degradation (non-security)
+  • Model card out of date
+  • Scheduled red team finding (low severity)
+  Response: Log → Prioritize → Fix in next sprint</div>
+<div class="dp-note n-violet"><strong>AI-specific vs traditional:</strong> Traditional incident response focuses on system compromise (unauthorized access, malware). AI incidents are different — a "compromised" LLM still runs normally, it just produces harmful outputs. Detection requires monitoring model behavior, not just system health. Your SOC team needs AI-specific training to recognize and respond to these incidents.</div>`},
+    7:{title:'Structured Audit Log Schema',color:'#2563eb',body:`
+<div class="dp-label">Log Event Structure</div>
+<div class="dp-code"><span class="hl-cmt">// Every LLM interaction produces this event</span>
+
+{
+  <span class="hl-key">"event_id"</span>: <span class="hl-str">"evt_a1b2c3d4"</span>,
+  <span class="hl-key">"timestamp"</span>: <span class="hl-str">"2026-03-15T14:30:00Z"</span>,
+  <span class="hl-key">"trace_id"</span>: <span class="hl-str">"tr_x7y8z9"</span>,
+
+  <span class="hl-key">"user"</span>: {
+    <span class="hl-key">"id"</span>: <span class="hl-str">"usr_123"</span>,
+    <span class="hl-key">"role"</span>: <span class="hl-str">"customer"</span>,
+    <span class="hl-key">"ip_hash"</span>: <span class="hl-str">"sha256:..."</span>
+  },
+
+  <span class="hl-key">"request"</span>: {
+    <span class="hl-key">"prompt_hash"</span>: <span class="hl-str">"sha256:..."</span>,
+    <span class="hl-key">"prompt_length"</span>: <span class="hl-num">142</span>,
+    <span class="hl-key">"model"</span>: <span class="hl-str">"gpt-4-0125"</span>,
+    <span class="hl-key">"temperature"</span>: <span class="hl-num">0.7</span>
+  },
+
+  <span class="hl-key">"guardrails"</span>: {
+    <span class="hl-key">"input_injection_scan"</span>: <span class="hl-ok">"pass"</span>,
+    <span class="hl-key">"input_pii_detected"</span>: <span class="hl-err">true</span>,
+    <span class="hl-key">"input_pii_types"</span>: [<span class="hl-str">"EMAIL"</span>],
+    <span class="hl-key">"output_pii_scan"</span>: <span class="hl-ok">"pass"</span>,
+    <span class="hl-key">"output_toxicity"</span>: <span class="hl-ok">"pass"</span>,
+    <span class="hl-key">"canary_check"</span>: <span class="hl-ok">"pass"</span>
+  },
+
+  <span class="hl-key">"tool_calls"</span>: [
+    {
+      <span class="hl-key">"tool"</span>: <span class="hl-str">"search_knowledge_base"</span>,
+      <span class="hl-key">"approved"</span>: <span class="hl-ok">true</span>,
+      <span class="hl-key">"duration_ms"</span>: <span class="hl-num">230</span>
+    }
+  ],
+
+  <span class="hl-key">"response"</span>: {
+    <span class="hl-key">"completion_hash"</span>: <span class="hl-str">"sha256:..."</span>,
+    <span class="hl-key">"tokens_in"</span>: <span class="hl-num">142</span>,
+    <span class="hl-key">"tokens_out"</span>: <span class="hl-num">387</span>,
+    <span class="hl-key">"latency_ms"</span>: <span class="hl-num">1240</span>,
+    <span class="hl-key">"model_version"</span>: <span class="hl-str">"v2.1.0-canary"</span>
+  }
+}</div>
+<div class="dp-note n-blue"><strong>Privacy-aware logging:</strong> Log prompt and response hashes by default (not full text) to minimize PII in logs. Store full text only when guardrails flag an issue (for investigation). Retention: 12 months minimum for EU AI Act compliance, 7 years for financial services. Immutable storage (S3 Object Lock) ensures logs can't be tampered with post-incident.</div>`},
+    10:{title:'Production Launch Checklist — Full Course Synthesis',color:'#16a34a',body:`
+<div class="dp-label">Pre-Deployment Verification (All 14 Chapters)</div>
+<div class="dp-code"><span class="hl-cmt"># Ch 1: THREAT LANDSCAPE</span>
+<span class="hl-ok">☐</span> Attack surface documented (model, tools, RAG, MCP)
+<span class="hl-ok">☐</span> Threat model completed (MITRE ATLAS mapped)
+
+<span class="hl-cmt"># Ch 2-3: PROMPT INJECTION & JAILBREAKING</span>
+<span class="hl-ok">☐</span> Input injection detection enabled
+<span class="hl-ok">☐</span> System prompt uses instruction hierarchy
+<span class="hl-ok">☐</span> Garak jailbreak ASR < 5%
+
+<span class="hl-cmt"># Ch 4: DATA POISONING</span>
+<span class="hl-ok">☐</span> Training data provenance documented
+<span class="hl-ok">☐</span> Model format: Safetensors (no pickle)
+<span class="hl-ok">☐</span> Supply chain deps scanned (pip-audit)
+
+<span class="hl-cmt"># Ch 5: ADVERSARIAL ML</span>
+<span class="hl-ok">☐</span> Adversarial robustness evaluated
+<span class="hl-ok">☐</span> Input perturbation detection active
+
+<span class="hl-cmt"># Ch 6: GUARDRAILS</span>
+<span class="hl-ok">☐</span> Input guardrails configured (LLM Guard/NeMo)
+<span class="hl-ok">☐</span> Output PII filter active (Presidio)
+<span class="hl-ok">☐</span> Canary tokens embedded in system prompt
+<span class="hl-ok">☐</span> LLM-as-Judge safety check enabled
+
+<span class="hl-cmt"># Ch 7: RAG SECURITY</span>
+<span class="hl-ok">☐</span> Document-level access control (ACL metadata)
+<span class="hl-ok">☐</span> Retrieval sanitization active
+<span class="hl-ok">☐</span> Prompt boundary markers in place
+
+<span class="hl-cmt"># Ch 8: AGENT & TOOL SECURITY</span>
+<span class="hl-ok">☐</span> Tool sandbox active (WASM/container)
+<span class="hl-ok">☐</span> Least privilege per tool
+<span class="hl-ok">☐</span> HITL gates for destructive actions
+<span class="hl-ok">☐</span> Tool allowlist enforced
+
+<span class="hl-cmt"># Ch 9: MCP SECURITY</span>
+<span class="hl-ok">☐</span> MCP-Scan run on all connected servers
+<span class="hl-ok">☐</span> Tool description hashing enabled
+<span class="hl-ok">☐</span> Secrets vaulted (not in descriptions)
+<span class="hl-ok">☐</span> Server allowlist enforced
+
+<span class="hl-cmt"># Ch 10: PRIVACY</span>
+<span class="hl-ok">☐</span> PII scrubbed from training data
+<span class="hl-ok">☐</span> Output memorization detection active
+<span class="hl-ok">☐</span> Machine unlearning pipeline ready
+<span class="hl-ok">☐</span> Rate limiting for extraction defense
+
+<span class="hl-cmt"># Ch 11: RED TEAMING</span>
+<span class="hl-ok">☐</span> Garak scan passed (CI/CD gate)
+<span class="hl-ok">☐</span> PyRIT multi-turn test completed
+<span class="hl-ok">☐</span> DeepTeam compliance report generated
+
+<span class="hl-cmt"># Ch 12: GOVERNANCE</span>
+<span class="hl-ok">☐</span> EU AI Act risk tier classified
+<span class="hl-ok">☐</span> Model card complete and current
+<span class="hl-ok">☐</span> AI BOM documented
+<span class="hl-ok">☐</span> Governance board approval obtained
+
+<span class="hl-cmt"># Ch 13: ARCHITECTURE</span>
+<span class="hl-ok">☐</span> AI gateway deployed (single entry point)
+<span class="hl-ok">☐</span> mTLS between all services
+<span class="hl-ok">☐</span> Secrets in vault (not env vars)
+<span class="hl-ok">☐</span> Network isolation verified (VPC)
+<span class="hl-ok">☐</span> Model weights encrypted at rest
+
+<span class="hl-cmt"># Ch 14: PRODUCTION OPS</span>
+<span class="hl-ok">☐</span> CI/CD security gates active
+<span class="hl-ok">☐</span> Canary deployment configured
+<span class="hl-ok">☐</span> Security monitoring dashboard live
+<span class="hl-ok">☐</span> Incident playbooks written & tested
+<span class="hl-ok">☐</span> Audit logging to immutable store
+<span class="hl-ok">☐</span> Kill switch tested and ready</div>
+<div class="dp-note n-green"><strong>This checklist is the course.</strong> Every item maps to a specific chapter and technique you've learned. No single item is sufficient alone — security comes from the combination of all layers. Start with the highest-impact items (guardrails, gateway, logging) and progressively add layers. The goal is not perfection on day one — it's continuous improvement toward comprehensive coverage.</div>`},
+  };
+
+  let current=0, playing=false, timer=null;
+  const allSteps=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    allSteps.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function showReset(){
+    allSteps.forEach(el=>el.classList.add('dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin. Click any node for deep-dive details...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    document.getElementById('dpStep').style.background=d.color;
+    document.getElementById('dpStep').textContent=step;
+    document.getElementById('dpTitle').textContent=d.title;
+    document.getElementById('dpBody').innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  document.querySelectorAll('.fnode').forEach(n=>{n.addEventListener('click',()=>{const s=parseInt(n.closest('[data-step]')?.dataset.step);if(s&&DETAILS[s])showDetail(s)})});
+  overlay.addEventListener('click',hideDetail);
+  document.getElementById('dpClose').addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDetail()});
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(overlay.classList.contains('visible'))return;if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

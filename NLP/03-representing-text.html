@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 3: Representing Text — Natural Language Processing</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--violet-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet),var(--teal),var(--green));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-err{color:var(--red)}.cc-code .hl-ok{color:var(--green)}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 3 &mdash; Representing Text</h2><span class="tb-sub">From bag-of-words to Word2Vec &mdash; the journey from sparse to dense representations</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">grid_on</span></div><span class="pipe-label">One-Hot</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">shopping_bag</span></div><span class="pipe-label">BoW</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">balance</span></div><span class="pipe-label">TF-IDF</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">scatter_plot</span></div><span class="pipe-label">Word2Vec</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">public</span></div><span class="pipe-label">GloVe</span></div>
+    <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">dynamic_feed</span></div><span class="pipe-label">Contextual</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">grid_on</span></div><div><div class="cc-title">The Representation Problem</div><div class="cc-sub">Machines need numbers, not words &mdash; how do we bridge the gap?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why Representation Matters</div><div class="cc-text">Machine learning models operate on <strong>numbers</strong>, not words. The fundamental challenge of NLP is converting text into numerical representations that preserve meaning. The simplest approach is <strong>one-hot encoding</strong>: represent each word as a vector with a 1 in its position and 0s everywhere else. With a vocabulary of 50,000 words, each word becomes a 50,000-dimensional vector with a single 1. This is wildly inefficient &mdash; 99.998% of every vector is zeros. Worse, one-hot vectors treat every word as equally different from every other word: "cat" is as far from "dog" as it is from "democracy." There's no notion of <strong>similarity</strong>. The history of text representation is the story of finding better ways to encode meaning into numbers.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">One-Hot Encoding</div><div class="cc-code"><span class="hl-key">Vocabulary</span>: [cat, dog, fish, bird]
+
+<span class="hl-str">"cat"</span>  &rarr; [1, 0, 0, 0]
+<span class="hl-str">"dog"</span>  &rarr; [0, 1, 0, 0]
+<span class="hl-str">"fish"</span> &rarr; [0, 0, 1, 0]
+<span class="hl-str">"bird"</span> &rarr; [0, 0, 0, 1]
+
+<span class="hl-err">Problems</span>:
+  Dimensionality = vocabulary size
+  50K words = 50K dimensions
+  No similarity: dist(cat, dog) = dist(cat, fish)
+  No semantic information encoded
+  Extremely sparse (99.998% zeros)</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> The quality of your text representation <strong>determines the ceiling</strong> of your model's performance. A great model on bad representations will always lose to a decent model on great representations.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">shopping_bag</span></div><div><div class="cc-title">Bag of Words (BoW)</div><div class="cc-sub">Count the words, ignore the order &mdash; surprisingly effective</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How It Works</div><div class="cc-text"><strong>Bag of Words</strong> represents a document as a vector of word counts. Each dimension corresponds to a word in the vocabulary, and the value is how many times that word appears. "The cat sat on the mat" becomes a count vector where "the" = 2, "cat" = 1, "sat" = 1, "on" = 1, "mat" = 1. The name "bag" reflects that <strong>word order is completely discarded</strong> &mdash; "dog bites man" and "man bites dog" have identical BoW representations despite opposite meanings. Despite this limitation, BoW is a strong baseline for document-level tasks like <strong>topic classification</strong> and <strong>spam detection</strong>, where the presence of certain words matters more than their arrangement. BoW vectors are sparse (mostly zeros) and high-dimensional, but they're fast to compute and easy to interpret.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Bag of Words Example</div><div class="cc-code"><span class="hl-key">Document</span>: "the cat sat on the mat"
+<span class="hl-key">Vocabulary</span>: [cat, mat, on, sat, the]
+
+<span class="hl-str">BoW vector</span>: [1, 1, 1, 1, 2]
+
+<span class="hl-err">Order lost</span>:
+  "dog bites man" &rarr; [1, 0, 1, 1]
+  "man bites dog" &rarr; [1, 0, 1, 1]
+  <span class="hl-cmt">// Identical vectors, opposite meanings!</span>
+
+<span class="hl-ok">Strengths</span>:
+  Simple, fast, interpretable
+  Good baseline for classification
+  Works well with Naive Bayes, SVM
+
+<span class="hl-err">Weaknesses</span>:
+  No word order
+  No semantic similarity
+  High dimensionality, sparse</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> BoW works because for many tasks, <strong>what words appear matters more than how they're arranged</strong>. A movie review containing "terrible", "boring", "waste" is negative regardless of word order. But BoW fails when order carries meaning.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">balance</span></div><div><div class="cc-title">TF-IDF</div><div class="cc-sub">Not all words are created equal &mdash; weighting by importance</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Term Frequency &times; Inverse Document Frequency</div><div class="cc-text"><strong>TF-IDF</strong> improves on raw counts by weighting words based on how <strong>discriminative</strong> they are. <strong>Term Frequency (TF)</strong> measures how often a word appears in a document. <strong>Inverse Document Frequency (IDF)</strong> measures how rare a word is across all documents &mdash; words that appear in every document (like "the") get low IDF, while words that appear in few documents (like "quantum") get high IDF. The product TF &times; IDF gives high scores to words that are <strong>frequent in a specific document but rare overall</strong> &mdash; exactly the words that characterize that document. TF-IDF remains a remarkably strong baseline. A large-scale study across 73 datasets found that TF-IDF outperformed neural embeddings on 61 of them for text classification, often by 3&ndash;5% in F1 score.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">TF-IDF Calculation</div><div class="cc-code"><span class="hl-key">TF</span>(word, doc) = count(word in doc) / total words
+
+<span class="hl-key">IDF</span>(word) = log(total docs / docs containing word)
+
+<span class="hl-key">TF-IDF</span> = TF &times; IDF
+
+<span class="hl-str">Example</span>: "quantum" in a physics paper
+  TF  = 15/500 = 0.03
+  IDF = log(10000/50) = 5.3
+  TF-IDF = 0.03 &times; 5.3 = <span class="hl-num">0.159</span> (high)
+
+<span class="hl-str">Example</span>: "the" in the same paper
+  TF  = 30/500 = 0.06
+  IDF = log(10000/9900) = 0.01
+  TF-IDF = 0.06 &times; 0.01 = <span class="hl-num">0.0006</span> (low)
+
+<span class="hl-ok">Result</span>: "quantum" weighted 265x more than "the"</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> TF-IDF captures a deep intuition: <strong>the most informative words are those that distinguish one document from others</strong>. This principle &mdash; weighting by discriminative power &mdash; appears throughout machine learning, not just NLP.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">scatter_plot</span></div><div><div class="cc-title">Word2Vec: The Dense Revolution</div><div class="cc-sub">Words as points in space &mdash; where geometry captures meaning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Distributional Hypothesis</div><div class="cc-text"><strong>Word2Vec</strong> (Mikolov et al., 2013) was the breakthrough that launched the dense embedding era. It's built on the <strong>distributional hypothesis</strong>: "You shall know a word by the company it keeps" (J.R. Firth, 1957). Words that appear in similar contexts have similar meanings, so they should have similar vectors. Word2Vec trains a shallow neural network on a simple task: given a word, predict its surrounding words (<strong>Skip-gram</strong>), or given surrounding words, predict the center word (<strong>CBOW</strong>). The hidden layer weights become the word vectors &mdash; typically 100&ndash;300 dimensions. The result: words with similar meanings cluster together, and <strong>vector arithmetic captures semantic relationships</strong>. The famous example: vec("king") &minus; vec("man") + vec("woman") &asymp; vec("queen").</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Word2Vec Architecture</div><div class="cc-code"><span class="hl-key">Skip-gram</span>: predict context from word
+  Input: "sat"
+  Predict: "the", "cat", "on", "the"
+
+<span class="hl-key">CBOW</span>: predict word from context
+  Input: "the", "cat", "on", "the"
+  Predict: "sat"
+
+<span class="hl-str">Vector arithmetic</span>:
+  king - man + woman &asymp; queen
+  Paris - France + Italy &asymp; Rome
+  bigger - big + small &asymp; smaller
+
+<span class="hl-ok">Properties</span>:
+  Dense: 300 dims (not 50,000)
+  Similar words = nearby vectors
+  Directions encode relationships
+  Trained on billions of words</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Word2Vec showed that <strong>meaning can emerge from context alone</strong>. No one told the model that "king" and "queen" are related &mdash; it discovered this from patterns in billions of words. This is the distributional hypothesis in action.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">public</span></div><div><div class="cc-title">GloVe and fastText</div><div class="cc-sub">Two improvements on Word2Vec &mdash; global statistics and subword information</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond Word2Vec</div><div class="cc-text"><strong>GloVe</strong> (Global Vectors, Stanford 2014) combines the best of two worlds: the <strong>global co-occurrence statistics</strong> of matrix factorization methods with the <strong>local context window</strong> approach of Word2Vec. It builds a word-word co-occurrence matrix from the entire corpus, then factorizes it to produce dense vectors. GloVe often produces more stable embeddings than Word2Vec, especially for less frequent words. <strong>fastText</strong> (Facebook, 2016) adds a crucial innovation: it represents each word as a <strong>bag of character n-grams</strong>. The word "where" is represented by its character n-grams: "&lt;wh", "whe", "her", "ere", "re&gt;" plus the word itself. This means fastText can generate vectors for <strong>words it has never seen</strong> by composing their subword vectors &mdash; solving the OOV problem for morphologically rich languages.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">GloVe vs fastText</div><div class="cc-code"><span class="hl-key">GloVe</span>:
+  Build co-occurrence matrix X
+  X[i][j] = how often word i appears
+             near word j in corpus
+  Factorize: minimize weighted least squares
+  <span class="hl-ok">Strength</span>: global + local context
+  <span class="hl-err">Weakness</span>: still one vector per word
+
+<span class="hl-key">fastText</span>:
+  "where" = &lt;wh + whe + her + ere + re&gt;
+  Word vector = sum of n-gram vectors
+
+  <span class="hl-ok">Strength</span>: handles unseen words
+  "unhappily" = un + nh + ha + ... + ly
+  Even if "unhappily" never seen in training
+
+  <span class="hl-ok">Strength</span>: great for morphologically
+  rich languages (Turkish, Finnish)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> fastText's subword approach is the <strong>conceptual ancestor of BPE tokenization</strong> used in modern transformers. The idea that word meaning can be composed from sub-word parts is fundamental to how BERT and GPT handle vocabulary.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">dynamic_feed</span></div><div><div class="cc-title">Contextual Embeddings</div><div class="cc-sub">The same word, different meanings, different vectors</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Polysemy Problem</div><div class="cc-text">Word2Vec, GloVe, and fastText all share a fundamental limitation: each word gets <strong>one vector regardless of context</strong>. The word "bank" has the same vector whether it means a financial institution or a river bank. <strong>ELMo</strong> (Embeddings from Language Models, 2018) solved this with <strong>contextual embeddings</strong>: it runs a bidirectional LSTM over the entire sentence and uses the hidden states as word representations. Now "bank" in "I deposited money at the bank" gets a different vector than "bank" in "We sat on the river bank." <strong>BERT</strong> (2018) took this further with transformer-based contextual embeddings, producing even richer representations. Contextual embeddings are the foundation of modern NLP &mdash; they're why BERT, GPT, and their successors understand language so much better than earlier models.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Static vs Contextual</div><div class="cc-code"><span class="hl-err">Static embeddings</span> (Word2Vec/GloVe):
+  "bank" &rarr; [0.2, -0.1, 0.8, ...]
+  Always the same vector, any context
+
+<span class="hl-ok">Contextual embeddings</span> (ELMo/BERT):
+  "I went to the bank to deposit money"
+  "bank" &rarr; [0.3, 0.7, -0.2, ...]
+                 (financial meaning)
+
+  "We sat on the river bank"
+  "bank" &rarr; [-0.1, 0.2, 0.9, ...]
+                 (geographical meaning)
+
+<span class="hl-key">How it works</span>:
+  ELMo: BiLSTM hidden states
+  BERT: Transformer self-attention
+  Each token "sees" the full sentence</div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Contextual embeddings represent a <strong>paradigm shift</strong>: from "one meaning per word" to "meaning emerges from context." This mirrors how humans understand language &mdash; we don't store fixed definitions, we interpret words based on their surroundings.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Sparse vs Dense: When to Use What</div><div class="cc-sub">The surprising resilience of simple methods</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Choosing a Representation</div><div class="cc-text">The choice between sparse and dense representations depends on your task, data, and constraints. <strong>Sparse methods (BoW, TF-IDF)</strong> excel when you have limited labeled data, need interpretability, or are doing keyword-based tasks like search and topic modeling. A large-scale study across 73 classification datasets found TF-IDF outperformed neural embeddings on <strong>61 of 73 datasets</strong> by 3&ndash;5% average F1. <strong>Static dense embeddings (Word2Vec, GloVe)</strong> are best when you need semantic similarity, have moderate data, and want pre-trained representations without GPU costs. <strong>Contextual embeddings (BERT, GPT)</strong> dominate when you have sufficient compute, need to handle polysemy, or are tackling complex tasks like question answering and natural language inference. The best practitioners don't default to the newest method &mdash; they match the representation to the problem.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Decision Guide</div><div class="cc-code"><span class="hl-key">Use TF-IDF when</span>:
+  Limited labeled data
+  Need interpretability
+  Keyword-based tasks (search, topics)
+  Speed/cost constraints
+  <span class="hl-ok">Outperforms neural on 61/73 datasets</span>
+
+<span class="hl-key">Use Word2Vec/GloVe when</span>:
+  Need semantic similarity
+  Moderate data, no GPU budget
+  Transfer learning (pre-trained vectors)
+  Analogy-style reasoning
+
+<span class="hl-key">Use BERT/contextual when</span>:
+  Complex tasks (QA, NLI, NER)
+  Polysemy matters
+  Sufficient compute available
+  Large fine-tuning datasets</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> There is no universally "best" representation. <strong>TF-IDF is still competitive</strong> for many real-world classification tasks. The best approach depends on your data size, compute budget, and whether the task requires understanding word order and context.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">The Representation Timeline</div><div class="cc-sub">From counting words to understanding meaning &mdash; 20 years of progress</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Evolution Summary</div><div class="cc-text">The evolution of text representation follows a clear arc: from <strong>no semantics</strong> (one-hot) to <strong>statistical semantics</strong> (TF-IDF) to <strong>learned semantics</strong> (Word2Vec) to <strong>contextual semantics</strong> (BERT). Each step added a new dimension of understanding. One-hot encoding treats words as arbitrary symbols. BoW and TF-IDF capture word importance but not meaning. Word2Vec and GloVe capture meaning but not context. Contextual embeddings capture both meaning and context. The next chapter on text classification will show how these representations are used as input to models that make predictions. The representation you choose determines which patterns your model can learn &mdash; and which it can't.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Arc of Progress</div><div class="cc-code"><span class="hl-key">One-Hot</span> (1950s+):
+  Words as arbitrary symbols
+  No similarity, no semantics
+
+<span class="hl-key">BoW / TF-IDF</span> (1970s+):
+  Word importance from statistics
+  No similarity between words
+
+<span class="hl-key">Word2Vec / GloVe</span> (2013+):
+  Semantic similarity from context
+  One vector per word (static)
+
+<span class="hl-key">fastText</span> (2016):
+  Subword composition
+  Handle unseen words
+
+<span class="hl-key">ELMo</span> (2018):
+  Context-dependent vectors (BiLSTM)
+
+<span class="hl-key">BERT / GPT</span> (2018+):
+  Context-dependent (Transformer)
+  Pre-trained on massive corpora</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Each representation method is <strong>still useful today</strong>. TF-IDF for search, Word2Vec for lightweight similarity, BERT for complex understanding. The history isn't obsolete &mdash; it's a toolkit where each tool has its place.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="02-text-preprocessing.html"><span class="material-symbols-rounded">arrow_back</span> Ch 2: Text Preprocessing</a>
+    <a class="ch-nav-btn next" href="04-text-classification.html">Ch 4: Text Classification <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> ML models need numbers, not words. One-hot encoding is the simplest approach but wastes dimensions and captures no similarity. The representation determines the model\'s ceiling.',color:'#2563eb'},
+    2:{text:'<strong>Step 2:</strong> Bag of Words counts word occurrences, ignoring order. "Dog bites man" and "man bites dog" get identical vectors. Surprisingly effective for topic classification and spam detection.',color:'#16a34a'},
+    3:{text:'<strong>Step 3:</strong> TF-IDF weights words by discriminative power: frequent in this document, rare across all documents. Still outperforms neural embeddings on 61 of 73 classification datasets.',color:'#d97706'},
+    4:{text:'<strong>Step 4:</strong> Word2Vec (2013) learns dense vectors where geometry captures meaning. king &minus; man + woman &asymp; queen. The distributional hypothesis: meaning comes from context.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> GloVe adds global co-occurrence statistics. fastText adds subword n-grams, handling unseen words by composing character-level representations.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Contextual embeddings (ELMo, BERT) give each word a different vector depending on context. "Bank" in "river bank" vs "bank account" &mdash; different vectors, different meanings.',color:'#dc2626'},
+    7:{text:'<strong>Step 7:</strong> Sparse vs dense: TF-IDF for limited data and interpretability, Word2Vec for similarity, BERT for complex tasks. Match the representation to the problem.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The arc: one-hot &rarr; BoW/TF-IDF &rarr; Word2Vec/GloVe &rarr; ELMo &rarr; BERT. Each step added a new dimension of understanding. Every method is still useful today.',color:'#db2777'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

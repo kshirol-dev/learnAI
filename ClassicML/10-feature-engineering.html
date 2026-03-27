@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Feature Engineering & The ML Pipeline — Classic ML</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);padding:4px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.lit .pipe-icon{background:var(--green);color:#fff}.pipe-stage.lit .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--green)}.narration{padding:12px 36px;background:linear-gradient(90deg,var(--green-light) 0%,var(--teal-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--teal),var(--blue),var(--violet));transition:width .5s ease}.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--green);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--green);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Feature Engineering &amp; The ML Pipeline</h2><span class="tb-sub">The art that separates good models from great ones &mdash; and when to reach for deep learning</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Toolkit</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">straighten</span></div><span class="pipe-label">Scaling</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">tag</span></div><span class="pipe-label">Encoding</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">healing</span></div><span class="pipe-label">Imputation</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">auto_fix_high</span></div><span class="pipe-label">Create</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Select</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">plumbing</span></div><span class="pipe-label">Pipeline</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">view_column</span></div><span class="pipe-label">ColTransform</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">neurology</span></div><span class="pipe-label">Deep Learning?</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">straighten</span></div><div><div class="cc-title">Feature Scaling: StandardScaler, MinMaxScaler, RobustScaler</div><div class="cc-sub">Putting all features on the same playing field</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Scaling Matters</div><div class="cc-text">A dataset with &ldquo;age&rdquo; (0&ndash;100) and &ldquo;income&rdquo; (0&ndash;1,000,000) will be dominated by income in any distance-based algorithm (KNN, SVM, K-Means). Scaling puts all features on equal footing.<br><br><strong>StandardScaler:</strong> z = (x &minus; &mu;) / &sigma;. Transforms to mean=0, std=1. Best for normally distributed features. Used by logistic regression, SVMs, PCA, neural networks.<br><br><strong>MinMaxScaler:</strong> x&rsquo; = (x &minus; min) / (max &minus; min). Scales to [0, 1]. Preserves zero entries in sparse data. Sensitive to outliers.<br><br><strong>RobustScaler:</strong> Uses median and IQR instead of mean and std. Robust to outliers. x&rsquo; = (x &minus; median) / IQR.<br><br><strong>Tree-based models</strong> (Random Forest, XGBoost) don&rsquo;t need scaling &mdash; they split on thresholds, not distances. But scaling never hurts and sometimes helps.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Scaling in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> (
+    StandardScaler, MinMaxScaler, RobustScaler
+)
+
+<span class="hl-cmt"># StandardScaler: mean=0, std=1</span>
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)  <span class="hl-cmt"># same params!</span>
+
+<span class="hl-cmt"># MinMaxScaler: [0, 1]</span>
+mm = MinMaxScaler()
+X_train_mm = mm.fit_transform(X_train)
+
+<span class="hl-cmt"># RobustScaler: median/IQR (outlier-resistant)</span>
+rs = RobustScaler()
+X_train_rs = rs.fit_transform(X_train)
+
+<span class="hl-key">Which algorithms need scaling?</span>
+  ✓ LogisticRegression, SVM, KNN, K-Means, PCA
+  ✗ DecisionTree, RandomForest, GradientBoosting
+  ✓ Neural networks (always scale!)
+
+<span class="hl-cmt"># CRITICAL: fit on train, transform both.
+# Never fit on test data — that's data leakage.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Scaling is like converting currencies before comparing prices. A laptop costs 1,200 USD or 160,000 JPY &mdash; without conversion, the yen price &ldquo;dominates.&rdquo; StandardScaler converts all features to the same &ldquo;currency&rdquo; (standard deviations from the mean) so no feature unfairly dominates.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">tag</span></div><div><div class="cc-title">Encoding Categorical Features</div><div class="cc-sub">Turning &ldquo;red, blue, green&rdquo; into numbers the model understands</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Encoding Strategies</div><div class="cc-text"><strong>Ordinal Encoding:</strong> Map categories to integers. &ldquo;small&rdquo;=0, &ldquo;medium&rdquo;=1, &ldquo;large&rdquo;=2. Only use when there&rsquo;s a natural order. If you encode &ldquo;red&rdquo;=0, &ldquo;blue&rdquo;=1, &ldquo;green&rdquo;=2, the model thinks green &gt; blue &gt; red, which is meaningless.<br><br><strong>One-Hot Encoding:</strong> Create a binary column for each category. &ldquo;color_red&rdquo;=1/0, &ldquo;color_blue&rdquo;=1/0, &ldquo;color_green&rdquo;=1/0. No false ordering. But with 1,000 categories, you get 1,000 new columns (high dimensionality).<br><br><strong>Target Encoding:</strong> Replace each category with the mean of the target variable for that category. &ldquo;red&rdquo; &rarr; 0.73 (mean price for red items). Powerful but risks data leakage &mdash; must be computed on training data only, ideally with cross-validation.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Encoding in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> (
+    OrdinalEncoder, OneHotEncoder
+)
+
+<span class="hl-cmt"># Ordinal: for ordered categories</span>
+oe = OrdinalEncoder(
+    categories=[[<span class="hl-str">'small'</span>,<span class="hl-str">'medium'</span>,<span class="hl-str">'large'</span>]]
+)
+
+<span class="hl-cmt"># One-Hot: for unordered categories</span>
+ohe = OneHotEncoder(
+    sparse_output=<span class="hl-num">False</span>,
+    drop=<span class="hl-str">'first'</span>,      <span class="hl-cmt"># avoid multicollinearity</span>
+    handle_unknown=<span class="hl-str">'ignore'</span>
+)
+
+<span class="hl-key">Decision guide:</span>
+  2-5 categories, unordered → <span class="hl-str">OneHotEncoder</span>
+  Ordered categories        → <span class="hl-str">OrdinalEncoder</span>
+  100+ categories           → <span class="hl-str">TargetEncoder</span>
+  Tree-based models         → <span class="hl-str">OrdinalEncoder</span> (trees
+                               handle arbitrary splits)
+
+<span class="hl-cmt"># drop='first' removes one column to avoid
+# perfect multicollinearity (the dropped column
+# is implied by all others being 0).</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Encoding is like translating a foreign language for the model. One-hot encoding gives each word its own flashcard (precise but bulky). Ordinal encoding assigns numbers (compact but implies order). Target encoding summarizes each word by its average effect (powerful but needs care to avoid cheating).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">healing</span></div><div><div class="cc-title">Handling Missing Values</div><div class="cc-sub">Imputation strategies &mdash; because real data is messy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Imputation Strategies</div><div class="cc-text"><strong>Simple imputation:</strong><br>&bull; <strong>Mean/Median:</strong> Replace NaN with the column&rsquo;s mean (for normal data) or median (for skewed data). Fast, but ignores relationships between features.<br>&bull; <strong>Most frequent:</strong> For categorical features, replace with the mode.<br>&bull; <strong>Constant:</strong> Replace with a fixed value (e.g., 0 or &ldquo;missing&rdquo;).<br><br><strong>Advanced imputation:</strong><br>&bull; <strong>KNN Imputer:</strong> Fill missing values using the K nearest neighbors&rsquo; values. Captures feature relationships but slow for large data.<br>&bull; <strong>Iterative Imputer:</strong> Models each feature with missing values as a function of other features. Essentially multiple regression imputation. Most accurate but slowest.<br><br><strong>Add a missing indicator:</strong> Create a binary column &ldquo;feature_was_missing&rdquo; alongside the imputed value. Sometimes the <strong>fact</strong> that data is missing is informative (e.g., income not reported may correlate with low income).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Imputation in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.impute <span class="hl-key">import</span> SimpleImputer, KNNImputer
+
+<span class="hl-cmt"># Simple: median for numeric</span>
+imp_median = SimpleImputer(strategy=<span class="hl-str">'median'</span>)
+
+<span class="hl-cmt"># Simple: most frequent for categorical</span>
+imp_mode = SimpleImputer(strategy=<span class="hl-str">'most_frequent'</span>)
+
+<span class="hl-cmt"># KNN: uses 5 nearest neighbors</span>
+imp_knn = KNNImputer(n_neighbors=<span class="hl-num">5</span>)
+
+<span class="hl-cmt"># Add missing indicator</span>
+imp_with_flag = SimpleImputer(
+    strategy=<span class="hl-str">'median'</span>,
+    add_indicator=<span class="hl-num">True</span>  <span class="hl-cmt"># adds binary columns</span>
+)
+
+<span class="hl-key">Decision guide:</span>
+  Quick baseline      → <span class="hl-str">SimpleImputer(median)</span>
+  Few missing values  → <span class="hl-str">KNNImputer</span>
+  Missingness matters → <span class="hl-str">add_indicator=True</span>
+  Tree models         → can handle NaN natively
+                        (HistGradientBoosting)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Imputation is like filling in a crossword puzzle. Mean imputation fills every blank with the most common letter (fast but often wrong). KNN imputation looks at the surrounding clues to make an educated guess (slower but smarter). Sometimes the blank itself is a clue &mdash; that&rsquo;s why adding a missing indicator can boost accuracy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">auto_fix_high</span></div><div><div class="cc-title">Feature Creation: The Highest-ROI Step</div><div class="cc-sub">Domain knowledge + creativity = features the model can&rsquo;t discover alone</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Feature Engineering Techniques</div><div class="cc-text"><strong>Interaction features:</strong> Multiply features together. &ldquo;bedrooms &times; sqft&rdquo; captures &ldquo;spaciousness per room&rdquo; &mdash; a concept neither feature expresses alone.<br><br><strong>Polynomial features:</strong> Add x&sup2;, x&sup3; to capture nonlinear relationships. Linear regression with polynomial features becomes polynomial regression.<br><br><strong>Binning:</strong> Convert continuous to categorical. Age &rarr; &ldquo;child/teen/adult/senior.&rdquo; Useful when the relationship is step-wise, not smooth.<br><br><strong>Log/sqrt transforms:</strong> Compress right-skewed distributions (income, population). log(income) is often more predictive than raw income because the difference between $50K and $100K matters more than $950K and $1M.<br><br><strong>Date/time features:</strong> Extract day_of_week, month, hour, is_weekend, days_since_event from timestamps. A model can&rsquo;t learn &ldquo;weekends have higher sales&rdquo; from a raw timestamp.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Feature Creation Examples</div><div class="cc-code"><span class="hl-key">import</span> numpy <span class="hl-key">as</span> np
+<span class="hl-key">import</span> pandas <span class="hl-key">as</span> pd
+
+<span class="hl-cmt"># Interaction features</span>
+df[<span class="hl-str">'rooms_per_sqft'</span>] = df[<span class="hl-str">'bedrooms'</span>] / df[<span class="hl-str">'sqft'</span>]
+df[<span class="hl-str">'price_per_sqft'</span>] = df[<span class="hl-str">'price'</span>] / df[<span class="hl-str">'sqft'</span>]
+
+<span class="hl-cmt"># Log transform (skewed features)</span>
+df[<span class="hl-str">'log_income'</span>] = np.log1p(df[<span class="hl-str">'income'</span>])
+
+<span class="hl-cmt"># Date features</span>
+df[<span class="hl-str">'day_of_week'</span>] = df[<span class="hl-str">'date'</span>].dt.dayofweek
+df[<span class="hl-str">'is_weekend'</span>] = df[<span class="hl-str">'day_of_week'</span>].isin([<span class="hl-num">5</span>,<span class="hl-num">6</span>])
+df[<span class="hl-str">'month'</span>] = df[<span class="hl-str">'date'</span>].dt.month
+
+<span class="hl-cmt"># Binning</span>
+df[<span class="hl-str">'age_group'</span>] = pd.cut(df[<span class="hl-str">'age'</span>],
+    bins=[<span class="hl-num">0</span>,<span class="hl-num">18</span>,<span class="hl-num">35</span>,<span class="hl-num">55</span>,<span class="hl-num">100</span>],
+    labels=[<span class="hl-str">'young'</span>,<span class="hl-str">'adult'</span>,<span class="hl-str">'middle'</span>,<span class="hl-str">'senior'</span>])
+
+<span class="hl-cmt"># Good features often boost accuracy more
+# than switching from LogReg to XGBoost.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Feature engineering is where domain expertise meets ML. A data scientist who knows that &ldquo;price per square foot&rdquo; matters in real estate will build a better model than one who throws raw features at XGBoost. The best feature engineers ask: &ldquo;What would a human expert look at?&rdquo; and encode that knowledge as features.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">filter_alt</span></div><div><div class="cc-title">Feature Selection: RFE, Lasso, and Importance</div><div class="cc-sub">Fewer features = faster training, less overfitting, better interpretability</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Three Approaches</div><div class="cc-text"><strong>1. Filter methods:</strong> Score each feature independently (correlation with target, mutual information, chi-squared). Fast but ignores feature interactions. Good for initial screening.<br><br><strong>2. Wrapper methods (RFE):</strong> <strong>Recursive Feature Elimination</strong> trains a model, removes the least important feature, retrains, repeats. Considers feature interactions but slow (trains many models).<br><br><strong>3. Embedded methods:</strong> Feature selection built into the model. <strong>Lasso</strong> zeros out unimportant features (L1 regularization). <strong>Tree importance</strong> ranks features by Gini reduction. Fast and considers interactions.<br><br>In practice, start with Lasso or tree importance for a quick ranking, then use RFE for fine-tuning if needed.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Feature Selection in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.feature_selection <span class="hl-key">import</span> (
+    RFE, SelectFromModel
+)
+<span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> RandomForestClassifier
+<span class="hl-key">from</span> sklearn.linear_model <span class="hl-key">import</span> Lasso
+
+<span class="hl-cmt"># RFE: keep top 10 features</span>
+rfe = RFE(
+    estimator=RandomForestClassifier(n_estimators=<span class="hl-num">50</span>),
+    n_features_to_select=<span class="hl-num">10</span>
+)
+rfe.fit(X_train, y_train)
+X_selected = rfe.transform(X_train)
+<span class="hl-key">print</span>(f<span class="hl-str">"Selected: {rfe.support_}"</span>)
+
+<span class="hl-cmt"># Lasso: automatic feature selection</span>
+lasso = Lasso(alpha=<span class="hl-num">0.01</span>)
+selector = SelectFromModel(lasso)
+selector.fit(X_train, y_train)
+X_selected = selector.transform(X_train)
+<span class="hl-key">print</span>(f<span class="hl-str">"Features kept: {selector.get_support().sum()}"</span>)
+
+<span class="hl-cmt"># 100 features → 20 selected → same accuracy
+# but 5x faster training and more interpretable.</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Feature selection is like packing for a trip. You could bring everything (overfit), but a lighter suitcase (fewer features) is easier to carry (faster training), less likely to include things you don&rsquo;t need (less noise), and you can actually find what you&rsquo;re looking for (interpretability).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">plumbing</span></div><div><div class="cc-title">scikit-learn Pipeline: No Data Leakage</div><div class="cc-sub">Chain preprocessing and model into one leak-proof object</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Pipelines?</div><div class="cc-text">Without a pipeline, you might accidentally:<br>&bull; Fit the scaler on the full dataset (leaks test statistics into training)<br>&bull; Forget to apply the same transforms to test data<br>&bull; Apply transforms in the wrong order<br><br>A <strong>Pipeline</strong> chains steps sequentially. When you call <code>pipeline.fit(X_train, y_train)</code>, each step&rsquo;s <code>fit_transform()</code> is called in order, feeding output to the next step. The final step calls <code>fit()</code>.<br><br>When you call <code>pipeline.predict(X_test)</code>, each step calls <code>transform()</code> (not fit_transform!) and the final step calls <code>predict()</code>. This guarantees no data leakage.<br><br>Pipelines also work with <code>GridSearchCV</code> &mdash; you can tune hyperparameters of any step using the <code>stepname__param</code> syntax.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pipeline in Code</div><div class="cc-code"><span class="hl-key">from</span> sklearn.pipeline <span class="hl-key">import</span> make_pipeline, Pipeline
+<span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> StandardScaler
+<span class="hl-key">from</span> sklearn.decomposition <span class="hl-key">import</span> PCA
+<span class="hl-key">from</span> sklearn.svm <span class="hl-key">import</span> SVC
+
+<span class="hl-cmt"># Simple pipeline</span>
+pipe = make_pipeline(
+    StandardScaler(),
+    PCA(n_components=<span class="hl-num">50</span>),
+    SVC(kernel=<span class="hl-str">'rbf'</span>)
+)
+
+<span class="hl-cmt"># fit: scaler.fit_transform → PCA.fit_transform → SVC.fit</span>
+pipe.fit(X_train, y_train)
+
+<span class="hl-cmt"># predict: scaler.transform → PCA.transform → SVC.predict</span>
+y_pred = pipe.predict(X_test)
+score = pipe.score(X_test, y_test)
+
+<span class="hl-cmt"># GridSearch with pipeline</span>
+<span class="hl-key">from</span> sklearn.model_selection <span class="hl-key">import</span> GridSearchCV
+grid = GridSearchCV(pipe, {
+    <span class="hl-str">'svc__C'</span>: [<span class="hl-num">1</span>, <span class="hl-num">10</span>],
+    <span class="hl-str">'pca__n_components'</span>: [<span class="hl-num">30</span>, <span class="hl-num">50</span>]
+}, cv=<span class="hl-num">5</span>)
+grid.fit(X_train, y_train)</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> A Pipeline is like an assembly line in a factory. Raw materials (data) enter one end, pass through stations (scaler, PCA, model) in order, and a finished product (prediction) comes out the other end. The assembly line guarantees every piece goes through every station in the right order &mdash; no shortcuts, no skipped steps, no contamination.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">view_column</span></div><div><div class="cc-title">ColumnTransformer: Different Transforms for Different Features</div><div class="cc-sub">Scale numbers, encode categories, impute missing &mdash; all in one step</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Real datasets have mixed types: numeric features need scaling, categorical features need encoding, and some features need imputation. You can&rsquo;t apply StandardScaler to &ldquo;color&rdquo; or OneHotEncoder to &ldquo;age.&rdquo;<br><br><strong>ColumnTransformer</strong> applies different transformations to different columns, then concatenates the results. It&rsquo;s the key to building production-grade ML pipelines.<br><br>Combined with Pipeline, you get a single object that handles the entire workflow from raw data to prediction &mdash; including mixed types, missing values, and feature engineering.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">ColumnTransformer Pipeline</div><div class="cc-code"><span class="hl-key">from</span> sklearn.compose <span class="hl-key">import</span> ColumnTransformer
+<span class="hl-key">from</span> sklearn.pipeline <span class="hl-key">import</span> Pipeline
+<span class="hl-key">from</span> sklearn.impute <span class="hl-key">import</span> SimpleImputer
+<span class="hl-key">from</span> sklearn.preprocessing <span class="hl-key">import</span> StandardScaler, OneHotEncoder
+<span class="hl-key">from</span> sklearn.ensemble <span class="hl-key">import</span> HistGradientBoostingClassifier
+
+num_features = [<span class="hl-str">'age'</span>, <span class="hl-str">'income'</span>, <span class="hl-str">'score'</span>]
+cat_features = [<span class="hl-str">'color'</span>, <span class="hl-str">'city'</span>, <span class="hl-str">'gender'</span>]
+
+preprocessor = ColumnTransformer([
+    (<span class="hl-str">'num'</span>, Pipeline([
+        (<span class="hl-str">'impute'</span>, SimpleImputer(strategy=<span class="hl-str">'median'</span>)),
+        (<span class="hl-str">'scale'</span>, StandardScaler()),
+    ]), num_features),
+    (<span class="hl-str">'cat'</span>, Pipeline([
+        (<span class="hl-str">'impute'</span>, SimpleImputer(strategy=<span class="hl-str">'most_frequent'</span>)),
+        (<span class="hl-str">'encode'</span>, OneHotEncoder(handle_unknown=<span class="hl-str">'ignore'</span>)),
+    ]), cat_features),
+])
+
+full_pipe = Pipeline([
+    (<span class="hl-str">'preprocess'</span>, preprocessor),
+    (<span class="hl-str">'model'</span>, HistGradientBoostingClassifier()),
+])
+full_pipe.fit(X_train, y_train)
+<span class="hl-key">print</span>(f<span class="hl-str">"Test: {full_pipe.score(X_test, y_test):.3f}"</span>)</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> ColumnTransformer is like a hospital triage system. Numeric patients go to the scaling ward, categorical patients go to the encoding ward, and missing-value patients get imputation treatment. After treatment, everyone is combined into a single healthy dataset ready for the model. One pipeline handles everything.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--slate)"><span class="material-symbols-rounded">neurology</span></div><div><div class="cc-title">When to Bridge to Deep Learning</div><div class="cc-sub">Classic ML vs deep learning &mdash; the honest comparison</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Classic ML Wins When&hellip;</div><div class="cc-text"><strong>Tabular data:</strong> Gradient boosted trees (XGBoost, LightGBM) consistently beat neural networks on structured/tabular data. Kaggle competitions confirm this year after year.<br><br><strong>Small data (&lt;10K samples):</strong> Deep learning needs massive data to avoid overfitting. Classic ML works well with hundreds or thousands of samples.<br><br><strong>Interpretability required:</strong> Logistic regression coefficients, tree feature importance, and SHAP values are straightforward. Neural networks are black boxes.<br><br><strong>Fast iteration:</strong> Train a Random Forest in seconds. Train a neural network in hours/days. For rapid prototyping, classic ML wins.<br><br><strong>Limited compute:</strong> Classic ML runs on a laptop CPU. Deep learning often needs GPUs.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Deep Learning Wins When&hellip;</div><div class="cc-text"><strong>Images:</strong> CNNs dominate image classification, object detection, segmentation. No amount of feature engineering matches learned convolutional filters.<br><br><strong>Text/NLP:</strong> Transformers (BERT, GPT) understand language context that TF-IDF + NB cannot. For complex NLP tasks, deep learning is essential.<br><br><strong>Audio/Video:</strong> Speech recognition, music generation, video understanding &mdash; all deep learning territory.<br><br><strong>Massive data (&gt;100K+ samples):</strong> Neural networks improve with more data, while classic ML plateaus.<br><br><strong>End-to-end learning:</strong> Deep learning learns features automatically. No manual feature engineering needed for images, text, or audio.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Classic ML and deep learning are complementary tools, not competitors. For tabular data with &lt;100K rows, gradient boosted trees are king. For images, text, and audio, deep learning is unbeatable. The best practitioners know both and pick the right tool for each job. This course gave you the classic ML toolkit &mdash; now you&rsquo;re ready to add deep learning when the problem demands it.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-model-evaluation.html"><span class="material-symbols-rounded">arrow_back</span> Model Evaluation</a>
+    <a class="ch-nav-btn next" href="index.html">Back to Index <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[5],7:[5,6],8:[7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> <strong>Feature scaling</strong>: StandardScaler (mean=0, std=1), MinMaxScaler ([0,1]), RobustScaler (median/IQR). Required for SVMs, KNN, PCA, LogReg. Not needed for trees.',color:'#16a34a'},
+    2:{text:'<strong>Step 2:</strong> <strong>Encoding</strong>: OrdinalEncoder for ordered categories, OneHotEncoder for unordered (drop="first" to avoid multicollinearity), TargetEncoder for high-cardinality.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> <strong>Missing values</strong>: SimpleImputer(median) for quick baseline, KNNImputer for accuracy, add_indicator=True when missingness is informative. HistGradientBoosting handles NaN natively.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> <strong>Feature creation</strong>: interactions (bedrooms/sqft), log transforms (income), date extraction (day_of_week), binning (age groups). Often more impactful than model choice.',color:'#d97706'},
+    5:{text:'<strong>Step 5:</strong> <strong>Feature selection</strong>: Lasso zeros out unimportant features (embedded). RFE recursively removes weakest (wrapper). Tree importance ranks by Gini reduction. Fewer features = less overfitting.',color:'#dc2626'},
+    6:{text:'<strong>Step 6:</strong> <strong>Pipeline</strong> chains preprocessing + model into one leak-proof object. fit() calls fit_transform on each step. predict() calls transform. Works with GridSearchCV.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> <strong>ColumnTransformer</strong> applies different transforms to different column types. Numeric → scale, categorical → encode, missing → impute. The key to production ML pipelines.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Classic ML wins on tabular data, small datasets, and when interpretability matters. Deep learning wins on images, text, audio, and massive datasets. The best practitioners master both.',color:'#64748b'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

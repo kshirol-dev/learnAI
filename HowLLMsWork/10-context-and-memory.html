@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Context Windows & Memory — How LLMs Work</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-arrow.lit{color:var(--violet)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.real{border-color:var(--amber-border);background:var(--amber-light)}.compare-box.real .cb-tag{color:var(--amber)}.compare-box.ai{border-color:var(--violet-border);background:var(--violet-light)}.compare-box.ai .cb-tag{color:var(--violet)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Context Windows &amp; Memory</h2><span class="tb-sub">How LLMs remember conversations &mdash; KV cache, context length, RAG, and the quest for infinite memory</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Inference</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">width</span></div><span class="pipe-label">Window</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">save</span></div><span class="pipe-label">KV Cache</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Memory</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">rotate_right</span></div><span class="pipe-label">RoPE Ext</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">auto_stories</span></div><span class="pipe-label">PagedAttn</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">search</span></div><span class="pipe-label">RAG</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">all_inclusive</span></div><span class="pipe-label">Limits</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">width</span></div><div><div class="cc-title">The Context Window: An LLM&rsquo;s Working Memory</div><div class="cc-sub">Everything the model can &ldquo;see&rdquo; at once</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">The context window is like a <strong>desk</strong>. A small desk (2K tokens) can hold one page. A large desk (128K tokens) can hold a short novel. Everything on the desk is visible simultaneously &mdash; the model can attend to any token from any other token. But once something falls off the desk, it&rsquo;s gone. LLMs have <strong>no persistent memory</strong> between conversations. Each API call starts with a blank desk.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Context windows have grown dramatically: GPT-2 (1K tokens) &rarr; GPT-3 (2K) &rarr; GPT-3.5 (4K/16K) &rarr; GPT-4 (8K/32K/128K) &rarr; Claude 3 (200K) &rarr; Gemini 1.5 (1M+). But attention is O(n&sup2;) in sequence length, so doubling the context quadruples the compute. A 128K context window processes 128K &times; 128K = 16.4 billion attention scores per layer.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Context Window Sizes</div>
+            <div class="cc-code"><span class="hl-cmt"># Context windows (tokens):</span>
+<span class="hl-cmt"># GPT-2 (2019):        1,024</span>
+<span class="hl-cmt"># GPT-3 (2020):        2,048</span>
+<span class="hl-cmt"># GPT-4 (2023):      128,000</span>
+<span class="hl-cmt"># Claude 3.5 (2024):  200,000</span>
+<span class="hl-cmt"># Gemini 1.5 (2024):1,000,000</span>
+<span class="hl-cmt"># Llama 3.1 (2024):  128,000</span>
+
+<span class="hl-cmt"># What fits in 128K tokens?</span>
+<span class="hl-cmt"># ~96,000 words ≈ a 300-page book</span>
+<span class="hl-cmt"># ~200 pages of code</span>
+<span class="hl-cmt"># ~3 hours of meeting transcript</span>
+
+<span class="hl-cmt"># Attention cost: O(n²)</span>
+<span class="hl-cmt"># 2K context:   4M attention scores/layer</span>
+<span class="hl-cmt"># 128K context: 16.4B attention scores/layer</span>
+<span class="hl-cmt"># 1M context:   1T attention scores/layer</span>
+<span class="hl-cmt"># → Quadratic scaling is the core challenge</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">save</span></div><div><div class="cc-title">The KV Cache: Avoiding Redundant Work</div><div class="cc-sub">Why we store key-value pairs from previous tokens</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Without a KV cache, generating each new token would require recomputing attention for <em>all</em> previous tokens from scratch &mdash; like re-reading an entire book every time you write one word. The <strong>KV cache</strong> stores the Key and Value vectors from all previous tokens. When generating token N+1, you only compute Q/K/V for the new token and look up the cached K/V for tokens 1&hellip;N. This turns O(n&sup2;) per token into O(n).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The KV cache is the biggest memory consumer during inference. For Llama 3 8B with 128K context: 32 layers &times; 2 (K+V) &times; 128K tokens &times; 4096 dims &times; 2 bytes = <strong>64 GB</strong> just for the KV cache of one request! This is why serving long-context models is so expensive, and why KV cache compression (quantization to FP8, eviction strategies) is a hot research area.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">KV Cache Math</div>
+            <div class="cc-code"><span class="hl-cmt"># Without KV cache (naive):</span>
+<span class="hl-cmt"># Token 1: process [t1]           → 1 step</span>
+<span class="hl-cmt"># Token 2: process [t1, t2]       → 2 steps</span>
+<span class="hl-cmt"># Token N: process [t1...tN]      → N steps</span>
+<span class="hl-cmt"># Total: 1+2+...+N = N²/2 steps</span>
+
+<span class="hl-cmt"># With KV cache:</span>
+<span class="hl-cmt"># Token 1: compute K1,V1, cache them</span>
+<span class="hl-cmt"># Token 2: compute K2,V2, attend to K1,V1</span>
+<span class="hl-cmt"># Token N: compute KN,VN, attend to K1..KN-1</span>
+<span class="hl-cmt"># Total: N steps (linear!)</span>
+
+<span class="hl-cmt"># KV cache memory (Llama 3 8B, BF16):</span>
+<span class="hl-cmt"># Per token per layer:</span>
+<span class="hl-cmt">#   K: 1024 dims × 2 bytes = 2 KB (GQA: 8 heads)</span>
+<span class="hl-cmt">#   V: 1024 dims × 2 bytes = 2 KB</span>
+<span class="hl-cmt"># Per token (all 32 layers): 128 KB</span>
+<span class="hl-cmt"># 128K tokens: 128K × 128KB = 16 GB</span>
+<span class="hl-cmt"># (GQA reduces this 4× vs full MHA)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">Prefill vs Decode: Two Phases of Inference</div><div class="cc-sub">Why the first token is slow and the rest are fast</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">When you start reading a long document, the first read-through takes time (you&rsquo;re processing everything). After that, answering questions is fast (you remember the content). LLM inference has the same two phases: <strong>Prefill</strong> processes the entire prompt in parallel (compute-bound, fast per token). <strong>Decode</strong> generates tokens one at a time (memory-bound, slow). Time-to-first-token (TTFT) depends on prefill; tokens-per-second depends on decode.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Prefill is <strong>compute-bound</strong> (GPU cores are the bottleneck) while decode is <strong>memory-bound</strong> (memory bandwidth is the bottleneck). This is why different optimizations target different phases: FlashAttention speeds up prefill, while KV cache quantization and batching speed up decode. Understanding this split is essential for optimizing LLM serving.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Two Phases</div>
+            <div class="cc-code"><span class="hl-cmt"># Phase 1: PREFILL (prompt processing)</span>
+<span class="hl-cmt"># Input: 4000-token prompt</span>
+<span class="hl-cmt"># Process all 4000 tokens in parallel</span>
+<span class="hl-cmt"># Fill the KV cache for all prompt tokens</span>
+<span class="hl-cmt"># Compute-bound: GPU cores fully utilized</span>
+<span class="hl-cmt"># Time: ~200ms for 4K tokens on H100</span>
+
+<span class="hl-cmt"># Phase 2: DECODE (token generation)</span>
+<span class="hl-cmt"># Generate 1 token at a time</span>
+<span class="hl-cmt"># Each step: read entire KV cache from memory</span>
+<span class="hl-cmt"># Memory-bound: waiting for data transfer</span>
+<span class="hl-cmt"># Time: ~20ms per token on H100</span>
+
+<span class="hl-cmt"># For a 4K prompt + 500 token response:</span>
+<span class="hl-cmt"># TTFT: ~200ms (prefill)</span>
+<span class="hl-cmt"># Generation: 500 × 20ms = 10s (decode)</span>
+<span class="hl-cmt"># Total: ~10.2s</span>
+<span class="hl-cmt"># Decode dominates total time!</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">rotate_right</span></div><div><div class="cc-title">Extending Context: RoPE Scaling &amp; Beyond</div><div class="cc-sub">How models trained on 4K tokens work at 128K</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Imagine a ruler marked up to 10 cm. To measure 100 cm, you could <strong>stretch the ruler</strong> (each mark now represents 10 cm) or <strong>use a different encoding</strong>. RoPE (Rotary Position Embeddings, Ch 2) encodes position as rotations. To extend context, you can <strong>interpolate</strong> the rotations (squeeze more positions into the same rotation range) or use <strong>NTK-aware scaling</strong> (adjust different frequency components differently).</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Llama 3.1 extended from 8K to 128K context using RoPE scaling + continued pretraining on long documents. LongRoPE (Microsoft) achieves 2M tokens by non-uniformly rescaling RoPE frequencies with only 1K fine-tuning steps. The key discovery: high-frequency RoPE dimensions should be scaled less than low-frequency ones, because they encode local position information that shouldn&rsquo;t change.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Extension Methods</div>
+            <div class="cc-code"><span class="hl-cmt"># RoPE position interpolation:</span>
+<span class="hl-cmt"># Original: position i → rotate by i·θ</span>
+<span class="hl-cmt"># Extended: position i → rotate by i·θ/scale</span>
+<span class="hl-cmt"># scale = new_length / original_length</span>
+
+<span class="hl-cmt"># Methods (from simple to advanced):</span>
+
+<span class="hl-cmt"># 1. Linear interpolation (Chen et al., 2023)</span>
+<span class="hl-cmt"># Scale all frequencies equally</span>
+<span class="hl-cmt"># Simple but loses short-context quality</span>
+
+<span class="hl-cmt"># 2. NTK-aware (Reddit/bloc97, 2023)</span>
+<span class="hl-cmt"># Scale high-freq less, low-freq more</span>
+<span class="hl-cmt"># Better short-context preservation</span>
+
+<span class="hl-cmt"># 3. YaRN (Peng et al., 2023)</span>
+<span class="hl-cmt"># NTK + attention scaling + temperature</span>
+<span class="hl-cmt"># Used by many open-source models</span>
+
+<span class="hl-cmt"># 4. LongRoPE (Microsoft, 2024)</span>
+<span class="hl-cmt"># Evolutionary search for optimal scaling</span>
+<span class="hl-cmt"># 2M tokens, 1K fine-tuning steps</span>
+<span class="hl-cmt"># Used in Phi-3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">auto_stories</span></div><div><div class="cc-title">PagedAttention: Virtual Memory for KV Cache</div><div class="cc-sub">How vLLM serves thousands of requests efficiently</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Without PagedAttention, each request pre-allocates GPU memory for its maximum possible context length &mdash; like reserving an entire restaurant for one person who <em>might</em> bring friends. <strong>PagedAttention</strong> (Kwon et al., 2023, vLLM) borrows from OS virtual memory: allocate KV cache in small pages on demand. No wasted memory. This simple idea improved serving throughput by <strong>2-4&times;</strong>.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Before PagedAttention, KV cache memory waste was 60-80% in production. A 128K-capable model would reserve 16 GB per request even if the actual conversation was only 1K tokens. PagedAttention allocates in 16-token blocks, achieving near-zero waste. vLLM is now the standard serving framework for open-source LLMs, used by thousands of companies.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How It Works</div>
+            <div class="cc-code"><span class="hl-cmt"># Traditional KV cache allocation:</span>
+<span class="hl-cmt"># Request 1: reserve 128K tokens → 16 GB</span>
+<span class="hl-cmt"># Request 2: reserve 128K tokens → 16 GB</span>
+<span class="hl-cmt"># Actual usage: 2K tokens each → 0.25 GB</span>
+<span class="hl-cmt"># Waste: 31.5 GB (98.4%!)</span>
+
+<span class="hl-cmt"># PagedAttention (vLLM):</span>
+<span class="hl-cmt"># Allocate in pages (blocks of 16 tokens)</span>
+<span class="hl-cmt"># Request 1: 2K tokens → 125 pages → 0.25 GB</span>
+<span class="hl-cmt"># Request 2: 2K tokens → 125 pages → 0.25 GB</span>
+<span class="hl-cmt"># Waste: ~0 GB</span>
+<span class="hl-cmt"># → Can serve 60× more concurrent requests!</span>
+
+<span class="hl-cmt"># Additional benefits:</span>
+<span class="hl-cmt"># - Shared prefixes (system prompts)</span>
+<span class="hl-cmt"># - Copy-on-write for beam search</span>
+<span class="hl-cmt"># - Dynamic memory growth</span>
+
+<span class="hl-cmt"># vLLM throughput vs baselines:</span>
+<span class="hl-cmt"># 2-4× higher than HuggingFace TGI</span>
+<span class="hl-cmt"># Near-zero memory waste</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">search</span></div><div><div class="cc-title">RAG: Retrieval-Augmented Generation</div><div class="cc-sub">Giving LLMs access to external knowledge</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Analogy</div><div class="cc-text">Even with 128K tokens, an LLM can&rsquo;t hold all of Wikipedia in its context. <strong>RAG</strong> is like giving a student access to a <strong>library during an exam</strong>: when asked a question, first search a knowledge base for relevant documents, then stuff them into the context window, then generate an answer. The model&rsquo;s parametric knowledge (from training) is augmented with retrieved knowledge (from the database).</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> RAG solves two critical problems: <strong>hallucination</strong> (the model can cite real documents instead of making things up) and <strong>freshness</strong> (the knowledge base can be updated without retraining). The embedding models from Ch 2 power the retrieval step: embed the query, find the nearest document embeddings via cosine similarity, and inject the top-K documents into the prompt. This is how most enterprise AI applications work.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">RAG Pipeline</div>
+            <div class="cc-code"><span class="hl-cmt"># RAG pipeline:</span>
+
+<span class="hl-cmt"># 1. Index (offline, once):</span>
+<span class="hl-cmt"># Split documents into chunks (~512 tokens)</span>
+<span class="hl-cmt"># Embed each chunk → vector (1536-dim)</span>
+<span class="hl-cmt"># Store in vector database (Pinecone, etc.)</span>
+
+<span class="hl-cmt"># 2. Retrieve (per query):</span>
+<span class="hl-cmt"># Embed user query → vector</span>
+<span class="hl-cmt"># Find top-K nearest chunks (cosine sim)</span>
+<span class="hl-cmt"># K = 3-10 typically</span>
+
+<span class="hl-cmt"># 3. Generate (per query):</span>
+prompt = f<span class="hl-str">"""Context:
+{retrieved_chunks}
+
+Question: {user_query}
+Answer based on the context above:"""</span>
+response = llm.generate(prompt)
+
+<span class="hl-cmt"># Benefits:</span>
+<span class="hl-cmt"># ✓ Reduces hallucination (citable sources)</span>
+<span class="hl-cmt"># ✓ Always up-to-date (update DB, not model)</span>
+<span class="hl-cmt"># ✓ Domain-specific (your company's docs)</span>
+<span class="hl-cmt"># ✓ No fine-tuning needed</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">all_inclusive</span></div><div><div class="cc-title">The Limits: Lost in the Middle &amp; Beyond</div><div class="cc-sub">Long context doesn&rsquo;t mean perfect memory</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Known Limitations</div><div class="cc-text">Research shows LLMs suffer from <strong>&ldquo;lost in the middle&rdquo;</strong> (Liu et al., 2023): information at the start and end of the context is recalled well, but information in the middle is often missed. A 128K context window doesn&rsquo;t mean perfect recall of all 128K tokens. Additionally, performance degrades on tasks requiring precise retrieval from very long contexts. The effective context is often shorter than the advertised maximum.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The future of LLM memory likely combines multiple approaches: long context windows (128K-1M), RAG for external knowledge, tool use for real-time data, and potentially persistent memory stores that accumulate across conversations. No single approach solves the memory problem completely. Understanding these tradeoffs is essential for building robust AI applications.</div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Strategies</div>
+            <div class="cc-code"><span class="hl-cmt"># LLM memory landscape:</span>
+
+<span class="hl-cmt"># In-context (this chapter):</span>
+<span class="hl-cmt"># ✓ Immediate, no setup</span>
+<span class="hl-cmt"># ✗ Limited to context window</span>
+<span class="hl-cmt"># ✗ Lost in the middle problem</span>
+
+<span class="hl-cmt"># RAG (retrieval):</span>
+<span class="hl-cmt"># ✓ Unlimited knowledge base</span>
+<span class="hl-cmt"># ✓ Citable, updatable</span>
+<span class="hl-cmt"># ✗ Retrieval can miss relevant docs</span>
+
+<span class="hl-cmt"># Fine-tuning (Ch 7):</span>
+<span class="hl-cmt"># ✓ Baked into model weights</span>
+<span class="hl-cmt"># ✗ Expensive, can't easily update</span>
+
+<span class="hl-cmt"># Tool use (function calling):</span>
+<span class="hl-cmt"># ✓ Real-time data (APIs, databases)</span>
+<span class="hl-cmt"># ✗ Requires integration work</span>
+
+<span class="hl-cmt"># Best practice: combine all four</span>
+<span class="hl-cmt"># Long context + RAG + fine-tuning + tools</span>
+<span class="hl-cmt"># = robust, production-ready AI system</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-text-generation.html"><span class="material-symbols-rounded">arrow_back</span> Ch 9: Text Generation</a>
+    <a class="ch-nav-btn next" href="11-making-llms-fast.html">Ch 11: Making LLMs Fast <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> The context window is the model\'s working memory. GPT-2: 1K tokens. GPT-4/Llama 3.1: 128K. Gemini 1.5: 1M. But attention is O(n²) — doubling context quadruples compute.',color:'#7c3aed'},
+    2:{text:'<strong>Step 2:</strong> KV cache stores Key/Value vectors from previous tokens, avoiding recomputation. Llama 3 8B at 128K context: 16 GB just for KV cache. The biggest memory consumer during inference.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Prefill (prompt processing) is compute-bound and parallel. Decode (token generation) is memory-bound and sequential. Different phases need different optimizations.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> RoPE scaling extends context beyond training length. Linear interpolation → NTK-aware → YaRN → LongRoPE. Llama 3.1: 8K→128K. LongRoPE: up to 2M tokens.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> PagedAttention (vLLM): allocate KV cache in pages on demand, like OS virtual memory. Reduces waste from 98% to ~0%. 2-4× throughput improvement. The industry standard.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> RAG: search a knowledge base, stuff relevant docs into context, then generate. Reduces hallucination, always up-to-date, domain-specific. How most enterprise AI works.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Limitations: "lost in the middle" — models recall start/end better than middle. Long context ≠ perfect memory. Best practice: combine context + RAG + fine-tuning + tools.',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

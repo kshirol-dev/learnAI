@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Data &amp; Features — Under the Hood</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 60px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1120px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--red);background:var(--red-light);border:1px solid var(--red-border)}.tb-nav a.nav-alt:hover{background:var(--red);color:#fff}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--red-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--red),var(--orange),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.zone{padding:22px 32px;border-bottom:1px solid var(--border-light);position:relative}.zone:last-child{border-bottom:none}.zone-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.zone-tag{padding:3px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;flex-shrink:0}.zone-title{font-size:12px;font-weight:700}.zone-sub{font-size:10px;color:var(--text-3);margin-left:auto}
+.zone-a{background:linear-gradient(180deg,var(--red-light) 0%,var(--bg-white) 100%)}.zone-a .zone-tag{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}.zone-a .zone-title{color:var(--red)}
+.zone-b{background:linear-gradient(180deg,var(--orange-light) 0%,var(--bg-white) 100%)}.zone-b .zone-tag{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border)}.zone-b .zone-title{color:var(--orange)}
+.zone-c{background:linear-gradient(180deg,var(--violet-light) 0%,var(--bg-white) 100%)}.zone-c .zone-tag{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet-border)}.zone-c .zone-title{color:var(--violet)}
+.zone-d{background:linear-gradient(180deg,var(--blue-light) 0%,var(--bg-white) 100%)}.zone-d .zone-tag{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border)}.zone-d .zone-title{color:var(--blue)}
+.zone-e{background:linear-gradient(180deg,var(--teal-light) 0%,var(--bg-white) 100%)}.zone-e .zone-tag{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}.zone-e .zone-title{color:var(--teal)}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.fnode{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:var(--radius);min-width:115px;max-width:140px;text-align:center;box-shadow:var(--shadow-sm);transition:all .5s ease;cursor:default;position:relative}.fnode:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fnode-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}.fnode-icon .material-symbols-rounded{font-size:20px}.fnode-label{font-size:10px;font-weight:700;letter-spacing:-.1px}.fnode-sub{font-size:8px;color:var(--text-3);line-height:1.4}
+.fnode.c-red .fnode-icon{background:var(--red-light);color:var(--red)}.fnode.c-red .fnode-label{color:var(--red)}.fnode.c-red{border-color:var(--red-border)}.fnode.c-red.active{box-shadow:0 0 0 3px rgba(220,38,38,.15),var(--shadow-md)}
+.fnode.c-orange .fnode-icon{background:var(--orange-light);color:var(--orange)}.fnode.c-orange .fnode-label{color:var(--orange)}.fnode.c-orange{border-color:var(--orange-border)}.fnode.c-orange.active{box-shadow:0 0 0 3px rgba(234,88,12,.15),var(--shadow-md)}
+.fnode.c-violet .fnode-icon{background:var(--violet-light);color:var(--violet)}.fnode.c-violet .fnode-label{color:var(--violet)}.fnode.c-violet{border-color:var(--violet-border)}.fnode.c-violet.active{box-shadow:0 0 0 3px rgba(124,58,237,.15),var(--shadow-md)}
+.fnode.c-blue .fnode-icon{background:var(--blue-light);color:var(--blue)}.fnode.c-blue .fnode-label{color:var(--blue)}.fnode.c-blue{border-color:var(--blue-border)}.fnode.c-blue.active{box-shadow:0 0 0 3px rgba(37,99,235,.15),var(--shadow-md)}
+.fnode.c-teal .fnode-icon{background:var(--teal-light);color:var(--teal)}.fnode.c-teal .fnode-label{color:var(--teal)}.fnode.c-teal{border-color:var(--teal-border)}.fnode.c-teal.active{box-shadow:0 0 0 3px rgba(13,148,136,.15),var(--shadow-md)}
+.fnode.c-green .fnode-icon{background:var(--green-light);color:var(--green)}.fnode.c-green .fnode-label{color:var(--green)}.fnode.c-green{border-color:var(--green-border)}.fnode.c-green.active{box-shadow:0 0 0 3px rgba(22,163,74,.15),var(--shadow-md)}
+.fnode.active{transform:translateY(-2px)}
+.farr{display:flex;align-items:center;width:36px;height:2px;position:relative;margin:0 2px;flex-shrink:0;transition:opacity .5s ease}.farr::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--border),var(--text-3));border-radius:1px}.farr::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);border:4px solid transparent;border-left:5px solid var(--text-3)}
+.loop-conn{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 32px;background:var(--bg-muted);border-bottom:1px solid var(--border-light);transition:opacity .5s ease}.loop-dash{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 10px)}.loop-pill{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--bg-white);border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:500;color:var(--text-3);white-space:nowrap;letter-spacing:.3px;transition:all .5s ease}.loop-pill .material-symbols-rounded{font-size:13px}
+.loop-conn.active .loop-pill{background:var(--red-light);border-color:var(--red-border);color:var(--red)}
+.loop-conn.c-orange.active .loop-pill{background:var(--orange-light);border-color:var(--orange-border);color:var(--orange)}
+.loop-conn.c-violet.active .loop-pill{background:var(--violet-light);border-color:var(--violet-border);color:var(--violet)}
+.loop-conn.c-blue.active .loop-pill{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.loop-conn.c-teal.active .loop-pill{background:var(--teal-light);border-color:var(--teal-border);color:var(--teal)}
+.step-badge{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;color:#fff;z-index:10;opacity:0;transform:scale(0);transition:all .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+.loop-conn .step-badge{position:relative;top:auto;right:auto;transform:none;flex-shrink:0;width:20px;height:20px;font-size:8px}
+[data-step].dimmed{opacity:.15;filter:grayscale(.7)}[data-step].active{opacity:1;filter:none}[data-step].active .step-badge{opacity:1;transform:scale(1)}
+.bg-red{background:var(--red)}.bg-orange{background:var(--orange)}.bg-violet{background:var(--violet)}.bg-blue{background:var(--blue)}.bg-teal{background:var(--teal)}.bg-green{background:var(--green)}.bg-pink{background:var(--pink)}.bg-slate{background:var(--slate)}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s ease}.detail-overlay.visible{opacity:1;pointer-events:auto}
+.detail-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:660px;max-width:92vw;max-height:82vh;overflow-y:auto;background:var(--bg-white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:200;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}.detail-panel.visible{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dp-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-light);position:sticky;top:0;background:var(--bg-white);border-radius:16px 16px 0 0;z-index:1}.dp-step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}.dp-title{font-size:12px;font-weight:700}.dp-close{margin-left:auto;width:28px;height:28px;border:none;background:var(--bg-muted);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}.dp-close:hover{background:var(--border)}.dp-close .material-symbols-rounded{font-size:16px;color:var(--text-3)}
+.dp-body{padding:16px 20px 20px}.dp-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dp-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+.dp-code .hl-key{color:var(--violet);font-weight:600}.dp-code .hl-str{color:var(--teal)}.dp-code .hl-num{color:var(--amber)}.dp-code .hl-cmt{color:var(--text-3);font-style:italic}.dp-code .hl-cmd{color:var(--pink);font-weight:600}.dp-code .hl-ok{color:var(--green);font-weight:600}.dp-code .hl-err{color:var(--red);font-weight:600}
+.dp-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+.dp-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.dp-note.n-red strong{color:var(--red)}
+.dp-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.dp-note.n-orange strong{color:var(--orange)}
+.dp-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.dp-note.n-violet strong{color:var(--violet)}
+.dp-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.dp-note.n-blue strong{color:var(--blue)}
+.dp-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.dp-note.n-teal strong{color:var(--teal)}
+.dp-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.dp-note.n-green strong{color:var(--green)}
+.dp-note:last-child,.dp-code:last-child{margin-bottom:0}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{background:#6d28d9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 48px}.zone{padding:18px 18px}.narration,.loop-conn{padding:10px 18px}.title-bar,.step-counter{padding:14px 18px}.flow-row{gap:4px}.farr{width:24px}.fnode{min-width:90px;padding:10px 10px}}
+@media(max-width:600px){.flow-row{flex-direction:column;gap:0}.farr{width:2px;height:20px;margin:0}.farr::before{background:var(--border)}.farr::after{right:auto;bottom:-2px;top:auto;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top:5px solid var(--text-3)}.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.step-counter{flex-wrap:wrap}.tb-nav{margin-right:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Data &amp; Features &mdash; Under the Hood</h2><span class="tb-sub">Scaling math, encoding internals, SMOTE algorithm, leakage detection, and augmentation pipelines</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="04-data-and-features-high-level.html">&larr; High Level</a></div>
+    <span class="tb-tag">Under the Hood</span>
+  </div>
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin. Click any node for deep-dive details...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 10</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- ZONE A: Scaling & Normalization Math (red) -->
+  <div class="zone zone-a">
+    <div class="zone-head"><span class="zone-tag">A</span><span class="zone-title">Scaling &amp; Normalization Math</span><span class="zone-sub">Min-max &middot; Z-score &middot; robust scaling &middot; when to use each</span></div>
+    <div class="flow-row">
+      <div class="fnode c-red dimmed" data-step="1"><span class="step-badge bg-red">1</span><div class="fnode-icon"><span class="material-symbols-rounded">straighten</span></div><span class="fnode-label">Min-Max</span><span class="fnode-sub">Scale to [0, 1]<br>preserve distribution</span></div>
+      <div class="farr dimmed" data-step="1"></div>
+      <div class="fnode c-red dimmed" data-step="2"><span class="step-badge bg-red">2</span><div class="fnode-icon"><span class="material-symbols-rounded">functions</span></div><span class="fnode-label">Z-Score</span><span class="fnode-sub">Mean=0, std=1<br>standardization</span></div>
+      <div class="farr dimmed" data-step="2"></div>
+      <div class="fnode c-red dimmed" data-step="2"><div class="fnode-icon"><span class="material-symbols-rounded">shield</span></div><span class="fnode-label">Robust</span><span class="fnode-sub">Median &amp; IQR<br>outlier-resistant</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-orange dimmed" data-step="3"><span class="step-badge bg-orange">3</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> From numerical scaling to categorical encoding</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE B: Encoding Internals (orange) -->
+  <div class="zone zone-b">
+    <div class="zone-head"><span class="zone-tag">B</span><span class="zone-title">Encoding Internals</span><span class="zone-sub">One-hot &middot; ordinal &middot; target encoding &middot; embeddings</span></div>
+    <div class="flow-row">
+      <div class="fnode c-orange dimmed" data-step="3"><div class="fnode-icon"><span class="material-symbols-rounded">grid_on</span></div><span class="fnode-label">One-Hot</span><span class="fnode-sub">Binary columns<br>per category</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><span class="step-badge bg-orange">4</span><div class="fnode-icon"><span class="material-symbols-rounded">tag</span></div><span class="fnode-label">Target Enc.</span><span class="fnode-sub">Replace with<br>mean target value</span></div>
+      <div class="farr dimmed" data-step="4"></div>
+      <div class="fnode c-orange dimmed" data-step="4"><div class="fnode-icon"><span class="material-symbols-rounded">data_array</span></div><span class="fnode-label">Embeddings</span><span class="fnode-sub">Learned dense<br>representations</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-violet dimmed" data-step="5"><span class="step-badge bg-violet">5</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Feature engineering: creating signal from raw data</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE C: Feature Engineering Internals (violet) -->
+  <div class="zone zone-c">
+    <div class="zone-head"><span class="zone-tag">C</span><span class="zone-title">Feature Engineering Internals</span><span class="zone-sub">Interaction features &middot; binning &middot; feature selection math</span></div>
+    <div class="flow-row">
+      <div class="fnode c-violet dimmed" data-step="5"><div class="fnode-icon"><span class="material-symbols-rounded">join</span></div><span class="fnode-label">Interactions</span><span class="fnode-sub">Cross features<br>polynomial terms</span></div>
+      <div class="farr dimmed" data-step="6"></div>
+      <div class="fnode c-violet dimmed" data-step="6"><span class="step-badge bg-violet">6</span><div class="fnode-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="fnode-label">Selection</span><span class="fnode-sub">Mutual information<br>importance scores</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-blue dimmed" data-step="7"><span class="step-badge bg-blue">7</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Data leakage: the silent model killer</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE D: Leakage & Splitting (blue) -->
+  <div class="zone zone-d">
+    <div class="zone-head"><span class="zone-tag">D</span><span class="zone-title">Leakage Detection &amp; Splitting</span><span class="zone-sub">Preprocessing order &middot; temporal splits &middot; stratification</span></div>
+    <div class="flow-row">
+      <div class="fnode c-blue dimmed" data-step="7"><div class="fnode-icon"><span class="material-symbols-rounded">warning</span></div><span class="fnode-label">Leakage Types</span><span class="fnode-sub">Target leakage<br>train-test contamination</span></div>
+      <div class="farr dimmed" data-step="8"></div>
+      <div class="fnode c-blue dimmed" data-step="8"><span class="step-badge bg-blue">8</span><div class="fnode-icon"><span class="material-symbols-rounded">call_split</span></div><span class="fnode-label">Split Strategies</span><span class="fnode-sub">Stratified, temporal<br>group-aware splits</span></div>
+    </div>
+  </div>
+
+  <div class="loop-conn c-teal dimmed" data-step="9"><span class="step-badge bg-teal">9</span><div class="loop-dash"></div><span class="loop-pill"><span class="material-symbols-rounded">arrow_downward</span> Class imbalance &amp; data augmentation techniques</span><div class="loop-dash"></div></div>
+
+  <!-- ZONE E: Imbalance & Augmentation (teal) -->
+  <div class="zone zone-e">
+    <div class="zone-head"><span class="zone-tag">E</span><span class="zone-title">Imbalance &amp; Augmentation</span><span class="zone-sub">SMOTE algorithm &middot; class weights &middot; image/text augmentation</span></div>
+    <div class="flow-row">
+      <div class="fnode c-teal dimmed" data-step="9"><div class="fnode-icon"><span class="material-symbols-rounded">balance</span></div><span class="fnode-label">SMOTE</span><span class="fnode-sub">Synthetic minority<br>oversampling</span></div>
+      <div class="farr dimmed" data-step="10"></div>
+      <div class="fnode c-teal dimmed" data-step="10"><span class="step-badge bg-green">10</span><div class="fnode-icon"><span class="material-symbols-rounded">add_photo_alternate</span></div><span class="fnode-label">Augmentation</span><span class="fnode-sub">Image, text, tabular<br>data expansion</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head"><div class="dp-step" id="dpStep"></div><div class="dp-title" id="dpTitle"></div><button class="dp-close" id="dpClose"><span class="material-symbols-rounded">close</span></button></div>
+  <div class="dp-body" id="dpBody"></div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=10, STEP_MS=5000;
+  const NARRATION={
+    1:{text:'<strong>Min-Max scaling</strong> maps every value to [0, 1]: x\u2032 = (x \u2212 min) / (max \u2212 min). Preserves the original distribution shape. Sensitive to outliers \u2014 a single extreme value compresses all other values into a narrow range. Best for neural networks and distance-based algorithms.',color:'#dc2626'},
+    2:{text:'<strong>Z-score standardization:</strong> x\u2032 = (x \u2212 \u03bc) / \u03c3. Centers data at 0 with standard deviation 1. Not bounded to a fixed range. Robust scaling uses median and IQR instead: x\u2032 = (x \u2212 median) / IQR, making it resistant to outliers.',color:'#dc2626'},
+    3:{text:'<strong>One-hot encoding</strong> creates a binary column per category. "Red" \u2192 [1,0,0], "Blue" \u2192 [0,1,0], "Green" \u2192 [0,0,1]. Simple but explodes dimensionality for high-cardinality features. Drop one column to avoid the dummy variable trap in linear models.',color:'#ea580c'},
+    4:{text:'<strong>Target encoding</strong> replaces each category with the mean target value for that category. NYC \u2192 0.73 (mean house price in NYC). Powerful for high-cardinality features but risks overfitting \u2014 use smoothing and cross-validation to prevent leakage.',color:'#ea580c'},
+    5:{text:'<strong>Interaction features</strong> capture relationships between variables. price_per_sqft = price / sqft. Polynomial features: x\u00b2, x\u00b3, x\u2081\u00d7x\u2082. These let linear models capture non-linear patterns. Feature crosses combine categoricals: city + property_type \u2192 "NYC_apartment".',color:'#7c3aed'},
+    6:{text:'<strong>Feature selection</strong> removes irrelevant features. Mutual information measures how much knowing a feature reduces uncertainty about the target. Tree-based importance ranks features by how much they reduce impurity (Gini or entropy). L1 regularization drives unimportant weights to exactly zero.',color:'#7c3aed'},
+    7:{text:'<strong>Data leakage</strong> inflates metrics but destroys real-world performance. Target leakage: using a feature that encodes the answer (e.g., "chargeback_filed" to predict fraud). Train-test contamination: fitting scaler on full data before splitting. Rule: <em>always split first, then preprocess</em>.',color:'#2563eb'},
+    8:{text:'<strong>Splitting strategies:</strong> Stratified split preserves class proportions in each fold. Temporal split uses chronological order (train on past, test on future). Group-aware split ensures all records from the same entity (patient, user) stay in one split \u2014 prevents identity leakage.',color:'#2563eb'},
+    9:{text:'<strong>SMOTE</strong> (Synthetic Minority Over-sampling Technique): For each minority sample, find its K nearest minority neighbors. Create synthetic examples along the line segments between them. This expands the minority class decision region without simple duplication.',color:'#0d9488'},
+    10:{text:'<strong>Data augmentation</strong> creates training variations. Images: random crop, flip, rotation, color jitter, CutMix (paste patches between images). Text: back-translation, synonym replacement, LLM paraphrasing. Each augmentation must preserve the label \u2014 flipping a "6" makes it a "9".',color:'#16a34a'},
+  };
+
+  const DETAILS={
+    1:{title:'Scaling Methods: The Math',color:'#dc2626',body:`
+<div class="dp-label">Min-Max Normalization</div>
+<div class="dp-code"><span class="hl-key">x\u2032</span> = (x \u2212 x_min) / (x_max \u2212 x_min)
+
+<span class="hl-cmt">// Example: ages [18, 25, 35, 60, 90]</span>
+<span class="hl-key">min</span> = <span class="hl-num">18</span>,  <span class="hl-key">max</span> = <span class="hl-num">90</span>,  range = <span class="hl-num">72</span>
+
+age <span class="hl-num">18</span> \u2192 (18\u221218)/72 = <span class="hl-ok">0.000</span>
+age <span class="hl-num">25</span> \u2192 (25\u221218)/72 = <span class="hl-ok">0.097</span>
+age <span class="hl-num">35</span> \u2192 (35\u221218)/72 = <span class="hl-ok">0.236</span>
+age <span class="hl-num">60</span> \u2192 (60\u221218)/72 = <span class="hl-ok">0.583</span>
+age <span class="hl-num">90</span> \u2192 (90\u221218)/72 = <span class="hl-ok">1.000</span></div>
+<div class="dp-label">Z-Score Standardization</div>
+<div class="dp-code"><span class="hl-key">x\u2032</span> = (x \u2212 \u03bc) / \u03c3
+
+<span class="hl-cmt">// Same ages: \u03bc = 45.6, \u03c3 = 27.1</span>
+age <span class="hl-num">18</span> \u2192 (18\u221245.6)/27.1 = <span class="hl-ok">\u22121.02</span>
+age <span class="hl-num">25</span> \u2192 (25\u221245.6)/27.1 = <span class="hl-ok">\u22120.76</span>
+age <span class="hl-num">35</span> \u2192 (35\u221245.6)/27.1 = <span class="hl-ok">\u22120.39</span>
+age <span class="hl-num">60</span> \u2192 (60\u221245.6)/27.1 = <span class="hl-ok">+0.53</span>
+age <span class="hl-num">90</span> \u2192 (90\u221245.6)/27.1 = <span class="hl-ok">+1.64</span></div>
+<div class="dp-label">Robust Scaling (outlier-resistant)</div>
+<div class="dp-code"><span class="hl-key">x\u2032</span> = (x \u2212 median) / IQR
+
+<span class="hl-cmt">// IQR = Q3 \u2212 Q1 (interquartile range)</span>
+<span class="hl-cmt">// Uses median instead of mean</span>
+<span class="hl-cmt">// Unaffected by extreme outliers</span>
+<span class="hl-cmt">// Best when data has heavy tails</span></div>
+<div class="dp-note n-red"><strong>When to use which:</strong> Min-Max for neural networks (bounded inputs). Z-score for SVM, logistic regression, PCA (assumes centered data). Robust for datasets with outliers. Tree-based models (Random Forest, XGBoost) don\u2019t need scaling at all \u2014 they split on thresholds, not distances.</div>`},
+    4:{title:'Target Encoding with Smoothing',color:'#ea580c',body:`
+<div class="dp-label">Na\u00efve Target Encoding</div>
+<div class="dp-code"><span class="hl-cmt">// Replace category with mean target value</span>
+
+<span class="hl-key">City</span>        <span class="hl-key">Count</span>   <span class="hl-key">Mean Price</span>
+NYC          <span class="hl-num">5000</span>    <span class="hl-num">$720K</span>     \u2192 encode as <span class="hl-ok">0.72</span>
+LA           <span class="hl-num">3000</span>    <span class="hl-num">$610K</span>     \u2192 encode as <span class="hl-ok">0.61</span>
+Smalltown    <span class="hl-num">3</span>       <span class="hl-num">$900K</span>     \u2192 encode as <span class="hl-err">0.90</span> <span class="hl-cmt">// unreliable!</span></div>
+<div class="dp-label">Smoothed Target Encoding</div>
+<div class="dp-code"><span class="hl-cmt">// Blend category mean with global mean</span>
+<span class="hl-cmt">// based on sample size</span>
+
+<span class="hl-key">encoding</span> = (\u03bb \u00d7 category_mean) + ((1\u2212\u03bb) \u00d7 global_mean)
+
+<span class="hl-key">\u03bb</span> = n / (n + smoothing_factor)
+
+<span class="hl-cmt">// With smoothing_factor = 100, global_mean = 0.65:</span>
+NYC:       \u03bb = 5000/5100 = <span class="hl-num">0.98</span> \u2192 <span class="hl-ok">0.719</span> (trusts data)
+Smalltown: \u03bb = 3/103    = <span class="hl-num">0.03</span> \u2192 <span class="hl-ok">0.657</span> (falls back to global)</div>
+<div class="dp-note n-orange"><strong>Leakage risk:</strong> Target encoding uses the target variable to create features. If done on the full dataset, it leaks test information into training. Always compute target encoding statistics on the training fold only, using K-fold encoding to prevent overfitting within training data itself.</div>`},
+    6:{title:'Feature Selection: Mutual Information & Importance',color:'#7c3aed',body:`
+<div class="dp-label">Mutual Information</div>
+<div class="dp-code"><span class="hl-cmt">// How much knowing feature X reduces</span>
+<span class="hl-cmt">// uncertainty about target Y</span>
+
+<span class="hl-key">MI(X; Y)</span> = \u2211\u2211 p(x,y) \u00d7 log[ p(x,y) / (p(x)\u00d7p(y)) ]
+
+<span class="hl-cmt">// MI = 0: X and Y are independent</span>
+<span class="hl-cmt">// MI > 0: X carries information about Y</span>
+<span class="hl-cmt">// Higher MI = more informative feature</span>
+
+<span class="hl-cmt">// Advantages over correlation:</span>
+<span class="hl-ok">\u2713</span> Captures non-linear relationships
+<span class="hl-ok">\u2713</span> Works with categorical features
+<span class="hl-ok">\u2713</span> Model-independent (filter method)</div>
+<div class="dp-label">Tree-Based Feature Importance</div>
+<div class="dp-code"><span class="hl-cmt">// Gini importance (Random Forest)</span>
+
+For each feature f:
+  importance(f) = \u2211 (weighted impurity decrease
+                     at all nodes splitting on f)
+
+<span class="hl-cmt">// Example output:</span>
+<span class="hl-key">sqft</span>          <span class="hl-num">0.35</span>  <span class="hl-str">\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588</span>
+<span class="hl-key">location</span>      <span class="hl-num">0.28</span>  <span class="hl-str">\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588</span>
+<span class="hl-key">bedrooms</span>      <span class="hl-num">0.15</span>  <span class="hl-str">\u2588\u2588\u2588\u2588\u2588\u2588</span>
+<span class="hl-key">year_built</span>    <span class="hl-num">0.12</span>  <span class="hl-str">\u2588\u2588\u2588\u2588\u2588</span>
+<span class="hl-key">garage</span>        <span class="hl-num">0.07</span>  <span class="hl-str">\u2588\u2588\u2588</span>
+<span class="hl-key">color</span>         <span class="hl-num">0.03</span>  <span class="hl-str">\u2588</span>  <span class="hl-cmt">\u2190 candidate for removal</span></div>
+<div class="dp-note n-violet"><strong>Permutation importance</strong> is more reliable than Gini importance. It measures how much accuracy drops when a feature\u2019s values are randomly shuffled. If shuffling "sqft" drops accuracy by 15%, it\u2019s critical. If shuffling "color" changes nothing, it\u2019s irrelevant. Works with any model, not just trees.</div>`},
+    7:{title:'Data Leakage: Detection & Prevention',color:'#2563eb',body:`
+<div class="dp-label">The Correct Preprocessing Order</div>
+<div class="dp-code"><span class="hl-err">\u2717 WRONG: Preprocess \u2192 Split</span>
+  scaler.fit(ALL_DATA)          <span class="hl-cmt">// leaks test info</span>
+  X_scaled = scaler.transform(ALL_DATA)
+  X_train, X_test = split(X_scaled)
+
+<span class="hl-ok">\u2713 CORRECT: Split \u2192 Preprocess</span>
+  X_train, X_test = split(X_raw)
+  scaler.fit(X_train)           <span class="hl-cmt">// train only!</span>
+  X_train = scaler.transform(X_train)
+  X_test  = scaler.transform(X_test) <span class="hl-cmt">// same scaler</span></div>
+<div class="dp-label">Common Leakage Patterns</div>
+<div class="dp-code"><span class="hl-err">1. Feature from the future</span>
+   Predicting churn using "cancellation_date"
+   (only exists AFTER churn happens)
+
+<span class="hl-err">2. Target proxy</span>
+   Predicting disease using "treatment_type"
+   (treatment is assigned because of disease)
+
+<span class="hl-err">3. Duplicate records across splits</span>
+   Same patient in both train and test
+   Model memorizes the patient, not the pattern
+
+<span class="hl-err">4. Global statistics</span>
+   Computing mean imputation on full dataset
+   Test set means leak into training</div>
+<div class="dp-note n-blue"><strong>Detection heuristic:</strong> If your model achieves suspiciously high accuracy (e.g., 99.5% on a hard problem), suspect leakage first. Check feature importance \u2014 if a single feature dominates, investigate whether it\u2019s a proxy for the target. Always ask: "Would this feature be available at prediction time?"</div>`},
+    9:{title:'SMOTE Algorithm Step by Step',color:'#0d9488',body:`
+<div class="dp-label">SMOTE: Synthetic Minority Over-sampling</div>
+<div class="dp-code"><span class="hl-cmt">// Chawla et al., 2002 (JAIR)</span>
+
+<span class="hl-key">Input:</span>  minority samples, K neighbors, N synthetic
+
+<span class="hl-key">For each</span> minority sample x\u1d62:
+  <span class="hl-num">1.</span> Find K nearest minority neighbors
+  <span class="hl-num">2.</span> Randomly select neighbor x\u2c7c
+  <span class="hl-num">3.</span> Generate synthetic sample:
+
+     <span class="hl-key">x_new</span> = x\u1d62 + rand(0,1) \u00d7 (x\u2c7c \u2212 x\u1d62)
+
+<span class="hl-cmt">// Example in 2D:</span>
+<span class="hl-key">x\u1d62</span>    = (<span class="hl-num">2.0</span>, <span class="hl-num">3.0</span>)    <span class="hl-cmt">// minority point</span>
+<span class="hl-key">x\u2c7c</span>    = (<span class="hl-num">4.0</span>, <span class="hl-num">5.0</span>)    <span class="hl-cmt">// nearest neighbor</span>
+<span class="hl-key">rand</span>   = <span class="hl-num">0.4</span>
+<span class="hl-key">x_new</span>  = (2.0, 3.0) + 0.4 \u00d7 (2.0, 2.0)
+       = (<span class="hl-ok">2.8</span>, <span class="hl-ok">3.8</span>)    <span class="hl-cmt">// new synthetic point</span></div>
+<div class="dp-label">SMOTE Variants</div>
+<div class="dp-code"><span class="hl-key">SMOTE-Borderline</span>
+  Only oversample minority points near the
+  decision boundary (most informative region)
+
+<span class="hl-key">ADASYN</span> (Adaptive Synthetic)
+  Generate more synthetics for harder-to-learn
+  minority samples (adaptive density)
+
+<span class="hl-key">SMOTE-NC</span> (Nominal Continuous)
+  Handles mixed numerical + categorical features
+  Uses modified distance metric</div>
+<div class="dp-note n-teal"><strong>Critical rule:</strong> Always apply SMOTE <em>after</em> the train-test split, and only to the training set. If you SMOTE the full dataset before splitting, synthetic minority samples based on test data will leak into training. This is one of the most common leakage mistakes in imbalanced learning.</div>`},
+  };
+
+  let current=0, playing=false, timer=null;
+  const allSteps=document.querySelectorAll('[data-step]');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+  const overlay=document.getElementById('detailOverlay');
+  const panel=document.getElementById('detailPanel');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function activate(step){
+    allSteps.forEach(el=>{const s=parseInt(el.dataset.step);el.classList.remove('active','dimmed');if(s===step)el.classList.add('active');else el.classList.add('dimmed')});
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function showReset(){
+    allSteps.forEach(el=>el.classList.add('dimmed'));
+    progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--violet)';
+    narText.innerHTML='Click play or press Space to begin. Click any node for deep-dive details...';
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  function showDetail(step){
+    const d=DETAILS[step];if(!d)return;
+    document.getElementById('dpStep').style.background=d.color;
+    document.getElementById('dpStep').textContent=step;
+    document.getElementById('dpTitle').textContent=d.title;
+    document.getElementById('dpBody').innerHTML=d.body;
+    overlay.classList.add('visible');panel.classList.add('visible');
+  }
+  function hideDetail(){overlay.classList.remove('visible');panel.classList.remove('visible')}
+
+  document.querySelectorAll('.fnode').forEach(n=>{n.style.cursor='pointer';n.addEventListener('click',()=>{const s=parseInt(n.closest('[data-step]')?.dataset.step);if(s&&DETAILS[s])showDetail(s)})});
+  overlay.addEventListener('click',hideDetail);
+  document.getElementById('dpClose').addEventListener('click',hideDetail);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideDetail()});
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(overlay.classList.contains('visible'))return;if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

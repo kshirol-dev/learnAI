@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 5: Ollama — Small Models & Local AI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--cyan:#0891b2;--cyan-light:#ecfeff;--cyan-border:#a5f3fc;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);padding:4px 12px;background:var(--cyan-light);border:1px solid var(--cyan-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--cyan-border);background:var(--cyan-light)}.pipe-stage.lit .pipe-icon{background:var(--cyan);color:#fff}.pipe-stage.lit .pipe-label{color:var(--cyan)}.pipe-arrow.lit{color:var(--cyan)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--cyan-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--cyan);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--violet),var(--teal));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--cyan);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--cyan);box-shadow:0 0 5px rgba(8,145,178,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-cyan{background:var(--cyan-light);border:1px solid var(--cyan-border)}.cc-note.n-cyan strong{color:var(--cyan)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--cyan);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 5 &mdash; Ollama: Your Local AI Runtime</h2><span class="tb-sub">Install, pull, run &mdash; from zero to local AI in 5 minutes</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Hands-On</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">info</span></div><span class="pipe-label">What Is It</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">download</span></div><span class="pipe-label">Install</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">play_arrow</span></div><span class="pipe-label">Run</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">api</span></div><span class="pipe-label">API</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">edit_note</span></div><span class="pipe-label">Modelfile</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">inventory_2</span></div><span class="pipe-label">Management</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">developer_board</span></div><span class="pipe-label">GPU vs CPU</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Cheat Sheet</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--cyan)"><span class="material-symbols-rounded">info</span></div><div><div class="cc-title">What Is Ollama?</div><div class="cc-sub">The Docker of local AI &mdash; one tool to pull, run, and manage models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Ollama in One Sentence</div><div class="cc-text">Ollama is a tool that lets you <strong>download and run LLMs locally</strong> with a single command. It handles model downloading, GGUF format management, GPU/CPU allocation, and serves an API &mdash; all automatically.<br><br>Think of it as <strong>Docker for AI models</strong>: <code>docker pull nginx</code> becomes <code>ollama pull llama3.2</code>. <code>docker run</code> becomes <code>ollama run</code>. Same simplicity, different domain.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Architecture</div><div class="cc-code"><span class="hl-key">Ollama</span>
+├── <span class="hl-str">CLI</span> (command-line interface)
+│   ollama run, pull, list, rm, serve
+├── <span class="hl-str">Server</span> (background daemon)
+│   Listens on localhost:11434
+│   REST API for programmatic access
+├── <span class="hl-str">Model Registry</span> (ollama.com/library)
+│   Pre-quantized models ready to pull
+└── <span class="hl-str">Inference Engine</span> (llama.cpp)
+    The actual C++ code that runs models
+    Handles GPU offloading, KV cache, etc.
+
+<span class="hl-cmt">Ollama is a wrapper around llama.cpp
+that adds model management, an API,
+and a much simpler user experience.</span></div></div>
+          <div class="cc-note n-cyan"><strong>Key insight:</strong> Ollama&rsquo;s genius is abstraction. You don&rsquo;t need to know about GGUF formats, quantization levels, GPU layers, or context sizes. Pull a model, run it. Ollama figures out the rest. When you need more control, Chapter 6 covers llama.cpp directly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">download</span></div><div><div class="cc-title">Installation &amp; First Model</div><div class="cc-sub">From zero to running a local LLM in under 5 minutes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Install</div><div class="cc-code"><span class="hl-key">macOS:</span>
+  brew install ollama
+  <span class="hl-cmt"># or download from ollama.com</span>
+
+<span class="hl-key">Linux:</span>
+  curl -fsSL https://ollama.com/install.sh | sh
+
+<span class="hl-key">Windows:</span>
+  <span class="hl-cmt"># Download installer from ollama.com</span>
+
+<span class="hl-key">Docker:</span>
+  docker run -d -v ollama:/root/.ollama \
+    -p 11434:11434 --name ollama \
+    ollama/ollama</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Your First Model</div><div class="cc-code"><span class="hl-key"># Pull and run in one command:</span>
+$ ollama run llama3.2
+
+<span class="hl-cmt"># First time: downloads ~2GB model
+# Subsequent: starts instantly</span>
+
+>>> <span class="hl-str">What is the capital of France?</span>
+The capital of France is Paris. It is
+the largest city in France and serves
+as the country's political, economic,
+and cultural center...
+
+>>> <span class="hl-str">/bye</span>
+<span class="hl-cmt"># Exit the chat</span></div></div>
+          <div class="cc-block"><div class="cc-label">What Just Happened</div><div class="cc-text"><strong>1.</strong> Ollama downloaded the Llama 3.2 3B model (Q4_K_M quantization) from its registry<br><strong>2.</strong> Loaded it into RAM (or VRAM if GPU available)<br><strong>3.</strong> Started an interactive chat session<br><strong>4.</strong> All inference happened locally &mdash; no data left your machine</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> That&rsquo;s it. One command. No API keys, no accounts, no configuration. The model runs entirely on your hardware. Every prompt and response stays on your machine. This is the power of local AI.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">play_arrow</span></div><div><div class="cc-title">Running Models: Commands &amp; Options</div><div class="cc-sub">Pull, run, and control models from the command line</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Essential Commands</div><div class="cc-code"><span class="hl-key"># Pull a model (download only)</span>
+$ ollama pull qwen2.5:7b
+
+<span class="hl-key"># Run interactively</span>
+$ ollama run qwen2.5:7b
+
+<span class="hl-key"># Run with a specific prompt</span>
+$ ollama run qwen2.5:7b "Summarize this"
+
+<span class="hl-key"># Pipe input</span>
+$ cat document.txt | ollama run qwen2.5:7b \
+  "Summarize this document in 3 bullets"
+
+<span class="hl-key"># List downloaded models</span>
+$ ollama list
+NAME            SIZE    MODIFIED
+llama3.2:latest 2.0 GB  2 hours ago
+qwen2.5:7b      4.4 GB  5 min ago
+
+<span class="hl-key"># Remove a model</span>
+$ ollama rm llama3.2
+
+<span class="hl-key"># Show model details</span>
+$ ollama show qwen2.5:7b</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Model Naming</div><div class="cc-code"><span class="hl-key">Format:</span> name:tag
+
+<span class="hl-str">ollama run llama3.2</span>
+  → llama3.2:latest (default tag)
+
+<span class="hl-str">ollama run llama3.2:1b</span>
+  → 1B parameter variant
+
+<span class="hl-str">ollama run qwen2.5:7b</span>
+  → 7B parameter variant
+
+<span class="hl-str">ollama run mistral-small</span>
+  → Mistral Small 3.1 (24B)</div></div>
+          <div class="cc-block"><div class="cc-label">Popular Models on Ollama</div><div class="cc-text"><strong>llama3.2</strong> &mdash; Meta&rsquo;s 3B, great all-rounder<br><strong>qwen2.5:7b</strong> &mdash; Alibaba&rsquo;s 7B, strong reasoning<br><strong>gemma2:2b</strong> &mdash; Google&rsquo;s 2B, tiny and fast<br><strong>phi4-mini</strong> &mdash; Microsoft&rsquo;s 3.8B, math/code<br><strong>mistral-small</strong> &mdash; Mistral&rsquo;s 24B, best medium<br><strong>codellama:7b</strong> &mdash; Code-specialized Llama<br><strong>nomic-embed-text</strong> &mdash; Embeddings model</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Ollama&rsquo;s model registry at <code>ollama.com/library</code> has hundreds of pre-quantized models ready to pull. You don&rsquo;t need to find GGUF files on Hugging Face or quantize anything yourself. Just <code>ollama pull model-name</code> and go.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">api</span></div><div><div class="cc-title">The Ollama API</div><div class="cc-sub">REST endpoints for programmatic access &mdash; build apps, not just chat</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Start the Server</div><div class="cc-code"><span class="hl-key"># Ollama server starts automatically
+# on install, or start manually:</span>
+$ ollama serve
+
+<span class="hl-cmt"># Server runs on localhost:11434
+# API docs: docs.ollama.com/api</span></div></div>
+          <div class="cc-block"><div class="cc-label">Generate (Completion)</div><div class="cc-code"><span class="hl-key">curl</span> http://localhost:11434/api/generate \
+  -d '{
+    <span class="hl-str">"model"</span>: <span class="hl-str">"qwen2.5:7b"</span>,
+    <span class="hl-str">"prompt"</span>: <span class="hl-str">"Explain quantization"</span>,
+    <span class="hl-str">"stream"</span>: false
+  }'</div></div>
+          <div class="cc-block"><div class="cc-label">Chat (Multi-Turn)</div><div class="cc-code"><span class="hl-key">curl</span> http://localhost:11434/api/chat \
+  -d '{
+    <span class="hl-str">"model"</span>: <span class="hl-str">"qwen2.5:7b"</span>,
+    <span class="hl-str">"messages"</span>: [
+      {<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+       <span class="hl-str">"content"</span>: <span class="hl-str">"What is GGUF?"</span>}
+    ]
+  }'</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Python Client</div><div class="cc-code"><span class="hl-key">import</span> ollama
+
+<span class="hl-cmt"># Simple generation</span>
+response = ollama.generate(
+    model=<span class="hl-str">'qwen2.5:7b'</span>,
+    prompt=<span class="hl-str">'Explain quantization in 2 sentences'</span>
+)
+print(response[<span class="hl-str">'response'</span>])
+
+<span class="hl-cmt"># Chat with history</span>
+response = ollama.chat(
+    model=<span class="hl-str">'qwen2.5:7b'</span>,
+    messages=[
+        {<span class="hl-str">'role'</span>: <span class="hl-str">'system'</span>,
+         <span class="hl-str">'content'</span>: <span class="hl-str">'You are a helpful assistant.'</span>},
+        {<span class="hl-str">'role'</span>: <span class="hl-str">'user'</span>,
+         <span class="hl-str">'content'</span>: <span class="hl-str">'What is GGUF?'</span>}
+    ]
+)
+
+<span class="hl-cmt"># Streaming</span>
+<span class="hl-key">for</span> chunk <span class="hl-key">in</span> ollama.chat(
+    model=<span class="hl-str">'qwen2.5:7b'</span>,
+    messages=[...],
+    stream=<span class="hl-num">True</span>
+):
+    print(chunk[<span class="hl-str">'message'</span>][<span class="hl-str">'content'</span>], end=<span class="hl-str">''</span>)</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Ollama&rsquo;s API is intentionally similar to OpenAI&rsquo;s. This means you can swap a cloud model for a local one by changing the base URL from <code>api.openai.com</code> to <code>localhost:11434</code>. Many libraries (LangChain, LlamaIndex) support Ollama as a drop-in replacement. We&rsquo;ll build on this in Chapter 7.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">edit_note</span></div><div><div class="cc-title">Custom Modelfiles</div><div class="cc-sub">Create custom model configurations with system prompts, parameters, and templates</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What&rsquo;s a Modelfile?</div><div class="cc-text">A <strong>Modelfile</strong> is like a Dockerfile for AI models. It defines a custom model configuration: which base model to use, what system prompt to set, and what parameters to tune.<br><br>This lets you create specialized models (&ldquo;my-support-bot&rdquo;, &ldquo;my-code-reviewer&rdquo;) that you can share and reuse.</div></div>
+          <div class="cc-block"><div class="cc-label">Example Modelfile</div><div class="cc-code"><span class="hl-cmt"># File: Modelfile.support-bot</span>
+
+<span class="hl-key">FROM</span> qwen2.5:7b
+
+<span class="hl-key">SYSTEM</span> """You are a customer support
+assistant for AcmeCorp. Be helpful,
+concise, and professional. Never
+make up information. If you don't
+know, say so."""
+
+<span class="hl-key">PARAMETER</span> temperature <span class="hl-num">0.3</span>
+<span class="hl-key">PARAMETER</span> num_ctx <span class="hl-num">4096</span>
+<span class="hl-key">PARAMETER</span> top_p <span class="hl-num">0.9</span></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Create &amp; Run</div><div class="cc-code"><span class="hl-key"># Create the custom model</span>
+$ ollama create support-bot \
+  -f Modelfile.support-bot
+
+<span class="hl-key"># Run it</span>
+$ ollama run support-bot
+>>> How do I reset my password?
+
+<span class="hl-key"># It now uses the system prompt
+# and parameters from the Modelfile</span></div></div>
+          <div class="cc-block"><div class="cc-label">Key Parameters</div><div class="cc-code"><span class="hl-key">temperature</span>  <span class="hl-num">0.0-2.0</span>  Creativity
+<span class="hl-key">num_ctx</span>      <span class="hl-num">2048-131072</span>  Context window
+<span class="hl-key">top_p</span>        <span class="hl-num">0.0-1.0</span>  Nucleus sampling
+<span class="hl-key">top_k</span>        <span class="hl-num">1-100</span>    Top-K sampling
+<span class="hl-key">repeat_penalty</span> <span class="hl-num">1.0-2.0</span> Repetition control
+<span class="hl-key">num_gpu</span>      <span class="hl-num">0-999</span>    GPU layers to offload
+<span class="hl-key">seed</span>         <span class="hl-num">int</span>      Reproducible output</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Modelfiles let you version-control your model configurations. Commit them to git, share with your team, deploy consistently. A Modelfile + base model = a reproducible, specialized AI assistant that anyone on your team can run with <code>ollama create</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">inventory_2</span></div><div><div class="cc-title">Model Management</div><div class="cc-sub">Where models live, how to manage storage, and keeping things tidy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Storage Locations</div><div class="cc-code"><span class="hl-key">macOS:</span>
+  ~/.ollama/models/
+
+<span class="hl-key">Linux:</span>
+  /usr/share/ollama/.ollama/models/
+
+<span class="hl-key">Windows:</span>
+  C:\Users\&lt;user&gt;\.ollama\models\
+
+<span class="hl-key">Custom location:</span>
+  OLLAMA_MODELS=/path/to/models ollama serve</div></div>
+          <div class="cc-block"><div class="cc-label">Management Commands</div><div class="cc-code"><span class="hl-key"># List all models with sizes</span>
+$ ollama list
+
+<span class="hl-key"># See what's currently loaded in RAM</span>
+$ ollama ps
+
+<span class="hl-key"># Remove a model (frees disk space)</span>
+$ ollama rm llama3.2
+
+<span class="hl-key"># Copy a model (for custom variants)</span>
+$ ollama cp qwen2.5:7b my-qwen
+
+<span class="hl-key"># Show model details (params, template)</span>
+$ ollama show qwen2.5:7b --modelfile</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Management</div><div class="cc-text"><strong>Models stay loaded for 5 minutes</strong> after the last request (configurable via <code>keep_alive</code>). This means:<br><br>• First request: slow (model loads into RAM/VRAM)<br>• Subsequent requests within 5 min: fast (already loaded)<br>• After 5 min idle: model unloads, RAM freed<br><br><strong>Running multiple models:</strong> Ollama can load multiple models simultaneously if you have enough RAM. Each model occupies its full size in memory.</div></div>
+          <div class="cc-block"><div class="cc-label">Disk Space Tips</div><div class="cc-text"><strong>Models are large.</strong> A typical setup might have 3&ndash;5 models totaling 15&ndash;25GB. Regularly clean unused models with <code>ollama rm</code>. Use <code>ollama list</code> to see what&rsquo;s taking space.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Ollama&rsquo;s model management is simple but effective. The 5-minute keep-alive means you get fast responses during active use without permanently consuming RAM. For production servers, set <code>keep_alive</code> to <code>-1</code> (never unload) for consistent latency.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">developer_board</span></div><div><div class="cc-title">GPU vs CPU Inference</div><div class="cc-sub">When GPU matters, when CPU is fine, and how Ollama decides</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How Ollama Allocates</div><div class="cc-text">Ollama automatically detects your GPU and offloads as many model layers as will fit in VRAM. Remaining layers run on CPU.<br><br><strong>Full GPU:</strong> All layers in VRAM. Fastest. Happens when model fits entirely in VRAM.<br><br><strong>Partial GPU:</strong> Some layers in VRAM, rest on CPU. Common with larger models on consumer GPUs.<br><br><strong>CPU only:</strong> No GPU, or GPU too small. Slower but still works. Apple Silicon (M1/M2/M3) uses unified memory &mdash; CPU and GPU share the same RAM, so it&rsquo;s always &ldquo;GPU.&rdquo;</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Speed Comparison</div><div class="cc-code"><span class="hl-key">Qwen 2.5 7B Q4_K_M — tokens/sec:</span>
+
+RTX 4090 (24GB VRAM):    <span class="hl-num">~95</span> tok/s
+RTX 4070 (12GB VRAM):    <span class="hl-num">~65</span> tok/s
+Apple M2 Pro (16GB):     <span class="hl-num">~45</span> tok/s
+Apple M1 (8GB):          <span class="hl-num">~25</span> tok/s
+Intel i7 CPU-only:       <span class="hl-num">~8</span>  tok/s
+Raspberry Pi 5:          <span class="hl-num">~2</span>  tok/s
+
+<span class="hl-cmt">Apple Silicon is special: unified
+memory means the "GPU" and "CPU"
+share the same fast RAM. No PCIe
+bottleneck for data transfer.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> For local AI, Apple Silicon Macs are surprisingly good &mdash; unified memory means a 16GB M2 Pro can run a 9B model at 45 tok/s with no discrete GPU. On the NVIDIA side, the RTX 4090 is the gold standard. CPU-only is viable for batch processing but too slow for interactive use.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The Ollama Cheat Sheet</div><div class="cc-sub">Everything you need on one card</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Commands</div><div class="cc-code"><span class="hl-key">ollama pull</span> &lt;model&gt;    Download model
+<span class="hl-key">ollama run</span> &lt;model&gt;     Chat interactively
+<span class="hl-key">ollama list</span>            Show downloaded
+<span class="hl-key">ollama ps</span>              Show running
+<span class="hl-key">ollama rm</span> &lt;model&gt;      Delete model
+<span class="hl-key">ollama show</span> &lt;model&gt;    Model details
+<span class="hl-key">ollama cp</span> &lt;src&gt; &lt;dst&gt;  Copy model
+<span class="hl-key">ollama create</span> &lt;name&gt; -f Modelfile
+<span class="hl-key">ollama serve</span>           Start server</div></div>
+          <div class="cc-block"><div class="cc-label">API Endpoints</div><div class="cc-code"><span class="hl-str">POST</span> /api/generate    Completion
+<span class="hl-str">POST</span> /api/chat         Chat (multi-turn)
+<span class="hl-str">POST</span> /api/embeddings   Embeddings
+<span class="hl-str">GET</span>  /api/tags         List models
+<span class="hl-str">POST</span> /api/show         Model info
+<span class="hl-str">POST</span> /api/pull         Pull model
+<span class="hl-str">DELETE</span> /api/delete     Delete model
+<span class="hl-str">GET</span>  /api/ps           Running models</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Recommended First Models</div><div class="cc-code"><span class="hl-key">8GB RAM:</span>
+  ollama run llama3.2       <span class="hl-cmt"># 3B, 2GB</span>
+  ollama run gemma2:2b      <span class="hl-cmt"># 2B, 1.6GB</span>
+
+<span class="hl-key">16GB RAM:</span>
+  ollama run qwen2.5:7b     <span class="hl-cmt"># 7B, 4.4GB</span>
+  ollama run phi4-mini       <span class="hl-cmt"># 3.8B, 2.5GB</span>
+
+<span class="hl-key">24GB+ RAM:</span>
+  ollama run mistral-small  <span class="hl-cmt"># 24B, 14GB</span>
+  ollama run qwen2.5:14b    <span class="hl-cmt"># 14B, 9GB</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Ollama is your daily driver for local AI. Install it, pull a model, and you have a private, free, fast AI assistant running on your machine. For most users, this is all you need. Chapter 6 covers llama.cpp for when you need more control &mdash; custom quantization, server tuning, or building from source.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="04-distillation-pruning.html"><span class="material-symbols-rounded">arrow_back</span> Ch 4: Distillation &amp; Pruning</a>
+    <a class="ch-nav-btn next" href="06-llama-cpp-gguf.html">Ch 6: llama.cpp &amp; GGUF <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Ollama is Docker for AI models. One tool to pull, run, and manage local LLMs. Built on llama.cpp, adds model registry and REST API.',color:'#0891b2'},
+    2:{text:'<strong>Step 2:</strong> Install with brew/curl/installer. First model: `ollama run llama3.2`. Downloads ~2GB, starts chatting. No API keys, no accounts.',color:'#16a34a'},
+    3:{text:'<strong>Step 3:</strong> Commands: pull, run, list, rm, show. Model naming: name:tag (e.g., qwen2.5:7b). Hundreds of pre-quantized models in the registry.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> REST API on localhost:11434. /api/generate for completions, /api/chat for multi-turn. Python client: `import ollama`. Drop-in replacement for OpenAI.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Modelfiles: Dockerfile for AI. Define base model + system prompt + parameters. Create specialized bots, version-control them in git.',color:'#d97706'},
+    6:{text:'<strong>Step 6:</strong> Models stored in ~/.ollama/models/. 5-minute keep-alive default. `ollama ps` shows loaded models. Clean unused with `ollama rm`.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> GPU auto-detection. RTX 4090: ~95 tok/s. M2 Pro: ~45 tok/s. CPU-only: ~8 tok/s. Apple Silicon unified memory is a sweet spot for local AI.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Cheat sheet: pull → run → chat. API for apps. Modelfiles for customization. Start with llama3.2 (8GB) or qwen2.5:7b (16GB).',color:'#16a34a'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

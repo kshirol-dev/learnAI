@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 4: Memory — The Real Bottleneck — AI Infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 4 &mdash; Memory: The Real Bottleneck</h2><span class="tb-sub">HBM, bandwidth math, KV cache explosion, and why memory determines everything</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html"><span class="material-symbols-rounded" style="font-size:14px;margin-right:2px">arrow_back</span>Index</a></div>
+    <span class="tb-tag">Core</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">apartment</span></div><span class="pipe-label">HBM vs GDDR</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">HBM Stacking</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">speed</span></div><span class="pipe-label">Bandwidth Math</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">scale</span></div><span class="pipe-label">Weight Memory</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">expand</span></div><span class="pipe-label">KV Cache</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">swap_vert</span></div><span class="pipe-label">Bound Type</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="6"><div class="pipe-icon"><span class="material-symbols-rounded">timeline</span></div><span class="pipe-label">HBM Roadmap</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="7"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">Sizing Guide</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">apartment</span></div><div><div class="cc-title">HBM vs GDDR: Two Approaches to GPU Memory</div><div class="cc-sub">Apartment building vs row of houses &mdash; stacking changes everything</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Apartment Building Analogy</div><div class="cc-text"><strong>GDDR</strong> (used in gaming GPUs like RTX 4090) is like a <strong>row of houses</strong> along a street. Each house (memory chip) has its own driveway (data bus). To get more capacity, you build more houses along the street. But the street has limited width &mdash; bandwidth is constrained.<br><br><strong>HBM</strong> (used in AI GPUs like H100, B200) is like an <strong>apartment building</strong>. Memory chips are stacked vertically, connected by thousands of tiny elevators (through-silicon vias, or TSVs). This stacking gives you a massively wider data path &mdash; 1,024 bits wide per stack vs GDDR&rsquo;s 32 bits per chip.<br><br>The result: HBM delivers <strong>5&ndash;10x more bandwidth</strong> than GDDR in the same physical footprint. This is why every serious AI GPU uses HBM &mdash; the bandwidth is essential for feeding thousands of Tensor Cores.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">HBM vs GDDR Comparison</div><div class="cc-code"><span class="hl-key">GDDR6X (RTX 4090):</span>
+  Capacity:    <span class="hl-num">24</span> GB
+  Bandwidth:   <span class="hl-num">1,008</span> GB/s
+  Bus width:   <span class="hl-num">384</span> bits
+  Chips:       <span class="hl-num">12</span> (side by side)
+  Power:       ~<span class="hl-num">50</span>W for memory
+
+<span class="hl-key">HBM3 (H100):</span>
+  Capacity:    <span class="hl-num">80</span> GB
+  Bandwidth:   <span class="hl-num">3,350</span> GB/s
+  Bus width:   <span class="hl-num">5,120</span> bits
+  Stacks:      <span class="hl-num">5</span> (8-high each)
+  Power:       ~<span class="hl-num">30</span>W for memory
+
+<span class="hl-key">HBM3e (B200):</span>
+  Capacity:    <span class="hl-num">192</span> GB
+  Bandwidth:   <span class="hl-num">8,000</span> GB/s
+  Stacks:      <span class="hl-num">8</span> (12-high each)
+
+<span class="hl-cmt">HBM3e: 8x the bandwidth of GDDR6X
+while using less power per bit.
+This is why AI GPUs cost $25K+.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> HBM is the single most expensive component in an AI GPU &mdash; it can account for 40&ndash;60% of the chip&rsquo;s cost. The global HBM market is projected to grow from $38 billion (2025) to $58 billion (2026). SK Hynix, Samsung, and Micron are in an arms race to produce more HBM stacks, and supply constraints directly affect GPU availability.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">How HBM Stacking Works</div><div class="cc-sub">Through-silicon vias connect vertically stacked DRAM dies for massive bandwidth</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Stacking Technology</div><div class="cc-text">HBM achieves its extraordinary bandwidth through <strong>vertical stacking</strong>:<br><br><strong>1. DRAM dies are stacked:</strong> 8 or 12 DRAM dies are placed on top of each other, like floors in a building. Each die is thinned to ~50 micrometers (thinner than a human hair).<br><br><strong>2. TSVs connect them:</strong> Thousands of Through-Silicon Vias (TSVs) &mdash; tiny copper pillars drilled through each die &mdash; create vertical electrical connections between all layers. Each stack has over 5,000 TSVs.<br><br><strong>3. Wide interface:</strong> Each HBM stack has a 1,024-bit wide interface. With 5 stacks (H100), that&rsquo;s 5,120 bits of data moving simultaneously. Compare to GDDR&rsquo;s 32 bits per chip.<br><br><strong>4. Close to the GPU:</strong> HBM stacks sit on the same silicon interposer as the GPU die, just millimeters away. This proximity reduces latency and power consumption vs off-package memory.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">HBM Generation Evolution</div><div class="cc-code"><span class="hl-key">Gen     Layers  Cap/Stack  BW/Stack  Data Rate</span>
+
+HBM2    8-high  <span class="hl-num">8</span> GB      <span class="hl-num">256</span> GB/s  2.4 Gbps
+HBM2e   8-high  <span class="hl-num">16</span> GB     <span class="hl-num">460</span> GB/s  3.6 Gbps
+HBM3    8-high  <span class="hl-num">16</span> GB     <span class="hl-num">665</span> GB/s  6.4 Gbps
+HBM3e   12-high <span class="hl-num">36</span> GB     <span class="hl-num">1,200</span> GB/s 9.6 Gbps
+HBM4    16-high <span class="hl-num">48</span> GB     <span class="hl-num">2,000+</span>   TBD
+
+<span class="hl-key">Used in:</span>
+  HBM2e:  A100 (80GB = 5 stacks)
+  HBM3:   H100 (80GB = 5 stacks)
+  HBM3e:  H200 (141GB), B200 (192GB)
+  HBM4:   Next-gen GPUs (2026+)
+
+<span class="hl-key">Market leaders (Q2 2025):</span>
+  SK Hynix:  <span class="hl-num">62%</span> share
+  Micron:    <span class="hl-num">21%</span> share
+  Samsung:   <span class="hl-num">17%</span> share</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> HBM4 (expected 2026) doubles the interface width to 2,048 bits and targets 2+ TB/s per stack. Samsung has already announced HBM4E at 4 TB/s per stack. This means future GPUs could have 10&ndash;20x the memory bandwidth of today&rsquo;s H100 &mdash; fundamentally changing what&rsquo;s possible for real-time inference of very large models.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">speed</span></div><div><div class="cc-title">Bandwidth Math: Why It Determines Token Speed</div><div class="cc-sub">Every token generated requires reading the entire model from memory</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Fundamental Equation</div><div class="cc-text">During LLM inference (generating tokens), the GPU must <strong>read every model weight from memory for every token</strong>. This is because each token passes through every layer of the model.<br><br>This means your maximum token generation speed is directly limited by memory bandwidth:<br><br><strong>Max tokens/sec = Memory Bandwidth &divide; Model Size</strong><br><br>For a 70B model in FP16 (140 GB of weights):<br>&bull; <strong>H100:</strong> 3,350 GB/s &divide; 140 GB = <strong>~24 tokens/sec</strong> (theoretical max)<br>&bull; <strong>B200:</strong> 8,000 GB/s &divide; 140 GB = <strong>~57 tokens/sec</strong> (theoretical max)<br><br>Real-world numbers are lower due to KV cache reads, activation memory, and overhead. But this formula gives you the ceiling &mdash; no amount of TFLOPS can exceed it.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Bandwidth-Limited Token Rates</div><div class="cc-code"><span class="hl-key">Theoretical max tokens/sec (single GPU):</span>
+<span class="hl-str">Formula: BW ÷ Model_Size_Bytes</span>
+
+<span class="hl-key">7B model (FP16 = 14 GB):</span>
+  H100: 3,350 / 14 = <span class="hl-num">~239</span> tok/s
+  B200: 8,000 / 14 = <span class="hl-num">~571</span> tok/s
+
+<span class="hl-key">13B model (FP16 = 26 GB):</span>
+  H100: 3,350 / 26 = <span class="hl-num">~129</span> tok/s
+  B200: 8,000 / 26 = <span class="hl-num">~308</span> tok/s
+
+<span class="hl-key">70B model (FP16 = 140 GB):</span>
+  H100: 3,350 / 140 = <span class="hl-num">~24</span> tok/s
+  B200: 8,000 / 140 = <span class="hl-num">~57</span> tok/s
+
+<span class="hl-key">70B model (INT4 = 35 GB):</span>
+  H100: 3,350 / 35 = <span class="hl-num">~96</span> tok/s
+  B200: 8,000 / 35 = <span class="hl-num">~229</span> tok/s
+
+<span class="hl-cmt">Quantization (FP16→INT4) gives 4x
+more tokens/sec because you read
+4x less data per token. This is
+why quantization matters so much.</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> This is why memory bandwidth &mdash; not TFLOPS &mdash; determines inference speed for most LLM workloads. The H100 has 990 TFLOPS FP16 but only 3,350 GB/s bandwidth. For single-user inference, those TFLOPS sit mostly idle, waiting for data. Bandwidth is the bottleneck, and quantization is the most effective way to work around it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">scale</span></div><div><div class="cc-title">Model Weight Memory: The Sizing Problem</div><div class="cc-sub">A 70B model needs 140 GB just for weights &mdash; before anything else</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Memory Budget for Model Weights</div><div class="cc-text">Every parameter in a neural network takes memory. The amount depends on precision:<br><br><strong>FP32 (4 bytes per param):</strong><br>&bull; 7B model = 28 GB<br>&bull; 13B model = 52 GB<br>&bull; 70B model = 280 GB<br>&bull; 405B model = 1,620 GB (!)<br><br><strong>FP16/BF16 (2 bytes per param):</strong><br>&bull; 7B = 14 GB, 13B = 26 GB, 70B = 140 GB<br><br><strong>INT8 (1 byte per param):</strong><br>&bull; 7B = 7 GB, 13B = 13 GB, 70B = 70 GB<br><br><strong>INT4 (0.5 bytes per param):</strong><br>&bull; 7B = 3.5 GB, 13B = 6.5 GB, 70B = 35 GB<br><br>But weights are just the start. You also need memory for activations, optimizer states (during training), and the KV cache (during inference).</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training Memory: The 16x Multiplier</div><div class="cc-code"><span class="hl-key">Training a 7B model (FP32/FP16 mixed):</span>
+
+Model weights (FP16):    <span class="hl-num">14</span> GB
+Master weights (FP32):   <span class="hl-num">28</span> GB
+Gradients (FP16):        <span class="hl-num">14</span> GB
+Optimizer states (FP32):
+  Adam momentum:         <span class="hl-num">28</span> GB
+  Adam variance:         <span class="hl-num">28</span> GB
+─────────────────────────────
+<span class="hl-str">Total optimizer memory:   112 GB</span>
+
+Plus activations:        <span class="hl-num">~20-60</span> GB
+  (depends on batch size
+   and sequence length)
+
+<span class="hl-key">Total for 7B training:</span>  <span class="hl-num">~130-170</span> GB
+<span class="hl-key">Total for 70B training:</span> <span class="hl-num">~1,300-1,700</span> GB
+
+<span class="hl-cmt">A 70B model needs ~1.5 TB just
+to train. That's 19 H100s worth
+of memory — minimum. This is why
+distributed training exists.</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> The &ldquo;16x rule&rdquo; for training: you need roughly 16 bytes per parameter for mixed-precision training with Adam optimizer. A 70B model needs ~1,120 GB just for weights + optimizer, before activations. This is why training always requires multiple GPUs, while inference can sometimes fit on one.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">expand</span></div><div><div class="cc-title">The KV Cache Explosion</div><div class="cc-sub">Every token you generate makes the next one more expensive</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What Is the KV Cache?</div><div class="cc-text">During LLM inference, the attention mechanism needs to look back at all previous tokens. To avoid recomputing attention for every past token, GPUs store the <strong>Key and Value vectors</strong> for each token in a cache.<br><br>Think of it like a <strong>conversation transcript</strong>. Every time you say something new, the model needs to re-read the entire transcript to understand context. The KV cache stores this transcript in GPU memory so it doesn&rsquo;t have to recompute it.<br><br>The problem: this cache <strong>grows linearly with sequence length and batch size</strong>. For long conversations or large batches, the KV cache can consume more memory than the model weights themselves.<br><br>For a 70B model with 80 layers, 64 attention heads, and 128-dim per head:<br>KV cache per token = 2 &times; 80 &times; 64 &times; 128 &times; 2 bytes = <strong>~2.6 MB per token</strong></div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">KV Cache Memory Math</div><div class="cc-code"><span class="hl-key">Llama 3 70B KV cache:</span>
+
+Per token: ~<span class="hl-num">2.6</span> MB (FP16)
+
+<span class="hl-str">Single user, 4K context:</span>
+  4,096 × 2.6 MB = <span class="hl-num">~10.7</span> GB
+
+<span class="hl-str">Single user, 128K context:</span>
+  131,072 × 2.6 MB = <span class="hl-num">~341</span> GB (!!)
+
+<span class="hl-str">Batch of 32 users, 4K each:</span>
+  32 × 10.7 GB = <span class="hl-num">~342</span> GB
+
+<span class="hl-key">Total GPU memory needed:</span>
+  Weights (FP16):     <span class="hl-num">140</span> GB
+  + KV cache (32×4K): <span class="hl-num">342</span> GB
+  + Activations:      <span class="hl-num">~10</span> GB
+  ─────────────────────────
+  Total:              <span class="hl-num">~492</span> GB
+
+<span class="hl-cmt">That's 6 H100s just for memory.
+The KV cache is often the largest
+memory consumer in production
+inference systems.</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The KV cache is why long-context models (128K+ tokens) are so expensive to serve. It&rsquo;s also why techniques like KV cache quantization (storing keys/values in INT8 instead of FP16), PagedAttention (used in vLLM), and multi-query attention (sharing KV heads) are critical for production inference. They can reduce KV cache memory by 4&ndash;8x.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">swap_vert</span></div><div><div class="cc-title">Compute-Bound vs Memory-Bound</div><div class="cc-sub">Understanding which bottleneck you&rsquo;re hitting changes your optimization strategy</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Two Different Bottlenecks</div><div class="cc-text">Every GPU workload is limited by either <strong>compute</strong> (not enough TFLOPS) or <strong>memory bandwidth</strong> (can&rsquo;t feed data fast enough). Knowing which one you&rsquo;re hitting determines your optimization strategy:<br><br><strong>Compute-bound</strong> (training, batched inference):<br>&bull; GPU cores are fully utilized<br>&bull; Adding more TFLOPS helps<br>&bull; Larger batch sizes help (more work per memory read)<br>&bull; Lower precision helps (more ops per cycle)<br><br><strong>Memory-bound</strong> (single-user inference, small batches):<br>&bull; GPU cores are idle, waiting for data<br>&bull; More TFLOPS don&rsquo;t help<br>&bull; More bandwidth helps<br>&bull; Quantization helps (less data to read)<br>&bull; Smaller models help</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Arithmetic Intensity Test</div><div class="cc-code"><span class="hl-key">Arithmetic Intensity (AI):</span>
+  = FLOPs per byte of memory accessed
+
+<span class="hl-key">H100 balance point:</span>
+  990 TFLOPS ÷ 3,350 GB/s
+  = <span class="hl-num">295</span> FLOPs per byte
+
+If your workload does <span class="hl-num">&lt;295</span>
+FLOPs per byte → <span class="hl-str">memory-bound</span>
+
+If your workload does <span class="hl-num">&gt;295</span>
+FLOPs per byte → <span class="hl-str">compute-bound</span>
+
+<span class="hl-key">Typical workloads:</span>
+  Training (large batch):
+    ~<span class="hl-num">500-2000</span> FLOPs/byte → Compute
+  
+  Inference (batch=1):
+    ~<span class="hl-num">1-2</span> FLOPs/byte → Memory
+
+  Inference (batch=64):
+    ~<span class="hl-num">64-128</span> FLOPs/byte → Still memory
+
+  Inference (batch=512):
+    ~<span class="hl-num">512-1024</span> FLOPs/byte → Compute</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Most LLM inference is memory-bound. This is why buying a GPU with more TFLOPS doesn&rsquo;t always make inference faster &mdash; you need more bandwidth. It&rsquo;s also why the H200 (same compute as H100, but 43% more bandwidth) gives a meaningful inference speedup despite having zero additional TFLOPS.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">timeline</span></div><div><div class="cc-title">The HBM Roadmap: What&rsquo;s Coming</div><div class="cc-sub">HBM4, HBM4E, and the path to 4 TB/s per stack</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">HBM Technology Roadmap</div><div class="cc-text">Memory technology is evolving rapidly to keep pace with AI compute demands:<br><br><strong>HBM3e (current, 2024&ndash;2025):</strong> 9.6 Gbps data rate, up to 36 GB per stack, ~1.2 TB/s per stack. Used in H200, B200, MI350X. 30% more power-efficient than competitors (Micron). Production is scaling rapidly.<br><br><strong>HBM4 (2026):</strong> JEDEC spec released April 2025. Doubles interface width to 2,048 bits. Targets 2+ TB/s per stack. Will enable GPUs with 256&ndash;384 GB of memory at 16+ TB/s total bandwidth.<br><br><strong>HBM4E (2027+):</strong> Samsung announced 16 Gbps speed, up to 48 GB per stack, 4 TB/s per stack. This would give a single GPU potentially 384 GB at 32 TB/s &mdash; enough to run a 200B model on a single chip.<br><br>The memory industry is investing tens of billions in HBM manufacturing capacity. It&rsquo;s the bottleneck that determines how fast AI accelerators can be built.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Impact on AI Workloads</div><div class="cc-code"><span class="hl-key">What HBM4/4E enables:</span>
+
+<span class="hl-str">Single-GPU model capacity:</span>
+  HBM3e (B200):  <span class="hl-num">192</span> GB → 96B FP16
+  HBM4 (2026):   <span class="hl-num">~384</span> GB → 192B FP16
+  HBM4E (2027):  <span class="hl-num">~384</span> GB → 192B FP16
+
+<span class="hl-str">Inference speed (70B FP16):</span>
+  HBM3 (H100):   <span class="hl-num">~24</span> tok/s
+  HBM3e (B200):  <span class="hl-num">~57</span> tok/s
+  HBM4 (est):    <span class="hl-num">~114</span> tok/s
+  HBM4E (est):   <span class="hl-num">~228</span> tok/s
+
+<span class="hl-key">HBM market growth:</span>
+  2024: $<span class="hl-num">26</span> billion
+  2025: $<span class="hl-num">38</span> billion
+  2026: $<span class="hl-num">58</span> billion (projected)
+
+<span class="hl-cmt">Memory bandwidth is doubling
+every ~2 years. This is what
+makes each GPU generation
+dramatically faster at inference.</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The HBM roadmap is as important as the GPU compute roadmap. Each HBM generation roughly doubles bandwidth, which directly translates to faster inference. The combination of more bandwidth (HBM4) and lower precision (FP4/FP8) means future GPUs could serve today&rsquo;s largest models at real-time speeds on a single chip.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">Practical GPU Sizing Guide</div><div class="cc-sub">How many GPUs do you actually need for your model?</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Inference Sizing</div><div class="cc-code"><span class="hl-key">Rule of thumb for inference:</span>
+  GPUs needed = Model_Size ÷ GPU_Memory
+  (leave 20-30% headroom for KV cache)
+
+<span class="hl-str">7B model (FP16 = 14 GB):</span>
+  H100 (80GB): <span class="hl-num">1</span> GPU ✓
+  RTX 4090 (24GB): <span class="hl-num">1</span> GPU ✓
+
+<span class="hl-str">13B model (FP16 = 26 GB):</span>
+  H100: <span class="hl-num">1</span> GPU ✓
+  RTX 4090: <span class="hl-num">2</span> GPUs (or INT4 = 1)
+
+<span class="hl-str">70B model (FP16 = 140 GB):</span>
+  H100: <span class="hl-num">2</span> GPUs
+  B200 (192GB): <span class="hl-num">1</span> GPU ✓
+  MI300X (192GB): <span class="hl-num">1</span> GPU ✓
+
+<span class="hl-str">405B model (FP16 = 810 GB):</span>
+  H100: <span class="hl-num">~12</span> GPUs
+  B200: <span class="hl-num">~5</span> GPUs</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Training Sizing</div><div class="cc-code"><span class="hl-key">Rule of thumb for training:</span>
+  Memory = ~16 bytes × parameters
+  + activations (varies with batch)
+
+<span class="hl-str">7B model training:</span>
+  Memory: ~<span class="hl-num">130-170</span> GB
+  H100s needed: <span class="hl-num">2-4</span>
+  (with FSDP sharding)
+
+<span class="hl-str">13B model training:</span>
+  Memory: ~<span class="hl-num">250-350</span> GB
+  H100s needed: <span class="hl-num">4-8</span>
+
+<span class="hl-str">70B model training:</span>
+  Memory: ~<span class="hl-num">1,300-1,700</span> GB
+  H100s needed: <span class="hl-num">16-32</span>
+
+<span class="hl-str">405B model training:</span>
+  Memory: ~<span class="hl-num">7,500-10,000</span> GB
+  H100s needed: <span class="hl-num">128+</span>
+
+<span class="hl-cmt">These are minimums. Production
+training often uses 2-4x more
+GPUs for faster throughput.</span></div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> Memory is the first constraint to check when planning any AI workload. Before worrying about TFLOPS, interconnects, or networking, ask: &ldquo;Does my model fit?&rdquo; If it doesn&rsquo;t fit in GPU memory, nothing else matters until you solve that problem &mdash; either with more GPUs, quantization, or a smaller model.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="03-accelerator-landscape.html"><span class="material-symbols-rounded">arrow_back</span> Ch 3: The Accelerator Zoo</a>
+    <a class="ch-nav-btn next" href="05-interconnects.html">Ch 5: Interconnects <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4,5],7:[5,6],8:[6,7]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> HBM stacks memory vertically with 1,024-bit interfaces — 5-10x more bandwidth than GDDR. H100 HBM3: 3,350 GB/s vs RTX 4090 GDDR6X: 1,008 GB/s.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> HBM uses through-silicon vias (TSVs) to stack 8-12 DRAM dies vertically. HBM3e: 36GB/stack at 1.2 TB/s. HBM4 (2026): 2+ TB/s per stack.',color:'#7c3aed'},
+    3:{text:'<strong>Step 3:</strong> Max tokens/sec = Bandwidth ÷ Model Size. A 70B FP16 model on H100: ~24 tok/s. Quantize to INT4: ~96 tok/s. Bandwidth is the ceiling.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Training needs ~16 bytes per parameter (weights + optimizer + gradients). A 70B model needs ~1.5 TB — that\'s 19 H100s minimum.',color:'#dc2626'},
+    5:{text:'<strong>Step 5:</strong> KV cache grows linearly with context length. A 70B model with 32 users at 4K context: 342 GB of KV cache alone — more than the model weights.',color:'#ea580c'},
+    6:{text:'<strong>Step 6:</strong> Most LLM inference is memory-bound (low arithmetic intensity). More TFLOPS won\'t help — you need more bandwidth or smaller models.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> HBM4 (2026): 2+ TB/s per stack. HBM4E: 4 TB/s. Future GPUs could run 200B models on a single chip at real-time speeds.',color:'#16a34a'},
+    8:{text:'<strong>Step 8:</strong> First question for any AI workload: "Does my model fit?" Memory is the first constraint. Solve it with more GPUs, quantization, or smaller models.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

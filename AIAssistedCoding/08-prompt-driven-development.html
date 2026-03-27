@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 8: Prompt-Driven Development — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}.cc-code .hl-err{color:var(--red);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 8 &mdash; Prompt-Driven Development</h2><span class="tb-sub">From vague requests to precise specifications &mdash; the craft of telling AI what to build</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">lightbulb</span></div><span class="pipe-label">Mindset</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">layers</span></div><span class="pipe-label">3 Layers</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">call_split</span></div><span class="pipe-label">Decompose</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Patterns</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">replay</span></div><span class="pipe-label">Iterate</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">star</span></div><span class="pipe-label">Mastery</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">lightbulb</span></div>
+        <div><div class="cc-title">The Prompt-Driven Mindset</div><div class="cc-sub">You are no longer just a coder &mdash; you are a specification writer</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What Changes</div>
+            <div class="cc-text">In prompt-driven development, your primary output shifts from <strong>code</strong> to <strong>specifications</strong>. You describe what needs to be built, the constraints it must satisfy, and the patterns it should follow. The AI generates the implementation. Your job becomes defining the <em>what</em> and <em>why</em>, while the AI handles the <em>how</em>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Why Precision Matters</div>
+            <div class="cc-text">A vague prompt produces code that needs <strong>~60% rewriting</strong>. A structured, precise prompt produces code that needs only <strong>~10% modification</strong>. The difference isn&rsquo;t the model &mdash; it&rsquo;s the quality of the instruction. Prompt precision correlates directly with output quality.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">State the Outcome, Not the Steps</div>
+            <div class="cc-text">Tell the AI <strong>what you want to achieve</strong>, not how to achieve it. Let the agent determine the best implementation path. Micromanaging steps constrains the model and often produces worse results than letting it reason about the approach.</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-box bad">
+              <div class="cb-tag">Micromanaging</div>
+              <div class="cb-text">&ldquo;Create a variable called users. Then loop through the array. Inside the loop, check if the user is active. If so, push to a new array.&rdquo;</div>
+            </div>
+            <div class="compare-box good">
+              <div class="cb-tag">Outcome-Focused</div>
+              <div class="cb-text">&ldquo;Filter the users array to only include active users. Return a new array without mutating the original.&rdquo;</div>
+            </div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The best prompts read like a product specification, not a tutorial. You define acceptance criteria; the AI writes the implementation. This is a fundamentally different skill from writing code yourself.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">layers</span></div>
+        <div><div class="cc-title">The Three-Layer Prompt Framework</div><div class="cc-sub">Context &rarr; Task &rarr; Constraints &mdash; the structure that works</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Layer 1: Context</div>
+            <div class="cc-text">Tell the AI about your project, stack, and environment. What framework are you using? What does the existing code look like? What patterns does the codebase follow? This layer is often handled by rules files (Ch 7), but you can supplement it in the prompt.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Layer 2: Task</div>
+            <div class="cc-text">Be specific about what needs to happen. Not &ldquo;add login&rdquo; but &ldquo;implement email/password login with JWT tokens, returning a 200 with the token on success and a 401 with an error message on failure.&rdquo; Include expected behavior, edge cases, and error handling.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Layer 3: Constraints &amp; Format</div>
+            <div class="cc-text">Specify boundaries: what <em>not</em> to do, style requirements, performance expectations, and output format. &ldquo;Don&rsquo;t use any external libraries. Follow the existing error handling pattern in @src/utils/errors.ts. Include unit tests.&rdquo;</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Framework in Action</div>
+            <div class="cc-code"><span class="hl-cmt">// LAYER 1: CONTEXT</span>
+<span class="hl-str">&ldquo;We use Next.js 15 with App Router, Prisma ORM,</span>
+<span class="hl-str"> and Zod for validation. Auth uses JWT stored</span>
+<span class="hl-str"> in httpOnly cookies.</span>
+
+<span class="hl-cmt">// LAYER 2: TASK</span>
+<span class="hl-str"> Create a POST /api/users endpoint that:</span>
+<span class="hl-str"> - Accepts { email, name, role } in the body</span>
+<span class="hl-str"> - Validates with Zod (email format, name 2-50</span>
+<span class="hl-str">   chars, role: admin|editor|viewer)</span>
+<span class="hl-str"> - Creates user in DB via Prisma</span>
+<span class="hl-str"> - Returns 201 with the created user</span>
+<span class="hl-str"> - Returns 409 if email already exists</span>
+
+<span class="hl-cmt">// LAYER 3: CONSTRAINTS</span>
+<span class="hl-str"> Follow the pattern in @src/app/api/posts/route.ts.</span>
+<span class="hl-str"> Use the existing ApiResponse type from @src/types.</span>
+<span class="hl-str"> Require admin role (check auth middleware).</span>
+<span class="hl-str"> Add tests in @tests/api/users.test.ts.&rdquo;</span></div>
+          </div>
+          <div class="cc-note n-green"><strong>Why it works:</strong> Each layer narrows the solution space. Context eliminates wrong-framework answers. Task eliminates wrong-behavior answers. Constraints eliminate wrong-style answers. What remains is exactly what you need.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">call_split</span></div>
+        <div><div class="cc-title">Task Decomposition: Break It Down</div><div class="cc-sub">Why small, focused prompts beat monolithic requests</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Decomposition Principle</div>
+            <div class="cc-text">Large tasks produce large, error-prone outputs. The model loses track of requirements, introduces inconsistencies, and generates code that&rsquo;s harder to review. <strong>Decompose by natural code boundaries</strong>: layers, concerns, or dependency order. Generate each unit separately with focused context, then integrate.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">When to Decompose</div>
+            <div class="cc-text">&bull; Task touches <strong>3+ files</strong><br>&bull; Task has <strong>multiple independent concerns</strong> (UI + API + DB)<br>&bull; Task requires <strong>different expertise</strong> (security, performance, UX)<br>&bull; AI produces <strong>partial solutions</strong> or loses track of requirements<br>&bull; You can&rsquo;t <strong>review the output</strong> in one pass</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Decomposition Example</div>
+            <div class="cc-code"><span class="hl-cmt">// Instead of: &ldquo;Build user registration&rdquo;</span>
+<span class="hl-cmt">// Decompose into:</span>
+
+<span class="hl-ok">Step 1:</span> Create Zod validation schema for
+  registration (email, password, name)
+  <span class="hl-cmt">&rarr; Review &amp; approve</span>
+
+<span class="hl-ok">Step 2:</span> Create Prisma migration for users table
+  with email unique constraint, hashed password
+  <span class="hl-cmt">&rarr; Review &amp; approve</span>
+
+<span class="hl-ok">Step 3:</span> Create POST /api/auth/register endpoint
+  using schema from Step 1, model from Step 2
+  <span class="hl-cmt">&rarr; Review &amp; approve</span>
+
+<span class="hl-ok">Step 4:</span> Create registration form component
+  with validation, loading states, error display
+  <span class="hl-cmt">&rarr; Review &amp; approve</span>
+
+<span class="hl-ok">Step 5:</span> Add tests for endpoint and form
+  <span class="hl-cmt">&rarr; Review &amp; approve</span></div>
+          </div>
+          <div class="cc-note n-blue"><strong>The review checkpoint:</strong> Each step ends with a review. This is critical. Errors caught at Step 2 are cheap to fix. Errors caught after all 5 steps are expensive. Decomposition creates natural review points that prevent cascading mistakes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Before &amp; After: Prompt Rewrites</div><div class="cc-sub">Real examples showing how prompt quality transforms output quality</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Example 1: API Endpoint</div>
+            <div class="compare-row">
+              <div class="compare-box bad">
+                <div class="cb-tag">Before</div>
+                <div class="cb-text">&ldquo;Add a notifications endpoint.&rdquo;</div>
+              </div>
+              <div class="compare-box good">
+                <div class="cb-tag">After</div>
+                <div class="cb-text">&ldquo;Create GET /api/notifications for authenticated users. Return { id, type, message, read, createdAt } with cursor-based pagination (limit, cursor params). Return 401 if unauthenticated. Add unit tests covering pagination and auth.&rdquo;</div>
+              </div>
+            </div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Example 2: Bug Fix</div>
+            <div class="compare-row">
+              <div class="compare-box bad">
+                <div class="cb-tag">Before</div>
+                <div class="cb-text">&ldquo;The form is broken, fix it.&rdquo;</div>
+              </div>
+              <div class="compare-box good">
+                <div class="cb-tag">After</div>
+                <div class="cb-text">&ldquo;The registration form in @src/components/RegisterForm.tsx submits successfully but doesn&rsquo;t redirect. Expected: redirect to /dashboard after 201 response. Actual: stays on /register. The API call succeeds (confirmed in Network tab).&rdquo;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Example 3: Refactoring</div>
+            <div class="compare-row">
+              <div class="compare-box bad">
+                <div class="cb-tag">Before</div>
+                <div class="cb-text">&ldquo;Refactor this code.&rdquo;</div>
+              </div>
+              <div class="compare-box good">
+                <div class="cb-tag">After</div>
+                <div class="cb-text">&ldquo;Extract the validation logic from @src/routes/orders.ts lines 45-89 into a separate validateOrder function in @src/validators/order.ts. Keep the same behavior. The function should accept an OrderInput and return { valid: boolean, errors: string[] }.&rdquo;</div>
+              </div>
+            </div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Pattern</div>
+            <div class="cc-text">Every good prompt rewrite adds the same things: <strong>specific files</strong>, <strong>expected behavior</strong>, <strong>data shapes</strong>, <strong>error cases</strong>, and <strong>verification criteria</strong>. The &ldquo;after&rdquo; prompts aren&rsquo;t longer for the sake of length &mdash; every word narrows the solution space.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>The 4 missing elements:</strong> When a prompt fails, it&rsquo;s almost always missing one of: task scope, file locations, constraints, or verification steps. Add whichever is missing and retry.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">psychology</span></div>
+        <div><div class="cc-title">Prompt Patterns That Work</div><div class="cc-sub">Reusable patterns for common development tasks</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Exemplar Pattern</div>
+            <div class="cc-text"><strong>&ldquo;Follow the pattern in [existing file].&rdquo;</strong><br><br>The most powerful prompt technique for consistency. Point the AI at an existing, well-written piece of code and ask it to follow the same pattern. The AI infers naming conventions, error handling, response formats, and architectural decisions from the example.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Constraint Pattern</div>
+            <div class="cc-text"><strong>&ldquo;Do X, but don&rsquo;t do Y.&rdquo;</strong><br><br>Explicitly state what the AI should avoid. &ldquo;Implement caching, but don&rsquo;t use Redis &mdash; use in-memory Map with TTL.&rdquo; Constraints prevent the AI from making assumptions that conflict with your architecture.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Role Pattern</div>
+            <div class="cc-text"><strong>&ldquo;Act as a [specialist] and review/build X.&rdquo;</strong><br><br>&ldquo;Act as a security auditor and review this authentication flow for vulnerabilities.&rdquo; Assigning a role activates domain-specific knowledge and changes the model&rsquo;s evaluation criteria.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Verification Pattern</div>
+            <div class="cc-text"><strong>&ldquo;After implementing, verify by [criteria].&rdquo;</strong><br><br>&ldquo;After adding the endpoint, run the test suite and fix any failures.&rdquo; This turns a single-shot generation into an iterative loop where the agent checks its own work. Properly structured, this reduces manual debugging time by <strong>6.5x</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Incremental Pattern</div>
+            <div class="cc-text"><strong>&ldquo;Start with [minimal version], then add [feature].&rdquo;</strong><br><br>&ldquo;First create a basic CRUD endpoint with no auth. Once that works, add JWT authentication. Then add rate limiting.&rdquo; Building incrementally lets you verify each layer before adding complexity.</div>
+          </div>
+          <div class="cc-note n-violet"><strong>Combine patterns:</strong> The best prompts use 2&ndash;3 patterns together. &ldquo;Follow the pattern in @src/routes/posts.ts (exemplar). Add input validation with Zod (constraint). After implementing, run <code>npm test</code> and fix failures (verification).&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">replay</span></div>
+        <div><div class="cc-title">The Iterative Refinement Loop</div><div class="cc-sub">First draft is never final &mdash; how to steer the AI toward what you want</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Expect Iteration</div>
+            <div class="cc-text">Even with a perfect prompt, the first output rarely matches exactly what you want. This is normal. Prompt-driven development is an <strong>iterative conversation</strong>, not a one-shot generation. Plan for 2&ndash;3 rounds of refinement on complex tasks.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Effective Correction Prompts</div>
+            <div class="cc-code"><span class="hl-cmt">// Be specific about what&rsquo;s wrong:</span>
+
+<span class="hl-err">Bad:</span>  &ldquo;That&rsquo;s not right, try again.&rdquo;
+<span class="hl-ok">Good:</span> &ldquo;The error handling is wrong. On 404,
+       return { error: &lsquo;Not found&rsquo; } not throw.
+       See how @src/routes/posts.ts handles it.&rdquo;
+
+<span class="hl-err">Bad:</span>  &ldquo;Make it better.&rdquo;
+<span class="hl-ok">Good:</span> &ldquo;Extract the DB query into a separate
+       function in @src/db/queries.ts so it
+       can be reused by the admin endpoint.&rdquo;
+
+<span class="hl-err">Bad:</span>  &ldquo;This is too slow.&rdquo;
+<span class="hl-ok">Good:</span> &ldquo;This queries the DB inside a loop (N+1).
+       Batch the user lookups into a single
+       WHERE id IN (...) query instead.&rdquo;</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Refinement Workflow</div>
+            <div class="cc-text"><strong>Round 1:</strong> Generate the initial implementation. Review structure and approach. Is the overall direction right?<br><br><strong>Round 2:</strong> Fix specific issues. Wrong error handling? Missing edge case? Point to the exact problem and the desired behavior.<br><br><strong>Round 3:</strong> Polish. Naming, comments, test coverage, performance. These are the details that make code production-ready.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">When to Start Over</div>
+            <div class="cc-text">If Round 2 corrections are making things worse, the fundamental approach is wrong. <strong>Don&rsquo;t iterate on a bad foundation.</strong> Revert, rethink your prompt, and start fresh. A new prompt with better context is faster than fixing a broken implementation.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The skill isn&rsquo;t writing the perfect first prompt. It&rsquo;s recognizing what&rsquo;s wrong with the output and writing a precise correction. Good developers iterate faster because they diagnose problems faster.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">groups</span></div>
+        <div><div class="cc-title">Prompts as Team Artifacts</div><div class="cc-sub">Shared prompt patterns accelerate the entire team</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Prompt Libraries</div>
+            <div class="cc-text">When you find a prompt pattern that works well for your project, <strong>save it</strong>. Create a shared library of prompt templates for common tasks: new endpoint, new component, migration, test suite, code review. New team members get productive faster because they inherit proven patterns.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Prompts in Code Review</div>
+            <div class="cc-text">Include the prompt that generated the code in the PR description. This gives reviewers <strong>context about intent</strong>: what was asked for, what constraints were specified, and what the AI was told to do. It makes review faster and catches specification gaps.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Shared Vocabulary</div>
+            <div class="cc-text">Teams that use <strong>consistent prompt patterns</strong> produce more consistent code. When everyone uses the same three-layer structure, the same decomposition approach, and the same verification patterns, the codebase stays coherent even with multiple developers using AI independently.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Template Example</div>
+            <div class="cc-code"><span class="hl-cmt">// Team prompt template: New API Endpoint</span>
+
+<span class="hl-key">Context:</span> [stack from rules file]
+<span class="hl-key">Endpoint:</span> [METHOD] [path]
+<span class="hl-key">Auth:</span> [required role or public]
+<span class="hl-key">Input:</span> [request body/params with types]
+<span class="hl-key">Output:</span> [response shape with status codes]
+<span class="hl-key">Errors:</span> [error cases and responses]
+<span class="hl-key">Pattern:</span> Follow @[existing similar endpoint]
+<span class="hl-key">Tests:</span> Add to @[test file location]
+<span class="hl-key">Verify:</span> Run <span class="hl-str">npm test</span> after implementation</div>
+          </div>
+          <div class="cc-note n-green"><strong>The multiplier:</strong> A good prompt template used by 5 developers saves more time than one developer writing perfect prompts. Invest in templates that encode your team&rsquo;s standards, patterns, and quality expectations.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">star</span></div>
+        <div><div class="cc-title">The Prompt-Driven Developer&rsquo;s Checklist</div><div class="cc-sub">A practical reference for every AI coding session</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Before You Prompt</div>
+            <div class="cc-code"><span class="hl-ok">&square;</span> Is the task small enough for one prompt?
+  If not &rarr; decompose first
+
+<span class="hl-ok">&square;</span> Do I have an example to reference?
+  If yes &rarr; use the exemplar pattern
+
+<span class="hl-ok">&square;</span> Are my rules files up to date?
+  If not &rarr; update before starting
+
+<span class="hl-ok">&square;</span> Am I in the right mode?
+  Completion / Chat / Agent (Ch 5)</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">While You Prompt</div>
+            <div class="cc-code"><span class="hl-ok">&square;</span> Layer 1: Context provided?
+  Stack, framework, relevant files
+
+<span class="hl-ok">&square;</span> Layer 2: Task specified?
+  Expected behavior, data shapes, edge cases
+
+<span class="hl-ok">&square;</span> Layer 3: Constraints stated?
+  What not to do, patterns to follow, tests
+
+<span class="hl-ok">&square;</span> File references included?
+  @ mentions for all relevant files</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">After You Get Output</div>
+            <div class="cc-code"><span class="hl-ok">&square;</span> Does the approach make sense?
+  Review structure before details
+
+<span class="hl-ok">&square;</span> Are there obvious errors?
+  Wrong imports, missing error handling
+
+<span class="hl-ok">&square;</span> Does it match the constraints?
+  Correct patterns, no forbidden elements
+
+<span class="hl-ok">&square;</span> Do I understand every line?
+  Never accept code you can&rsquo;t explain</div>
+          </div>
+          <div class="cc-note n-pink"><strong>The meta-skill:</strong> Prompt-driven development isn&rsquo;t about memorizing frameworks. It&rsquo;s about developing the habit of <em>thinking precisely about what you want before asking for it</em>. This precision transfers to writing better tickets, better documentation, and better code &mdash; even without AI.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="07-context-engineering.html"><span class="material-symbols-rounded">arrow_back</span> Ch 7: Context Engineering</a>
+    <a class="ch-nav-btn next" href="09-vibe-coding.html">Ch 9: Vibe Coding Workflows <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2,3],5:[3,4],6:[4],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> In prompt-driven development, your output shifts from code to specifications. A vague prompt needs ~60% rewriting; a structured prompt needs only ~10% modification. State outcomes, not steps.',color:'#0d9488'},
+    2:{text:'<strong>Step 2:</strong> The three-layer framework: Context (stack, environment), Task (specific behavior, data shapes, errors), Constraints (what not to do, patterns, tests). Each layer narrows the solution space.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Decompose large tasks by natural code boundaries. Generate each unit separately with focused context. Review after each step \u2014 errors caught early are cheap; errors caught late are expensive.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> Before/after prompt rewrites show the pattern: add specific files, expected behavior, data shapes, error cases, and verification criteria. When prompts fail, they\u2019re missing one of these four.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> Five reusable patterns: Exemplar (follow existing code), Constraint (do X not Y), Role (act as specialist), Verification (check your work), Incremental (build in layers). Combine 2\u20133 per prompt.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Expect 2\u20133 rounds of refinement. Be specific about what\u2019s wrong in corrections. If Round 2 makes things worse, the approach is wrong \u2014 revert and start fresh with a better prompt.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Save working prompt patterns as team templates. Include prompts in PR descriptions. Consistent prompt vocabulary across a team produces consistent code across the codebase.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The checklist: before (decompose, find examples, update rules), during (three layers + file references), after (review approach, check constraints, understand every line). Precision is the meta-skill.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>

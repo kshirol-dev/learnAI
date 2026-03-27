@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 11: Prompt Engineering as Product Design — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}
+.pipe-stage.done{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.done .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.done .pipe-label{color:var(--teal)}
+.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--teal)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--blue),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 11 &mdash; Prompt Engineering as Product Design</h2><span class="tb-sub">For LLM products: prompts are your product logic. How to version, test, and iterate.</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">code</span></div><span class="pipe-label">Prompts = Code</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">architecture</span></div><span class="pipe-label">Anatomy</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">psychology</span></div><span class="pipe-label">Techniques</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">history</span></div><span class="pipe-label">Versioning</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">science</span></div><span class="pipe-label">Testing</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">deployed_code</span></div><span class="pipe-label">Production</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">Prompts Are Product Logic</div><div class="cc-sub">In LLM products, the prompt IS the specification &mdash; treat it like code, not like a message</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Paradigm Shift</div><div class="cc-text">In traditional software, product logic lives in code. The PM writes requirements, engineers write code, and the code determines behavior.<br><br>In LLM products, <strong>the prompt IS the product logic</strong>. The system prompt defines what the AI does, how it responds, what it refuses, what tone it uses, and how it handles edge cases. Change the prompt and you change the product.<br><br>This means prompt engineering is not a technical task delegated to engineers. It&rsquo;s a <strong>product design discipline</strong> that the PM must understand and often directly participate in. The prompt is the most important artifact in an LLM product &mdash; more important than the UI, the API, or the model selection.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why PMs Must Care</div><div class="cc-text"><strong>Prompts encode product decisions:</strong><br>&bull; &ldquo;Always respond in a professional, empathetic tone&rdquo; &mdash; brand voice decision<br>&bull; &ldquo;If you&rsquo;re not sure, say so rather than guessing&rdquo; &mdash; accuracy vs. coverage trade-off<br>&bull; &ldquo;Never provide medical, legal, or financial advice&rdquo; &mdash; scope boundary<br>&bull; &ldquo;Keep responses under 200 words unless asked for detail&rdquo; &mdash; UX decision<br>&bull; &ldquo;If the user seems frustrated, offer to connect them with a human agent&rdquo; &mdash; escalation logic<br><br>Every line in a system prompt is a product decision. If the PM doesn&rsquo;t review and own the prompt, they don&rsquo;t own the product behavior.</div></div>
+          <div class="cc-note n-violet"><strong>The $2M lesson:</strong> An e-commerce company lost $2M in revenue from a single untested prompt change that altered how the AI handled product recommendations. The prompt is production code. Treat it with the same rigor: version control, testing, staged rollouts, and rollback capability.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">architecture</span></div><div><div class="cc-title">Anatomy of a Production Prompt</div><div class="cc-sub">The five components that make up a well-structured system prompt</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">1. Role &amp; Identity</div><div class="cc-text">Define <strong>who the AI is</strong> and how it should behave:<br><br>&ldquo;You are a customer support specialist for Acme Corp. You are knowledgeable about our products, policies, and billing processes. You are professional, empathetic, and concise.&rdquo;<br><br>This grounds the model&rsquo;s behavior in a specific persona and prevents it from acting as a generic chatbot.</div></div>
+          <div class="cc-block"><div class="cc-label">2. Task Definition</div><div class="cc-text">Define <strong>what the AI does</strong>:<br><br>&ldquo;Your job is to answer customer questions about billing, shipping, and returns. For each question, provide a clear, accurate answer based on the company knowledge base provided. If you need to look up order details, use the order_lookup function.&rdquo;<br><br>Be specific about the task scope. Vague task definitions produce vague outputs.</div></div>
+          <div class="cc-block"><div class="cc-label">3. Constraints &amp; Boundaries</div><div class="cc-text">Define <strong>what the AI must not do</strong>:<br><br>&ldquo;Never provide medical, legal, or financial advice. Never share internal company information. Never make promises about refunds without checking the order status. If asked about topics outside your scope, politely redirect to the appropriate channel.&rdquo;</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">4. Output Format</div><div class="cc-text">Define <strong>how the AI responds</strong>:<br><br>&ldquo;Respond in 1&ndash;3 paragraphs. Use bullet points for lists of steps. Include relevant order numbers or policy references when applicable. End with a question to confirm the issue is resolved.&rdquo;<br><br>Format instructions dramatically improve consistency. Without them, the model&rsquo;s output length, structure, and style vary unpredictably.</div></div>
+          <div class="cc-block"><div class="cc-label">5. Few-Shot Examples</div><div class="cc-text">Provide <strong>examples of ideal behavior</strong>:<br><br>&ldquo;Here are examples of good responses:<br><br>User: Where is my order?<br>Assistant: I&rsquo;d be happy to help you track your order. Could you please share your order number? You can find it in your confirmation email. I&rsquo;ll look up the current status right away.&rdquo;<br><br>Few-shot examples are the most powerful tool for controlling output quality. 3&ndash;5 well-chosen examples often improve quality more than pages of instructions.</div></div>
+          <div class="cc-note n-blue"><strong>The 80/20 of prompting:</strong> Role + constraints + 3 examples gets you 80% of the way. The remaining 20% comes from iterating on edge cases, refining format instructions, and adding specific handling for failure modes. Start simple, then add complexity based on evaluation results.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">psychology</span></div><div><div class="cc-title">Prompting Techniques</div><div class="cc-sub">Five techniques that every PM building LLM products should understand</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">1. Zero-Shot</div><div class="cc-text">Give the model a task with <strong>no examples</strong>. Just instructions.<br><br>&ldquo;Classify this email as spam or not spam.&rdquo;<br><br>Fastest to implement. Works well for simple, well-defined tasks. Quality varies significantly across inputs.</div></div>
+          <div class="cc-block"><div class="cc-label">2. Few-Shot</div><div class="cc-text">Provide <strong>3&ndash;10 examples</strong> of input-output pairs before the actual task.<br><br>&ldquo;Here are examples of how to classify emails: [examples]. Now classify this email.&rdquo;<br><br>Dramatically improves consistency and quality. The examples teach the model the expected pattern, format, and quality bar. This is the most commonly used technique in production.</div></div>
+          <div class="cc-block"><div class="cc-label">3. Chain-of-Thought (CoT)</div><div class="cc-text">Ask the model to <strong>reason step by step</strong> before giving its answer.<br><br>&ldquo;Think through this step by step before providing your answer.&rdquo;<br><br>Significantly improves accuracy on reasoning tasks (math, logic, multi-step analysis). The model &ldquo;shows its work,&rdquo; which also makes outputs more explainable and debuggable.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">4. Structured Output</div><div class="cc-text">Instruct the model to respond in a <strong>specific format</strong> (JSON, XML, markdown, table).<br><br>&ldquo;Respond with a JSON object containing: category (string), confidence (number 0&ndash;1), reasoning (string).&rdquo;<br><br>Essential for programmatic consumption of model outputs. Many APIs now support forced JSON output, ensuring the response is always parseable.</div></div>
+          <div class="cc-block"><div class="cc-label">5. System + User Separation</div><div class="cc-text">Use the <strong>system message</strong> for persistent instructions and the <strong>user message</strong> for per-request context.<br><br>System: &ldquo;You are a legal document analyzer. Extract key terms, obligations, and deadlines.&rdquo;<br>User: &ldquo;[paste document here]&rdquo;<br><br>This separation keeps the product logic (system) separate from the user input (user), making it easier to version, test, and maintain the product behavior independently of user inputs.</div></div>
+          <div class="cc-note n-teal"><strong>Technique selection:</strong> Start with zero-shot. If quality is insufficient, add few-shot examples. If reasoning is needed, add chain-of-thought. If you need parseable output, add structured output. Layer techniques incrementally &mdash; each adds tokens (cost) and latency. Only add what measurably improves quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">history</span></div><div><div class="cc-title">Prompt Versioning &amp; Management</div><div class="cc-sub">Treating prompts with the same rigor as production code</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Why Versioning Matters</div><div class="cc-text">Without version control, prompt management becomes chaos:<br><br>&bull; <strong>Lost work:</strong> Someone overwrites a prompt that was working well. No way to recover it.<br>&bull; <strong>No comparison:</strong> &ldquo;The AI was better last week.&rdquo; Which version was running last week? Nobody knows.<br>&bull; <strong>No audit trail:</strong> Who changed the prompt? When? Why? Critical for compliance and debugging.<br>&bull; <strong>Wasted compute:</strong> Teams re-run experiments they&rsquo;ve already run because results weren&rsquo;t tracked. Studies show 30&ndash;40% of prompt engineering time is wasted on re-work.<br><br>Every prompt change should create an <strong>immutable version</strong> with metadata: author, timestamp, changelog, and evaluation results.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Prompt Management in Practice</div><div class="cc-text"><strong>Version every change.</strong> Even a single-word edit creates a new version. Diff viewers show exactly what changed.<br><br><strong>Track performance per version.</strong> Each version has associated metrics: evaluation scores, token usage, latency, cost, user feedback. You can compare any two versions side by side.<br><br><strong>Rollback is non-destructive.</strong> Restoring a previous version creates a new version with the old content. The full history is preserved.<br><br><strong>Separate prompts from code deploys.</strong> Prompt changes should be deployable independently of code changes. This allows product and content teams to iterate on prompts without engineering releases &mdash; fetching prompts at runtime with caching and fallback support.<br><br><strong>Environment stages.</strong> Development &rarr; Staging &rarr; Production. A prompt must pass evaluation in staging before reaching production users.</div></div>
+          <div class="cc-note n-amber"><strong>Scale thresholds:</strong> Prompt management becomes urgent when you exceed: 10,000+ queries daily, 2+ people modifying prompts, or 5+ distinct prompts in the product. Below these thresholds, a shared document might suffice. Above them, you need proper tooling (Promptfoo, Humanloop, PostHog, or custom solutions).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Testing Prompts Systematically</div><div class="cc-sub">Moving from &ldquo;it looks good&rdquo; to &ldquo;it passes the eval suite&rdquo;</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Evaluation Suite</div><div class="cc-text">Every production prompt needs an <strong>evaluation suite</strong> &mdash; a set of test cases that the prompt must pass before deployment:<br><br><strong>Happy path tests (40%):</strong><br>Common, straightforward inputs. &ldquo;What&rsquo;s your return policy?&rdquo; The AI should handle these perfectly.<br><br><strong>Edge case tests (30%):</strong><br>Unusual but legitimate inputs. Misspellings, multiple questions in one message, very long inputs, inputs in unexpected languages.<br><br><strong>Adversarial tests (20%):</strong><br>Inputs designed to break the AI. Prompt injection attempts, jailbreaking, requests for out-of-scope content, attempts to extract the system prompt.<br><br><strong>Regression tests (10%):</strong><br>Cases that previously failed and were fixed. Ensure old bugs don&rsquo;t return when the prompt changes.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Testing Workflow</div><div class="cc-text"><strong>Step 1: Write the prompt change.</strong><br>Modify the system prompt, few-shot examples, or output format.<br><br><strong>Step 2: Run the eval suite.</strong><br>Execute all test cases against the new prompt. Compare results to the previous version.<br><br><strong>Step 3: Review failures.</strong><br>Did any previously passing tests fail? (Regression.) Did any new tests pass? (Improvement.) Are there new failure modes?<br><br><strong>Step 4: Human review.</strong><br>For subjective quality (tone, helpfulness), have 2&ndash;3 people review a sample of outputs. Automated metrics catch factual errors; humans catch quality issues.<br><br><strong>Step 5: Deploy to staging.</strong><br>Run the new prompt on a small percentage of real traffic. Monitor metrics for 24&ndash;48 hours.<br><br><strong>Step 6: Promote to production.</strong><br>If staging metrics hold, roll out to all users. Keep the previous version ready for instant rollback.</div></div>
+          <div class="cc-note n-pink"><strong>The non-determinism challenge:</strong> LLMs produce different outputs for the same input. Run each test case 3&ndash;5 times and evaluate the distribution of responses, not a single response. A prompt that works 4 out of 5 times is different from one that works 5 out of 5 times &mdash; and both are different from one that works 2 out of 5.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">token</span></div><div><div class="cc-title">Token Economics</div><div class="cc-sub">Every word in your prompt costs money &mdash; the PM must manage the token budget</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">How Tokens Work</div><div class="cc-text">LLMs process text in <strong>tokens</strong> &mdash; roughly 3/4 of a word. You pay for both <strong>input tokens</strong> (your prompt + context) and <strong>output tokens</strong> (the model&rsquo;s response).<br><br><strong>Cost example (GPT-4o, 2026 pricing):</strong><br>&bull; Input: ~$2.50 per million tokens<br>&bull; Output: ~$10 per million tokens<br>&bull; A 2,000-token system prompt + 500-token user input + 500-token response = ~$0.008 per request<br>&bull; At 100K requests/day = ~$800/day = ~$24K/month<br><br>The system prompt is sent with <strong>every single request</strong>. A 2,000-token system prompt at 100K requests/day costs ~$500/month just for the prompt alone. Every word matters.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Managing the Token Budget</div><div class="cc-text"><strong>Context window allocation:</strong><br>Modern models have large context windows (128K&ndash;1M tokens), but using more tokens costs more and increases latency. Allocate your budget:<br><br>&bull; <strong>System prompt:</strong> 500&ndash;2,000 tokens (fixed cost per request)<br>&bull; <strong>Few-shot examples:</strong> 200&ndash;1,000 tokens (high impact per token)<br>&bull; <strong>RAG context:</strong> 500&ndash;4,000 tokens (variable, based on retrieval)<br>&bull; <strong>User input:</strong> Variable (set a max length)<br>&bull; <strong>Response:</strong> Set a max output length<br><br><strong>Optimization techniques:</strong><br>&bull; Compress instructions (remove redundancy, use concise language)<br>&bull; Use dynamic few-shot (select relevant examples per query, not all examples every time)<br>&bull; Cache system prompts where the API supports it<br>&bull; Use smaller models for simpler tasks (GPT-4o-mini vs. GPT-4o)</div></div>
+          <div class="cc-note n-green"><strong>The cost-quality trade-off:</strong> Longer prompts with more examples generally produce better outputs but cost more. The PM must find the sweet spot: the minimum prompt that achieves the quality threshold. Track cost per query alongside quality metrics. A 10% quality improvement that doubles cost may not be worth it.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">warning</span></div><div><div class="cc-title">Prompt Pitfalls</div><div class="cc-sub">Common mistakes that cause production failures in LLM products</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pitfalls 1&ndash;4</div><div class="cc-text"><strong>1. Prompt injection vulnerability.</strong><br>Users can include instructions in their input that override your system prompt: &ldquo;Ignore all previous instructions and...&rdquo; Without defenses, your carefully crafted prompt is bypassed. Mitigation: input sanitization, instruction hierarchy, and adversarial testing.<br><br><strong>2. Prompt-model coupling.</strong><br>A prompt optimized for GPT-4 may perform poorly on Claude or Gemini. When the provider updates the model, your prompt may break. Mitigation: test prompts against multiple models regularly.<br><br><strong>3. Over-engineering the prompt.</strong><br>A 5,000-token system prompt with 50 rules and 20 examples. The model gets confused by contradictory instructions. Longer prompts don&rsquo;t always mean better outputs &mdash; they can degrade quality by overwhelming the model&rsquo;s attention.<br><br><strong>4. No fallback for prompt failures.</strong><br>The prompt assumes the model always follows instructions. It doesn&rsquo;t. What happens when the model ignores a constraint? Without a programmatic fallback (output validation, content filtering), failures reach users.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pitfalls 5&ndash;7</div><div class="cc-text"><strong>5. Testing on cherry-picked examples.</strong><br>&ldquo;The prompt works great on these 5 examples!&rdquo; But fails on the 500 examples in the eval suite. Always test on a representative, diverse set &mdash; not the examples you used to write the prompt.<br><br><strong>6. Ignoring temperature and parameters.</strong><br>Temperature controls randomness. Temperature 0 = deterministic (good for classification). Temperature 0.7 = creative (good for writing). Using the wrong temperature for the task produces inconsistent or bland outputs.<br><br><strong>7. No monitoring after deployment.</strong><br>The prompt works today. But user inputs change, model behavior drifts with updates, and edge cases accumulate. Without monitoring, quality degrades silently. Track output quality metrics continuously, not just at deployment.</div></div>
+          <div class="cc-note n-red"><strong>Defense in depth:</strong> Never rely on the prompt alone for safety or correctness. Layer defenses: prompt instructions (first line), output validation (check format, length, content), content filtering (block harmful outputs), and programmatic guardrails (never execute actions without confirmation). The prompt is one layer in a multi-layer safety system.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:linear-gradient(135deg,var(--violet),var(--blue))"><span class="material-symbols-rounded">deployed_code</span></div><div><div class="cc-title">The Prompt Engineering Workflow</div><div class="cc-sub">A production-grade process for managing prompts as product artifacts</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Workflow</div><div class="cc-text"><strong>1. Define the behavior</strong> (PM)<br>What should the AI do? What should it refuse? What tone? What format? Write this as product requirements, not as a prompt.<br><br><strong>2. Draft the prompt</strong> (PM + Prompt Engineer)<br>Translate requirements into a system prompt with role, task, constraints, format, and examples. Start simple.<br><br><strong>3. Evaluate against the test suite</strong> (Automated)<br>Run the prompt against 100&ndash;500 test cases. Measure quality metrics. Compare to the previous version.<br><br><strong>4. Iterate</strong> (PM + Prompt Engineer)<br>Review failures. Adjust the prompt. Re-evaluate. Repeat until the quality threshold is met. Typically 5&ndash;15 iterations.<br><br><strong>5. Human review</strong> (Domain experts)<br>Have qualified reviewers assess a sample of outputs for quality, accuracy, and safety.<br><br><strong>6. Staged rollout</strong> (Engineering)<br>Deploy to 5% of traffic. Monitor for 24&ndash;48 hours. If metrics hold, expand to 100%.<br><br><strong>7. Monitor continuously</strong> (Automated + PM)<br>Track quality, cost, latency, and user feedback. Alert on regressions.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">PM Ownership</div><div class="cc-text">In this workflow, the PM owns:<br><br>&bull; <strong>The behavior definition</strong> (step 1) &mdash; What the AI should do<br>&bull; <strong>The evaluation criteria</strong> (step 3) &mdash; What &ldquo;good&rdquo; looks like<br>&bull; <strong>The quality threshold</strong> (step 4) &mdash; When it&rsquo;s good enough to ship<br>&bull; <strong>The rollout decision</strong> (step 6) &mdash; When to go live<br>&bull; <strong>The monitoring review</strong> (step 7) &mdash; Whether quality is holding<br><br>The prompt engineer owns the technical implementation (steps 2, 4). Engineering owns the infrastructure (steps 3, 6, 7). But the PM is the decision-maker at every gate.</div></div>
+          <div class="cc-note n-violet"><strong>The bottom line:</strong> Prompt engineering is the new product design for LLM products. The prompt defines behavior, the evaluation suite defines quality, and the versioning system provides control. PMs who master this workflow ship better LLM products faster, with fewer production incidents and more predictable quality. It&rsquo;s not optional &mdash; it&rsquo;s the core competency of AI product management in the LLM era.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="10-evaluation-metrics-high-level.html"><span class="material-symbols-rounded">arrow_back</span> Ch 10: Evaluation &amp; Metrics That Matter</a>
+    <a class="ch-nav-btn next" href="12-rag-knowledge-integration-high-level.html">Ch 12: RAG &amp; Knowledge Integration <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=6000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[3],5:[3,4],6:[0,1],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Prompts are product logic.</strong> In LLM products, the system prompt defines what the AI does, how it responds, what it refuses, and how it handles edge cases. Every line is a product decision. If the PM doesn&rsquo;t own the prompt, they don&rsquo;t own the product behavior. An untested prompt change cost one company $2M.',color:'#7c3aed'},
+    2:{text:'<strong>Five components of a production prompt:</strong> Role &amp; identity (who the AI is), task definition (what it does), constraints &amp; boundaries (what it must not do), output format (how it responds), and few-shot examples (ideal behavior). Role + constraints + 3 examples gets you 80% of the way.',color:'#2563eb'},
+    3:{text:'<strong>Five prompting techniques:</strong> Zero-shot (no examples, simplest). Few-shot (3&ndash;10 examples, most common in production). Chain-of-thought (step-by-step reasoning). Structured output (JSON/format enforcement). System/user separation (persistent logic vs. per-request input). Layer incrementally &mdash; each adds cost.',color:'#0d9488'},
+    4:{text:'<strong>Version every prompt change.</strong> Immutable versions with metadata, performance tracking per version, non-destructive rollback, environment stages (dev &rarr; staging &rarr; production). Separate prompts from code deploys. Management becomes urgent at 10K+ queries/day, 2+ editors, or 5+ distinct prompts.',color:'#d97706'},
+    5:{text:'<strong>Test prompts systematically.</strong> Build an eval suite: 40% happy path, 30% edge cases, 20% adversarial, 10% regression. Run each test 3&ndash;5 times (non-determinism). Review failures, iterate, human review, staged rollout, then production. Move from &ldquo;it looks good&rdquo; to &ldquo;it passes the eval suite.&rdquo;',color:'#db2777'},
+    6:{text:'<strong>Token economics.</strong> The system prompt is sent with every request. A 2,000-token prompt at 100K requests/day costs ~$500/month just for the prompt. Manage the token budget: system prompt, few-shot examples, RAG context, user input, response. Find the minimum prompt that achieves the quality threshold.',color:'#16a34a'},
+    7:{text:'<strong>Seven prompt pitfalls:</strong> Injection vulnerability, prompt-model coupling, over-engineering, no fallback for failures, cherry-picked testing, wrong temperature, no post-deployment monitoring. Defense in depth: prompt instructions + output validation + content filtering + programmatic guardrails.',color:'#dc2626'},
+    8:{text:'<strong>The workflow:</strong> Define behavior (PM) &rarr; draft prompt (PM + engineer) &rarr; evaluate against test suite &rarr; iterate (5&ndash;15 rounds) &rarr; human review &rarr; staged rollout (5% traffic) &rarr; monitor continuously. The PM owns behavior definition, evaluation criteria, quality threshold, rollout decision, and monitoring.',color:'#7c3aed'}
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narStep.style.background='var(--violet)';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v.includes&&v.includes(idx)&&v[0]===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+  reset();
+})();
+</script>
+</body>
+</html>

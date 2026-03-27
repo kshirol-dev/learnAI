@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: The Model Selection Workflow — Reading Model Cards</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:4px 12px;background:var(--violet-light);border:1px solid var(--violet-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--violet-border);background:var(--violet-light)}.pipe-stage.lit .pipe-icon{background:var(--violet);color:#fff}.pipe-stage.lit .pipe-label{color:var(--violet)}.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}.pipe-arrow.lit{color:var(--violet)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--violet-light) 0%,var(--pink-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--violet);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--violet),var(--pink),var(--teal),var(--green));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--violet);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--violet);box-shadow:0 0 5px rgba(124,58,237,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--violet);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--violet);color:var(--violet);background:var(--violet-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}.ch-nav-btn.prev:empty,.ch-nav-btn.next:empty{display:none}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; The Model Selection Workflow</h2><span class="tb-sub">Card to decision &mdash; a practical checklist and side-by-side comparison walkthrough</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap"><div class="pipeline" id="pipeline">
+    <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">checklist</span></div><span class="pipe-label">7 Questions</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">filter_alt</span></div><span class="pipe-label">Filter</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">compare</span></div><span class="pipe-label">Compare</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">public</span></div><span class="pipe-label">Providers</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">groups</span></div><span class="pipe-label">Community</span></div><div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+    <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Decide</span></div>
+  </div></div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">checklist</span></div><div><div class="cc-title">The 7-Question Checklist</div><div class="cc-sub">Answer these before downloading any model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Questions</div><div class="cc-code"><span class="hl-key">Q1</span> <span class="hl-cmt">Does the license allow my use case?</span>
+<span class="hl-key">Q2</span> <span class="hl-cmt">Is the parameter count feasible for my hardware?</span>
+<span class="hl-key">Q3</span> <span class="hl-cmt">Does the context length fit my application?</span>
+<span class="hl-key">Q4</span> <span class="hl-cmt">Do the benchmarks cover my task type?</span>
+<span class="hl-key">Q5</span> <span class="hl-cmt">Is the training data appropriate?</span>
+<span class="hl-key">Q6</span> <span class="hl-cmt">Is there a quantized variant that fits?</span>
+<span class="hl-key">Q7</span> <span class="hl-cmt">How active is the community?</span></div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Order Matters</div><div class="cc-text">These questions are ordered by <strong>elimination efficiency</strong>. Q1 (license) kills the most candidates with the least effort. Q2 (hardware) eliminates the next largest set. By Q4, you&rsquo;re comparing 3&ndash;5 finalists instead of 50 candidates. Don&rsquo;t start with benchmarks (Q4) &mdash; that&rsquo;s the mistake most people make. Start with constraints (Q1&ndash;Q3), then compare quality (Q4&ndash;Q5), then verify logistics (Q6&ndash;Q7).</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> The checklist is a funnel, not a wish list. Start with hard constraints (license, hardware, context) that immediately eliminate incompatible models. Then compare the survivors on quality and community signals.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">filter_alt</span></div><div><div class="cc-title">Using Hub Filters Effectively</div><div class="cc-sub">Narrowing 2 million models to a shortlist of 10</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Filter Stack</div><div class="cc-text">On huggingface.co/models, apply filters in this order:<br><br><strong>1. Task:</strong> Text Generation, Text-to-Image, etc. (pipeline_tag)<br><strong>2. Library:</strong> Transformers, GGUF, diffusers (library_name)<br><strong>3. License:</strong> Apache 2.0, MIT, or your requirement<br><strong>4. Language:</strong> English, multilingual, etc.<br><strong>5. Sort by:</strong> Most Downloads or Trending<br><br>This typically reduces millions of models to hundreds. Then scan the first 2&ndash;3 pages for models from <strong>reputable organizations</strong> (Meta, Mistral, Google, Microsoft, Alibaba, Nous Research, etc.).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Beyond Filters</div><div class="cc-text">Filters get you to a shortlist. From there, <strong>open the top 3&ndash;5 model cards in tabs</strong> and compare them side by side. Look for: recency (when was it released?), base model family (Llama, Mistral, Qwen?), benchmark table coverage, and quality of the model card itself. A thorough, well-written card is a signal of a well-built model.</div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Don&rsquo;t search for &ldquo;the best model.&rdquo; Search for &ldquo;the best model for my constraints.&rdquo; Filter by your requirements first, then compare quality within the constraint set.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Side-by-Side Comparison</div><div class="cc-sub">Walking through a real model selection: coding assistant on a single GPU</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Scenario</div><div class="cc-text">You need a coding assistant. Constraints: commercial use, single 24GB GPU, 32K+ context, strong Python/JavaScript performance. You&rsquo;ve filtered and found three candidates.</div></div>
+          <div class="cc-block"><div class="cc-label">The Comparison</div><div class="cc-code"><span class="hl-cmt">            Model A    Model B    Model C</span>
+<span class="hl-key">Params</span>     <span class="hl-num">8B</span>         <span class="hl-num">14B</span>        <span class="hl-num">32B</span>
+<span class="hl-key">License</span>    <span class="hl-str">Apache</span>     <span class="hl-str">MIT</span>        <span class="hl-str">Apache</span>
+<span class="hl-key">Context</span>    <span class="hl-num">128K</span>       <span class="hl-num">32K</span>        <span class="hl-num">128K</span>
+<span class="hl-key">HumanEval</span>  <span class="hl-num">72%</span>        <span class="hl-num">82%</span>        <span class="hl-num">88%</span>
+<span class="hl-key">FP16 VRAM</span>  <span class="hl-num">16GB</span>       <span class="hl-num">28GB</span>       <span class="hl-num">64GB</span>
+<span class="hl-key">Q4 VRAM</span>    <span class="hl-num">5GB</span>        <span class="hl-num">9GB</span>        <span class="hl-num">20GB</span></div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Analysis</div><div class="cc-text"><strong>Model C:</strong> Best benchmarks, but at FP16 it needs 64GB (doesn&rsquo;t fit). At Q4 it needs 20GB &mdash; fits, but tight with KV-cache. Only works with aggressive quantization.<br><br><strong>Model B:</strong> Good benchmarks, fits at FP16 with slight squeeze. 32K context might be tight for full codebase analysis but fine for file-level work.<br><br><strong>Model A:</strong> Lower benchmarks, but fits easily at FP16 with room for long context. The 128K window enables whole-project analysis.<br><br><strong>The decision:</strong> No single &ldquo;right&rdquo; answer. If coding quality is paramount: Model B at FP16 or Model C at Q4. If context length matters: Model A at FP16. If easy deployment: Model A.</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Model selection is always a tradeoff between quality, hardware requirements, and features. The &ldquo;best&rdquo; model is the one that gives you the best results <em>within your constraints</em>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">public</span></div><div><div class="cc-title">Provider-Specific Documentation</div><div class="cc-sub">Where to find equivalent information for OpenAI, Anthropic, Google, Meta</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Finding the Info</div><div class="cc-code"><span class="hl-key">OpenAI</span>
+  <span class="hl-cmt">platform.openai.com/docs/models</span>
+  <span class="hl-cmt">Model Spec: openai.com/index/the-model-spec</span>
+
+<span class="hl-key">Anthropic</span>
+  <span class="hl-cmt">docs.anthropic.com/en/docs/about-claude/models</span>
+  <span class="hl-cmt">System Cards: anthropic.com/system-cards</span>
+
+<span class="hl-key">Google</span>
+  <span class="hl-cmt">ai.google.dev/gemini-api/docs/models</span>
+  <span class="hl-cmt">Gemma cards on Hugging Face</span>
+
+<span class="hl-key">Meta</span>
+  <span class="hl-cmt">ai.meta.com/llama (overview)</span>
+  <span class="hl-cmt">Full cards on Hugging Face repos</span></div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What&rsquo;s Different</div><div class="cc-text">For <strong>API-based models</strong> (GPT-4o, Claude, Gemini Pro), the model card equivalent is the <strong>pricing page + model docs + system card</strong>. You won&rsquo;t find config.json or weight files &mdash; instead, look for: token limits, rate limits, pricing per million tokens, supported features (function calling, vision, streaming), and safety documentation. The same 7-question checklist applies; just replace &ldquo;hardware&rdquo; with &ldquo;budget&rdquo; and &ldquo;quantization&rdquo; with &ldquo;pricing tier.&rdquo;</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> The skill of reading model documentation transfers across all providers. Whether it&rsquo;s a Hugging Face model card, an OpenAI model spec, or an Anthropic system card &mdash; you&rsquo;re asking the same questions, just finding answers in different places.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">groups</span></div><div><div class="cc-title">Community Signals as Tiebreakers</div><div class="cc-sub">When two models look equal on paper, the community breaks the tie</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Signals to Check</div><div class="cc-text"><strong>Download trajectory:</strong> Is usage growing or declining? A model with 500K downloads last month but 100K this month is being replaced.<br><br><strong>Discussion quality:</strong> Are people reporting success stories or filing bugs? Active Q&amp;A means the model is being used in production.<br><br><strong>Linked Spaces:</strong> Can you test it before downloading? Live demos are worth more than benchmark tables.<br><br><strong>Third-party reviews:</strong> Has the model been covered by independent benchmarkers, tech blogs, or the Hugging Face blog?</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Red Flags in Community</div><div class="cc-text"><strong>No discussions:</strong> Either nobody is using it, or the creator disabled comments. Neither is a great sign.<br><br><strong>Unresolved bug reports:</strong> Multiple users reporting the same issue with no response from the creator.<br><br><strong>Hype without substance:</strong> 10,000 likes but only 100 downloads. The model was upvoted for novelty, not utility.<br><br><strong>Stale repo:</strong> No updates in 6+ months. The model is likely superseded.</div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Community signals tell you what benchmarks can&rsquo;t: is this model actually being used successfully by real people? A model with mediocre benchmarks but 10 million downloads per month is doing something right.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Test Before You Commit</div><div class="cc-sub">Your shortlist isn&rsquo;t final until you&rsquo;ve tested the top 2&ndash;3 candidates</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Testing Strategy</div><div class="cc-text"><strong>Step 1: Quick test.</strong> Use the HF widget or a linked Space to test with 3&ndash;5 prompts representative of your use case. Takes 5 minutes. Eliminates models that clearly don&rsquo;t work for your task.<br><br><strong>Step 2: Local test.</strong> Download the top 2&ndash;3 and test with 20&ndash;30 prompts from your actual domain. Score outputs on your own criteria (accuracy, format compliance, tone). Takes 1&ndash;2 hours. This is where you find the winner.<br><br><strong>Step 3: Integration test.</strong> Deploy the winner in your actual pipeline and measure real-world performance over 100+ queries. Takes 1&ndash;2 days.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What Benchmarks Miss</div><div class="cc-text">Benchmarks can&rsquo;t tell you: whether the model&rsquo;s <strong>default tone</strong> matches your application, how it handles <strong>your specific domain</strong> (medical, legal, finance), whether it follows <strong>your output format</strong> requirements, or how it behaves with <strong>your system prompt</strong>. Only testing on your data answers these questions.</div></div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> The model card gets you to a shortlist. Testing gets you to a decision. Never skip testing &mdash; the card tells you the model&rsquo;s potential; testing tells you its actual performance on your task.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">swap_horiz</span></div><div><div class="cc-title">When to Reassess</div><div class="cc-sub">Model selection is not a one-time decision</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Triggers for Reassessment</div><div class="cc-text"><strong>New model release:</strong> Every 3&ndash;6 months, a new generation appears. Set a calendar reminder to check whether your model has been superseded.<br><br><strong>Use case change:</strong> Your requirements evolved &mdash; new language, longer context, different task type.<br><br><strong>Cost pressure:</strong> A smaller model can now match your current model&rsquo;s quality at lower cost.<br><br><strong>Community decline:</strong> Your model&rsquo;s repo goes stale, downloads drop, maintainer stops responding.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Switching Cost</div><div class="cc-text">Switching models isn&rsquo;t free. You need to re-test, update prompts, potentially change infrastructure. The checklist helps <strong>minimize unnecessary switching</strong> by making your selection criteria explicit. If your current model still passes all 7 questions, don&rsquo;t switch just because something new came out. Switch when a new model is <strong>meaningfully better</strong> on the dimensions that matter to your use case.</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> The model landscape changes every 3&ndash;6 months. Build your selection workflow as a repeatable process, not a one-time decision. The 7-question checklist is a tool you&rsquo;ll use again and again.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">verified</span></div><div><div class="cc-title">The Decision Framework</div><div class="cc-sub">A model card is an engineering specification &mdash; read it like one</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Complete Workflow</div><div class="cc-text"><strong>Phase 1: Filter</strong> (2 min)<br>License &rarr; Hardware fit &rarr; Context length &rarr; Task type<br><br><strong>Phase 2: Compare</strong> (10 min)<br>Benchmarks &rarr; Training data &rarr; Architecture &rarr; Side-by-side table<br><br><strong>Phase 3: Validate</strong> (5 min)<br>Community signals &rarr; Discussions &rarr; Linked Spaces &rarr; Recency<br><br><strong>Phase 4: Test</strong> (1&ndash;2 hours)<br>Quick test (widget) &rarr; Local test (your prompts) &rarr; Integration test (your pipeline)</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Mindset</div><div class="cc-text">A model card is not a sales brochure. It is an <strong>engineering specification</strong>. Read it like you would read a spec sheet for a hardware component: check compatibility first, compare performance second, verify with testing third. The practitioners who evaluate models most effectively are the ones who have a <strong>systematic process</strong> &mdash; not the ones who grab whatever is trending.</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> A model card is not a sales brochure &mdash; it is an engineering specification. Read it like a spec sheet, not a blog post. The 7-question checklist turns model selection from an overwhelming choice into a manageable workflow.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-files-and-versions.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Files &amp; Versions</a>
+    <a class="ch-nav-btn next" href="08-beyond-the-card.html">Ch 8: Beyond the Card <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;const PIPE_MAP={1:[0],2:[1],3:[2],4:[3],5:[4],6:[2,4],7:[0,1,2,3,4],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>7 Questions:</strong> License &rarr; Hardware &rarr; Context &rarr; Benchmarks &rarr; Training data &rarr; Quantization &rarr; Community. A funnel, not a wish list.',color:'#7c3aed'},
+    2:{text:'<strong>Hub Filters:</strong> Task &rarr; Library &rarr; License &rarr; Language &rarr; Sort by downloads. Millions of models down to a shortlist of 10.',color:'#0d9488'},
+    3:{text:'<strong>Comparison:</strong> Put 3 finalists side by side. Params, license, context, benchmarks, VRAM. The &ldquo;best&rdquo; model is the best within your constraints.',color:'#2563eb'},
+    4:{text:'<strong>Providers:</strong> OpenAI docs, Anthropic system cards, Google Gemma cards, Meta Llama repos. Same questions, different locations.',color:'#ea580c'},
+    5:{text:'<strong>Community:</strong> Download trends, discussion quality, linked Spaces, third-party reviews. When two models tie on paper, community breaks it.',color:'#16a34a'},
+    6:{text:'<strong>Testing:</strong> Widget test (5 min) &rarr; Local test (1&ndash;2 hr) &rarr; Integration test (1&ndash;2 days). The card is the shortlist; testing is the decision.',color:'#db2777'},
+    7:{text:'<strong>Reassess:</strong> New models every 3&ndash;6 months. Build selection as a repeatable process. Don&rsquo;t switch unless the new model is meaningfully better.',color:'#d97706'},
+    8:{text:'<strong>The Framework:</strong> Filter (2 min) &rarr; Compare (10 min) &rarr; Validate (5 min) &rarr; Test (1&ndash;2 hr). Read model cards like spec sheets, not blog posts.',color:'#dc2626'},
+  };
+  let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

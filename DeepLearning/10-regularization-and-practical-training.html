@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 10: Regularization & Practical Training — Deep Learning Fundamentals</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);padding:4px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--blue-border);background:var(--blue-light)}.pipe-stage.lit .pipe-icon{background:var(--blue);color:#fff}.pipe-stage.lit .pipe-label{color:var(--blue)}.pipe-arrow.lit{color:var(--blue)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--blue-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--blue);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--blue);box-shadow:0 0 5px rgba(37,99,235,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--blue);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 10 &mdash; Regularization &amp; Practical Training</h2><span class="tb-sub">Dropout, batch normalization, layer normalization, data augmentation, and training recipes</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">fitness_center</span></div><span class="pipe-label">Overfit</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">casino</span></div><span class="pipe-label">Dropout</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">equalizer</span></div><span class="pipe-label">BatchNorm</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">photo_library</span></div><span class="pipe-label">Augment</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">stop_circle</span></div><span class="pipe-label">Early Stop</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">menu_book</span></div><span class="pipe-label">Recipes</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">fitness_center</span></div><div><div class="cc-title">The Overfitting Problem</div><div class="cc-sub">When your model memorizes instead of learning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Bias vs. Variance</div><div class="cc-text"><strong>Overfitting</strong> occurs when a model performs well on training data but poorly on unseen data &mdash; it has memorized the training examples rather than learning generalizable patterns. Deep networks with millions of parameters are especially prone to overfitting because they have enough capacity to memorize entire datasets. The <strong>bias-variance tradeoff</strong>: high bias (underfitting) means the model is too simple; high variance (overfitting) means it&rsquo;s too complex. Regularization techniques reduce variance without significantly increasing bias.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Detecting Overfitting</div><div class="cc-code"><span class="hl-cmt">// Signs of overfitting</span>
+<span class="hl-key">Training loss</span>:    ↓ decreasing
+<span class="hl-key">Validation loss</span>:  ↑ increasing  <span class="hl-str">← gap!</span>
+
+<span class="hl-cmt">// Signs of underfitting</span>
+<span class="hl-key">Training loss</span>:    → still high
+<span class="hl-key">Validation loss</span>:  → still high
+
+<span class="hl-cmt">// Good fit</span>
+<span class="hl-key">Training loss</span>:    ↓ decreasing
+<span class="hl-key">Validation loss</span>:  ↓ decreasing (close to train)</div></div>
+          <div class="cc-note n-red"><strong>Critical in AI:</strong> Modern deep learning has a surprising twist: very large models can be &ldquo;double descent&rdquo; &mdash; overfitting peaks at a certain model size, then decreases as the model gets even larger. This is why GPT-4 generalizes well despite having trillions of parameters.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">casino</span></div><div><div class="cc-title">Dropout</div><div class="cc-sub">Srivastava et al. (2014) &mdash; randomly silencing neurons</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">How Dropout Works</div><div class="cc-text">During training, <strong>dropout</strong> randomly sets each neuron&rsquo;s output to zero with probability p (typically 0.5 for FC layers, 0.1&ndash;0.3 for conv layers). This prevents neurons from co-adapting &mdash; no neuron can rely on any specific other neuron being present. It&rsquo;s like training an ensemble of 2ⁿ different sub-networks (where n is the number of neurons). At inference time, all neurons are active but outputs are scaled by (1-p) to compensate. PyTorch handles this automatically with <code>nn.Dropout</code>.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">PyTorch Dropout</div><div class="cc-code"><span class="hl-key">class</span> <span class="hl-str">Net</span>(nn.Module):
+    <span class="hl-key">def</span> __init__(self):
+        <span class="hl-key">super</span>().__init__()
+        self.fc1 = nn.Linear(<span class="hl-num">784</span>, <span class="hl-num">256</span>)
+        self.drop = nn.Dropout(p=<span class="hl-num">0.5</span>)
+        self.fc2 = nn.Linear(<span class="hl-num">256</span>, <span class="hl-num">10</span>)
+
+    <span class="hl-key">def</span> forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = self.drop(x)  <span class="hl-cmt">// active in train</span>
+        <span class="hl-key">return</span> self.fc2(x)
+
+<span class="hl-cmt">// model.train() → dropout active</span>
+<span class="hl-cmt">// model.eval() → dropout disabled</span></div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> Dropout is equivalent to training an exponentially large ensemble of models that share weights. At test time, using all neurons with scaled weights approximates averaging the predictions of all sub-networks.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">equalizer</span></div><div><div class="cc-title">Batch Normalization</div><div class="cc-sub">Ioffe &amp; Szegedy (2015) &mdash; normalizing layer inputs</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">What BatchNorm Does</div><div class="cc-text"><strong>Batch Normalization</strong> normalizes each layer&rsquo;s inputs to have zero mean and unit variance across the mini-batch, then applies learnable scale (γ) and shift (β) parameters. This addresses <strong>internal covariate shift</strong> &mdash; the distribution of layer inputs changing as earlier layers update. BatchNorm allows higher learning rates, reduces sensitivity to initialization, and acts as a mild regularizer. It was the single most impactful technique for training deep CNNs and is used in virtually every modern architecture.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">BatchNorm Equations</div><div class="cc-code"><span class="hl-cmt">// Batch Normalization</span>
+μ_B = (<span class="hl-num">1</span>/m) · Σ xᵢ          <span class="hl-cmt">// batch mean</span>
+σ²_B = (<span class="hl-num">1</span>/m) · Σ (xᵢ - μ_B)²  <span class="hl-cmt">// batch var</span>
+x̂ᵢ = (xᵢ - μ_B) / √(σ²_B + ε)  <span class="hl-cmt">// normalize</span>
+yᵢ = γ · x̂ᵢ + β             <span class="hl-cmt">// scale & shift</span>
+
+<span class="hl-cmt">// γ, β are learnable parameters</span>
+<span class="hl-cmt">// At inference: use running mean/var</span>
+<span class="hl-cmt">// (not batch statistics)</span>
+
+<span class="hl-cmt">// Placement: Conv → BN → ReLU</span></div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> BatchNorm depends on batch statistics, which makes it problematic for small batches and sequence models. <strong>Layer Normalization</strong> (Ba et al., 2016) normalizes across features instead of across the batch, making it batch-size independent. LayerNorm is the standard for transformers.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">layers</span></div><div><div class="cc-title">Layer Norm, Group Norm &amp; RMSNorm</div><div class="cc-sub">Normalization variants for different architectures</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Normalization Zoo</div><div class="cc-text"><strong>Layer Norm</strong> normalizes across all features for each sample independently &mdash; no batch dependency. Standard for transformers (GPT, BERT, LLaMA). <strong>Group Norm</strong> (Wu &amp; He, 2018) divides channels into groups and normalizes within each group &mdash; works well for small batches in detection/segmentation. <strong>RMSNorm</strong> (Zhang &amp; Sennrich, 2019) simplifies LayerNorm by removing the mean centering, using only root-mean-square normalization. LLaMA and many modern LLMs use RMSNorm for efficiency.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Comparison</div><div class="cc-code"><span class="hl-cmt">// Normalization comparison</span>
+<span class="hl-key">BatchNorm</span>:  across batch, per channel
+  → CNNs (ResNet, EfficientNet)
+
+<span class="hl-key">LayerNorm</span>:  across features, per sample
+  → Transformers (GPT, BERT)
+
+<span class="hl-key">GroupNorm</span>:  across channel groups, per sample
+  → Detection (small batches)
+
+<span class="hl-key">RMSNorm</span>:   like LayerNorm, no mean centering
+  → Modern LLMs (LLaMA, Gemma)
+
+<span class="hl-cmt">// Pre-norm (before attention) vs post-norm</span>
+<span class="hl-cmt">// Pre-norm is standard for modern transformers</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> The choice of normalization depends on the architecture: BatchNorm for CNNs, LayerNorm for transformers, GroupNorm for small-batch settings. Getting this wrong can significantly hurt performance.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">photo_library</span></div><div><div class="cc-title">Data Augmentation</div><div class="cc-sub">Creating more training data from existing data</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Why Augmentation Works</div><div class="cc-text"><strong>Data augmentation</strong> applies random transformations to training images (flips, rotations, crops, color jitter) to artificially increase dataset size and diversity. A dataset of 10K images with augmentation can behave like 100K+ images. This is one of the most effective regularization techniques &mdash; it directly addresses the root cause of overfitting (insufficient data diversity). Modern augmentation strategies like <strong>RandAugment</strong> (Cubuk et al., 2020) and <strong>Mixup</strong> (Zhang et al., 2018) have become standard.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Common Augmentations</div><div class="cc-code"><span class="hl-cmt">// PyTorch augmentation pipeline</span>
+<span class="hl-key">from</span> torchvision <span class="hl-key">import</span> transforms
+
+train_transform = transforms.Compose([
+    transforms.RandomResizedCrop(<span class="hl-num">224</span>),
+    transforms.RandomHorizontalFlip(),
+    transforms.ColorJitter(
+        brightness=<span class="hl-num">0.4</span>, contrast=<span class="hl-num">0.4</span>,
+        saturation=<span class="hl-num">0.4</span>, hue=<span class="hl-num">0.1</span>
+    ),
+    transforms.RandAugment(),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[<span class="hl-num">.485</span>,<span class="hl-num">.456</span>,<span class="hl-num">.406</span>],
+        std=[<span class="hl-num">.229</span>,<span class="hl-num">.224</span>,<span class="hl-num">.225</span>]
+    ),
+])</div></div>
+          <div class="cc-note n-green"><strong>Rule of thumb:</strong> Always use augmentation for image tasks. For NLP, augmentation is harder but includes back-translation, synonym replacement, and random deletion. For LLM pretraining, the massive dataset size makes traditional augmentation unnecessary.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">stop_circle</span></div><div><div class="cc-title">Early Stopping &amp; Weight Decay</div><div class="cc-sub">Knowing when to stop and penalizing complexity</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Early Stopping</div><div class="cc-text"><strong>Early stopping</strong> monitors validation loss during training and stops when it starts increasing (while training loss continues decreasing). This is the simplest and most effective way to prevent overfitting. Typically, you save the model checkpoint with the best validation loss and use <strong>patience</strong> (wait N epochs after the best score before stopping) to avoid stopping too early due to noise.</div></div>
+          <div class="cc-block"><div class="cc-label">Weight Decay (L2 Regularization)</div><div class="cc-text"><strong>Weight decay</strong> adds a penalty proportional to the squared magnitude of weights: L_total = L_data + λ||w||². This discourages large weights, pushing the model toward simpler solutions. In AdamW, weight decay is decoupled from the gradient update (λ typically 0.01&ndash;0.1). Weight decay is used in virtually every deep learning training recipe.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Early Stopping in Practice</div><div class="cc-code"><span class="hl-cmt">// Early stopping with patience</span>
+best_val_loss = float(<span class="hl-str">'inf'</span>)
+patience = <span class="hl-num">10</span>
+counter = <span class="hl-num">0</span>
+
+<span class="hl-key">for</span> epoch <span class="hl-key">in</span> range(max_epochs):
+    train(model)
+    val_loss = validate(model)
+
+    <span class="hl-key">if</span> val_loss < best_val_loss:
+        best_val_loss = val_loss
+        save_checkpoint(model)
+        counter = <span class="hl-num">0</span>
+    <span class="hl-key">else</span>:
+        counter += <span class="hl-num">1</span>
+        <span class="hl-key">if</span> counter >= patience:
+            <span class="hl-key">break</span>  <span class="hl-cmt">// stop training</span></div></div>
+          <div class="cc-note n-amber"><strong>Rule of thumb:</strong> For fine-tuning pretrained models, use patience=3-5. For training from scratch, use patience=10-20. Always save the best checkpoint, not the last one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">science</span></div><div><div class="cc-title">Mixup, CutMix &amp; Label Smoothing</div><div class="cc-sub">Advanced regularization techniques</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Mixup (Zhang et al., 2018)</div><div class="cc-text"><strong>Mixup</strong> creates new training examples by linearly interpolating between pairs of images and their labels: x_new = λ·x₁ + (1-λ)·x₂, y_new = λ·y₁ + (1-λ)·y₂. This encourages the model to behave linearly between training examples, producing smoother decision boundaries. <strong>CutMix</strong> (Yun et al., 2019) cuts a rectangular patch from one image and pastes it onto another, mixing labels proportionally to the area. Both significantly improve generalization on ImageNet.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Label Smoothing</div><div class="cc-text"><strong>Label smoothing</strong> (Szegedy et al., 2016) replaces hard labels [0, 0, 1, 0] with soft labels [0.033, 0.033, 0.9, 0.033]. Instead of pushing the model to be 100% confident, it encourages calibrated uncertainty. This prevents the model from becoming overconfident and improves generalization. Label smoothing of 0.1 is standard for ImageNet training and transformer models.</div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> These techniques share a common principle: they prevent the model from being too certain about any single training example. By introducing controlled ambiguity, they force the model to learn more robust, generalizable features.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">menu_book</span></div><div><div class="cc-title">Modern Training Recipes</div><div class="cc-sub">Putting it all together</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Standard Recipe</div><div class="cc-text">Modern training recipes combine multiple techniques. For <strong>ImageNet CNNs</strong>: AdamW or SGD+momentum, cosine LR schedule, RandAugment, Mixup/CutMix, label smoothing 0.1, weight decay 0.05, and stochastic depth. For <strong>transformers/LLMs</strong>: AdamW (lr=3e-4, wd=0.1), linear warmup + cosine decay, gradient clipping, RMSNorm or LayerNorm, and dropout 0.1. These recipes have been refined through thousands of experiments and represent hard-won practical knowledge.</div></div>
+          <div class="cc-note n-green"><strong>The connection:</strong> Regularization makes deep networks generalize. With these tools &mdash; dropout, normalization, augmentation, early stopping &mdash; we can train models with billions of parameters that still generalize to unseen data. Next: the attention mechanism that replaced recurrence and enabled transformers.</div>
+        </div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Regularization Checklist</div><div class="cc-code"><span class="hl-cmt">// Modern training checklist</span>
+<span class="hl-str">✓ Weight decay</span>      (0.01-0.1)
+<span class="hl-str">✓ Dropout</span>           (0.1-0.5)
+<span class="hl-str">✓ Data augmentation</span> (RandAugment)
+<span class="hl-str">✓ Normalization</span>     (BN/LN/RMSNorm)
+<span class="hl-str">✓ LR schedule</span>       (warmup + cosine)
+<span class="hl-str">✓ Early stopping</span>    (patience 5-20)
+<span class="hl-str">✓ Label smoothing</span>   (0.1)
+<span class="hl-str">✓ Mixup/CutMix</span>      (for vision)
+<span class="hl-str">✓ Gradient clipping</span> (max_norm=1.0)
+
+<span class="hl-cmt">// Not all are needed for every task</span>
+<span class="hl-cmt">// Start simple, add as needed</span></div></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="09-generative-adversarial-networks.html"><span class="material-symbols-rounded">arrow_back</span> Ch 9: Generative Adversarial Networks</a>
+    <a class="ch-nav-btn next" href="11-the-attention-mechanism.html">Ch 11: The Attention Mechanism <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[2],5:[2,3],6:[3,4],7:[3],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Overfitting = model memorizes training data but fails on new data. Deep networks with millions of parameters are especially prone. Regularization reduces variance without increasing bias.',color:'#dc2626'},
+    2:{text:'<strong>Step 2:</strong> Dropout (Srivastava, 2014) randomly zeros neurons during training with probability p. It\'s like training 2ⁿ sub-networks simultaneously — a powerful implicit ensemble.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Batch Normalization (Ioffe &amp; Szegedy, 2015) normalizes layer inputs to zero mean and unit variance. Enables higher learning rates and is used in virtually every CNN.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> LayerNorm for transformers, GroupNorm for small batches, RMSNorm for modern LLMs. The normalization choice depends on the architecture.',color:'#7c3aed'},
+    5:{text:'<strong>Step 5:</strong> Data augmentation (flips, crops, color jitter, RandAugment) artificially increases dataset diversity. One of the most effective regularization techniques for vision.',color:'#0d9488'},
+    6:{text:'<strong>Step 6:</strong> Early stopping monitors validation loss and stops when it starts increasing. Weight decay (L2) penalizes large weights. Both are universal regularization tools.',color:'#0d9488'},
+    7:{text:'<strong>Step 7:</strong> Mixup interpolates between training pairs; CutMix pastes patches between images; label smoothing prevents overconfidence. All improve generalization on ImageNet.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Modern recipes combine multiple techniques: AdamW, cosine LR, augmentation, normalization, dropout, weight decay, and label smoothing. Start simple, add as needed.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

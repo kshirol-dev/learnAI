@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 7: LLMOps — Gateways & Routing — MLOps & LLMOps</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}.pipe-arrow.lit{color:var(--amber)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--red),var(--violet));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}.ch-nav-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-light)}.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 7 &mdash; LLMOps: Gateways &amp; Routing</h2><span class="tb-sub">LLM gateways (LiteLLM, Portkey), model routing, fallbacks, rate limiting, and cost tracking</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">apps</span></div><span class="pipe-label">App</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">hub</span></div><span class="pipe-label">Gateway</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">route</span></div><span class="pipe-label">Route</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">LLM</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">cached</span></div><span class="pipe-label">Cache</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">monitoring</span></div><span class="pipe-label">Observe</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">What Is an LLM Gateway?</div><div class="cc-sub">A unified proxy between your app and LLM providers</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">The Problem</div><div class="cc-text">Modern applications use multiple LLM providers: OpenAI for GPT-4o, Anthropic for Claude, Google for Gemini, self-hosted LLaMA via vLLM. Each has a different API, different pricing, different rate limits, and different failure modes. Without a gateway, your application code is littered with provider-specific logic, retry handling, and cost tracking. An <strong>LLM gateway</strong> sits between your application and the LLM providers, providing: <strong>unified API</strong> (one interface for all providers), <strong>routing</strong> (send requests to the right model), <strong>fallbacks</strong> (switch providers on failure), <strong>rate limiting</strong> (prevent quota exhaustion), <strong>caching</strong> (avoid duplicate calls), and <strong>observability</strong> (logging, cost tracking, latency metrics).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Gateway Architecture</div><div class="cc-code"><span class="hl-cmt">// Without gateway</span>
+App → OpenAI API  <span class="hl-cmt">(custom code)</span>
+App → Anthropic API  <span class="hl-cmt">(different code)</span>
+App → vLLM API  <span class="hl-cmt">(yet another format)</span>
+<span class="hl-cmt">// 3 integrations, 3 retry logics, 3 cost trackers</span>
+
+<span class="hl-cmt">// With gateway</span>
+App → <span class="hl-key">LLM Gateway</span> → OpenAI
+                    → Anthropic
+                    → vLLM
+                    → Gemini
+<span class="hl-cmt">// 1 integration, unified retry/fallback/cost</span>
+
+<span class="hl-key">Gateway provides</span>:
+  ✓ Unified OpenAI-compatible API
+  ✓ Automatic fallbacks on failure
+  ✓ Rate limiting &amp; quota management
+  ✓ Semantic caching
+  ✓ Cost tracking per request
+  ✓ Logging &amp; observability</div></div>
+          <div class="cc-note n-amber"><strong>Key insight:</strong> An LLM gateway is to LLMs what an API gateway (like Kong or Envoy) is to microservices. It&rsquo;s the single point of control for all LLM traffic, and it becomes essential once you use more than one provider.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">code</span></div><div><div class="cc-title">LiteLLM</div><div class="cc-sub">Open-source gateway for 100+ LLM providers</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LiteLLM Overview</div><div class="cc-text"><strong>LiteLLM</strong> is the most popular open-source LLM gateway. It provides an <strong>OpenAI-compatible API</strong> that proxies to 100+ LLM providers (OpenAI, Anthropic, Google, Cohere, Mistral, Azure, Bedrock, self-hosted vLLM, Ollama, and more). Key features: <strong>unified interface</strong> (call any model with the same <code>completion()</code> function), <strong>load balancing</strong> (distribute across multiple API keys or deployments), <strong>fallbacks</strong> (automatic retry with alternative models on failure), <strong>budget management</strong> (set spend limits per user, team, or API key), and <strong>virtual keys</strong> (create API keys with custom rate limits and budgets). LiteLLM is MIT-licensed and can be self-hosted as a proxy server or used as a Python library.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">LiteLLM Usage</div><div class="cc-code"><span class="hl-cmt"># LiteLLM as a Python library</span>
+<span class="hl-key">from</span> litellm <span class="hl-key">import</span> completion
+
+<span class="hl-cmt"># Same interface, any provider</span>
+response = completion(
+    model=<span class="hl-str">"gpt-4o"</span>,
+    messages=[{<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+               <span class="hl-str">"content"</span>: <span class="hl-str">"Hello!"</span>}]
+)
+
+response = completion(
+    model=<span class="hl-str">"claude-sonnet-4-20250514"</span>,
+    messages=[{<span class="hl-str">"role"</span>: <span class="hl-str">"user"</span>,
+               <span class="hl-str">"content"</span>: <span class="hl-str">"Hello!"</span>}]
+)
+
+<span class="hl-cmt"># As a proxy server (OpenAI-compatible)</span>
+<span class="hl-cmt"># litellm --model gpt-4o</span>
+<span class="hl-cmt"># → http://localhost:4000/v1/chat/completions</span>
+
+<span class="hl-cmt"># With fallbacks</span>
+response = completion(
+    model=<span class="hl-str">"gpt-4o"</span>,
+    messages=messages,
+    fallbacks=[<span class="hl-str">"claude-sonnet-4-20250514"</span>, <span class="hl-str">"gemini-pro"</span>]
+)</div></div>
+          <div class="cc-note n-blue"><strong>Key insight:</strong> LiteLLM&rsquo;s proxy mode is the most common deployment. Run it as a server, point all your apps at it, and manage routing, budgets, and fallbacks centrally &mdash; without changing any application code.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">business</span></div><div><div class="cc-title">Portkey</div><div class="cc-sub">Managed AI gateway with enterprise features</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Portkey Overview</div><div class="cc-text"><strong>Portkey</strong> is a managed LLM gateway with enterprise-grade features. Beyond basic routing and fallbacks, Portkey offers: <strong>semantic caching</strong> (cache responses for semantically similar queries, reducing costs by up to 40%), <strong>guardrails</strong> (built-in content filtering and PII detection), <strong>detailed analytics</strong> (cost, latency, token usage dashboards per model, user, and team), <strong>request/response logging</strong> (full audit trail for compliance), and <strong>conditional routing</strong> (route based on request metadata, user tier, or content type). Portkey is SaaS-first with a self-hosted enterprise option. It&rsquo;s the right choice for teams that want a managed solution with advanced observability.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Portkey Config</div><div class="cc-code"><span class="hl-cmt">// Portkey gateway configuration</span>
+{
+  <span class="hl-str">"strategy"</span>: {
+    <span class="hl-str">"mode"</span>: <span class="hl-str">"fallback"</span>
+  },
+  <span class="hl-str">"targets"</span>: [
+    {
+      <span class="hl-str">"provider"</span>: <span class="hl-str">"openai"</span>,
+      <span class="hl-str">"model"</span>: <span class="hl-str">"gpt-4o"</span>,
+      <span class="hl-str">"weight"</span>: <span class="hl-num">0.7</span>
+    },
+    {
+      <span class="hl-str">"provider"</span>: <span class="hl-str">"anthropic"</span>,
+      <span class="hl-str">"model"</span>: <span class="hl-str">"claude-sonnet-4-20250514"</span>,
+      <span class="hl-str">"weight"</span>: <span class="hl-num">0.3</span>,
+      <span class="hl-str">"on_status_codes"</span>: [<span class="hl-num">429</span>, <span class="hl-num">503</span>]
+    }
+  ],
+  <span class="hl-str">"cache"</span>: {
+    <span class="hl-str">"mode"</span>: <span class="hl-str">"semantic"</span>,
+    <span class="hl-str">"max_age"</span>: <span class="hl-num">3600</span>
+  }
+}</div></div>
+          <div class="cc-note n-violet"><strong>Key insight:</strong> Semantic caching is Portkey&rsquo;s standout feature. Instead of exact-match caching, it recognizes that &ldquo;What is the capital of France?&rdquo; and &ldquo;Tell me France&rsquo;s capital city&rdquo; should return the same cached response, dramatically reducing costs for repetitive workloads.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">route</span></div><div><div class="cc-title">Model Routing Strategies</div><div class="cc-sub">Sending the right request to the right model</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Routing Patterns</div><div class="cc-text">Not every request needs GPT-4o. Smart routing saves money and reduces latency: <strong>Complexity-based routing</strong> &mdash; simple questions go to a cheap, fast model (GPT-4o-mini, Claude Haiku); complex reasoning goes to a powerful model (GPT-4o, Claude Sonnet). <strong>Cost-based routing</strong> &mdash; route to the cheapest model that meets quality requirements. <strong>Latency-based routing</strong> &mdash; route to the fastest available provider. <strong>Load-based routing</strong> &mdash; distribute across providers to stay under rate limits. <strong>Content-based routing</strong> &mdash; code questions to one model, creative writing to another. A <strong>classifier model</strong> (small, fast) can analyze the request and decide which model to route to.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Routing Examples</div><div class="cc-code"><span class="hl-cmt">// Model routing strategies</span>
+
+<span class="hl-key">Complexity-based</span>:
+  Simple Q&amp;A → GPT-4o-mini ($<span class="hl-num">0.15</span>/1M in)
+  Reasoning  → Claude Sonnet ($<span class="hl-num">3.00</span>/1M in)
+  Coding     → GPT-4o ($<span class="hl-num">2.50</span>/1M in)
+  <span class="hl-cmt">// 70% of requests are simple → huge savings</span>
+
+<span class="hl-key">Fallback chain</span>:
+  Try: GPT-4o
+  If 429 (rate limit): → Claude Sonnet
+  If 503 (down): → Gemini Pro
+  If all fail: → queue + retry
+
+<span class="hl-key">Load balancing</span>:
+  OpenAI key 1: 40% of traffic
+  OpenAI key 2: 40% of traffic
+  Azure OpenAI: 20% of traffic
+  <span class="hl-cmt">// Spread across keys/regions</span>
+
+<span class="hl-key">A/B routing</span>:
+  90% → current model (GPT-4o)
+  10% → candidate (Claude Sonnet)
+  <span class="hl-cmt">// Compare quality + cost</span></div></div>
+          <div class="cc-note n-teal"><strong>Key insight:</strong> Complexity-based routing is the highest-ROI optimization. If 70% of your requests are simple enough for a $0.15/1M-token model instead of a $3/1M-token model, you cut costs by ~90% on those requests with minimal quality impact.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--red)"><span class="material-symbols-rounded">block</span></div><div><div class="cc-title">Rate Limiting &amp; Quota Management</div><div class="cc-sub">Preventing runaway costs and API exhaustion</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Rate Limit Challenges</div><div class="cc-text">Every LLM provider enforces rate limits: <strong>RPM</strong> (requests per minute), <strong>TPM</strong> (tokens per minute), and <strong>RPD</strong> (requests per day). Hit the limit and you get HTTP 429 errors. Without management, a single user or feature can exhaust your entire quota. The gateway handles this with: <strong>per-user rate limits</strong> (each user gets a fair share), <strong>per-team budgets</strong> (engineering gets $5K/month, marketing gets $2K/month), <strong>token-level throttling</strong> (limit tokens per minute, not just requests), <strong>queue-based smoothing</strong> (queue excess requests instead of rejecting), and <strong>multi-key distribution</strong> (spread requests across multiple API keys to increase effective limits).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Rate Limit Config</div><div class="cc-code"><span class="hl-cmt">// LiteLLM budget/rate limit config</span>
+<span class="hl-cmt"># config.yaml</span>
+<span class="hl-key">model_list</span>:
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: sk-key-1
+      rpm: <span class="hl-num">500</span>    <span class="hl-cmt"># requests/min</span>
+      tpm: <span class="hl-num">80000</span>  <span class="hl-cmt"># tokens/min</span>
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: sk-key-2  <span class="hl-cmt"># 2nd key</span>
+      rpm: <span class="hl-num">500</span>
+
+<span class="hl-key">general_settings</span>:
+  max_budget: <span class="hl-num">10000</span>  <span class="hl-cmt"># $10K total/month</span>
+
+<span class="hl-cmt"># Per-user virtual keys</span>
+<span class="hl-cmt"># litellm /key/generate \</span>
+<span class="hl-cmt">#   --max_budget 500 \</span>
+<span class="hl-cmt">#   --tpm_limit 10000 \</span>
+<span class="hl-cmt">#   --team_id engineering</span></div></div>
+          <div class="cc-note n-red"><strong>Key insight:</strong> Set budget alerts at 50%, 80%, and 95% of your monthly limit. LLM costs can spike unexpectedly &mdash; a single prompt engineering experiment with long contexts can burn through hundreds of dollars in minutes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">cached</span></div><div><div class="cc-title">Caching Strategies</div><div class="cc-sub">Avoiding redundant LLM calls</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Caching Types</div><div class="cc-text">LLM calls are expensive and slow. Caching avoids redundant calls: <strong>Exact-match caching</strong> &mdash; cache the response for identical prompts. Simple, effective for deterministic queries (temperature=0). <strong>Semantic caching</strong> &mdash; embed the prompt, find similar cached prompts within a threshold, return the cached response. Catches paraphrases. <strong>Prompt prefix caching</strong> &mdash; some providers (Anthropic, OpenAI) cache the KV states of long system prompts, so only the user message is processed. Reduces latency and cost for apps with long, static system prompts. <strong>RAG caching</strong> &mdash; cache retrieved documents so the same query doesn&rsquo;t hit the vector database again. Layer these: prompt prefix caching (provider-side) + semantic caching (gateway-side) + application-level caching.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Caching Layers</div><div class="cc-code"><span class="hl-cmt">// LLM caching strategies</span>
+
+<span class="hl-key">1. Exact Match</span> (gateway):
+   Key: hash(model + messages + params)
+   Hit rate: 10-30% (typical)
+   Best for: deterministic queries
+
+<span class="hl-key">2. Semantic Cache</span> (gateway):
+   Key: embedding similarity &gt; 0.95
+   Hit rate: 20-50% (with good threshold)
+   Best for: customer support, FAQ
+
+<span class="hl-key">3. Prompt Prefix Cache</span> (provider):
+   Anthropic: automatic for long prompts
+   OpenAI: cached_tokens in response
+   Saves: 50-90% on long system prompts
+
+<span class="hl-key">4. Application Cache</span> (app layer):
+   Cache final answers, not LLM responses
+   Redis/Memcached
+   TTL based on data freshness
+
+<span class="hl-cmt">// Combined savings: 30-60% cost reduction</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> Prompt prefix caching is free and automatic on most providers. If your system prompt is 2,000+ tokens, you&rsquo;re already benefiting. For Anthropic, cached input tokens cost 90% less than uncached ones.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">payments</span></div><div><div class="cc-title">Cost Tracking &amp; Optimization</div><div class="cc-sub">Understanding and controlling LLM spend</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Cost Management</div><div class="cc-text">LLM costs are per-token, which makes them hard to predict. A gateway provides visibility: <strong>cost per request</strong> (input tokens &times; input price + output tokens &times; output price), <strong>cost per user/team</strong> (who&rsquo;s spending the most?), <strong>cost per feature</strong> (which product feature drives the most LLM spend?), and <strong>cost trends</strong> (is spend growing linearly or exponentially?). Optimization levers: <strong>model selection</strong> (use cheaper models where quality allows), <strong>prompt optimization</strong> (shorter prompts = fewer tokens = lower cost), <strong>caching</strong> (avoid duplicate calls), <strong>output length limits</strong> (set <code>max_tokens</code> appropriately), and <strong>batch processing</strong> (some providers offer 50% discounts for async batch API calls).</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Cost Breakdown</div><div class="cc-code"><span class="hl-cmt">// LLM cost tracking</span>
+
+<span class="hl-key">Per-request cost</span>:
+  Input:  <span class="hl-num">1500</span> tokens × $<span class="hl-num">2.50</span>/1M = $<span class="hl-num">0.00375</span>
+  Output: <span class="hl-num">500</span> tokens  × $<span class="hl-num">10.00</span>/1M = $<span class="hl-num">0.005</span>
+  Total:  $<span class="hl-num">0.00875</span> per request
+
+<span class="hl-key">At scale</span>:
+  100K requests/day = $<span class="hl-num">875</span>/day = $<span class="hl-num">26K</span>/month
+
+<span class="hl-key">Optimization</span>:
+  Route 70% to mini model:
+    70K × $<span class="hl-num">0.0002</span> = $<span class="hl-num">14</span>/day
+    30K × $<span class="hl-num">0.00875</span> = $<span class="hl-num">263</span>/day
+    Total: $<span class="hl-num">277</span>/day = $<span class="hl-num">8.3K</span>/month
+    <span class="hl-cmt">// 68% cost reduction!</span>
+
+  + Caching (30% hit rate):
+    $<span class="hl-num">8.3K</span> × <span class="hl-num">0.7</span> = $<span class="hl-num">5.8K</span>/month
+    <span class="hl-cmt">// 78% total reduction</span></div></div>
+          <div class="cc-note n-orange"><strong>Key insight:</strong> Output tokens are 2&ndash;4x more expensive than input tokens on most providers. Controlling output length (<code>max_tokens</code>) and using structured output (JSON mode) to avoid verbose responses are the easiest cost optimizations.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="8">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">compare</span></div><div><div class="cc-title">Choosing a Gateway</div><div class="cc-sub">LiteLLM vs. Portkey vs. building your own</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Decision Framework</div><div class="cc-text">Choose <strong>LiteLLM</strong> if: you want open-source, self-hosted control, need to support many providers, and have engineering capacity to operate it. Choose <strong>Portkey</strong> if: you want a managed service with semantic caching, advanced analytics, and enterprise compliance features. Choose <strong>OpenRouter</strong> if: you want a simple pay-per-use proxy without running infrastructure. <strong>Build your own</strong> if: you have very specific routing logic, need deep integration with internal systems, or have strict data residency requirements. Most teams should start with <strong>LiteLLM</strong> (free, self-hosted, covers 90% of needs) and evaluate Portkey if they need advanced observability or semantic caching.</div></div></div>
+        <div class="cc-col"><div class="cc-block"><div class="cc-label">Gateway Comparison</div><div class="cc-code"><span class="hl-cmt">// LLM gateway comparison</span>
+
+              <span class="hl-key">LiteLLM</span>    <span class="hl-key">Portkey</span>    <span class="hl-key">OpenRouter</span>
+License:   MIT        Commercial  Commercial
+Hosting:   Self       Cloud/Self  Cloud only
+Providers: 100+       100+        50+
+Fallbacks: Yes        Yes         Limited
+Caching:   Exact      Semantic    No
+Analytics: Basic      Advanced    Basic
+Guardrails:No         Yes         No
+Cost:      Free       $$          Per-token
+Best for:  Self-host  Enterprise  Simple proxy
+
+<span class="hl-cmt">// Recommendation:</span>
+<span class="hl-cmt">// Start → LiteLLM (free, flexible)</span>
+<span class="hl-cmt">// Scale → Portkey (if you need analytics)</span>
+<span class="hl-cmt">// Simple → OpenRouter (zero setup)</span></div></div>
+          <div class="cc-note n-green"><strong>Key insight:</strong> The gateway is the control plane for your LLM operations. Once in place, you can change models, add providers, adjust routing, and control costs &mdash; all without touching application code. It&rsquo;s the single highest-leverage LLMOps investment.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="06-model-serving-and-inference.html"><span class="material-symbols-rounded">arrow_back</span> Ch 6: Model Serving &amp; Inference</a>
+    <a class="ch-nav-btn next" href="08-llmops-prompt-management-and-evaluation.html">Ch 8: LLMOps: Prompt Management &amp; Evaluation <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8,STEP_MS=5000;
+  const PIPE_MAP={1:[0,1,2,3],2:[0,1,2,3],3:[0,1,2,3],4:[1,2,3],5:[0,1],6:[1,4],7:[1,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> An LLM gateway is a unified proxy between your app and LLM providers — one API for all models, with routing, fallbacks, caching, and cost tracking.',color:'#d97706'},
+    2:{text:'<strong>Step 2:</strong> LiteLLM — open-source, MIT-licensed, supports 100+ providers. Use as a Python library or proxy server. Fallbacks, load balancing, and virtual keys.',color:'#2563eb'},
+    3:{text:'<strong>Step 3:</strong> Portkey — managed gateway with semantic caching (40% cost reduction), guardrails, detailed analytics, and enterprise compliance. SaaS-first.',color:'#7c3aed'},
+    4:{text:'<strong>Step 4:</strong> Routing strategies: complexity-based (simple→cheap model), cost-based, latency-based, load-based. Complexity routing alone can cut costs 90% on simple requests.',color:'#0d9488'},
+    5:{text:'<strong>Step 5:</strong> Rate limiting: per-user limits, per-team budgets, token-level throttling, multi-key distribution. Set budget alerts at 50%, 80%, 95%.',color:'#dc2626'},
+    6:{text:'<strong>Step 6:</strong> Caching layers: exact-match, semantic cache, prompt prefix cache (provider-side), application cache. Combined savings: 30-60% cost reduction.',color:'#16a34a'},
+    7:{text:'<strong>Step 7:</strong> Cost tracking: per-request, per-user, per-feature. Optimization: model routing (68% savings) + caching (30% more) = 78% total cost reduction.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> Start with LiteLLM (free, self-hosted). Move to Portkey for enterprise analytics. The gateway is the single highest-leverage LLMOps investment.',color:'#16a34a'},
+  };
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage'),arrows=document.querySelectorAll('.pipe-arrow'),cards=document.querySelectorAll('.content-card'),progress=document.getElementById('progressFill'),stepLabel=document.getElementById('stepLabel'),dotsBox=document.getElementById('stepDots'),playBtn=document.getElementById('playBtn'),playIcon=document.getElementById('playIcon'),narStep=document.getElementById('narStep'),narText=document.getElementById('narText');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');
+  function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.toggle('lit',map.includes(i))});arrows.forEach((a,i)=>{a.classList.toggle('lit',map.includes(i+1)&&map.includes(i))})}
+  function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));stages.forEach(s=>s.classList.remove('lit'));arrows.forEach(a=>a.classList.remove('lit'));progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset();
+})();
+</script>
+</body>
+</html>

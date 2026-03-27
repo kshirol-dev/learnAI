@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 9: Vibe Coding Workflows — High Level</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);padding:4px 12px;background:var(--teal-light);border:1px solid var(--teal-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--teal-border);background:var(--teal-light)}.pipe-stage.lit .pipe-icon{background:var(--teal);color:#fff}.pipe-stage.lit .pipe-label{color:var(--teal)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--teal)}.pipe-arrow.done{color:var(--green)}
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--teal-light) 0%,var(--blue-light) 50%,var(--slate-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--blue),var(--violet),var(--pink));transition:width .5s ease}
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--teal);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--teal);box-shadow:0 0 5px rgba(13,148,136,.3)}
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}.cc-col{flex:1;min-width:240px}.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}.cc-code .hl-cmd{color:var(--pink);font-weight:600}.cc-code .hl-ok{color:var(--green);font-weight:600}.cc-code .hl-err{color:var(--red);font-weight:600}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-orange{background:var(--orange-light);border:1px solid var(--orange-border)}.cc-note.n-orange strong{color:var(--orange)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--teal);color:#fff;border-radius:50%}.ctrl-play:hover{opacity:.9;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+.ch-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 36px;border-top:1px solid var(--border-light);background:var(--bg-muted);gap:12px}
+.ch-nav-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;transition:all .15s;border:1.5px solid var(--border);color:var(--text-2);background:var(--bg-white)}
+.ch-nav-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light)}
+.ch-nav-btn .material-symbols-rounded{font-size:16px}
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}.ch-nav{padding:14px 18px}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}.ch-nav{flex-direction:column}.ch-nav-btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 9 &mdash; Vibe Coding Workflows</h2><span class="tb-sub">From Karpathy&rsquo;s tweet to a disciplined practice &mdash; when to vibe and when not to</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a></div>
+    <span class="tb-tag">High Level</span>
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">music_note</span></div><span class="pipe-label">Define</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">architecture</span></div><span class="pipe-label">Scaffold</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">bolt</span></div><span class="pipe-label">Build</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">bug_report</span></div><span class="pipe-label">Debug</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">verified</span></div><span class="pipe-label">Review</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="5"><div class="pipe-icon"><span class="material-symbols-rounded">rocket_launch</span></div><span class="pipe-label">Ship</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 8</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <div class="content-area" id="contentArea">
+
+    <!-- STEP 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">music_note</span></div>
+        <div><div class="cc-title">What Is Vibe Coding?</div><div class="cc-sub">The origin, the hype, and the reality behind the buzzword</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Origin</div>
+            <div class="cc-text">In February 2025, Andrej Karpathy described a new way of coding: <strong>&ldquo;You fully give in to the vibes, embrace exponentials, and forget that the code even exists.&rdquo;</strong> He described accepting AI-generated code without fully reviewing it, relying on observable results instead. The term &ldquo;vibe coding&rdquo; went viral and became Collins Dictionary&rsquo;s Word of the Year for 2025.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Core Idea</div>
+            <div class="cc-text">Vibe coding is building software by <strong>describing what you want in natural language</strong> and letting AI generate the implementation. You iterate through conversation: describe a feature, see the result, give feedback, repeat. The developer acts as <strong>architect and reviewer</strong>, not as the person typing code line by line.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">What It Is &mdash; and What It Isn&rsquo;t</div>
+            <div class="cc-code"><span class="hl-ok">Vibe coding IS:</span>
+  Describing intent in natural language
+  Letting AI generate entire features
+  Iterating through conversation
+  Testing by running and observing
+  Committing what works
+
+<span class="hl-err">Vibe coding is NOT:</span>
+  No-code / low-code platforms
+  Accepting code without any review
+  A replacement for engineering judgment
+  Appropriate for all situations
+  A license to skip testing</div>
+          </div>
+          <div class="cc-note n-teal"><strong>Key distinction:</strong> Karpathy&rsquo;s original description was about personal weekend projects. The industry has since evolved vibe coding into a more disciplined practice with structured workflows, review gates, and clear boundaries for when it&rsquo;s appropriate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">architecture</span></div>
+        <div><div class="cc-title">The Structured Vibe Coding Workflow</div><div class="cc-sub">Define &rarr; Scaffold &rarr; Build &rarr; Debug &rarr; Review &rarr; Ship</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Phase 1: Define</div>
+            <div class="cc-text">Write a <strong>natural-language specification</strong> before touching any code. What are you building? Who is it for? What are the key features? What are the constraints? Create a context document that captures rules, styling preferences, state management conventions, and API standards. This is your &ldquo;vibe document.&rdquo;</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Phase 2: Scaffold</div>
+            <div class="cc-text">Use the AI to generate the <strong>project structure</strong>: folder layout, configuration files, database schema, route definitions. Review the architecture before any feature code is written. This is where you make technology decisions (Next.js, Supabase, Tailwind) and establish patterns the AI will follow.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Phase 3: Build</div>
+            <div class="cc-text">Generate features one at a time through <strong>conversational iteration</strong>. Describe the feature, let the AI implement it across frontend, backend, and database in one coherent cycle. Test each feature before moving to the next. The AI works with the full project context.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Phase 4: Debug</div>
+            <div class="cc-text">Run the application and <strong>report what&rsquo;s broken</strong> back to the AI. Paste error messages, describe unexpected behavior, share screenshots. The AI fixes issues through the same conversational loop. This is where most time is spent &mdash; expect multiple debug cycles per feature.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Phase 5: Review</div>
+            <div class="cc-text">Before shipping, <strong>review the generated code</strong> for security issues, performance problems, and architectural coherence. This is the gate that separates responsible vibe coding from reckless vibe coding. Skip this step at your peril.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Phase 6: Ship</div>
+            <div class="cc-text">Commit working features to version control. Deploy. Iterate on feedback. The cycle continues: each new feature goes through the same Define &rarr; Ship pipeline.</div>
+          </div>
+          <div class="cc-note n-green"><strong>The discipline:</strong> Structured vibe coding isn&rsquo;t &ldquo;just vibing.&rdquo; It&rsquo;s a formalized workflow with specification, architecture review, feature-by-feature building, debugging, code review, and version control. The &ldquo;vibe&rdquo; is in the conversational interaction, not in the lack of rigor.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">check_circle</span></div>
+        <div><div class="cc-title">When Vibe Coding Excels</div><div class="cc-sub">The sweet spots where conversational development shines</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Prototyping &amp; MVPs</div>
+            <div class="cc-text">Vibe coding&rsquo;s greatest strength: turning an idea into a working prototype in <strong>hours instead of days</strong>. When you need to validate a concept, test a market, or demo to stakeholders, speed matters more than code quality. Prototypes ship <strong>67% faster</strong> with vibe coding workflows.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Internal Tools &amp; Scripts</div>
+            <div class="cc-text">One-off scripts, admin dashboards, data migration tools, internal utilities. These have <strong>low blast radius</strong> if they fail, limited users, and short lifespans. Perfect for vibe coding because the cost of technical debt is low.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Creative Exploration</div>
+            <div class="cc-text">Trying out a new API, experimenting with a UI concept, building a proof-of-concept for a design review. When you&rsquo;re exploring possibilities rather than building for production, vibe coding lets you <strong>iterate on ideas at the speed of thought</strong>.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Learning &amp; Onboarding</div>
+            <div class="cc-text">Building small projects to learn a new framework or language. The AI explains what it generates, answers questions about patterns, and helps you understand unfamiliar APIs. Vibe coding becomes a <strong>conversational tutorial</strong>.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Speed Advantage</div>
+            <div class="cc-code"><span class="hl-cmt">// Vibe coding speed benchmarks:</span>
+
+<span class="hl-ok">Landing page</span>      30 min vs 4 hours
+<span class="hl-ok">CRUD API</span>          1 hour vs 6 hours
+<span class="hl-ok">Dashboard MVP</span>     4 hours vs 2 days
+<span class="hl-ok">Full prototype</span>    1-2 days vs 1-2 weeks
+<span class="hl-ok">Hackathon project</span> 1 day vs 3 days
+
+<span class="hl-cmt">// These assume experienced vibe coders</span>
+<span class="hl-cmt">// with good context engineering skills.</span>
+<span class="hl-cmt">// Beginners see smaller gains initially.</span></div>
+          </div>
+          <div class="cc-note n-blue"><strong>The pattern:</strong> Vibe coding excels when speed matters more than durability, when the audience is small, and when the cost of failure is low. The common thread: <em>disposable or short-lived code</em>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">warning</span></div>
+        <div><div class="cc-title">When Vibe Coding Fails</div><div class="cc-sub">The danger zones where &ldquo;just vibing&rdquo; creates real damage</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Numbers Are Stark</div>
+            <div class="cc-text">&bull; <strong>40&ndash;62%</strong> of AI-generated code contains security vulnerabilities<br>&bull; Only <strong>10.5%</strong> of working AI code was found to be secure (Carnegie Mellon)<br>&bull; Vibe-coded projects accumulate technical debt <strong>3x faster</strong><br>&bull; Developers spend <strong>63% more time</strong> debugging AI code than writing it themselves<br>&bull; AI-generated code is now the cause of <strong>1 in 5</strong> security breaches</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Hallucinated Debt</div>
+            <div class="cc-text">Code that <strong>appears correct but contains hidden flaws</strong>: missing edge cases, insecure defaults, exposed secrets, fragile authentication. It passes basic testing because the happy path works. The problems emerge in production, under load, or when an attacker probes the system. This is the unique risk of vibe coding &mdash; debt you don&rsquo;t know you have.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Don&rsquo;t Vibe Code These</div>
+            <div class="cc-code"><span class="hl-err">HIGH RISK &mdash; Use disciplined development:</span>
+
+<span class="hl-err">&times;</span> Payment processing &amp; financial logic
+<span class="hl-err">&times;</span> Authentication &amp; authorization systems
+<span class="hl-err">&times;</span> Regulated workflows (healthcare, finance)
+<span class="hl-err">&times;</span> Systems with high blast radius if they fail
+<span class="hl-err">&times;</span> Long-lived codebases maintained by teams
+<span class="hl-err">&times;</span> Customer-facing production applications
+<span class="hl-err">&times;</span> Code handling PII or sensitive data
+
+<span class="hl-ok">LOWER RISK &mdash; Vibe coding appropriate:</span>
+
+<span class="hl-ok">&check;</span> Prototypes and MVPs
+<span class="hl-ok">&check;</span> Internal tools and scripts
+<span class="hl-ok">&check;</span> Creative exploration and learning
+<span class="hl-ok">&check;</span> Hackathon projects
+<span class="hl-ok">&check;</span> Personal automation</div>
+          </div>
+          <div class="cc-note n-red"><strong>The vibe coding hangover:</strong> Companies that shipped vibe-coded MVPs to production without refactoring are now facing audit failures, security breaches, and maintenance nightmares. An estimated 25&ndash;40% of new startup code is AI-generated. The technical debt bill is coming due.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">swap_horiz</span></div>
+        <div><div class="cc-title">The Hybrid Approach: Vibe to Production</div><div class="cc-sub">How to use vibe coding responsibly in a professional workflow</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Two-Phase Model</div>
+            <div class="cc-text">The most effective teams use a <strong>hybrid approach</strong>:<br><br><strong>Phase 1 &mdash; Vibe:</strong> Use conversational AI to rapidly prototype, explore approaches, and generate a working draft. Speed is the priority. Technical debt is acceptable.<br><br><strong>Phase 2 &mdash; Harden:</strong> Switch to disciplined AI-assisted development. Add tests, review security, refactor architecture, integrate CI/CD. Quality is the priority. This is where the prototype becomes production code.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">The Transition Checklist</div>
+            <div class="cc-text">Before a vibe-coded project goes to production:<br>&bull; Add comprehensive test coverage<br>&bull; Security audit all authentication and authorization<br>&bull; Review all database queries for injection risks<br>&bull; Check for exposed secrets and hardcoded credentials<br>&bull; Refactor &ldquo;accidental architecture&rdquo; into intentional design<br>&bull; Add error handling and logging<br>&bull; Set up CI/CD pipeline</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Governance: Mapping Task to Approach</div>
+            <div class="cc-code"><span class="hl-cmt">// Decision framework:</span>
+
+<span class="hl-key">Is it throwaway or long-lived?</span>
+  Throwaway &rarr; vibe freely
+  Long-lived &rarr; harden before shipping
+
+<span class="hl-key">Who sees it?</span>
+  Just me / team &rarr; vibe is fine
+  Customers &rarr; harden first
+
+<span class="hl-key">What&rsquo;s the blast radius?</span>
+  Low (internal tool) &rarr; vibe is fine
+  High (payments, auth) &rarr; disciplined only
+
+<span class="hl-key">Is there sensitive data?</span>
+  No &rarr; vibe is fine
+  Yes (PII, financial) &rarr; disciplined only
+
+<span class="hl-key">Will others maintain it?</span>
+  No &rarr; vibe is fine
+  Yes &rarr; harden + document</div>
+          </div>
+          <div class="cc-note n-violet"><strong>The professional stance:</strong> Vibe coding is a tool, not an identity. Professional developers know when to vibe and when to be disciplined. The skill is in the judgment call, not in picking one approach for everything.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">tips_and_updates</span></div>
+        <div><div class="cc-title">Vibe Coding Techniques That Work</div><div class="cc-sub">Practical patterns from experienced vibe coders</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Start with the UI</div>
+            <div class="cc-text">Describe the interface first: &ldquo;Create a dashboard with a sidebar, a data table showing users, and a chart showing signups over time.&rdquo; Seeing the UI immediately tells you if the AI understood your intent. It&rsquo;s much easier to spot a wrong UI than wrong backend logic.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">One Feature at a Time</div>
+            <div class="cc-text">Never describe the entire application in one prompt. Build feature by feature: authentication, then user management, then the dashboard, then notifications. <strong>Test each feature before starting the next.</strong> This prevents the cascading failures that happen when multiple broken features interact.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Screenshot Debugging</div>
+            <div class="cc-text">When something looks wrong, <strong>describe what you see vs. what you expected</strong>. &ldquo;The sidebar overlaps the main content on mobile. Expected: sidebar should collapse to a hamburger menu below 768px.&rdquo; Visual descriptions are often more effective than code-level debugging for UI issues.</div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Context Document</div>
+            <div class="cc-code"><span class="hl-cmt">// Create a .vibe or context file:</span>
+
+<span class="hl-key">Project:</span> SaaS dashboard for analytics
+<span class="hl-key">Stack:</span> Next.js 15, Supabase, Tailwind, shadcn/ui
+<span class="hl-key">Auth:</span> Supabase Auth with Google OAuth
+<span class="hl-key">DB:</span> PostgreSQL via Supabase
+<span class="hl-key">Style:</span> Minimal, dark mode default, Inter font
+<span class="hl-key">State:</span> React Query for server state, Zustand for UI
+<span class="hl-key">API:</span> Next.js API routes, REST, Zod validation
+
+<span class="hl-key">Rules:</span>
+- All pages use the AppLayout component
+- All forms use react-hook-form + Zod
+- All API responses: { data, error, meta }
+- No inline styles, use Tailwind only
+- Mobile-first responsive design</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Git After Every Feature</div>
+            <div class="cc-text">Commit after each working feature. If the next feature breaks something, you can <strong>revert to the last good state</strong> instantly. Without git discipline, a broken feature can destroy hours of working code with no way back.</div>
+          </div>
+          <div class="cc-note n-amber"><strong>Pro tip:</strong> Keep a running log of what you asked the AI to build and what decisions were made. This becomes invaluable when debugging later or when handing the project to someone else.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--orange)"><span class="material-symbols-rounded">compare</span></div>
+        <div><div class="cc-title">Vibe Coding vs. AI-Assisted Coding</div><div class="cc-sub">Two approaches on a spectrum &mdash; not a binary choice</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">The Spectrum</div>
+            <div class="cc-code"><span class="hl-cmt">// From most autonomous to most controlled:</span>
+
+<span class="hl-cmd">Pure Vibe</span>
+  Accept all AI output. Don&rsquo;t read the code.
+  &ldquo;If it works, ship it.&rdquo;
+  <span class="hl-err">Risk: Maximum. Only for throwaway code.</span>
+
+<span class="hl-str">Structured Vibe</span>
+  Conversational development with review gates.
+  Test each feature. Review before shipping.
+  <span class="hl-ok">Risk: Moderate. Good for prototypes.</span>
+
+<span class="hl-key">AI-Assisted</span>
+  Developer writes specs, AI generates code.
+  Full code review, tests, CI/CD integration.
+  <span class="hl-ok">Risk: Low. Good for production.</span>
+
+<span class="hl-ok">AI-Enhanced Traditional</span>
+  Developer writes code with AI completions.
+  AI assists, human drives every decision.
+  <span class="hl-ok">Risk: Minimal. Good for critical systems.</span></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Key Differences</div>
+            <div class="cc-text"><strong>Code understanding:</strong> In vibe coding, you may not understand every line. In AI-assisted coding, you understand and can explain all generated code.<br><br><strong>Review depth:</strong> Vibe coding reviews observable behavior (&ldquo;does it work?&rdquo;). AI-assisted reviews code quality (&ldquo;is it correct, secure, maintainable?&rdquo;).<br><br><strong>Testing:</strong> Vibe coding tests manually by running the app. AI-assisted coding writes automated tests as part of the workflow.<br><br><strong>Ownership:</strong> Vibe-coded projects are hard to hand off. AI-assisted projects follow team standards and are maintainable by others.</div>
+          </div>
+          <div class="cc-note n-orange"><strong>The professional reality:</strong> Most experienced developers operate in the &ldquo;Structured Vibe&rdquo; to &ldquo;AI-Assisted&rdquo; range, sliding up and down based on the task. Pure vibe is for weekends. AI-enhanced traditional is for critical systems. Know where you are on the spectrum.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="content-card" data-card="8">
+      <div class="cc-head">
+        <div class="cc-icon" style="background:var(--pink)"><span class="material-symbols-rounded">school</span></div>
+        <div><div class="cc-title">The Vibe Coder&rsquo;s Maturity Model</div><div class="cc-sub">How your relationship with vibe coding evolves over time</div></div>
+      </div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Level 1: The Enthusiast</div>
+            <div class="cc-text">&ldquo;AI can build anything!&rdquo; You accept everything the AI generates. Speed is intoxicating. You ship fast but don&rsquo;t understand the code. <strong>Risk:</strong> High. Hallucinated debt accumulates silently.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Level 2: The Burned</div>
+            <div class="cc-text">&ldquo;AI code is unreliable.&rdquo; You hit a production bug caused by AI-generated code. You swing to distrust. You start reviewing everything obsessively. <strong>Risk:</strong> Low, but you&rsquo;re losing the speed advantage.</div>
+          </div>
+          <div class="cc-block">
+            <div class="cc-label">Level 3: The Calibrated</div>
+            <div class="cc-text">&ldquo;AI is a tool with known strengths and weaknesses.&rdquo; You know when to vibe and when to be disciplined. You write good context, review strategically, and test the right things. <strong>This is the goal.</strong></div>
+          </div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block">
+            <div class="cc-label">Calibrated Vibe Coding Habits</div>
+            <div class="cc-code"><span class="hl-ok">&check;</span> Write context documents before building
+<span class="hl-ok">&check;</span> Build one feature at a time
+<span class="hl-ok">&check;</span> Test after every feature
+<span class="hl-ok">&check;</span> Git commit after every working state
+<span class="hl-ok">&check;</span> Review security-sensitive code carefully
+<span class="hl-ok">&check;</span> Know when to switch to disciplined mode
+<span class="hl-ok">&check;</span> Harden before shipping to production
+<span class="hl-ok">&check;</span> Keep a decision log
+<span class="hl-ok">&check;</span> Never ship code you can&rsquo;t explain</div>
+          </div>
+          <div class="cc-note n-pink"><strong>Key insight:</strong> Vibe coding is a legitimate development methodology when practiced with discipline. The problem was never the approach &mdash; it was the lack of structure. A structured vibe coder with good context engineering skills can build in hours what used to take days, without sacrificing quality where it matters.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ch-nav">
+    <a class="ch-nav-btn prev" href="08-prompt-driven-development.html"><span class="material-symbols-rounded">arrow_back</span> Ch 8: Prompt-Driven Development</a>
+    <a class="ch-nav-btn next" href="10-multi-file-refactoring.html">Ch 10: Multi-File &amp; Agentic Refactoring <span class="material-symbols-rounded">arrow_forward</span></a>
+  </div>
+</div>
+
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=8, STEP_MS=5000;
+  const PIPE_MAP={1:[0],2:[0,1,2,3,4,5],3:[2],4:[3],5:[4,5],6:[0,1,2,3],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};
+  const NARRATION={
+    1:{text:'<strong>Step 1:</strong> Vibe coding \u2014 coined by Andrej Karpathy in Feb 2025 \u2014 means building software by describing intent in natural language and letting AI generate the code. Collins Dictionary\u2019s Word of the Year 2025.',color:'#0d9488'},
+    2:{text:'<strong>Step 2:</strong> The structured workflow: Define (spec + context doc) \u2192 Scaffold (project structure) \u2192 Build (feature by feature) \u2192 Debug (conversational fixes) \u2192 Review (security + quality) \u2192 Ship.',color:'#0d9488'},
+    3:{text:'<strong>Step 3:</strong> Vibe coding excels for prototypes (67% faster), internal tools, creative exploration, and learning. The common thread: speed matters more than durability, and the cost of failure is low.',color:'#2563eb'},
+    4:{text:'<strong>Step 4:</strong> The risks are real: 40\u201362% of AI code has security vulns, 3x faster tech debt accumulation, 63% more debugging time. Don\u2019t vibe code payments, auth, regulated workflows, or long-lived production systems.',color:'#2563eb'},
+    5:{text:'<strong>Step 5:</strong> The hybrid approach: Phase 1 (Vibe) for rapid prototyping, Phase 2 (Harden) for production readiness. Map each task to the appropriate approach based on blast radius, audience, and lifespan.',color:'#7c3aed'},
+    6:{text:'<strong>Step 6:</strong> Practical techniques: start with UI, one feature at a time, screenshot debugging, context documents, git after every feature. Keep a running decision log for future reference.',color:'#7c3aed'},
+    7:{text:'<strong>Step 7:</strong> Four levels on the spectrum: Pure Vibe (throwaway only) \u2192 Structured Vibe (prototypes) \u2192 AI-Assisted (production) \u2192 AI-Enhanced Traditional (critical systems). Most pros slide between levels 2\u20133.',color:'#ea580c'},
+    8:{text:'<strong>Step 8:</strong> The maturity model: Enthusiast (accept everything) \u2192 Burned (distrust everything) \u2192 Calibrated (right tool for the task). The goal is calibration \u2014 knowing when to vibe and when to be disciplined.',color:'#db2777'},
+  };
+
+  let current=0,playing=false,timer=null;
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const cards=document.querySelectorAll('.content-card');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function lightPipe(step){
+    const map=PIPE_MAP[step]||[];
+    stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});
+    arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')});
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);if(card)card.classList.add('visible');
+    lightPipe(step);
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+  }
+
+  function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}
+  function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+  reset();
+})();
+</script>
+</body>
+</html>
