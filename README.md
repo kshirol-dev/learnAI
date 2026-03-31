@@ -2,7 +2,7 @@
 
 **Self-curated AI learning materials covering the fundamentals of Artificial Intelligence** — built to structure my own learning, shared to help anyone curious about AI get started.
 
-Topics range from core concepts to practical applications, organized chapter by chapter for easy follow-along.
+Topics range from core concepts to practical applications, organized chapter by chapter for easy follow-along. The entire courseware is also hosted at https://kshirol-dev.github.io/learnAI/
 
 ---
 
