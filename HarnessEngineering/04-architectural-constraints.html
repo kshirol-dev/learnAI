@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EN1EZ3Z0G6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-EN1EZ3Z0G6');
+</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ch 4: Architectural Constraints & Linting — Harness Engineering</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -93,6 +101,85 @@
 <div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
 <script>
 (function(){const TOTAL=8,STEP_MS=5000;const PIPE_MAP={1:[0],2:[0,1],3:[1,2],4:[1],5:[1,3],6:[4],7:[0,1,2,3,4,5],8:[0,1,2,3,4,5]};const NARRATION={1:{text:'<strong>Step 1:</strong> Dependency layering (Types \u2192 Config \u2192 Repo \u2192 Service \u2192 UI) prevents the most common class of agent-introduced architectural violations.',color:'#ea580c'},2:{text:'<strong>Step 2:</strong> Deterministic linters are the cheapest enforcement: zero cost, instant feedback, no false positives. First line of defense.',color:'#2563eb'},3:{text:'<strong>Step 3:</strong> LLM-based auditors catch what linters can\u2019t: subjective quality, descriptive naming, user-friendly errors. Use sparingly for high-value checks.',color:'#7c3aed'},4:{text:'<strong>Step 4:</strong> \u201cVibecoded lints\u201d target agent-specific mistakes: generic names, missing edge cases, duplicate utilities. Born from observing agent failures.',color:'#dc2626'},5:{text:'<strong>Step 5:</strong> Structural tests verify architecture, not behavior. They catch violations that unit tests miss \u2014 code that works but is organized wrong.',color:'#16a34a'},6:{text:'<strong>Step 6:</strong> Pre-commit hooks provide immediate feedback. Keep them under 10 seconds. Auto-fix formatting; report everything else.',color:'#d97706'},7:{text:'<strong>Step 7:</strong> The full enforcement stack: pre-commit (10s) \u2192 CI lint (2min) \u2192 CI tests (10min) \u2192 LLM audit (5min) \u2192 human review. Catch 90% before humans see it.',color:'#0d9488'},8:{text:'<strong>Step 8:</strong> Every agent mistake that reaches production is a missing rule. Add it, and that class of mistake never recurs. The stack grows more comprehensive over time.',color:'#db2777'}};let current=0,playing=false,timer=null;const stages=document.querySelectorAll('.pipe-stage');const arrows=document.querySelectorAll('.pipe-arrow');const cards=document.querySelectorAll('.content-card');const progress=document.getElementById('progressFill');const stepLabel=document.getElementById('stepLabel');const dotsBox=document.getElementById('stepDots');const playBtn=document.getElementById('playBtn');const playIcon=document.getElementById('playIcon');const narStep=document.getElementById('narStep');const narText=document.getElementById('narText');for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}const dots=dotsBox.querySelectorAll('.sc-dot');function lightPipe(step){const map=PIPE_MAP[step]||[];stages.forEach((s,i)=>{s.classList.remove('lit','done');if(map.includes(i))s.classList.add('lit')});arrows.forEach((a,i)=>{a.classList.remove('lit','done');if(map.includes(i+1)&&map.includes(i))a.classList.add('lit')})}function activate(step){cards.forEach(c=>c.classList.remove('visible'));const card=document.querySelector('[data-card="'+step+'"]');if(card)card.classList.add('visible');lightPipe(step);progress.style.width=((step/TOTAL)*100)+'%';stepLabel.textContent=step+' / '+TOTAL;dots.forEach((d,i)=>d.classList.toggle('filled',i<step));const n=NARRATION[step];if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}}function resetPipe(){stages.forEach(s=>s.classList.remove('lit','done'));arrows.forEach(a=>a.classList.remove('lit','done'))}function showReset(){cards.forEach(c=>c.classList.remove('visible'));resetPipe();progress.style.width='0%';stepLabel.textContent='- / '+TOTAL;dots.forEach(d=>d.classList.remove('filled'));narStep.textContent='-';narText.innerHTML='Click play or press Space to begin...'}function reset(){showReset();current=0}function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}function stepNext(){if(current<TOTAL)goTo(current+1)}function stepPrev(){if(current>0)goTo(current-1)}function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}playBtn.addEventListener('click',function(){if(playing)pause();else play()});document.getElementById('prevBtn').addEventListener('click',stepPrev);document.getElementById('nextBtn').addEventListener('click',stepNext);document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});reset()})();
+</script>
+<script>
+(function(){
+  var p = window.location.pathname.split('/');
+  var course = p[p.length - 2] || 'unknown';
+  var file = (p[p.length - 1] || '').replace('.html', '');
+  var variant = file.indexOf('under-the-hood') !== -1 ? 'deep_dive'
+              : file.indexOf('high-level') !== -1 ? 'high_level'
+              : 'standard';
+  var lesson = file.replace(/-high-level$/, '').replace(/-under-the-hood$/, '');
+
+  var narStep = document.getElementById('narStep');
+  if (narStep) {
+    var lastStep = 0;
+    var obs = new MutationObserver(function() {
+      var step = parseInt(narStep.textContent, 10);
+      if (!isNaN(step) && step > 0 && step !== lastStep) {
+        lastStep = step;
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'lesson_step_reached', {
+            course: course, lesson: lesson, variant: variant, step: step
+          });
+        }
+      }
+    });
+    obs.observe(narStep, { childList: true, characterData: true, subtree: true });
+  }
+
+  var playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_play', { course: course, lesson: lesson, variant: variant });
+      }
+    });
+  }
+
+  var nextBtn = document.getElementById('nextBtn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_navigate', {
+          course: course, lesson: lesson, variant: variant, direction: 'next'
+        });
+      }
+    });
+  }
+
+  var prevBtn = document.getElementById('prevBtn');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_navigate', {
+          course: course, lesson: lesson, variant: variant, direction: 'prev'
+        });
+      }
+    });
+  }
+
+  var altLink = document.querySelector('a.nav-alt');
+  if (altLink) {
+    altLink.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'variant_switch', {
+          course: course, lesson: lesson, from_variant: variant
+        });
+      }
+    });
+  }
+
+  var backLink = document.querySelector('a.nav-back');
+  if (backLink) {
+    backLink.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'back_to_course', { course: course, lesson: lesson, variant: variant });
+      }
+    });
+  }
+})();
 </script>
 </body>
 </html>
