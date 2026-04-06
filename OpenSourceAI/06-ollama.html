@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EN1EZ3Z0G6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-EN1EZ3Z0G6');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch 6: Running LLMs Locally with Ollama — Open Source AI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%231e1b4b'/%3E%3Ccircle cx='21' cy='21' r='16' stroke='%23a5b4fc' stroke-width='1.5' stroke-dasharray='3 3' fill='none' opacity='.45'/%3E%3Ccircle cx='21' cy='12' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='13' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='29' cy='26' r='3' fill='%2338bdf8'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23fff'/%3E%3Cline x1='21' y1='15' x2='21' y2='17' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='15.4' y1='24.2' x2='17.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='26.6' y1='24.2' x2='24.5' y2='23' stroke='%23a5b4fc' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f7fb;--bg-white:#fff;--bg-muted:#f0f2f7;--border:#dfe3ed;--border-light:#eaedf4;--text-1:#1b2035;--text-2:#505872;--text-3:#8892ab;--blue:#2563eb;--blue-light:#eff6ff;--blue-border:#bfdbfe;--violet:#7c3aed;--violet-light:#ede9fe;--violet-border:#c4b5fd;--pink:#db2777;--pink-light:#fdf2f8;--pink-border:#f9a8d4;--teal:#0d9488;--teal-light:#f0fdfa;--teal-border:#99f6e4;--amber:#d97706;--amber-light:#fffbeb;--amber-border:#fcd34d;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;--red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;--orange:#ea580c;--orange-light:#fff7ed;--orange-border:#fed7aa;--slate:#64748b;--slate-light:#f1f5f9;--shadow-sm:0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.08);--radius:12px;--radius-lg:20px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text-1);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 80px}.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+
+/* CANVAS */
+.canvas{width:100%;max-width:1140px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden}
+
+/* TITLE BAR */
+.title-bar{padding:18px 36px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px}.title-bar h2{font-size:16px;font-weight:800;letter-spacing:-.5px}.title-bar .tb-sub{font-size:11px;color:var(--text-3)}.title-bar .tb-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);padding:4px 12px;background:var(--amber-light);border:1px solid var(--amber-border);border-radius:6px;margin-left:auto}
+.tb-nav{display:flex;align-items:center;gap:8px;margin-right:8px}.tb-nav a{font-size:10px;font-weight:600;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all .15s}.tb-nav a.nav-back{color:var(--text-3);background:var(--bg-muted)}.tb-nav a.nav-back:hover{color:var(--text-1);background:var(--border)}.tb-nav a.nav-alt{color:var(--violet);background:var(--violet-light);border:1px solid var(--violet-border)}.tb-nav a.nav-alt:hover{background:var(--violet);color:#fff}
+
+/* PIPELINE */
+.pipeline-wrap{padding:20px 36px 12px;border-bottom:1px solid var(--border-light);background:linear-gradient(180deg,var(--bg-muted) 0%,var(--bg-white) 100%);overflow-x:auto}
+.pipeline{display:flex;align-items:center;gap:0;min-width:700px;position:relative}
+.pipe-stage{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius);min-width:80px;text-align:center;cursor:pointer;transition:all .3s ease;position:relative;border:1.5px solid transparent}
+.pipe-stage .pipe-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s ease;background:var(--bg-muted);color:var(--text-3)}.pipe-stage .pipe-icon .material-symbols-rounded{font-size:18px}
+.pipe-stage .pipe-label{font-size:8px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-3);transition:color .3s ease}
+.pipe-arrow{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border);transition:color .3s ease}.pipe-arrow .material-symbols-rounded{font-size:18px}
+.pipe-stage.lit{border-color:var(--amber-border);background:var(--amber-light)}.pipe-stage.lit .pipe-icon{background:var(--amber);color:#fff}.pipe-stage.lit .pipe-label{color:var(--amber)}
+.pipe-stage.done{border-color:var(--green-border);background:var(--green-light)}.pipe-stage.done .pipe-icon{background:var(--green);color:#fff}.pipe-stage.done .pipe-label{color:var(--green)}
+.pipe-arrow.lit{color:var(--amber)}.pipe-arrow.done{color:var(--green)}
+
+/* NARRATION */
+.narration{padding:12px 36px;background:linear-gradient(90deg,var(--amber-light) 0%,var(--orange-light) 50%,var(--pink-light) 100%);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:14px;min-height:48px;cursor:pointer;transition:background .3s ease}.narration:hover{filter:brightness(.97)}
+.nar-step{width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;flex-shrink:0;transition:background .4s ease}.nar-text{font-size:12px;font-weight:500;color:var(--text-1);line-height:1.5}.nar-text strong{font-weight:700}.nar-text code{font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+
+/* PROGRESS */
+.progress-track{height:3px;background:var(--bg-muted);position:relative}.progress-fill{position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--orange),var(--pink),var(--violet));transition:width .5s ease}
+
+/* STEP COUNTER */
+.step-counter{padding:8px 36px;display:flex;align-items:center;gap:12px;background:var(--bg-white);border-bottom:1px solid var(--border-light)}.sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}.sc-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--amber);min-width:55px}.sc-dots{display:flex;gap:4px;margin-left:auto}.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .3s ease}.sc-dot.filled{background:var(--amber);box-shadow:0 0 5px rgba(217,119,6,.3)}
+
+/* CONTENT AREA */
+.content-area{padding:28px 36px;min-height:260px;position:relative;transition:opacity .4s ease}
+.content-card{display:none;animation:fadeUp .4s ease}.content-card.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cc-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.cc-icon .material-symbols-rounded{font-size:22px;color:#fff}
+.cc-title{font-size:15px;font-weight:800;letter-spacing:-.3px}.cc-sub{font-size:10px;color:var(--text-3);margin-top:1px}
+.cc-body{display:flex;gap:24px;flex-wrap:wrap}
+.cc-col{flex:1;min-width:240px}
+.cc-block{margin-bottom:18px}.cc-block:last-child{margin-bottom:0}
+.cc-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cc-text{font-size:12px;color:var(--text-2);line-height:1.7}
+.cc-text strong{color:var(--text-1);font-weight:600}
+.cc-code{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:var(--text-1);background:var(--bg-muted);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.cc-code .hl-key{color:var(--violet);font-weight:600}.cc-code .hl-str{color:var(--teal)}.cc-code .hl-num{color:var(--amber)}.cc-code .hl-cmt{color:var(--text-3);font-style:italic}
+.cc-note{font-size:11px;color:var(--text-2);line-height:1.6;padding:10px 14px;border-radius:8px;margin-top:8px}
+.cc-note.n-amber{background:var(--amber-light);border:1px solid var(--amber-border)}.cc-note.n-amber strong{color:var(--amber)}
+.cc-note.n-green{background:var(--green-light);border:1px solid var(--green-border)}.cc-note.n-green strong{color:var(--green)}
+.cc-note.n-blue{background:var(--blue-light);border:1px solid var(--blue-border)}.cc-note.n-blue strong{color:var(--blue)}
+.cc-note.n-pink{background:var(--pink-light);border:1px solid var(--pink-border)}.cc-note.n-pink strong{color:var(--pink)}
+.cc-note.n-violet{background:var(--violet-light);border:1px solid var(--violet-border)}.cc-note.n-violet strong{color:var(--violet)}
+.cc-note.n-teal{background:var(--teal-light);border:1px solid var(--teal-border)}.cc-note.n-teal strong{color:var(--teal)}
+.cc-note.n-red{background:var(--red-light);border:1px solid var(--red-border)}.cc-note.n-red strong{color:var(--red)}
+
+/* COMPARE BOXES */
+.compare-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.compare-box{flex:1;min-width:200px;padding:14px;border-radius:10px;border:1.5px solid var(--border)}
+.compare-box.bad{border-color:var(--red-border);background:var(--red-light)}.compare-box.bad .cb-tag{color:var(--red)}
+.compare-box.good{border-color:var(--green-border);background:var(--green-light)}.compare-box.good .cb-tag{color:var(--green)}
+.cb-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.cb-text{font-size:11px;color:var(--text-2);line-height:1.6}
+
+/* CONTROLS */
+.controls{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:6px;background:var(--bg-white);border:1.5px solid var(--border);border-radius:28px;padding:5px 6px;box-shadow:var(--shadow-lg);z-index:100}.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text-2)}.ctrl-btn:hover{background:var(--bg-muted);color:var(--text-1)}.ctrl-btn:active{transform:scale(.92)}.ctrl-btn .material-symbols-rounded{font-size:20px}.ctrl-play{width:40px;height:40px;background:var(--amber);color:#fff;border-radius:50%}.ctrl-play:hover{background:#b45309;color:#fff}.ctrl-play .material-symbols-rounded{font-size:22px;color:#fff}
+
+@media(max-width:900px){body{padding:16px 10px 70px}.content-area,.narration,.step-counter{padding-left:18px;padding-right:18px}.title-bar{padding:14px 18px}.pipeline-wrap{padding:14px 18px 8px}.cc-body{flex-direction:column}}
+@media(max-width:600px){.title-bar{flex-direction:column;gap:6px;align-items:flex-start}.title-bar .tb-tag{margin-left:0}.tb-nav{margin-right:0}.step-counter{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="title-bar">
+    <div><h2>Ch 6 &mdash; Running LLMs Locally with Ollama</h2><span class="tb-sub">One command, any model, zero configuration — local AI made simple</span></div>
+    <div class="tb-nav"><a class="nav-back" href="index.html">Index</a><a class="nav-alt" href="05-gguf-quantization.html">&larr; Prev</a><a class="nav-alt" href="07-llamacpp.html">Next &rarr;</a></div>
+    <span class="tb-tag" style="color:var(--amber);background:var(--amber-light);border:1px solid var(--amber-border);padding:4px 12px;border-radius:6px;margin-left:auto;font-family:JetBrains Mono,monospace;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">Local AI</span>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-stage" data-pipe="0"><div class="pipe-icon"><span class="material-symbols-rounded">download</span></div><span class="pipe-label">Pull</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="1"><div class="pipe-icon"><span class="material-symbols-rounded">inventory</span></div><span class="pipe-label">Cache</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="2"><div class="pipe-icon"><span class="material-symbols-rounded">memory</span></div><span class="pipe-label">Load</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="3"><div class="pipe-icon"><span class="material-symbols-rounded">smart_toy</span></div><span class="pipe-label">Infer</span></div>
+      <div class="pipe-arrow"><span class="material-symbols-rounded">arrow_forward</span></div>
+      <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">api</span></div><span class="pipe-label">API</span></div>
+    </div>
+  </div>
+
+  <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the journey...</div></div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
+
+  <!-- CONTENT CARDS -->
+  <div class="content-area" id="contentArea">
+
+    <!-- CARD 1 -->
+    <div class="content-card" data-card="1">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">terminal</span></div><div><div class="cc-title">Getting Started with Ollama</div><div class="cc-sub">Install, run your first model, zero to AI in 2 minutes</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Installation</div><div class="cc-text">Mac: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">brew install ollama</code> or download from ollama.com. Linux: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">curl -fsSL https://ollama.com/install.sh | sh</code>. Windows: download the installer from ollama.com. Ollama runs as a background service — <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama serve</code> starts it manually if it's not already running.</div></div>
+          <div class="cc-block"><div class="cc-label">Your First Model</div><div class="cc-text"><code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run llama3.2</code> — this downloads the selected model and drops you into an interactive chat session. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run gemma3:2b</code> for a smaller model. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run qwen3:8b</code> as another supported model option. Every model in the Ollama library can be pulled this way.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"># Install (macOS)
+brew install ollama
+
+# Run your first model
+ollama run llama3.2
+
+# Non-interactive: pass a prompt
+ollama run llama3.2 "Explain RAG in one sentence"
+
+# List installed models
+ollama list
+
+# Remove a model
+ollama rm llama3.2
+
+# Show model info
+ollama show llama3.2</div>
+          <div class="cc-note n-amber"><strong>First run is slow</strong> — Ollama downloads the model artifact before first use. Subsequent runs are instant because the model is cached in <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">~/.ollama/models</code>. On Apple Silicon, Metal GPU acceleration is automatic — no configuration needed.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2 -->
+    <div class="content-card" data-card="2">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">dns</span></div><div><div class="cc-title">The Ollama REST API</div><div class="cc-sub">Programmatic access on port 11434</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Starting the Server</div><div class="cc-text"><code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama serve</code> starts the REST API server on <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">http://localhost:11434</code>. On macOS, it starts automatically on login. On Linux, enable with <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">systemctl enable ollama</code>. The API includes OpenAI-compatible endpoints for common workflows — changing <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">base_url='http://localhost:11434/v1'</code> works for many clients, but verify endpoint parity for your app.</div></div>
+          <div class="cc-block"><div class="cc-label">Core Endpoints</div><div class="cc-text"><code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">POST /api/generate</code> — single-turn generation. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">POST /api/chat</code> — multi-turn chat with messages array. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">POST /api/embed</code> — generate embeddings. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">GET /api/tags</code> — list installed models. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">POST /api/pull</code> — download a model. All responses stream by default.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code">import requests
+
+# Chat API (OpenAI-compatible format)
+response = requests.post(
+    "http://localhost:11434/api/chat",
+    json={
+        "model": "llama3.2",
+        "messages": [
+            {"role": "user", "content": "What is RAG?"}
+        ],
+        "stream": False
+    }
+)
+print(response.json()["message"]["content"])
+
+# Or use the OpenAI client
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[{"role":"user","content":"Hello!"}]
+)</div>
+          <div class="cc-note n-amber"><strong>Streaming responses:</strong> By default, Ollama streams tokens as they're generated. Set <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">"stream": false</code> to get the full response at once. For production applications, streaming gives better user experience — you can display tokens as they arrive.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3 -->
+    <div class="content-card" data-card="3">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--teal)"><span class="material-symbols-rounded">folder</span></div><div><div class="cc-title">Model Management</div><div class="cc-sub">Pulling, listing, and organizing local models</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">The Ollama Model Library</div><div class="cc-text">Ollama maintains a curated library at ollama.com/library — pre-quantized GGUF versions of popular models. Each model has tagged variants: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">llama3.2:3b</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">llama3.2:3b-instruct-q4_K_M</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">llama3.2:latest</code>. The <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">:latest</code> tag defaults to the recommended quantization for most hardware.</div></div>
+          <div class="cc-block"><div class="cc-label">Storage Location</div><div class="cc-text">Models are stored in <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">~/.ollama/models/</code> (macOS/Linux) or <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">C:\Users\{user}\.ollama\models\</code> (Windows). Each model is a GGUF blob file with a manifest. Disk usage can grow quickly for larger model variants, so storage planning matters.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"># Pull without running
+ollama pull llama3.1:70b
+
+# See what's stored locally
+ollama list
+# NAME                    ID         SIZE    MODIFIED
+# llama3.2:latest         a80c4f17...  2.0 GB  2 hours ago
+# llama3.1:70b            ..          43 GB   1 day ago
+
+# Check running models
+ollama ps
+
+# Pull a specific quantization
+ollama pull llama3.1:8b-instruct-q4_K_M
+
+# Delete to free disk space
+ollama rm llama3.1:70b</div>
+          <div class="cc-note n-teal"><strong>Model IDs from HuggingFace:</strong> Ollama also supports running GGUF files directly: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run hf.co/bartowski/Llama-3.1-8B-Instruct-GGUF:Q4_K_M</code>. This lets you run many compatible GGUF models from HuggingFace without requiring an Ollama library listing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 4 -->
+    <div class="content-card" data-card="4">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">description</span></div><div><div class="cc-title">Modelfiles — Customizing Models</div><div class="cc-sub">System prompts, parameters, and model composition</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">What a Modelfile Is</div><div class="cc-text">A Modelfile is a text file (like a Dockerfile for AI models) that customizes an Ollama model. You can: set a custom system prompt, change generation parameters (temperature, top_p, context length), and layer your customization on top of any base model.</div></div>
+          <div class="cc-block"><div class="cc-label">Building a Custom Model</div><div class="cc-text">Create a <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">Modelfile</code> → run <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama create my-model -f Modelfile</code> → run <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run my-model</code>. Your custom model appears in <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama list</code> and behaves exactly like a built-in model — same CLI, same API.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"># Modelfile example: custom coding assistant
+FROM llama3.2
+
+# Set the system prompt
+SYSTEM """
+You are an expert Python developer. You write clean,
+well-documented code and explain your reasoning clearly.
+Always include type hints and follow PEP 8.
+"""
+
+# Generation parameters
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9
+PARAMETER num_ctx 8192
+
+# Build and run
+# ollama create python-expert -f Modelfile
+# ollama run python-expert</div>
+          <div class="cc-note n-violet"><strong>Modelfile FROM:</strong> You can base a Modelfile on any installed Ollama model (<code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">FROM llama3.2</code>), a GGUF file path (<code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">FROM /path/to/model.gguf</code>), or a HuggingFace GGUF (<code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">FROM hf.co/bartowski/...</code>). The system prompt and parameters layer on top.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 5 -->
+    <div class="content-card" data-card="5">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--blue)"><span class="material-symbols-rounded">memory</span></div><div><div class="cc-title">Hardware Acceleration &amp; Performance</div><div class="cc-sub">GPU support, inference speeds, and tuning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Automatic GPU Detection</div><div class="cc-text">Ollama detects and uses: <strong>Apple Silicon</strong> (Metal), <strong>NVIDIA CUDA</strong>, and <strong>AMD ROCm</strong> where supported by the host environment. Priority: GPU VRAM first, then overflow to CPU RAM.</div></div>
+          <div class="cc-block"><div class="cc-label">Typical Performance</div><div class="cc-text">Performance depends on model size, quantization, hardware, and prompt shape. Benchmark on your own workload before setting production expectations.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">VRAM Overflow to RAM</div><div class="cc-text">If a model does not fully fit VRAM, offloading to system memory may enable execution at lower throughput.</div></div>
+          <div class="cc-note n-blue"><strong>Concurrency:</strong> Ollama can serve parallel requests and keep multiple models loaded, with behavior controlled by memory limits and settings such as <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_NUM_PARALLEL</code> and <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_MAX_LOADED_MODELS</code>. For sustained high-concurrency production serving, use vLLM instead — it's purpose-built for throughput.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 6 -->
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--amber)"><span class="material-symbols-rounded">settings</span></div><div><div class="cc-title">Advanced Configuration</div><div class="cc-sub">Environment variables, context windows, and tuning</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Key Environment Variables</div><div class="cc-text"><code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_HOST=0.0.0.0:11434</code> — expose the API on the network (default is localhost only). <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_MODELS=/path/to/models</code> — change the model storage directory. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_NUM_PARALLEL=4</code> — allow N parallel requests. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">OLLAMA_MAX_LOADED_MODELS=3</code> — keep multiple models warm in memory.</div></div>
+          <div class="cc-block"><div class="cc-label">Context Length</div><div class="cc-text">Ollama defaults to the model's native context length as defined by the selected model and runtime settings. Override per-request: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">"num_ctx": 32768</code> in the API call body. Or set it in a Modelfile: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">PARAMETER num_ctx 32768</code>. Longer context uses more VRAM.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"># Expose on network (for team use)
+export OLLAMA_HOST=0.0.0.0:11434
+ollama serve
+
+# Custom model storage
+export OLLAMA_MODELS=/data/ollama/models
+
+# Allow multiple parallel requests
+export OLLAMA_NUM_PARALLEL=4
+
+# Keep multiple models warm
+export OLLAMA_MAX_LOADED_MODELS=3
+
+# Per-request context extension
+curl http://localhost:11434/api/chat -d '{
+  "model": "llama3.1",
+  "options": {"num_ctx": 32768},
+  "messages": [...]
+}'</div>
+          <div class="cc-note n-amber"><strong>Production limitation:</strong> Ollama is optimized for single-user, single-model local use. It lacks continuous batching, PagedAttention, and multi-GPU tensor parallelism. For serving &gt;10 requests/second or multiple concurrent users, use vLLM. Ollama is for development and personal use.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 7 -->
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--green)"><span class="material-symbols-rounded">hub</span></div><div><div class="cc-title">The Ollama Ecosystem</div><div class="cc-sub">Integrations and what to build next</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Popular Integrations</div><div class="cc-text"><strong>Open WebUI</strong>: self-hosted ChatGPT-like interface, connects to Ollama out of the box. <strong>LangChain</strong>: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">from langchain_ollama import ChatOllama</code> — drop-in for any LangChain chain or agent. <strong>LlamaIndex</strong>: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">from llama_index.llms.ollama import Ollama</code>. <strong>Continue.dev</strong>: VS Code/JetBrains plugin for AI coding with local models.</div></div>
+          <div class="cc-block"><div class="cc-label">Python Direct Usage</div><div class="cc-text">The <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama</code> Python package: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">pip install ollama</code>. <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">import ollama; response = ollama.chat(model='llama3.2', messages=[...])</code>. The async client: <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">from ollama import AsyncClient</code>. Both wrap the REST API with pythonic interfaces and streaming support.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-code"># Python library
+import ollama
+
+response = ollama.chat(
+    model="llama3.2",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.message.content)
+
+# Streaming
+for chunk in ollama.chat(
+    model="llama3.2",
+    messages=[{"role":"user","content":"Tell me a story"}],
+    stream=True
+):
+    print(chunk.message.content, end="", flush=True)</div>
+          <div class="cc-note n-green"><strong>Next steps:</strong> Install Ollama → run <code style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px">ollama run llama3.2</code> → install Open WebUI for a full ChatGPT-like interface → integrate with LangChain for your first local RAG pipeline. Chapter 8 covers Open WebUI in detail, and Chapter 13 covers LangChain and LlamaIndex integration.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <footer style="text-align:center;padding:32px 20px 20px;font-size:13px;color:#8892ab;border-top:1px solid #dfe3ed;font-family:'Inter',system-ui,sans-serif;display:block;width:100%;box-sizing:border-box;clear:both;">
+    &copy; 2026 Kiran Shirol &mdash; The AI Atlas. All rights reserved.
+  </footer>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
+
+<script>
+(function(){
+  const TOTAL=7, STEP_MS=6000;
+  const PIPE_MAP={1:-1, 2:0, 3:1, 4:2, 5:3, 6:4, 7:4};
+  const NARRATION={
+    1:{text:'Ollama is the easiest way to run large language models locally. One command: <code>ollama run llama3.2</code> — it downloads the model, caches it, and starts a local server. No CUDA setup, no Python environment, no configuration. Just AI, running on your hardware.',color:'#d97706'},
+    2:{text:'Ollama <strong>pulls</strong> pre-quantized GGUF models from its own model library (which mirrors popular HuggingFace models). Models are cached in <code>~/.ollama/models</code>. Once downloaded, they run instantly without re-downloading.',color:'#d97706'},
+    3:{text:'When you run a model, Ollama <strong>loads</strong> the GGUF weights into memory (RAM for CPU, VRAM for GPU). It detects available hardware automatically — GPU acceleration on NVIDIA CUDA, AMD ROCm, and Apple Metal (Apple Silicon) is automatic.',color:'#1b2035'},
+    4:{text:'Ollama performs inference using <strong>llama.cpp</strong> under the hood. It handles tokenization, KV caching, and generation, and streams tokens to CLI/API clients.',color:'#d97706'},
+    5:{text:'Ollama exposes a <strong>REST API</strong> on port 11434. It\'s intentionally similar to OpenAI\'s API format — <code>/api/chat</code> uses the same messages-style structure. Many apps can switch by changing the base URL and model name, but some endpoint/option differences remain.',color:'#2563eb'},
+    6:{text:'Ollama\'s <strong>Modelfile</strong> lets you create custom model variants: change the system prompt, set parameters (temperature, context length), and layer on top of any base model. It\'s like a Dockerfile but for AI models.',color:'#7c3aed'},
+    7:{text:'The Ollama ecosystem includes integrations with popular local UI and application frameworks such as Open WebUI, LangChain, and LlamaIndex.',color:'#16a34a'},
+  };
+
+  let current=0, playing=false, timer=null;
+  const cards=document.querySelectorAll('.content-card');
+  const stages=document.querySelectorAll('.pipe-stage');
+  const arrows=document.querySelectorAll('.pipe-arrow');
+  const progress=document.getElementById('progressFill');
+  const stepLabel=document.getElementById('stepLabel');
+  const dotsBox=document.getElementById('stepDots');
+  const playBtn=document.getElementById('playBtn');
+  const playIcon=document.getElementById('playIcon');
+  const narStep=document.getElementById('narStep');
+  const narText=document.getElementById('narText');
+
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='sc-dot';dotsBox.appendChild(d)}
+  const dots=dotsBox.querySelectorAll('.sc-dot');
+
+  function updatePipeline(step){
+    const litIdx=PIPE_MAP[step]!==undefined?PIPE_MAP[step]:-1;
+    stages.forEach((s,i)=>{
+      s.classList.remove('lit','done');
+      if(i<litIdx)s.classList.add('done');
+      else if(i===litIdx)s.classList.add('lit');
+    });
+    arrows.forEach((a,i)=>{
+      a.classList.remove('lit','done');
+      if(i<litIdx)a.classList.add('done');
+      else if(i===litIdx)a.classList.add('lit');
+    });
+  }
+
+  function activate(step){
+    cards.forEach(c=>c.classList.remove('visible'));
+    const card=document.querySelector(`[data-card="${step}"]`);
+    if(card)card.classList.add('visible');
+    progress.style.width=((step/TOTAL)*100)+'%';
+    stepLabel.textContent=step+' / '+TOTAL;
+    dots.forEach((d,i)=>d.classList.toggle('filled',i<step));
+    const n=NARRATION[step];
+    if(n){narStep.textContent=step;narStep.style.background=n.color;narText.innerHTML=n.text}
+    updatePipeline(step);
+  }
+
+  function showReset(){
+    cards.forEach(c=>c.classList.remove('visible'));
+    progress.style.width='0%';
+    stepLabel.textContent='- / '+TOTAL;
+    dots.forEach(d=>d.classList.remove('filled'));
+    narStep.textContent='-';narStep.style.background='var(--amber)';
+    narText.innerHTML='Click play or press Space to begin the journey...';
+    stages.forEach(s=>s.classList.remove('lit','done'));
+    arrows.forEach(a=>a.classList.remove('lit','done'));
+  }
+
+  function reset(){showReset();current=0}
+  function pause(){if(!playing)return;playing=false;clearTimeout(timer);timer=null;playIcon.textContent='play_arrow'}
+  function play(){if(playing)return;playing=true;playIcon.textContent='pause';if(current>=TOTAL){reset();timer=setTimeout(tick,800)}else{timer=setTimeout(tick,current===0?600:STEP_MS)}}
+  function goTo(step){pause();current=Math.max(0,Math.min(TOTAL,step));if(current===0)showReset();else activate(current)}
+  function stepNext(){if(current<TOTAL)goTo(current+1)}
+  function stepPrev(){if(current>0)goTo(current-1)}
+  function tick(){current++;if(current>TOTAL){pause();return}activate(current);if(playing)timer=setTimeout(tick,STEP_MS)}
+
+  playBtn.addEventListener('click',()=>{if(playing)pause();else play()});
+  document.getElementById('prevBtn').addEventListener('click',stepPrev);
+  document.getElementById('nextBtn').addEventListener('click',stepNext);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stepNext()}else if(e.key==='ArrowLeft'){e.preventDefault();stepPrev()}else if(e.key===' '){e.preventDefault();if(playing)pause();else play()}});
+
+  stages.forEach(s=>{s.addEventListener('click',()=>{const idx=parseInt(s.dataset.pipe);const stepForPipe=Object.entries(PIPE_MAP).find(([k,v])=>v===idx);if(stepForPipe)goTo(parseInt(stepForPipe[0]))})});
+
+  reset();
+})();
+</script>
+<script>
+(function(){
+  var p = window.location.pathname.split('/');
+  var course = p[p.length - 2] || 'unknown';
+  var file = (p[p.length - 1] || '').replace('.html', '');
+  var variant = 'standard';
+  var lesson = file;
+
+  var narStep = document.getElementById('narStep');
+  if (narStep) {
+    var lastStep = 0;
+    var obs = new MutationObserver(function() {
+      var step = parseInt(narStep.textContent, 10);
+      if (!isNaN(step) && step > 0 && step !== lastStep) {
+        lastStep = step;
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'lesson_step_reached', {
+            course: course, lesson: lesson, variant: variant, step: step
+          });
+        }
+      }
+    });
+    obs.observe(narStep, { childList: true, characterData: true, subtree: true });
+  }
+
+  var playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_play', { course: course, lesson: lesson, variant: variant });
+      }
+    });
+  }
+
+  var nextBtn = document.getElementById('nextBtn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_navigate', {
+          course: course, lesson: lesson, variant: variant, direction: 'next'
+        });
+      }
+    });
+  }
+
+  var prevBtn = document.getElementById('prevBtn');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'lesson_navigate', {
+          course: course, lesson: lesson, variant: variant, direction: 'prev'
+        });
+      }
+    });
+  }
+
+  var altLink = document.querySelector('a.nav-alt');
+  if (altLink) {
+    altLink.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'variant_switch', {
+          course: course, lesson: lesson, from_variant: variant
+        });
+      }
+    });
+  }
+
+  var backLink = document.querySelector('a.nav-back');
+  if (backLink) {
+    backLink.addEventListener('click', function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'back_to_course', { course: course, lesson: lesson, variant: variant });
+      }
+    });
+  }
+})();
+</script></body>
+</html>
