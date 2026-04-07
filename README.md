@@ -49,6 +49,7 @@ Topics range from core concepts to practical applications, organized chapter by 
 | [MultimodalAI](./MultimodalAI) | AI systems that process multiple data types |
 | [ReasoningAI](./ReasoningAI) | Chain-of-thought and reasoning capabilities |
 | [SmallModelsLocalAI](./SmallModelsLocalAI) | Running AI locally with smaller models |
+| [EdgeAITinyML](./EdgeAITinyML) | End-to-end TinyML deployment on MCUs and edge devices |
 | [HarnessEngineering](./HarnessEngineering) | Building robust AI harnesses and scaffolding |
 
 ### Infrastructure & Operations
