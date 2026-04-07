@@ -106,7 +106,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div class="pipe-stage" data-pipe="4"><div class="pipe-icon"><span class="material-symbols-rounded">fact_check</span></div><span class="pipe-label">Validate</span></div></div></div>
   <div class="narration" id="narration"><div class="nar-step" id="narStep">-</div><div class="nar-text" id="narText">Click play or press Space to begin the chapter walkthrough...</div></div>
   <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 5</span><div class="sc-dots" id="stepDots"></div></div>
+  <div class="step-counter"><span class="sc-label">Step</span><span class="sc-num" id="stepLabel">- / 7</span><div class="sc-dots" id="stepDots"></div></div>
   <div class="content-area" id="contentArea">
     <div class="content-card" data-card="1">
       <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">schema</span></div><div><div class="cc-title">Inference Flow in Firmware</div><div class="cc-sub">Firmware integration should define data ownership and timing boundaries explicitly.</div></div></div>
@@ -116,6 +116,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div class="cc-col">
           <div class="cc-block"><div class="cc-label">Buffer Contracts</div><div class="cc-text">Use explicit buffer contracts and lifetimes to avoid race conditions and memory corruption. Deterministic ownership rules are especially important under interrupt-driven input streams.</div></div>
+          <div class="cc-block"><div class="cc-label">Practical Pattern</div><div class="cc-text">Define explicit ownership for buffers, queues, and inference tasks to avoid hidden concurrency bugs. Ownership contracts should be part of code review criteria.</div></div>
           <div class="cc-note n-violet"><strong>Note:</strong> Key Point: A clear dataflow contract is the foundation of stable TinyML firmware.</div>
         </div>
       </div>
@@ -129,6 +130,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div class="cc-col">
           <div class="cc-block"><div class="cc-label">Determinism Checks</div><div class="cc-text">Run schedule stress tests with realistic mixed workloads to ensure deadlines remain intact. This reveals priority inversion and queue bottlenecks before release.</div></div>
+          <div class="cc-block"><div class="cc-label">Failure Pattern</div><div class="cc-text">RTOS integration often fails through priority inversion and unbounded queue growth under burst inputs. These failure modes must be tested directly.</div></div>
           <div class="cc-note n-blue"><strong>Note:</strong> Key Point: RTOS priorities are part of model reliability, not only firmware tuning.</div>
         </div>
       </div>
@@ -142,6 +144,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div class="cc-col">
           <div class="cc-block"><div class="cc-label">Queueing Pattern</div><div class="cc-text">Use bounded queues and backpressure policies to handle bursty sensor traffic safely. Unbounded buffering can silently collapse memory budgets during field anomalies.</div></div>
+          <div class="cc-block"><div class="cc-label">Validation Signal</div><div class="cc-text">Stress test under combined sensor bursts and background tasks while monitoring deadline misses and watchdog triggers. Tail behavior is the key stability metric.</div></div>
           <div class="cc-note n-amber"><strong>Note:</strong> Key Point: Stable ingestion requires explicit backpressure and ISR minimalism.</div>
         </div>
       </div>
@@ -155,6 +158,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div class="cc-col">
           <div class="cc-block"><div class="cc-label">Recovery Strategy</div><div class="cc-text">Use watchdog integration and health-check hooks to detect and recover from inference pipeline failures quickly. Recovery pathways should preserve logs for post-incident diagnosis.</div></div>
+          <div class="cc-block"><div class="cc-label">Governance Rule</div><div class="cc-text">Require firmware-level regression tests for each model update before release acceptance. Model-only tests cannot prove RTOS safety.</div></div>
           <div class="cc-note n-teal"><strong>Note:</strong> Key Point: Safe fallback behavior is mandatory for production TinyML systems.</div>
         </div>
       </div>
@@ -168,7 +172,34 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
         <div class="cc-col">
           <div class="cc-block"><div class="cc-label">Release Gate</div><div class="cc-text">Require pass conditions for functional accuracy, deadline adherence, and restart resilience before release. A firmware-level gate prevents model-only optimism from reaching field devices.</div></div>
+          <div class="cc-block"><div class="cc-label">Handoff Artifact</div><div class="cc-text">Maintain failure-handling runbooks with reset strategy and diagnostic capture steps for field support teams. Review it at each release checkpoint so assumptions remain current.</div></div>
           <div class="cc-note n-green"><strong>Note:</strong> Key Point: Host-side correctness is insufficient; firmware-context testing is the real release signal.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="6">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">report_problem</span></div><div><div class="cc-title">Concurrency and Scheduling Pitfalls</div><div class="cc-sub">Most field instability is caused by firmware orchestration issues, not inference kernels.</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Pitfall Examples</div><div class="cc-text">Common pitfalls include blocking calls in high-priority paths, ISR overload, and queue starvation that delays inference decisions. These issues can silently degrade reliability before obvious failures appear.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Correction Pattern</div><div class="cc-text">Use bounded queues, minimal ISR work, and explicit deadline monitoring per task class. Correct scheduling design restores deterministic behavior without major model changes.</div></div>
+          <div class="cc-note n-red"><strong>Note:</strong> Key Point: Deterministic scheduling is a first-order requirement for TinyML firmware quality.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-card" data-card="7">
+      <div class="cc-head"><div class="cc-icon" style="background:var(--violet)"><span class="material-symbols-rounded">rule</span></div><div><div class="cc-title">Firmware Readiness Checklist</div><div class="cc-sub">Use explicit readiness gates before broad field rollout.</div></div></div>
+      <div class="cc-body">
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Checklist Items</div><div class="cc-text">Confirm deadline adherence, watchdog stability, queue headroom, deterministic reset behavior, and on-device regression pass status under production task mix. Use explicit owners so unresolved items are visible before launch.</div></div>
+        </div>
+        <div class="cc-col">
+          <div class="cc-block"><div class="cc-label">Release Discipline</div><div class="cc-text">Block release when timing margins are marginal even if functional outputs look correct. Timing debt typically becomes reliability incidents in field conditions.</div></div>
+          <div class="cc-note n-green"><strong>Note:</strong> Key Point: Firmware readiness depends on timing margin as much as functional correctness.</div>
         </div>
       </div>
     </div>
@@ -178,14 +209,16 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <div class="controls"><button class="ctrl-btn" id="prevBtn" title="Previous"><span class="material-symbols-rounded">chevron_left</span></button><button class="ctrl-btn ctrl-play" id="playBtn" title="Play / Pause"><span class="material-symbols-rounded" id="playIcon">play_arrow</span></button><button class="ctrl-btn" id="nextBtn" title="Next"><span class="material-symbols-rounded">chevron_right</span></button></div>
 <script>
 (function(){
-  const TOTAL=5, STEP_MS=6500;
-  const PIPE_MAP={1:0,2:1,3:2,4:3,5:4};
+  const TOTAL=7, STEP_MS=6500;
+  const PIPE_MAP={1:0,2:1,3:2,4:3,5:4,6:4,7:4};
   const NARRATION={
   "1": {"text": "<strong>Inference Flow in Firmware</strong>: Firmware integration should define data ownership and timing boundaries explicitly.", "color": "var(--violet)"},
   "2": {"text": "<strong>Task Scheduling and Priority</strong>: Inference must coexist with networking, IO, and safety tasks under RTOS policy.", "color": "var(--violet)"},
   "3": {"text": "<strong>Interrupt-Safe Data Ingestion</strong>: ISR and inference coordination is a common failure point in edge pipelines.", "color": "var(--violet)"},
   "4": {"text": "<strong>Watchdogs and Fault Handling</strong>: Tiny inference loops need safety boundaries and recovery behavior.", "color": "var(--violet)"},
-  "5": {"text": "<strong>Firmware Validation Harness</strong>: Validation must run in firmware context, not only in desktop simulation.", "color": "var(--violet)"}
+  "5": {"text": "<strong>Firmware Validation Harness</strong>: Validation must run in firmware context, not only in desktop simulation.", "color": "var(--violet)"},
+  "6": {"text": "<strong>Concurrency and Scheduling Pitfalls</strong>: Most field instability is caused by firmware orchestration issues, not inference kernels.", "color": "var(--violet)"},
+  "7": {"text": "<strong>Firmware Readiness Checklist</strong>: Use explicit readiness gates before broad field rollout.", "color": "var(--violet)"}
   };
   let current=0, playing=false, timer=null;
   const cards=document.querySelectorAll('.content-card');
